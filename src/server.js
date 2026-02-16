@@ -30,7 +30,8 @@ async function initialize() {
 initialize();
 
 const server = app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
+  logger.info(`Server running bHYon port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 const shutdown = async (signal) => {
