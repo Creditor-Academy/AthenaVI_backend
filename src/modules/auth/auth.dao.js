@@ -21,21 +21,6 @@ const createOtp = async(email,otp)=>{
   })
 }
 
-// create/store refresh token 
-
-const storeRefreshToken = async({hashedRefreshToken,sessionId, userId})=>{
-  console.log(`token: ${hashedRefreshToken}, sessionID: ${sessionId}, userID: ${userId}`);
-  
-  return await prisma.refreshToken.create({
-    data:{
-      hashedToken: hashedRefreshToken, 
-      sessionId,
-      userId,
-      expiresAt: new Date(Date.now()+ 7 * 24 * 60 * 60 * 1000)
-    }
-  })
-}
-
 // read
 const findUserByEmail = async (email) => {
   const user = await prisma.user.findFirst({
@@ -65,4 +50,4 @@ const deleteOldOtp = async(email)=>{
   })
 }
 
-module.exports = {findUserByEmail, createUser, deleteOldOtp , createOtp, findOtpByEmail, storeRefreshToken};
+module.exports = {findUserByEmail, createUser, deleteOldOtp , createOtp, findOtpByEmail};

@@ -8,6 +8,7 @@ module.exports = {
   // Auth
   INVALID_CREDENTIALS: 'Invalid email or password',
   TOKEN_EXPIRED: 'Token expired',
+  TOKEN_GENERATED: 'Token generated successfully',
 
   // User
   USER_NOT_FOUND: 'User not found',

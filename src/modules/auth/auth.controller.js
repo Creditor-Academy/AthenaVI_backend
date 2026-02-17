@@ -4,6 +4,7 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const messages = require('../../shared/utils/messages');
 const { sendEmail } = require('../notification/email.service');
 const authDao = require('./auth.dao');
+const refreshTokenDao= require('../sessions/refreshToken.dao')
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const otpService = require('./otp.service');
@@ -12,9 +13,6 @@ const { signAccessToken } = require('../../shared/utils/jwt');
 const { redisClient } = require('../../shared/config/redis');
 
 const createAndSendOtp = asyncHandler(async (req, res) => {
-  if (!req.body) {
-    throw new AppError(messages.BODY_MISSING, 400);
-  }
   const { email } = req.body;
   console.log(email);
 
@@ -80,12 +78,13 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
   // 6. Generate refresh token (raw)
   const refreshTokenId = crypto.randomUUID();
   const refreshTokenSecret = await crypto.randomBytes(40).toString('hex');
-  console.log(`refresh token: ${refreshToken}`);
 
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
+  console.log(`refresh token: ${refreshToken}`);
+
 
   const hashedRefreshToken = await bcrypt.hash(
-    refreshToken,
+    refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
   );
   console.log(`hashed refresh token: ${hashedRefreshToken}`);
@@ -93,8 +92,9 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
   console.log(user.id);
 
   // 7. Store refresh token (HASHED) in DB
-  await authDao.storeRefreshToken({
-    hashedRefreshToken,
+  await refreshTokenDao.create({
+    id: refreshTokenId,
+    token: hashedRefreshToken,
     sessionId,
     userId: user.id,
   });
@@ -121,9 +121,6 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
 });
 
 const resendOtp = asyncHandler(async (req, res) => {
-  if (!req.body) {
-    throw new AppError(messages.BODY_MISSING, 400);
-  }
   const { email } = req.body;
   if (!email) {
     throw new AppError(messages.EMAIL_REQUIRED, 400);
@@ -178,12 +175,13 @@ const login = asyncHandler(async (req, res) => {
   // 5. Generate refresh token (raw)
   const refreshTokenId = crypto.randomUUID();
   const refreshTokenSecret = await crypto.randomBytes(40).toString('hex');
-  console.log(`refresh token: ${refreshToken}`);
-
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
 
+  console.log(`refresh token: ${refreshToken}`);
+
+
   const hashedRefreshToken = await bcrypt.hash(
-    refreshToken,
+    refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
   );
   console.log(`hashed refresh token: ${hashedRefreshToken}`);
@@ -191,8 +189,9 @@ const login = asyncHandler(async (req, res) => {
   console.log(user.id);
 
   // 6. Store refresh token (HASHED) in DB
-  await authDao.storeRefreshToken({
-    hashedRefreshToken,
+  await refreshTokenDao.create({
+    id: refreshTokenId,
+    token: hashedRefreshToken,
     sessionId,
     userId: user.id,
   });
@@ -211,60 +210,102 @@ const login = asyncHandler(async (req, res) => {
     res,
     {
       accessToken,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { name: user.name, email: user.email },
     },
     200,
     messages.LOGIN_SUCCESS
   );
 });
 
-// const refreshToken = asyncHandler(async (req, res) => {
-//   const refreshToken = req.cookies.refreshToken;
+const refreshToken = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
 
-//   if (!refreshToken) {
-//     throw new AppError(messages.UNAUTHORIZED, 401);
-//   }
+  if (!refreshToken) {
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
+  // 1. Split tokenId.secret
+  const parts = refreshToken.split('.');
+  if (parts.length !== 2) {
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
 
-//   const payload = refreshToken.split('.')
-//   const [tokenId, secret] = payload
-
-//   const tokenData = await authDao.findTokenById(tokenId)
-
-//   await bcrypt.compare(secret,tokenData.refreshToken)
+  const [tokenId, secret] = parts;
+  console.log('token',tokenId);
+  console.log('secret', secret);
   
-//   const sessionExists= await redisClient.get(
-//     `sessionId:${tokenData.sessionId}`
-//   )
-
-//   await authDao.revokeToken(tokenData.id)
-
-//   const newTokenId = crypto.randomUUID();
-//   const newSecret = crypto.randomBytes(40).toString('hex')
-//   const newRefreshToken = `${newTokenId}.${newSecret}`
-
-
+  // 2. Fetch token row (O(1))
+  const savedToken = await refreshTokenDao.findById(tokenId);
+  console.log(savedToken);
   
-//   const hashedRefreshToken = await bcrypt.hash(
-//     refreshToken,
-//     Number(process.env.SALT_ROUNDS)
-//   );
+  if (!savedToken) {
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
 
+  // 3. Check revoked / expired
+  if (savedToken.isRevoked || savedToken.expiresAt < new Date()) {
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
 
-//   await authDao.storeRefreshToken({
-//     hashedRefreshToken,
-//     userId: tokenData.userId,
-//     sessionId: tokenData.sessionId
-//   })
+  // 4. Verify secret
+  const isValid = await bcrypt.compare(secret, savedToken.hashedToken);
+  if (!isValid) {
+    // Possible token reuse attack
+    await refreshTokenDao.revokeBySession(savedToken.sessionId);
+    await redisClient.del(`session:${savedToken.sessionId}`);
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
 
+  // 5. Check Redis session
+  const sessionExists = await redisClient.get(
+    `session:${savedToken.sessionId}`
+  );
+  if (!sessionExists) {
+    throw new AppError(messages.SESSION_EXPIRED, 401);
+  }
 
-//   res.cookies
+  // 6. ROTATION: revoke old token
+  await refreshTokenDao.revoke(savedToken.id);
 
+  // 7. Generate NEW refresh token
+  const newTokenId = crypto.randomUUID();
+  const newSecret = crypto.randomBytes(40).toString('hex');
+  const newRefreshToken = `${newTokenId}.${newSecret}`;
 
+  const hashedRefreshToken = await bcrypt.hash(
+    newSecret,
+    Number(process.env.SALT_ROUNDS)
+  );
 
+  await refreshTokenDao.create({
+    id: newTokenId, // later
+    token: hashedRefreshToken,
+    userId: savedToken.userId,
+    sessionId: savedToken.sessionId,
+  });
 
+  // 8. Set new refresh token cookie
+  res.cookie('refreshToken', newRefreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 
+  // 9. Issue new access token
+  
+   const accessToken = signAccessToken({
+    sub: savedToken.userId,
+      sessionId: savedToken.sessionId,
+  });
 
+  return successResponse(req, res, {accessToken}, 201, messages.TOKEN_GENERATED);
+});
 
-// });
-
-module.exports = { createAndSendOtp, verifyAndRegister, resendOtp, login };
+module.exports = {
+  createAndSendOtp,
+  verifyAndRegister,
+  resendOtp,
+  login,
+  refreshToken,
+};
