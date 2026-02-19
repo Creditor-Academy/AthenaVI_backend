@@ -4,11 +4,14 @@ module.exports = {
   INVALID_REQUEST: 'Invalid request',
   UNAUTHORIZED: 'Unauthorized',
   SESSION_EXPIRED: 'Session expired',
+  NOT_FOUND: 'Not found',
 
   // Auth
   INVALID_CREDENTIALS: 'Invalid email or password',
   TOKEN_EXPIRED: 'Token expired',
   TOKEN_GENERATED: 'Token generated successfully',
+  REFRESH_TOKEN_MISSING:'Refresh Token missing',
+  LOGOUT_SUCCESSFULLY: 'Logged out successfully',
 
   // User
   USER_NOT_FOUND: 'User not found',

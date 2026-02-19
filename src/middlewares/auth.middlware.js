@@ -14,21 +14,26 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   let payload;
+
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
     console.log(err);
     throw new AppError(messages.TOKEN_EXPIRED, 401);
   }
+  console.log(payload);
 
   const { sub: userId, sessionId } = payload;
 
   if (!userId || !sessionId) {
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
+  console.log(userId);
+
   console.log(sessionId);
-  
+
   const session = await redisClient.get(`session:${sessionId}`);
+  console.log(session);
 
   if (!session) {
     throw new AppError(messages.SESSION_EXPIRED, 401);

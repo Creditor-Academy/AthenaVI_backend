@@ -6,6 +6,15 @@ const findById = async (id) => {
   });
 };
 
+const findByUserId = async (userId) => {
+  return await prisma.refreshToken.findMany({
+    where: {
+      userId,
+      isRevoked: false,
+    },
+  });
+};
+
 const revoke = async (id) => {
   return prisma.refreshToken.update({
     where: { id },
@@ -22,10 +31,15 @@ const revokeBySession = async (sessionId) => {
   });
 };
 
+const revokeAllByUserId = (userId) => {
+  return prisma.refreshToken.updateMany({
+    where: { userId },
+    data: { isRevoked: true },
+  });
+};
+
 const create = async ({ id, userId, sessionId, token }) => {
-  console.log(
-    `token: ${token}, sessionID: ${sessionId}, userID: ${userId}`
-  );
+  console.log(`token: ${token}, sessionID: ${sessionId}, userID: ${userId}`);
 
   return await prisma.refreshToken.create({
     data: {
@@ -43,4 +57,6 @@ module.exports = {
   revoke,
   revokeBySession,
   create,
+  findByUserId,
+  revokeAllByUserId,
 };

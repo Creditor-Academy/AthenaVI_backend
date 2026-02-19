@@ -4,11 +4,15 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const messages = require('../../shared/utils/messages');
 const { sendEmail } = require('../notification/email.service');
 const authDao = require('./auth.dao');
-const refreshTokenDao= require('../sessions/refreshToken.dao')
+const refreshTokenDao = require('../sessions/refreshToken.dao');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const otpService = require('./otp.service');
-const { createSession } = require('../sessions/session.service');
+const {
+  createSession,
+  deleteSession,
+  findSession,
+} = require('../sessions/session.service');
 const { signAccessToken } = require('../../shared/utils/jwt');
 const { redisClient } = require('../../shared/config/redis');
 
@@ -82,7 +86,6 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
   console.log(`refresh token: ${refreshToken}`);
 
-
   const hashedRefreshToken = await bcrypt.hash(
     refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
@@ -104,7 +107,7 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    path: '/api/auth/refresh',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
@@ -179,7 +182,6 @@ const login = asyncHandler(async (req, res) => {
 
   console.log(`refresh token: ${refreshToken}`);
 
-
   const hashedRefreshToken = await bcrypt.hash(
     refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
@@ -201,7 +203,7 @@ const login = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    path: '/api/auth/refresh',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
@@ -230,13 +232,13 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 
   const [tokenId, secret] = parts;
-  console.log('token',tokenId);
+  console.log('token', tokenId);
   console.log('secret', secret);
-  
+
   // 2. Fetch token row (O(1))
   const savedToken = await refreshTokenDao.findById(tokenId);
   console.log(savedToken);
-  
+
   if (!savedToken) {
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
@@ -251,14 +253,14 @@ const refreshToken = asyncHandler(async (req, res) => {
   if (!isValid) {
     // Possible token reuse attack
     await refreshTokenDao.revokeBySession(savedToken.sessionId);
-    await redisClient.del(`session:${savedToken.sessionId}`);
+    await deleteSession(storedToken.sessionId);
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
 
   // 5. Check Redis session
-  const sessionExists = await redisClient.get(
-    `session:${savedToken.sessionId}`
-  );
+  const sessionExists = await findSession({ sessionId: savedToken.sessionId });
+  console.log(sessionExists);
+
   if (!sessionExists) {
     throw new AppError(messages.SESSION_EXPIRED, 401);
   }
@@ -288,18 +290,77 @@ const refreshToken = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    path: '/api/auth/refresh',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   // 9. Issue new access token
-  
-   const accessToken = signAccessToken({
+
+  const accessToken = signAccessToken({
     sub: savedToken.userId,
-      sessionId: savedToken.sessionId,
+    sessionId: savedToken.sessionId,
   });
 
-  return successResponse(req, res, {accessToken}, 201, messages.TOKEN_GENERATED);
+  return successResponse(
+    req,
+    res,
+    { accessToken },
+    201,
+    messages.TOKEN_GENERATED
+  );
+});
+
+const logout = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    throw new AppError(messages.REFRESH_TOKEN_MISSING, 400);
+  }
+  const [refreshTokenId] = refreshToken.split('.');
+  console.log('refreshtoken id ', refreshTokenId);
+
+  const storedToken = await refreshTokenDao.findById(refreshTokenId);
+  console.log(storedToken);
+
+  if (!storedToken) {
+    throw new Error(messages.NOT_FOUND, 404);
+  }
+
+  await deleteSession({ sessionId: storedToken.sessionId });
+  await refreshTokenDao.revoke(refreshTokenId);
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  return successResponse(req, res, {}, 200, messages.LOGOUT_SUCCESSFULLY);
+});
+
+const logoutAllDevices = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  // Fetch sessions
+  const tokens = await refreshTokenDao.findByUserId(userId);
+
+  // Revoke all refresh tokens
+  await refreshTokenDao.revokeAllByUserId(userId);
+
+  // Delete all Redis sessions in parallel
+  await Promise.all(
+    tokens.map((token) => deleteSession({ sessionId: token.sessionId }))
+  );
+
+  // Clear refresh token cookie on current device
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  return successResponse(req, res, {}, 200, messages.LOGOUT_SUCCESSFULLY);
 });
 
 module.exports = {
@@ -308,4 +369,6 @@ module.exports = {
   resendOtp,
   login,
   refreshToken,
+  logout,
+  logoutAllDevices,
 };

@@ -1,5 +1,5 @@
-const {redisClient} = require('../../shared/config/redis')
-const crypto = require('crypto')
+const { redisClient } = require('../../shared/config/redis');
+const crypto = require('crypto');
 
 const SESSION_TTL = 60 * 60 * 24 * 7; // 7 days
 
@@ -16,8 +16,18 @@ const createSession = async ({ userId, userAgent, ip }) => {
     }),
     { EX: SESSION_TTL }
   );
-  
+
   return sessionId;
 };
 
-module.exports = { createSession };
+const findSession = async ({ sessionId }) => {
+  return await redisClient.get(`session:${sessionId}`);
+};
+
+const deleteSession = async ({ sessionId }) => {
+  console.log(sessionId);
+
+  await redisClient.del(`session:${sessionId}`);
+};
+
+module.exports = { createSession, findSession, deleteSession };
