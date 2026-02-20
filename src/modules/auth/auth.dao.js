@@ -1,53 +1,107 @@
 const prisma = require('../../shared/config/prismaClient');
 
-// create
-const createUser = async(data)=>{
-    return await prisma.user.create({data,
-        select:{
-            name: true,
-            email: true,
-            id: true
-        }
-    })
-}
+/* =========================
+   CREATE
+========================= */
 
-const createOtp = async(email,otp)=>{
-  await prisma.otp.create({
+// Create User
+const createUser = async (data) => {
+  return await prisma.user.create({
+    data,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  });
+};
+
+// Create OTP
+const createOtp = async (email, otp) => {
+  return await prisma.otp.create({
     data: {
       email,
       code: otp,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     },
-  })
-}
-
-// read
-const findUserByEmail = async (email) => {
-  const user = await prisma.user.findFirst({
-    where: {
-      email: email,
-    },
   });
-  return user;
 };
 
-const findOtpByEmail = async (email)=>{
-  const otpRecord = await prisma.otp.findFirst({
-    where:{
-      email: email
+const createPasswordResetToken = async({userId,tokenHash, expiresAt})=>{
+  await prisma.passwordResetToken.create({
+    data:{
+      userId,
+      tokenHash,
+      expiresAt
     }
   })
-  return otpRecord;
 }
 
-//update
+
+/* =========================
+   READ
+========================= */
+
+// Find user by email
+const findUserByEmail = async (email) => {
+  return await prisma.user.findUnique({
+    where: { email },
+  });
+};
+
+const findValidPasswordResetTokenByHash =async (tokenHash) => {
+  return await prisma.passwordResetToken.findFirst({
+    where: {
+      tokenHash,
+      expiresAt: { gt: new Date() }
+    },
+    include: { user: true }
+  });
+};
+
+// Find OTP by email
+// const findOtpByEmail = async (email) => {
+//   return await prisma.otp.findUnique({
+//     where: { email },
+//   });
+// };
 
 
-// delete
-const deleteOldOtp = async(email)=>{
-  await prisma.otp.deleteMany({
-    where: {email}
-  })
+/* =========================
+   DELETE
+========================= */
+
+// Delete old OTPs
+const deleteOldOtp = async (email) => {
+  return await prisma.otp.deleteMany({
+    where: { email },
+  });
+};
+
+
+
+
+// mix 
+const updatePasswordAndInvalidateResetTokens= async({userId ,hashedPassword})=>{ 
+ await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId  },
+      data: { password: hashedPassword },
+    }),
+
+    prisma.passwordResetToken.deleteMany({
+      where: { userId: userId },
+    }),
+  ]);
 }
 
-module.exports = {findUserByEmail, createUser, deleteOldOtp , createOtp, findOtpByEmail};
+module.exports = {
+  createUser,
+  createOtp,
+  findUserByEmail,
+  deleteOldOtp,
+  createPasswordResetToken,
+  findValidPasswordResetTokenByHash,
+  updatePasswordAndInvalidateResetTokens,
+  
+};

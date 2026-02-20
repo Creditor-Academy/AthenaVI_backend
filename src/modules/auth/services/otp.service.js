@@ -1,6 +1,6 @@
-const {redisClient} = require('../../shared/config/redis');
-const AppError = require('../../shared/utils/AppError');
-const messages = require('../../shared/utils/messages');
+const {redisClient} = require('../../../shared/config/redis');
+const AppError = require('../../../shared/utils/AppError');
+const messages = require('../../../shared/utils/messages');
 
 const OTP_TTL = 300;        // 5 minutes
 const LOCK_TTL = 30;       // 30 seconds

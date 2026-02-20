@@ -12,6 +12,8 @@ module.exports = {
   TOKEN_GENERATED: 'Token generated successfully',
   REFRESH_TOKEN_MISSING:'Refresh Token missing',
   LOGOUT_SUCCESSFULLY: 'Logged out successfully',
+  PASSWORD_LINK_SEND: 'If the email exists, a password reset link has been sent',
+  PASSWORD_RESET: 'Password reset successful. Please login again',
 
   // User
   USER_NOT_FOUND: 'User not found',

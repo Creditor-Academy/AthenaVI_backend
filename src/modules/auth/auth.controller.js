@@ -2,19 +2,17 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const messages = require('../../shared/utils/messages');
-const { sendEmail } = require('../notification/email.service');
+const { sendEmail } = require('../../shared/notification/email.service');
 const authDao = require('./auth.dao');
 const refreshTokenDao = require('../sessions/refreshToken.dao');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const otpService = require('./otp.service');
-const {
-  createSession,
-  deleteSession,
-  findSession,
-} = require('../sessions/session.service');
+const otpService = require('./services/otp.service');
+const sessionService = require('../sessions/session.service');
 const { signAccessToken } = require('../../shared/utils/jwt');
-const { redisClient } = require('../../shared/config/redis');
+const passwordResetService = require('./services/passwordReset.service');
+const otpTemplate = require('../../shared/templates/otp.template');
+const resetPassworTemplate = require('../../shared/templates/passwordReset.template');
 
 const createAndSendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
@@ -31,7 +29,11 @@ const createAndSendOtp = asyncHandler(async (req, res) => {
   console.log(otp);
 
   await otpService.storeOtp(email, otp);
-  await sendEmail({ email, otp });
+  await sendEmail({
+    to: email,
+    subject: 'OTP Verification',
+    html: otpTemplate(otp),
+  });
 
   return successResponse(req, res, null, 200, messages.OTP_SENT);
 });
@@ -65,7 +67,7 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
   });
 
   // 4. Create session (Redis)
-  const sessionId = await createSession({
+  const sessionId = await sessionService.createSession({
     userId: user.id,
     userAgent: req.headers['user-agent'],
     ip: req.ip,
@@ -135,7 +137,11 @@ const resendOtp = asyncHandler(async (req, res) => {
   console.log(otp);
 
   await otpService.storeOtp(email, otp);
-  await sendEmail({ email, otp });
+  await sendEmail({
+    to: email,
+    subject: 'OTP Verification',
+    html: otpTemplate(otp),
+  });
 
   return successResponse(req, res, null, 200, messages.OTP_SENT);
 });
@@ -162,7 +168,7 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // 3. Create Redis session
-  const sessionId = await createSession({
+  const sessionId = await sessionService.createSession({
     userId: user.id,
     userAgent: req.headers['user-agent'],
     ip: req.ip,
@@ -253,12 +259,14 @@ const refreshToken = asyncHandler(async (req, res) => {
   if (!isValid) {
     // Possible token reuse attack
     await refreshTokenDao.revokeBySession(savedToken.sessionId);
-    await deleteSession(storedToken.sessionId);
+    await sessionService.deleteSession(storedToken.sessionId);
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
 
   // 5. Check Redis session
-  const sessionExists = await findSession({ sessionId: savedToken.sessionId });
+  const sessionExists = await sessionService.findSession({
+    sessionId: savedToken.sessionId,
+  });
   console.log(sessionExists);
 
   if (!sessionExists) {
@@ -325,7 +333,7 @@ const logout = asyncHandler(async (req, res) => {
     throw new Error(messages.NOT_FOUND, 404);
   }
 
-  await deleteSession({ sessionId: storedToken.sessionId });
+  await sessionService.deleteSession({ sessionId: storedToken.sessionId });
   await refreshTokenDao.revoke(refreshTokenId);
 
   res.clearCookie('refreshToken', {
@@ -349,7 +357,9 @@ const logoutAllDevices = asyncHandler(async (req, res) => {
 
   // Delete all Redis sessions in parallel
   await Promise.all(
-    tokens.map((token) => deleteSession({ sessionId: token.sessionId }))
+    tokens.map((token) =>
+      sessionService.deleteSession({ sessionId: token.sessionId })
+    )
   );
 
   // Clear refresh token cookie on current device
@@ -363,6 +373,43 @@ const logoutAllDevices = asyncHandler(async (req, res) => {
   return successResponse(req, res, {}, 200, messages.LOGOUT_SUCCESSFULLY);
 });
 
+const forgetPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new AppError(messages.EMAIL_REQUIRED, 400);
+  }
+  const user = await authDao.findUserByEmail(email);
+
+  // Always respond same (prevent enumeration)
+  if (!user) {
+    return successResponse(req, res, {}, 200, messages.PASSWORD_LINK_SEND);
+  }
+
+  const resetToken = await passwordResetService.generateResetToken(user);
+
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: 'OTP Verification',
+    html: resetPassworTemplate(resetUrl),
+  });
+
+  return successResponse(req, res, {}, 200, messages.PASSWORD_LINK_SEND);
+});
+
+const resetPassword = asyncHandler(async(req,res)=>{
+  const { token, newPassword } = req.body;
+
+  await passwordResetService.resetPassword({
+    token,
+    newPassword
+  });
+
+  return successResponse(req,res,{},200,messages.PASSWORD_RESET)
+})
+
 module.exports = {
   createAndSendOtp,
   verifyAndRegister,
@@ -371,4 +418,6 @@ module.exports = {
   refreshToken,
   logout,
   logoutAllDevices,
+  forgetPassword,
+  resetPassword,
 };

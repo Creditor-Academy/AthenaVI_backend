@@ -8,6 +8,8 @@ const {
   refreshToken,
   logout,
   logoutAllDevices,
+  forgetPassword,
+  resetPassword,
 } = require('./auth.controller');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 
@@ -18,5 +20,7 @@ router.post('/login', login);
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.post('/logout-all', authMiddleware, logoutAllDevices)
+router.post('/forget-password',forgetPassword)
+router.post('/reset-password',resetPassword)
 
 module.exports = router;
