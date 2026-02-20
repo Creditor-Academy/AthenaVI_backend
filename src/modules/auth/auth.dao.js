@@ -11,16 +11,6 @@ const createUser = async(data)=>{
     })
 }
 
-const createOtp = async(email,otp)=>{
-  await prisma.otp.create({
-    data: {
-      email,
-      code: otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    },
-  })
-}
-
 // read
 const findUserByEmail = async (email) => {
   const user = await prisma.user.findFirst({
@@ -31,24 +21,8 @@ const findUserByEmail = async (email) => {
   return user;
 };
 
-const findOtpByEmail = async (email)=>{
-  const otpRecord = await prisma.otp.findFirst({
-    where:{
-      email: email
-    }
-  })
-  return otpRecord;
-}
-
 //update
 
-
-// delete
-const deleteOldOtp = async(email)=>{
-  await prisma.otp.deleteMany({
-    where: {email}
-  })
-}
 
 // OAuth / Account
 const findAccountByProvider = async (provider, providerAccountId) => {
@@ -65,15 +39,15 @@ const findAccountByProvider = async (provider, providerAccountId) => {
 
 /**
  * Create or update Google Account and return the user.
- * @param {{ userId: string, providerAccountId: string, access_token?: string, refresh_token?: string, expires_at?: number, id_token?: string }}
+ * @param {{ userId: string, providerAccountId: string, accessToken?: string, refreshToken?: string, expiresAt?: number, idToken?: string }}
  */
 const upsertGoogleAccount = async ({
   userId,
   providerAccountId,
-  access_token,
-  refresh_token,
-  expires_at,
-  id_token,
+  accessToken,
+  refreshToken,
+  expiresAt,
+  idToken,
 }) => {
   await prisma.account.upsert({
     where: {
@@ -87,16 +61,16 @@ const upsertGoogleAccount = async ({
       type: 'oauth',
       provider: 'google',
       providerAccountId,
-      access_token: access_token || null,
-      refresh_token: refresh_token || null,
-      expires_at: expires_at || null,
-      id_token: id_token || null,
+      accessToken: accessToken || null,
+      refreshToken: refreshToken || null,
+      expiresAt: expiresAt || null,
+      idToken: idToken || null,
     },
     update: {
-      access_token: access_token ?? undefined,
-      refresh_token: refresh_token ?? undefined,
-      expires_at: expires_at ?? undefined,
-      id_token: id_token ?? undefined,
+      accessToken: accessToken ?? undefined,
+      refreshToken: refreshToken ?? undefined,
+      expiresAt: expiresAt ?? undefined,
+      idToken: idToken ?? undefined,
     },
   });
 };
@@ -104,9 +78,6 @@ const upsertGoogleAccount = async ({
 module.exports = {
   findUserByEmail,
   createUser,
-  deleteOldOtp,
-  createOtp,
-  findOtpByEmail,
   findAccountByProvider,
   upsertGoogleAccount,
 };

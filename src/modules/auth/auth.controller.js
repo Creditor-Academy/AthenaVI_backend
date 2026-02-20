@@ -413,10 +413,10 @@ const googleCallback = asyncHandler(async (req, res) => {
     await authDao.upsertGoogleAccount({
       userId: user.id,
       providerAccountId,
-      access_token,
-      refresh_token,
-      expires_at: expires_in ? Math.floor(Date.now() / 1000) + expires_in : null,
-      id_token: idToken,
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      expiresAt: expires_in ? Math.floor(Date.now() / 1000) + expires_in : null,
+      idToken,
     });
   }
 

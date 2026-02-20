@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const authDao = require('../auth/auth.dao');
 const messages = require('../../shared/utils/messages');
 
 const transporter = nodemailer.createTransport({
@@ -23,7 +22,6 @@ const sendEmail = async ({ email, otp, subject, text }) => {
       `Hello there \n Your OTP code is ${otp}. It will expire in 5 minutes.`,
   });
     } catch (error) {
-        // await authDao.deleteOldOtp(email)
         console.error("EMAIL ERROR", error)
         throw new Error(messages.EMAIL_SEND_FAILED)
     }
