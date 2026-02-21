@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+
+# Build / generated
+dist
+build
+.next
+*.min.js
+
+# Prisma
+prisma/migrations
+
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Logs
+*.log
+combined.log
+error.log
+
+# Environment (often has secrets)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE / OS
+.cursor
+.vscode
+.DS_Store
+Thumbs.db
+
+# Optional: keep coverage/test snapshots consistent
+# coverage
+# __snapshots__

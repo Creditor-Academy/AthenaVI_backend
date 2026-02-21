@@ -36,5 +36,9 @@ module.exports = {
   WAIT_BEFORE_REQUESTING_OTP: 'Please wait before requesting OTP again',
   TOO_MANY_OTP_REQUESTS: 'Too many OTP requests. Try again later',
   OTP_EXPIRED: 'OTP expired or not found',
-  OTP_INVALID: 'Invalid OTP', 
+  OTP_INVALID: 'Invalid OTP',
+
+  // OAuth
+  OAUTH_STATE_INVALID: 'Invalid or expired OAuth state',
+  GOOGLE_OAUTH_FAILED: 'Google sign-in failed',
 };

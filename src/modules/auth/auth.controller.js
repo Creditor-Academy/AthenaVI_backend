@@ -13,6 +13,51 @@ const { signAccessToken } = require('../../shared/utils/jwt');
 const passwordResetService = require('./services/passwordReset.service');
 const otpTemplate = require('../../shared/templates/otp.template');
 const resetPassworTemplate = require('../../shared/templates/passwordReset.template');
+const googleOAuth = require('./googleOAuth.service');
+
+/**
+ * Create Redis session, JWT, refresh token row, set refresh cookie.
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ * @param {{ id: string, name: string|null, email: string }} user
+ * @returns {{ accessToken: string, user: { name, email } }}
+ */
+async function issueSessionAndTokens(req, res, user) {
+  const sessionId = await sessionService.createSession({
+    userId: user.id,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip,
+  });
+  const accessToken = signAccessToken({ sub: user.id, sessionId });
+
+  const refreshTokenId = crypto.randomUUID();
+  const refreshTokenSecret = crypto.randomBytes(40).toString('hex');
+  const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
+  const hashedRefreshToken = await bcrypt.hash(
+    refreshTokenSecret,
+    Number(process.env.SALT_ROUNDS)
+  );
+
+  await refreshTokenDao.create({
+    id: refreshTokenId,
+    token: hashedRefreshToken,
+    sessionId,
+    userId: user.id,
+  });
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return {
+    accessToken,
+    user: { name: user.name, email: user.email },
+  };
+}
 
 const createAndSendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
@@ -309,14 +354,9 @@ const refreshToken = asyncHandler(async (req, res) => {
     sessionId: savedToken.sessionId,
   });
 
-  return successResponse(
-    req,
-    res,
-    { accessToken },
-    201,
-    messages.TOKEN_GENERATED
-  );
+  return successResponse(req, res, { accessToken }, 201, messages.TOKEN_GENERATED);
 });
+
 
 const logout = asyncHandler(async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
@@ -333,7 +373,7 @@ const logout = asyncHandler(async (req, res) => {
     throw new Error(messages.NOT_FOUND, 404);
   }
 
-  await sessionService.deleteSession({ sessionId: storedToken.sessionId });
+  await sessionService.deleteSession({ sessionId: storedToken.sessionId });  
   await refreshTokenDao.revoke(refreshTokenId);
 
   res.clearCookie('refreshToken', {
@@ -410,6 +450,100 @@ const resetPassword = asyncHandler(async(req,res)=>{
   return successResponse(req,res,{},200,messages.PASSWORD_RESET)
 })
 
+// ----- Google OAuth -----
+
+const googleRedirect = asyncHandler(async (req, res) => {
+  const state = await googleOAuth.createState();
+  const url = googleOAuth.getAuthUrl(state);
+  res.redirect(302, url);
+});
+
+const googleCallback = asyncHandler(async (req, res) => {
+  const { code, state } = req.query;
+  const errorRedirect = process.env.FRONTEND_URL || '/';
+
+  if (!code) {
+    return res.redirect(302, `${errorRedirect}?error=missing_code`);
+  }
+
+  const stateValid = await googleOAuth.consumeState(state);
+  if (!stateValid) {
+    return res.redirect(302, `${errorRedirect}?error=invalid_state`);
+  }
+
+  let tokens;
+  try {
+    tokens = await googleOAuth.exchangeCodeForTokens(code);
+  } catch (err) {
+    return res.redirect(302, `${errorRedirect}?error=token_exchange_failed`);
+  }
+
+  const { id_token: idToken, access_token, refresh_token, expires_in } = tokens;
+  if (!idToken) {
+    return res.redirect(302, `${errorRedirect}?error=no_id_token`);
+  }
+
+  let payload;
+  try {
+    payload = await googleOAuth.verifyIdToken(idToken);
+  } catch (err) {
+    return res.redirect(302, `${errorRedirect}?error=invalid_id_token`);
+  }
+
+  const { sub: providerAccountId, email, email_verified, name, picture } = payload;
+  if (!email) {
+    return res.redirect(302, `${errorRedirect}?error=no_email`);
+  }
+
+  let user;
+  const existingAccount = await authDao.findAccountByProvider('google', providerAccountId);
+
+  if (existingAccount) {
+    user = existingAccount.user;
+  } else {
+    const existingUser = await authDao.findUserByEmail(email);
+    if (existingUser) {
+      user = existingUser;
+    } else {
+      user = await authDao.createUser({
+        name: name || null,
+        email,
+        password: null,
+        image: picture || null,
+        emailVerified: email_verified ? new Date() : null,
+      });
+    }
+    await authDao.upsertGoogleAccount({
+      userId: user.id,
+      providerAccountId,
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      expiresAt: expires_in ? Math.floor(Date.now() / 1000) + expires_in : null,
+      idToken,
+    });
+  }
+
+  const { accessToken, user: userInfo } = await issueSessionAndTokens(req, res, user);
+  const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const successPath = process.env.OAUTH_SUCCESS_PATH || '/auth/callback';
+  const redirectUrl = frontendUrl
+    ? `${frontendUrl}${successPath}#access_token=${encodeURIComponent(accessToken)}`
+    : null;
+
+  if (redirectUrl) {
+    res.redirect(302, redirectUrl);
+  } else {
+    return successResponse(
+      req,
+      res,
+      { accessToken, user: userInfo },
+      200,
+      messages.LOGIN_SUCCESS
+    );
+  }
+});
+
+
 module.exports = {
   createAndSendOtp,
   verifyAndRegister,
@@ -420,4 +554,6 @@ module.exports = {
   logoutAllDevices,
   forgetPassword,
   resetPassword,
+  googleRedirect,
+  googleCallback,
 };

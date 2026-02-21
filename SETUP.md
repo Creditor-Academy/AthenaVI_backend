@@ -44,6 +44,14 @@ The project uses separate environment files for development and production. `cro
     DATABASE_URL="postgresql://user:password@localhost:5432/vi_backend_prod"
     ```
 
+4.  **For Google OAuth**, also set (see [Google OAuth Setup](#google-oauth-setup) below):
+    ```env
+    GOOGLE_CLIENT_ID=...
+    GOOGLE_CLIENT_SECRET=...
+    BACKEND_URL=http://localhost:3000
+    FRONTEND_URL=http://localhost:5173
+    ```
+
 ## Database Setup
 
 1.  **Initialize the database (Development):**
@@ -89,6 +97,28 @@ src/
 ├── utils/              # Global utilities (logger, etc.)
 └── server.js           # Entry point
 ```
+
+## Google OAuth Setup
+
+1. **Google Cloud Console**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+   - Create a **OAuth 2.0 Client ID** (Application type: **Web application**).
+   - Under **Authorized redirect URIs** add exactly:
+     - Development: `http://localhost:3000/api/auth/google/callback`
+     - Production: `https://<your-api-domain>/api/auth/google/callback`
+   - Copy the **Client ID** and **Client secret**.
+
+2. **Environment variables**
+   Add to `.env.development` / `.env.production`:
+   - `GOOGLE_CLIENT_ID` – from the OAuth client.
+   - `GOOGLE_CLIENT_SECRET` – from the OAuth client.
+   - `BACKEND_URL` – base URL of this API (e.g. `http://localhost:3000` or `https://api.yourdomain.com`). Used to build the redirect URI for Google.
+   - `FRONTEND_URL` – where to send the user after successful login (e.g. `http://localhost:5173` or `https://app.yourdomain.com`).
+   - Optional: `OAUTH_SUCCESS_PATH` – path on frontend for the callback (default `/auth/callback`). User is redirected to `FRONTEND_URL + OAUTH_SUCCESS_PATH + #access_token=...`.
+
+3. **Flow**
+   - User visits `GET /api/auth/google` → redirected to Google → after consent, Google redirects to `GET /api/auth/google/callback?code=...&state=...`.
+   - Backend exchanges `code` for tokens, verifies the id_token, creates or links the user, issues your app’s access token and refresh cookie, then redirects to the frontend with `access_token` in the URL hash.
 
 ## Commands Cheatsheet
 
