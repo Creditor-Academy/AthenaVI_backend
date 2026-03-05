@@ -6,6 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
+enum WorkspaceType {
+  PRIVATE
+  TEAM
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
 model User {
   id             String               @id @default(uuid())
   email          String               @unique
@@ -22,8 +39,61 @@ model User {
   sessions             Session[]
   refreshTokens        RefreshToken[]
   passwordResetTokens  PasswordResetToken[]
+  ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
+  workspaceMemberships WorkspaceMember[]
 
   @@map("users")
+}
+
+model Workspace {
+  id        String         @id @default(uuid())
+  name      String
+  type      WorkspaceType
+  ownerId   String         @map("owner_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt    @map("updated_at")
+
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     WorkspaceMember[]
+  invitations Invitation[]
+
+  @@index([ownerId])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String        @map("workspace_id")
+  userId      String        @map("user_id")
+  role        WorkspaceRole
+  joinedAt    DateTime      @default(now()) @map("joined_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+model Invitation {
+  id          String           @id @default(uuid())
+  workspaceId String           @map("workspace_id")
+  email       String
+  role        WorkspaceRole
+  token       String           @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime         @map("expires_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("invitations")
 }
 
 model Account {

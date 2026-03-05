@@ -30,9 +30,11 @@ app.get('/', (req, res) => {
 
 const userRoutes = require('./modules/user/user.routes');
 const authRoutes = require('./modules/auth/auth.routes');
+const workspaceRoutes = require('./modules/workspace/workspace.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/workspaces', workspaceRoutes);
 
 app.use(errorHandler);
 

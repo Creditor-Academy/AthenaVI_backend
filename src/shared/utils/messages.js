@@ -41,4 +41,24 @@ module.exports = {
   // OAuth
   OAUTH_STATE_INVALID: 'Invalid or expired OAuth state',
   GOOGLE_OAUTH_FAILED: 'Google sign-in failed',
+
+  // Workspace
+  WORKSPACE_NOT_FOUND: 'Workspace not found',
+  WORKSPACE_FORBIDDEN: 'You do not have access to this workspace',
+  WORKSPACE_NAME_REQUIRED: 'Workspace name is required',
+  WORKSPACE_CANNOT_DELETE_PRIVATE: 'Private workspace cannot be deleted',
+  WORKSPACE_CREATED: 'Workspace created successfully',
+  WORKSPACE_DELETED: 'Workspace deleted successfully',
+  WORKSPACE_LAST_OWNER: 'Cannot remove the last owner. Transfer ownership first.',
+  WORKSPACE_OWNER_CANNOT_REMOVE_SELF: 'Transfer ownership before leaving the workspace',
+  WORKSPACE_MEMBER_NOT_FOUND: 'Member not found',
+  WORKSPACE_ALREADY_MEMBER: 'User is already a member of this workspace',
+  WORKSPACE_INVITATION_EXPIRED: 'Invitation has expired or is invalid',
+  WORKSPACE_INVITATION_EMAIL_MISMATCH: 'Invitation was sent to a different email address',
+  WORKSPACE_INVITATION_ACCEPTED: 'Invitation accepted successfully',
+  WORKSPACE_INVITE_SENT: 'Invitation sent successfully',
+  WORKSPACE_MEMBER_REMOVED: 'Member removed successfully',
+  WORKSPACE_ROLE_UPDATED: 'Role updated successfully',
+  WORKSPACE_ONLY_OWNER_CHANGE_ROLES: 'Only the owner can change member roles',
+  WORKSPACE_INVITE_ROLE_INVALID: 'Invitation role must be ADMIN or MEMBER',
 };
