@@ -24,36 +24,37 @@ enum InvitationStatus {
 }
 
 model User {
-  id             String               @id @default(uuid())
-  email          String               @unique
-  name           String?
-  password       String?
-  image          String?
-  emailVerified  DateTime?            @map("email_verified")
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  image         String?
+  emailVerified DateTime? @map("email_verified")
 
-  createdAt      DateTime             @default(now())  @map("created_at")
-  updatedAt      DateTime             @updatedAt       @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  accounts             Account[]
-  sessions             Session[]
-  refreshTokens        RefreshToken[]
-  passwordResetTokens  PasswordResetToken[]
-  creditTransactions CreditTransaction[]
- 
-  ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
+  accounts            Account[]
+  sessions            Session[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  creditTransactions  CreditTransaction[]
+
+  ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
 
   @@map("users")
 }
 
 model Workspace {
-  id        String         @id @default(uuid())
+  id        String        @id @default(uuid())
   name      String
   type      WorkspaceType
-  ownerId   String         @map("owner_id")
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt    @map("updated_at")
+  ownerId   String        @map("owner_id")
+  credits   Int           @default(0)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
 
   owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members     WorkspaceMember[]
@@ -99,22 +100,22 @@ model Invitation {
 }
 
 model Account {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
   type              String
   provider          String
-  providerAccountId String   @map("provider_account_id")
+  providerAccountId String @map("provider_account_id")
 
-  refreshToken      String?  @map("refresh_token")
-  accessToken       String?  @map("access_token")
-  expiresAt         Int?     @map("expires_at")
-  tokenType         String?  @map("token_type")
-  scope             String?
-  idToken           String?  @map("id_token")
-  sessionState      String?  @map("session_state")
+  refreshToken String? @map("refresh_token")
+  accessToken  String? @map("access_token")
+  expiresAt    Int?    @map("expires_at")
+  tokenType    String? @map("token_type")
+  scope        String?
+  idToken      String? @map("id_token")
+  sessionState String? @map("session_state")
 
-  createdAt         DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -130,7 +131,7 @@ model Session {
   userId       String   @map("user_id")
   expiresAt    DateTime @map("expires_at")
 
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -141,15 +142,15 @@ model Session {
 }
 
 model RefreshToken {
-  id          String   @id @default(uuid())
-  hashedToken String   @unique @map("hashed_token")
-  userId      String   @map("user_id")
-  sessionId   String   @map("session_id")
+  id          String @id @default(uuid())
+  hashedToken String @unique @map("hashed_token")
+  userId      String @map("user_id")
+  sessionId   String @map("session_id")
 
-  isRevoked   Boolean  @default(false) @map("is_revoked")
-  expiresAt   DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  expiresAt DateTime @map("expires_at")
 
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -161,11 +162,11 @@ model RefreshToken {
 }
 
 model PasswordResetToken {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  tokenHash  String   @unique @map("token_hash")
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -174,15 +175,22 @@ model PasswordResetToken {
   @@index([expiresAt])
   @@map("password_reset_tokens")
 }
-
-
 model CreditTransaction {
-  id        String   @id @default(uuid())
-  userId    String
-  amount    Int
-  type      String   // purchase | usage | refund | admin_adjustment
-  reference String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  workspaceId String
+  amount      Int
+  type        String   // purchase | usage | refund | admin_adjustment
+  reference   String?
+  createdAt   DateTime @default(now())
 
-  user      User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([userId, createdAt])
+
+  @@map("credit_transactions")
 }

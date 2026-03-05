@@ -61,4 +61,9 @@ module.exports = {
   WORKSPACE_ROLE_UPDATED: 'Role updated successfully',
   WORKSPACE_ONLY_OWNER_CHANGE_ROLES: 'Only the owner can change member roles',
   WORKSPACE_INVITE_ROLE_INVALID: 'Invitation role must be ADMIN or MEMBER',
+
+
+  // Credit
+  CREDITS_FETCHED: 'Credits fetched successfully',
+  CREDIT_HISTORY_FETCHED: 'Credit history fetched successfully',
 };

@@ -1,22 +1,26 @@
-const prisma = require("../../shared/config/prismaClient");
+const prisma = require('../../shared/config/prismaClient');
 
 // Raw aggregate query
-const getCreditSumByUserId = async (userId) => {
-  return prisma.creditTransaction.aggregate({
+const findWorkspaceMember = async (userId) => {
+  return prisma.workspaceMember.findFirst({
     where: { userId },
-    _sum: { amount: true },
+    include: {
+      workspace: true,
+    },
   });
 };
 
 // Raw history query
-const getCreditTransactionsByUserId = async (userId) => {
+const getCreditTransactionsByUserId = async (workspaceId) => {
   return prisma.creditTransaction.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
+    where: { workspaceId },
+    orderBy: {
+      createdAt: 'desc',
+    },
   });
 };
 
 module.exports = {
-  getCreditSumByUserId,
+  findWorkspaceMember,
   getCreditTransactionsByUserId,
 };

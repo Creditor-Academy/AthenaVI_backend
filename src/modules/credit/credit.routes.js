@@ -7,4 +7,4 @@ router.get("/", authMiddleware, creditController.getCredits);
 router.get("/history", authMiddleware, creditController.getCreditHistory);
 router.post('/generate')
 
-module.exports = router;
+module.exports = router; 
