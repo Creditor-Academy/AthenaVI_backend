@@ -14,6 +14,7 @@ const passwordResetService = require('./services/passwordReset.service');
 const otpTemplate = require('../../shared/templates/otp.template');
 const resetPassworTemplate = require('../../shared/templates/passwordReset.template');
 const googleOAuth = require('./googleOAuth.service');
+const workspaceService = require('../workspace/workspace.service');
 
 /**
  * Create Redis session, JWT, refresh token row, set refresh cookie.
@@ -110,6 +111,8 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
     email,
     password: hashedPassword,
   });
+
+  await workspaceService.createPrivateWorkspaceForUser(user.id);
 
   // 4. Create session (Redis)
   const sessionId = await sessionService.createSession({
@@ -512,6 +515,7 @@ const googleCallback = asyncHandler(async (req, res) => {
         image: picture || null,
         emailVerified: email_verified ? new Date() : null,
       });
+      await workspaceService.createPrivateWorkspaceForUser(user.id);
     }
     await authDao.upsertGoogleAccount({
       userId: user.id,
