@@ -25,7 +25,6 @@ const findSession = async ({ sessionId }) => {
 };
 
 const deleteSession = async ({ sessionId }) => {
-  console.log(sessionId);
 
   await redisClient.del(`session:${sessionId}`);
 };

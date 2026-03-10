@@ -2,35 +2,25 @@ const messages = require('../../shared/utils/messages');
 const creditDao = require('./credit.dao');
 
 // Business meaning of "available credits"
-const getAvailableCredits = async (userId) => {
-  const member = await creditDao.findWorkspaceMember(userId);
+const getAvailableCredits = async (workspaceId) => {
+  const workspace = await creditDao.getWorkspaceCredits(workspaceId);
 
-  if (!member) {
-    throw new Error(messages.WORKSPACE_NOT_FOUND);
+  if (!workspace) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
   }
-
-  return {
-    workspaceId: member.workspaceId,
-    credits: member.workspace.credits,
-  };
+  return workspace.credits;
 };
 
-const getCreditHistory = async (userId) => {
-  const member = await creditDao.findWorkspaceMember(userId);
+const getWorkspaceCreditHistory = async ({ workspaceId, page, limit }) => {
+  return creditDao.getWorkspaceCreditHistory(workspaceId, page, limit);
+};
 
-  if (!member) {
-    throw new Error(messages.WORKSPACE_NOT_FOUND);
-  }
-
-  const history = await creditDao.getCreditTransactions(member.workspaceId);
-
-  return {
-    workspaceId: member.workspaceId,
-    history,
-  };
+const getUserCreditHistory = async ({ workspaceId, userId, page, limit }) => {
+  return creditDao.getUserCreditHistory(workspaceId, userId, page, limit);
 };
 
 module.exports = {
   getAvailableCredits,
-  getCreditHistory,
+  getUserCreditHistory,
+  getWorkspaceCreditHistory,
 };

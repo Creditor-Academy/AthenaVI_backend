@@ -6,6 +6,7 @@ const workspaceService = require('./workspace.service');
 
 const createTeamWorkspace = asyncHandler(async (req, res) => {
   const { name } = req.body;
+  
   const userId = req.user.id;
   const workspace = await workspaceService.createTeamWorkspace(userId, name);
   return successResponse(

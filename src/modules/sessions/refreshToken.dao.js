@@ -39,7 +39,6 @@ const revokeAllByUserId = (userId) => {
 };
 
 const create = async ({ id, userId, sessionId, token }) => {
-  console.log(`token: ${token}, sessionID: ${sessionId}, userID: ${userId}`);
 
   return await prisma.refreshToken.create({
     data: {
@@ -47,6 +46,7 @@ const create = async ({ id, userId, sessionId, token }) => {
       hashedToken: token,
       sessionId,
       userId,
+      
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });

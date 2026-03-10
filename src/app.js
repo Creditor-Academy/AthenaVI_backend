@@ -31,10 +31,12 @@ app.get('/', (req, res) => {
 const userRoutes = require('./modules/user/user.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const workspaceRoutes = require('./modules/workspace/workspace.routes');
+const creditRoutes = require('./modules/credit/credit.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/credits', creditRoutes);
 
 app.use(errorHandler);
 

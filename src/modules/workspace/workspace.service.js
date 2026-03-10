@@ -45,7 +45,10 @@ async function getWorkspaceById(userId, workspaceId) {
   const workspace = await workspaceDao.findWorkspaceById(workspaceId);
   if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
 
-  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  const membership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    userId
+  );
   if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
 
   return workspace;
@@ -58,7 +61,10 @@ async function deleteWorkspace(userId, workspaceId) {
     throw new AppError(messages.WORKSPACE_CANNOT_DELETE_PRIVATE, 400);
   }
 
-  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  const membership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    userId
+  );
   if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
   if (membership.role !== 'OWNER') {
     throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
@@ -73,7 +79,10 @@ async function inviteMember(workspaceId, inviterId, email, role) {
     throw new AppError(messages.WORKSPACE_INVITE_ROLE_INVALID, 400);
   }
 
-  const inviterMembership = await workspaceDao.findWorkspaceMember(workspaceId, inviterId);
+  const inviterMembership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    inviterId
+  );
   if (!inviterMembership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
   if (!['OWNER', 'ADMIN'].includes(inviterMembership.role)) {
     throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
@@ -84,14 +93,19 @@ async function inviteMember(workspaceId, inviterId, email, role) {
 
   const existingUser = await workspaceDao.findUserByEmail(email);
   if (existingUser) {
-    const existingMember = await workspaceDao.findWorkspaceMember(workspaceId, existingUser.id);
+    const existingMember = await workspaceDao.findWorkspaceMember(
+      workspaceId,
+      existingUser.id
+    );
     if (existingMember) {
       throw new AppError(messages.WORKSPACE_ALREADY_MEMBER, 409);
     }
   }
 
   const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(
+    Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+  );
 
   await workspaceDao.createInvitation({
     workspaceId,
@@ -107,7 +121,8 @@ async function inviteMember(workspaceId, inviterId, email, role) {
 
 async function acceptInvitation(token, userId) {
   const invitation = await workspaceDao.findInvitationByToken(token);
-  if (!invitation) throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
+  if (!invitation)
+    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
   if (invitation.status !== 'PENDING') {
     throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
   }
@@ -121,7 +136,10 @@ async function acceptInvitation(token, userId) {
     throw new AppError(messages.WORKSPACE_INVITATION_EMAIL_MISMATCH, 400);
   }
 
-  const existingMember = await workspaceDao.findWorkspaceMember(invitation.workspaceId, userId);
+  const existingMember = await workspaceDao.findWorkspaceMember(
+    invitation.workspaceId,
+    userId
+  );
   if (existingMember) {
     await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
     return existingMember.workspace;
@@ -138,8 +156,12 @@ async function acceptInvitation(token, userId) {
 }
 
 async function removeMember(workspaceId, requesterId, memberId) {
-  const requesterMembership = await workspaceDao.findWorkspaceMember(workspaceId, requesterId);
-  if (!requesterMembership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  const requesterMembership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    requesterId
+  );
+  if (!requesterMembership)
+    throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
 
   const targetMember = await workspaceDao.findWorkspaceMemberById(memberId);
   if (!targetMember || targetMember.workspaceId !== workspaceId) {
@@ -168,8 +190,12 @@ async function removeMember(workspaceId, requesterId, memberId) {
 }
 
 async function changeMemberRole(workspaceId, requesterId, memberId, newRole) {
-  const requesterMembership = await workspaceDao.findWorkspaceMember(workspaceId, requesterId);
-  if (!requesterMembership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  const requesterMembership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    requesterId
+  );
+  if (!requesterMembership)
+    throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
   if (requesterMembership.role !== 'OWNER') {
     throw new AppError(messages.WORKSPACE_ONLY_OWNER_CHANGE_ROLES, 403);
   }
@@ -204,7 +230,10 @@ async function changeMemberRole(workspaceId, requesterId, memberId, newRole) {
 }
 
 async function getWorkspaceMembers(workspaceId, userId) {
-  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  const membership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    userId
+  );
   if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
 
   return await workspaceDao.findMembersByWorkspaceId(workspaceId);

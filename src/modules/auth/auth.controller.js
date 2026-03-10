@@ -13,7 +13,7 @@ const { signAccessToken } = require('../../shared/utils/jwt');
 const passwordResetService = require('./services/passwordReset.service');
 const otpTemplate = require('../../shared/templates/otp.template');
 const resetPassworTemplate = require('../../shared/templates/passwordReset.template');
-const googleOAuth = require('./googleOAuth.service');
+const googleOAuth = require('./services/googleOAuth.service');
 const workspaceService = require('../workspace/workspace.service');
 
 /**
@@ -62,7 +62,6 @@ async function issueSessionAndTokens(req, res, user) {
 
 const createAndSendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  console.log(email);
 
   if (!email) {
     throw new AppError(messages.EMAIL_REQUIRED, 400);
@@ -72,7 +71,6 @@ const createAndSendOtp = asyncHandler(async (req, res) => {
   await otpService.checkResendLimit(email);
 
   const otp = crypto.randomInt(100000, 999999).toString();
-  console.log(otp);
 
   await otpService.storeOtp(email, otp);
   await sendEmail({
@@ -120,29 +118,24 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
     userAgent: req.headers['user-agent'],
     ip: req.ip,
   });
-  console.log(`session: ${sessionId}`);
 
   // 5. Issue JWT
   const accessToken = signAccessToken({
     sub: user.id,
     sessionId,
   });
-  console.log(`token: ${accessToken}`);
 
   // 6. Generate refresh token (raw)
   const refreshTokenId = crypto.randomUUID();
   const refreshTokenSecret = await crypto.randomBytes(40).toString('hex');
 
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
-  console.log(`refresh token: ${refreshToken}`);
 
   const hashedRefreshToken = await bcrypt.hash(
     refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
   );
-  console.log(`hashed refresh token: ${hashedRefreshToken}`);
 
-  console.log(user.id);
 
   // 7. Store refresh token (HASHED) in DB
   await refreshTokenDao.create({
@@ -182,7 +175,6 @@ const resendOtp = asyncHandler(async (req, res) => {
   await otpService.checkResendLimit(email);
 
   const otp = crypto.randomInt(100000, 999999).toString();
-  console.log(otp);
 
   await otpService.storeOtp(email, otp);
   await sendEmail({
@@ -196,7 +188,6 @@ const resendOtp = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   if (!email || !password) {
     throw new AppError(messages.ALL_FIELDS_REQUIRED, 400);
@@ -207,7 +198,6 @@ const login = asyncHandler(async (req, res) => {
   if (!user) {
     throw new AppError(messages.INVALID_CREDENTIALS, 401);
   }
-  console.log(user);
 
   // 2. Verify password
   const isMatch = await bcrypt.compare(password, user.password);
@@ -221,7 +211,6 @@ const login = asyncHandler(async (req, res) => {
     userAgent: req.headers['user-agent'],
     ip: req.ip,
   });
-  console.log(sessionId);
 
   // 4. Issue JWT
   const accessToken = signAccessToken({
@@ -234,15 +223,12 @@ const login = asyncHandler(async (req, res) => {
   const refreshTokenSecret = await crypto.randomBytes(40).toString('hex');
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
 
-  console.log(`refresh token: ${refreshToken}`);
 
   const hashedRefreshToken = await bcrypt.hash(
     refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
   );
-  console.log(`hashed refresh token: ${hashedRefreshToken}`);
 
-  console.log(user.id);
 
   // 6. Store refresh token (HASHED) in DB
   await refreshTokenDao.create({
@@ -286,12 +272,10 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 
   const [tokenId, secret] = parts;
-  console.log('token', tokenId);
-  console.log('secret', secret);
+  
 
   // 2. Fetch token row (O(1))
   const savedToken = await refreshTokenDao.findById(tokenId);
-  console.log(savedToken);
 
   if (!savedToken) {
     throw new AppError(messages.UNAUTHORIZED, 401);
@@ -315,7 +299,6 @@ const refreshToken = asyncHandler(async (req, res) => {
   const sessionExists = await sessionService.findSession({
     sessionId: savedToken.sessionId,
   });
-  console.log(sessionExists);
 
   if (!sessionExists) {
     throw new AppError(messages.SESSION_EXPIRED, 401);
@@ -367,10 +350,8 @@ const logout = asyncHandler(async (req, res) => {
     throw new AppError(messages.REFRESH_TOKEN_MISSING, 400);
   }
   const [refreshTokenId] = refreshToken.split('.');
-  console.log('refreshtoken id ', refreshTokenId);
 
   const storedToken = await refreshTokenDao.findById(refreshTokenId);
-  console.log(storedToken);
 
   if (!storedToken) {
     throw new Error(messages.NOT_FOUND, 404);
@@ -391,7 +372,6 @@ const logout = asyncHandler(async (req, res) => {
 
 const logoutAllDevices = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-
   // Fetch sessions
   const tokens = await refreshTokenDao.findByUserId(userId);
 

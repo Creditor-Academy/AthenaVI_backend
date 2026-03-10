@@ -3,6 +3,7 @@ const prisma = require('../../shared/config/prismaClient');
 /* =========================
    WORKSPACE
 ========================= */
+const transaction = (fn) => prisma.$transaction(fn);
 
 const findPrivateWorkspaceByOwnerId = async (ownerId) => {
   return await prisma.workspace.findFirst({
@@ -34,7 +35,7 @@ const createWorkspaceWithMember = async (tx, workspaceData, memberData) => {
   return workspace;
 };
 
-const transaction = (fn) => prisma.$transaction(fn);
+
 
 const findWorkspaceById = async (workspaceId) => {
   return await prisma.workspace.findUnique({
