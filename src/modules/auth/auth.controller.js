@@ -63,9 +63,7 @@ async function issueSessionAndTokens(req, res, user) {
 const createAndSendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  if (!email) {
-    throw new AppError(messages.EMAIL_REQUIRED, 400);
-  }
+ 
 
   await otpService.acquireOtpLock(email);
   await otpService.checkResendLimit(email);
@@ -84,10 +82,6 @@ const createAndSendOtp = asyncHandler(async (req, res) => {
 
 const verifyAndRegister = asyncHandler(async (req, res) => {
   const { name, email, password, otp } = req.body;
-
-  if (!name || !email || !password || !otp) {
-    throw new AppError(messages.ALL_FIELDS_REQUIRED);
-  }
 
   // 1. Verify OTP
   await otpService.verifyOtp({ email, otp });
@@ -136,7 +130,6 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
     Number(process.env.SALT_ROUNDS)
   );
 
-
   // 7. Store refresh token (HASHED) in DB
   await refreshTokenDao.create({
     id: refreshTokenId,
@@ -168,9 +161,7 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
 
 const resendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  if (!email) {
-    throw new AppError(messages.EMAIL_REQUIRED, 400);
-  }
+  
   await otpService.acquireOtpLock(email);
   await otpService.checkResendLimit(email);
 
@@ -189,9 +180,7 @@ const resendOtp = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    throw new AppError(messages.ALL_FIELDS_REQUIRED, 400);
-  }
+ 
 
   // 1. Find user
   const user = await authDao.findUserByEmail(email);
@@ -223,12 +212,10 @@ const login = asyncHandler(async (req, res) => {
   const refreshTokenSecret = await crypto.randomBytes(40).toString('hex');
   const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
 
-
   const hashedRefreshToken = await bcrypt.hash(
     refreshTokenSecret,
     Number(process.env.SALT_ROUNDS)
   );
-
 
   // 6. Store refresh token (HASHED) in DB
   await refreshTokenDao.create({
@@ -272,7 +259,6 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
 
   const [tokenId, secret] = parts;
-  
 
   // 2. Fetch token row (O(1))
   const savedToken = await refreshTokenDao.findById(tokenId);
@@ -340,9 +326,14 @@ const refreshToken = asyncHandler(async (req, res) => {
     sessionId: savedToken.sessionId,
   });
 
-  return successResponse(req, res, { accessToken }, 201, messages.TOKEN_GENERATED);
+  return successResponse(
+    req,
+    res,
+    { accessToken },
+    201,
+    messages.TOKEN_GENERATED
+  );
 });
-
 
 const logout = asyncHandler(async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
@@ -357,7 +348,7 @@ const logout = asyncHandler(async (req, res) => {
     throw new Error(messages.NOT_FOUND, 404);
   }
 
-  await sessionService.deleteSession({ sessionId: storedToken.sessionId });  
+  await sessionService.deleteSession({ sessionId: storedToken.sessionId });
   await refreshTokenDao.revoke(refreshTokenId);
 
   res.clearCookie('refreshToken', {
@@ -399,9 +390,7 @@ const logoutAllDevices = asyncHandler(async (req, res) => {
 const forgetPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  if (!email) {
-    throw new AppError(messages.EMAIL_REQUIRED, 400);
-  }
+ 
   const user = await authDao.findUserByEmail(email);
 
   // Always respond same (prevent enumeration)
@@ -422,16 +411,16 @@ const forgetPassword = asyncHandler(async (req, res) => {
   return successResponse(req, res, {}, 200, messages.PASSWORD_LINK_SEND);
 });
 
-const resetPassword = asyncHandler(async(req,res)=>{
+const resetPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
 
   await passwordResetService.resetPassword({
     token,
-    newPassword
+    newPassword,
   });
 
-  return successResponse(req,res,{},200,messages.PASSWORD_RESET)
-})
+  return successResponse(req, res, {}, 200, messages.PASSWORD_RESET);
+});
 
 // ----- Google OAuth -----
 
@@ -473,13 +462,22 @@ const googleCallback = asyncHandler(async (req, res) => {
     return res.redirect(302, `${errorRedirect}?error=invalid_id_token`);
   }
 
-  const { sub: providerAccountId, email, email_verified, name, picture } = payload;
+  const {
+    sub: providerAccountId,
+    email,
+    email_verified,
+    name,
+    picture,
+  } = payload;
   if (!email) {
     return res.redirect(302, `${errorRedirect}?error=no_email`);
   }
 
   let user;
-  const existingAccount = await authDao.findAccountByProvider('google', providerAccountId);
+  const existingAccount = await authDao.findAccountByProvider(
+    'google',
+    providerAccountId
+  );
 
   if (existingAccount) {
     user = existingAccount.user;
@@ -507,7 +505,11 @@ const googleCallback = asyncHandler(async (req, res) => {
     });
   }
 
-  const { accessToken, user: userInfo } = await issueSessionAndTokens(req, res, user);
+  const { accessToken, user: userInfo } = await issueSessionAndTokens(
+    req,
+    res,
+    user
+  );
   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
   const successPath = process.env.OAUTH_SUCCESS_PATH || '/auth/callback';
   const redirectUrl = frontendUrl
@@ -526,7 +528,6 @@ const googleCallback = asyncHandler(async (req, res) => {
     );
   }
 });
-
 
 module.exports = {
   createAndSendOtp,

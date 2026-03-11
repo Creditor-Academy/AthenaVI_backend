@@ -61,9 +61,7 @@ const inviteMember = asyncHandler(async (req, res) => {
   const workspaceId = req.params.id;
   const inviterId = req.user.id;
   const { email, role } = req.body;
-  if (!email || !role) {
-    throw new AppError(messages.ALL_FIELDS_REQUIRED, 400);
-  }
+
   const result = await workspaceService.inviteMember(
     workspaceId,
     inviterId,
@@ -82,9 +80,7 @@ const inviteMember = asyncHandler(async (req, res) => {
 const acceptInvitation = asyncHandler(async (req, res) => {
   const { token } = req.body;
   const userId = req.user.id;
-  if (!token) {
-    throw new AppError(messages.INVALID_REQUEST, 400);
-  }
+ 
   const workspace = await workspaceService.acceptInvitation(token, userId);
   return successResponse(
     req,
@@ -114,9 +110,7 @@ const changeMemberRole = asyncHandler(async (req, res) => {
   const memberId = req.params.memberId;
   const requesterId = req.user.id;
   const { role: newRole } = req.body;
-  if (!newRole) {
-    throw new AppError(messages.INVALID_REQUEST, 400);
-  }
+  
   const member = await workspaceService.changeMemberRole(
     workspaceId,
     requesterId,

@@ -13,19 +13,46 @@ const {
 } = require('./auth.controller');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const { googleRedirect, googleCallback } = require('./auth.controller');
+const authValidation = require('../validations/auth.validations');
+const validate = require('../../middlewares/validate.middleware');
 
-router.post('/otp/generate', createAndSendOtp);
-router.post('/otp/resend', resendOtp);
-router.post('/register', verifyAndRegister);
-router.post('/login', login);
+router.post(
+  '/otp/generate',
+  validate(authValidation.onlyEmailValidation),
+  createAndSendOtp
+);
+router.post(
+  '/otp/resend',
+  validate(authValidation.onlyEmailValidation),
+  resendOtp
+);
+router.post(
+  '/register',
+  validate(authValidation.verifyAndRegisterSchema),
+  verifyAndRegister
+);
+router.post('/login', validate(authValidation.loginSchema), login);
 router.post('/refresh', refreshToken);
+
 router.post('/logout', logout);
 router.post('/logout-all', authMiddleware, logoutAllDevices);
-router.post('/forget-password', forgetPassword);
-router.post('/reset-password', resetPassword);
+router.post(
+  '/forget-password',
+  validate(authValidation.onlyEmailValidation),
+  forgetPassword
+);
+router.post(
+  '/reset-password',
+  validate(authValidation.resetPasswordSchema),
+  resetPassword
+);
 
 // Google OAuth (GET so browser can be redirected)
 router.get('/google', googleRedirect);
-router.get('/google/callback', googleCallback);
+router.get(
+  '/google/callback',
+  validate(authValidation.googleCallbackSchema),
+  googleCallback
+);
 
 module.exports = router;
