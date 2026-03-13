@@ -20,6 +20,8 @@ module.exports = {
   USER_CREATED: 'User created successfully',
   USER_EMAIL_EXISTS: 'Email already registered',
   USERS_FETCHED_SUCCESSFULLY: 'Users fetched successfully',
+  USER_PROFILE_FETCHED_SUCCESSFULLY: 'User profile fetched successfully',
+  NO_VALID_FIELDS_PROVIDED: 'No valid fields provided for update',
 
   // Database
   DUPLICATE_ENTRY: 'Record already exists',

@@ -10,7 +10,7 @@ const validate = (schema) => (req, res, next) => {
     {
       abortEarly: false, // return all errors
       stripUnknown: true, // remove extra fields
-      convert: false, // disable type coercion
+      convert: true, // disable type coercion
     }
   );
 

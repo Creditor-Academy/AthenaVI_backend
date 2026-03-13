@@ -24,15 +24,16 @@ enum InvitationStatus {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
+  id            String   @id @default(uuid())
+  email         String   @unique
   name          String?
   password      String?
-  image         String?
-  emailVerified DateTime? @map("email_verified")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  profileImage  String?  @map("profile_image")
+  phoneNumber   String?  @map("phone_number")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
   accounts            Account[]
@@ -175,12 +176,13 @@ model PasswordResetToken {
   @@index([expiresAt])
   @@map("password_reset_tokens")
 }
+
 model CreditTransaction {
   id          String   @id @default(uuid())
   userId      String
   workspaceId String
   amount      Int
-  type        String   // purchase | usage | refund | admin_adjustment
+  type        String // purchase | usage | refund | admin_adjustment
   reference   String?
   createdAt   DateTime @default(now())
 
@@ -191,6 +193,5 @@ model CreditTransaction {
   @@index([createdAt])
   @@index([workspaceId, createdAt])
   @@index([userId, createdAt])
-
   @@map("credit_transactions")
 }
