@@ -30,8 +30,23 @@ const updateUserById = async (userId, updateData) => {
   });
 };
 
+const updateUserProfileImageById = async (userId, profileImageUrl) => {
+  return prisma.user.update({
+    where: {id: userId},
+    data: {
+      profileImage: profileImageUrl,
+    },
+    select: {
+      id: true,
+      profileImage: true,
+    },
+  });
+}
+
+
 module.exports = {
   getAllUsers,
   getUserById,
   updateUserById,
+  updateUserProfileImageById
 };

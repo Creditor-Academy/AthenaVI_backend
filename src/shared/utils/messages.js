@@ -5,6 +5,8 @@ module.exports = {
   UNAUTHORIZED: 'Unauthorized',
   SESSION_EXPIRED: 'Session expired',
   NOT_FOUND: 'Not found',
+  INVALID_IMAGE_TYPE: 'Only JPG, PNG and WEBP images are allowed',
+  PROFILE_IMAGE_REQUIRED: 'Profile image is required',
 
   // Auth
   INVALID_CREDENTIALS: 'Invalid email or password',
@@ -22,6 +24,9 @@ module.exports = {
   USERS_FETCHED_SUCCESSFULLY: 'Users fetched successfully',
   USER_PROFILE_FETCHED_SUCCESSFULLY: 'User profile fetched successfully',
   NO_VALID_FIELDS_PROVIDED: 'No valid fields provided for update',
+  PROFILE_IMAGE_UPLOADED_SUCCESSFULLY: 'Profile image uploaded successfully',
+  PROFILE_IMAGE_NOT_FOUND: 'Profile image not found',
+  PROFILE_IMAGE_DELETED_SUCCESSFULLY: 'Profile image deleted successfully',
 
   // Database
   DUPLICATE_ENTRY: 'Record already exists',

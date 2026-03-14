@@ -60,8 +60,44 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   );
 });
 
+const uploadProfileImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new AppError(messages.PROFILE_IMAGE_REQUIRED, 400);
+  }
+
+  const userId = req.user.id;
+
+  const result = await userService.uploadProfileImageService(userId, req.file);
+  return successResponse(
+    req,
+    res,
+    {
+      profile: result,
+    },
+    200,
+    messages.PROFILE_IMAGE_UPLOADED_SUCCESSFULLY
+  );
+});
+
+const deleteProfileImage = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+
+  const deleteUserProfile = await userService.deleteProfileImageService(userId);
+  return successResponse(
+    req,
+    res,
+    {
+      profile: deleteUserProfile,
+    },
+    200,
+    messages.PROFILE_IMAGE_DELETED_SUCCESSFULLY
+  );
+});
+
 module.exports = {
   getAllUsers,
   getUserProfile,
   updateUserProfile,
+  uploadProfileImage,
+  deleteProfileImage,
 };
