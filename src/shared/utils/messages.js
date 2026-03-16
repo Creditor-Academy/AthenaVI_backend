@@ -69,6 +69,13 @@ module.exports = {
   WORKSPACE_ONLY_OWNER_CHANGE_ROLES: 'Only the owner can change member roles',
   WORKSPACE_INVITE_ROLE_INVALID: 'Invitation role must be ADMIN or MEMBER',
   WORKSPACE_NOT_FOUND: 'Workspace not found',
+  WORKSPACE_NAME_TOO_LONG: 'Workspace name is too long',
+  WORKSPACE_INVITE_SENT: 'Workspace invitation sent successfully',
+  WORKSPACE_INVITE_ALREADY_SENT: 'An invitation has already been sent to this email',
+  WORKSPACE_INVITE_NOT_FOUND: 'Invitation not found',
+  WORKSPACE_INVITE_NOT_PENDING: 'Invitation is not pending',
+  WORKSPACE_INVITATIONS_FETCHED: 'Workspace invitations fetched successfully',
+  WORKSPACE_INVITE_CANCELLED: 'Workspace invitation cancelled successfully',
 
 
   // Credit

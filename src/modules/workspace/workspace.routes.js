@@ -14,6 +14,8 @@ const {
   acceptInvitation,
   removeMember,
   changeMemberRole,
+  cancelInvitation,
+  getWorkspaceInvitations,
 } = require('./workspace.controller');
 const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
@@ -47,6 +49,14 @@ router.delete(
 );
 
 //invitation routes
+router.get(
+  '/:id/invitations',
+  authMiddleware,
+  validate(workspaceValidations.workspaceByIdSchema),
+  requireWorkspaceRole(ownerOrAdmin),
+  getWorkspaceInvitations
+);
+
 router.post(
   '/:id/invite',
   authMiddleware,
@@ -54,6 +64,15 @@ router.post(
   requireWorkspaceRole(ownerOrAdmin),
   inviteMember
 );
+
+router.delete(
+  '/:id/invitations/:invitationId',
+  authMiddleware,
+  validate(workspaceValidations.cancelInvitationSchema),
+  requireWorkspaceRole(ownerOrAdmin),
+  cancelInvitation
+);
+
 router.post(
   '/invitations/accept',
   authMiddleware,

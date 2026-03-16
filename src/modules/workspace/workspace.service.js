@@ -2,6 +2,8 @@ const workspaceDao = require('./workspace.dao');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const crypto = require('crypto');
+const { sendEmail } = require('../../shared/notification/email.service');
+const invitationTemplate = require('../../shared/templates/invitation.template');
 
 const INVITATION_EXPIRY_DAYS = 7;
 const MAX_WORKSPACE_NAME_LENGTH = 255;
@@ -25,7 +27,7 @@ async function createTeamWorkspace(userId, name) {
   }
   const trimmed = name.trim();
   if (trimmed.length > MAX_WORKSPACE_NAME_LENGTH) {
-    throw new AppError('Workspace name is too long', 400);
+    throw new AppError(messages.WORKSPACE_NAME_TOO_LONG, 400);
   }
 
   return await workspaceDao.transaction(async (tx) => {
@@ -74,49 +76,119 @@ async function deleteWorkspace(userId, workspaceId) {
   return workspace;
 }
 
+// INVITATION & MEMBER MANAGEMENT
+
 async function inviteMember(workspaceId, inviterId, email, role) {
   if (!['ADMIN', 'MEMBER'].includes(role)) {
     throw new AppError(messages.WORKSPACE_INVITE_ROLE_INVALID, 400);
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   const inviterMembership = await workspaceDao.findWorkspaceMember(
     workspaceId,
     inviterId
   );
-  if (!inviterMembership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
-  if (!['OWNER', 'ADMIN'].includes(inviterMembership.role)) {
+
+  if (!inviterMembership || !['OWNER', 'ADMIN'].includes(inviterMembership.role)) {
     throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
   }
 
-  const workspace = await workspaceDao.findWorkspaceById(workspaceId);
-  if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  const [workspace, existingUser] = await Promise.all([
+    workspaceDao.findWorkspaceById(workspaceId),
+    workspaceDao.findUserByEmail(normalizedEmail)
+  ]);
 
-  const existingUser = await workspaceDao.findUserByEmail(email);
+  if (!workspace) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+
   if (existingUser) {
     const existingMember = await workspaceDao.findWorkspaceMember(
       workspaceId,
       existingUser.id
     );
+
     if (existingMember) {
       throw new AppError(messages.WORKSPACE_ALREADY_MEMBER, 409);
     }
   }
 
+  const existingInvitation = await workspaceDao.findPendingInvitation(
+    workspaceId,
+    normalizedEmail
+  );
+
+  if (existingInvitation) {
+    throw new AppError(messages.WORKSPACE_INVITE_ALREADY_SENT, 409);
+  }
+
   const token = crypto.randomUUID();
+
   const expiresAt = new Date(
     Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
   );
 
   await workspaceDao.createInvitation({
     workspaceId,
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     role,
     token,
     status: 'PENDING',
     expiresAt,
   });
 
-  return { token, expiresAt };
+  const invitationLink = `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
+
+  
+  await sendEmail({
+    to: normalizedEmail,
+    subject: 'Invitation to join workspace',
+    html: invitationTemplate(invitationLink, workspace.name),
+  });
+
+  return {
+    message: messages.WORKSPACE_INVITE_SENT,
+  };
+}
+
+async function getWorkspaceInvitations(workspaceId, userId) {
+  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+
+  if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  }
+
+  return workspaceDao.findWorkspaceInvitations(workspaceId);
+}
+
+async function cancelInvitation(workspaceId, inviterId, invitationId) {
+  const inviterMembership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    inviterId
+  );
+
+
+  if (!inviterMembership || !['OWNER', 'ADMIN'].includes(inviterMembership.role)) {
+    throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  }
+
+  const invitation = await workspaceDao.findInvitationById(invitationId);
+
+  if (!invitation || invitation.workspaceId !== workspaceId) {
+    throw new AppError(messages.WORKSPACE_INVITE_NOT_FOUND, 404);
+  }
+
+  if (invitation.status !== 'PENDING') {
+    throw new AppError(messages.WORKSPACE_INVITE_NOT_PENDING, 400);
+  }
+
+  const updatedInvitation = await workspaceDao.updateInvitationStatus(invitationId, 'EXPIRED');
+
+  return {
+    updatedInvitation: updatedInvitation.email,
+    message: messages.WORKSPACE_INVITE_CANCELLED,
+  };
 }
 
 async function acceptInvitation(token, userId) {
@@ -247,6 +319,8 @@ module.exports = {
   deleteWorkspace,
   inviteMember,
   acceptInvitation,
+  cancelInvitation,
+  getWorkspaceInvitations,
   removeMember,
   changeMemberRole,
   getWorkspaceMembers,

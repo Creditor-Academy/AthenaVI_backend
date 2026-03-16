@@ -22,6 +22,13 @@ const inviteMemberSchema = Joi.object({
   }),
 });
 
+const cancelInvitationSchema = Joi.object({
+  params: Joi.object({
+    id: Joi.string().uuid().required(),
+    invitationId: Joi.string().uuid().required(),
+  }),
+});
+
 const acceptInvitationSchema = Joi.object({
   body: Joi.object({
     token: Joi.string().required(),
@@ -46,6 +53,7 @@ module.exports = {
   inviteMemberSchema,
   acceptInvitationSchema,
   removeMemberSchema,
-  changeMemberRoleSchema
+  changeMemberRoleSchema,
+  cancelInvitationSchema,
 };
 

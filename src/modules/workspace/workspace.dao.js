@@ -151,6 +151,36 @@ const findInvitationByToken = async (token) => {
   });
 };
 
+const findInvitationById = async (invitationId) => {
+  return await prisma.invitation.findUnique({
+    where: { id: invitationId },
+  });
+}
+
+const findWorkspaceInvitations = async (workspaceId) => {
+  return await prisma.invitation.findMany({
+    where: { workspaceId, status: 'PENDING' },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      expiresAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+const findPendingInvitation = async (workspaceId, email) => {
+  return await prisma.invitation.findFirst({
+    where: {
+      workspaceId,
+      email,
+      status: 'PENDING',
+    },
+  });
+}
+
 const updateInvitationStatus = async (invitationId, status) => {
   return await prisma.invitation.update({
     where: { id: invitationId },
@@ -177,6 +207,7 @@ const findUserById = async (userId) => {
 };
 
 module.exports = {
+  findInvitationById,
   findPrivateWorkspaceByOwnerId,
   createWorkspace,
   createWorkspaceWithMember,
@@ -192,6 +223,8 @@ module.exports = {
   updateMemberRole,
   deleteMember,
   createInvitation,
+  findPendingInvitation,
+  findWorkspaceInvitations,
   findInvitationByToken,
   updateInvitationStatus,
   findUserByEmail,
