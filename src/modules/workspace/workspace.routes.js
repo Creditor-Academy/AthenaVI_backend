@@ -19,6 +19,9 @@ const {
 } = require('./workspace.controller');
 const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
+const videoRoutes = require('../video/video.routes');
+const renderController = require('../render/render.controller');
+const renderValidations = require('../validations/render.validations');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
@@ -33,6 +36,23 @@ router.post(
 );
 
 router.get('/', authMiddleware, getUserWorkspaces);
+
+router.use(
+  '/:id/videos',
+  authMiddleware,
+  validate(workspaceValidations.workspaceByIdSchema),
+  requireWorkspaceRole(anyMember),
+  videoRoutes
+);
+
+router.get(
+  '/:id/render/:jobId',
+  authMiddleware,
+  validate(renderValidations.getRenderJobSchema),
+  requireWorkspaceRole(anyMember),
+  renderController.getRenderJob
+);
+
 router.get(
   '/:id',
   authMiddleware,

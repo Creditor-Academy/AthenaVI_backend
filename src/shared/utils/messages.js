@@ -77,6 +77,13 @@ module.exports = {
   WORKSPACE_INVITATIONS_FETCHED: 'Workspace invitations fetched successfully',
   WORKSPACE_INVITE_CANCELLED: 'Workspace invitation cancelled successfully',
 
+  // Video editor & Scene
+  VIDEO_NOT_FOUND: 'Video not found',
+  VIDEO_FORBIDDEN: 'You do not have access to this video',
+  SCENE_NOT_FOUND: 'Scene not found',
+  SCENE_FORBIDDEN: 'You do not have access to this scene',
+
+  RENDER_JOB_NOT_FOUND: 'Render job not found',
 
   // Credit
   CREDITS_FETCHED: 'Credits fetched successfully',

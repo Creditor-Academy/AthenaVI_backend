@@ -9,7 +9,8 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "prisma:studio:development": "dotenv -e .env.development -- npx prisma studio",
-    "prisma:studio:production": "dotenv -e .env.production -- npx prisma studio"
+    "prisma:studio:production": "dotenv -e .env.production -- npx prisma studio",
+    "worker:render": "node src/workers/render.worker.js"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,7 @@
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "bcrypt": "^6.0.0",
+    "bull": "^4.16.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "cross-env": "^10.1.0",

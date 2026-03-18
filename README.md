@@ -66,7 +66,7 @@ Authorization: Bearer <access_token>
 ### Unprotected vs protected
 
 - **Unprotected**: OTP, register, login, refresh, logout, forget-password, reset-password, Google OAuth.
-- **Protected**: All `/api/user/*` and `/api/workspaces/*` routes require `Authorization: Bearer <access_token>`.
+- **Protected**: All `/api/user/*`, `/api/workspaces/*`, and `/api/workspaces/:id/videos/*` routes require `Authorization: Bearer <access_token>`.
 
 ---
 
@@ -563,6 +563,229 @@ Remove a member from the workspace. OWNER or ADMIN can remove others; members ca
 
 ---
 
+# Video editor (Video & Scene) API
+
+Base path: **`/api/workspaces/:id/videos`**
+
+All video editor routes require **`Authorization: Bearer <access_token>`** and **workspace membership** (any role: OWNER, ADMIN, MEMBER). Replace `:id` with the workspace ID.
+
+Videos represent one timeline in the video editor; scenes are ordered segments (script, avatar, background, etc.) within a video.
+
+---
+
+## Create video
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:id/videos` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+```json
+{
+  "name": "My training video",
+  "aspectRatio": "16:9",
+  "title": "Optional display title",
+  "description": "Optional description"
+}
+```
+
+- `name` (optional): video name; defaults to "Untitled video".
+- `aspectRatio`, `title`, `description` (optional): stored in `metadata`.
+
+**Response (201)** – `data`: `{ "video": { "id": "uuid", "workspaceId": "...", "name": "...", "metadata": { ... }, "createdAt": "...", "updatedAt": "..." } }`
+
+---
+
+## List videos
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:id/videos` |
+| **Auth** | Bearer + member |
+| **Query** | `include=scenes` (optional) – include scenes in each video |
+
+**Response (200)** – `data`: `{ "videos": [ ... ], "count": N }`
+
+---
+
+## Get video by ID
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:id/videos/:videoId` |
+| **Auth** | Bearer + member |
+| **Query** | `include=scenes` (optional) – include scenes |
+
+**Response (200)** – `data`: `{ "video": { "id", "workspaceId", "name", "metadata", "createdAt", "updatedAt", "scenes"?: [ ... ] } }`
+
+- **404** if video not found. **403** if video does not belong to the workspace.
+
+---
+
+## Update video
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:id/videos/:videoId` |
+| **Auth** | Bearer + member |
+
+**Request body** (all optional): `name`, `aspectRatio`, `title`, `description`
+
+**Response (200)** – `data`: `{ "video": { ... } }`
+
+---
+
+## Delete video
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/workspaces/:id/videos/:videoId` |
+| **Auth** | Bearer + member |
+
+Deletes the video and all its scenes (cascade).
+
+**Response (200)** – no body.
+
+---
+
+## Create scene
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/scenes` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+```json
+{
+  "order": 0,
+  "startTime": 0,
+  "duration": 12.5,
+  "payload": {
+    "scriptText": "Welcome to this video.",
+    "avatar": "avatar_id",
+    "avatarSettings": { "style": "rectangular", "voice": null, "scale": 1, "horizontalAlign": "center" },
+    "background": "background_id_or_url",
+    "backgroundSettings": { "scale": 1 },
+    "transition": "fade"
+  }
+}
+```
+
+- `order` (optional): 0-based sequence. `startTime`, `duration` (optional): seconds. `payload` (optional): JSON object (script, avatar, background, etc.).
+
+**Response (201)** – `data`: `{ "scene": { "id", "videoId", "order", "startTime", "duration", "payload", "createdAt", "updatedAt" } }`
+
+---
+
+## List scenes
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/scenes` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data`: `{ "scenes": [ ... ], "count": N }` (ordered by `order`, then `startTime`).
+
+---
+
+## Get scene by ID
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data`: `{ "scene": { ... } }`
+
+---
+
+## Update scene
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` |
+| **Auth** | Bearer + member |
+
+**Request body** (all optional): `order`, `startTime`, `duration`, `payload`
+
+**Response (200)** – `data`: `{ "scene": { ... } }`
+
+---
+
+## Delete scene
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – no body.
+
+---
+
+## Align timeline (TTS-driven)
+
+Set each scene’s `duration` and cumulative `startTime` from TTS-based duration (word-count estimate ~0.4 s/word). Call after editing scene scripts to keep the timeline in sync with speech.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/align-timeline` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data`: `{ "video": { ...video with updated scenes (duration, startTime set) } }`
+
+- No request body. Loads all scenes (by `order`), computes duration per scene from `payload.scriptText`, sets `startTime` (cumulative) and `duration`, then persists and returns the video with scenes.
+
+---
+
+## Generate video (render)
+
+Start a render job for a video. Poll the job until `status` is `COMPLETED` or `FAILED`; when `COMPLETED`, `outputUrl` contains the video URL (or is null if no render backend is configured).
+
+### Start render
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:id/videos/:videoId/render` |
+| **Auth** | Bearer + member |
+
+**Response (201)** – `data`: `{ "job": { "id", "videoId", "workspaceId", "userId", "status": "PENDING", "outputUrl", "error", "createdAt", "updatedAt" } }`
+
+### Get render job status
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:id/render/:jobId` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data`: `{ "job": { "id", "videoId", "workspaceId", "status", "outputUrl", "error", "createdAt", "updatedAt" } }`
+
+- `status`: `PENDING` | `RENDERING` | `COMPLETED` | `FAILED`. When `COMPLETED`, use `outputUrl` for download/play (may be null if no render backend is configured).
+- Run the render worker with `npm run worker:render` so jobs are processed.
+- **Render backends (worker env):**
+  - **HeyGen:** Set `HEYGEN_API_KEY`. The worker makes one HeyGen API call per video: combined script from all scenes, single avatar and voice from the first scene’s `payload.avatar` and `payload.avatarSettings.voice`, aspect ratio and background from video/first scene. If `HEYGEN_API_KEY` is not set, see below.
+  - **Custom service:** Set `RENDER_SERVICE_URL` to a URL that accepts POST `{ inputProps }` and returns `{ outputUrl }` (e.g. Remotion Lambda).
+  - If neither is set, the worker marks jobs `COMPLETED` with `outputUrl` null (for frontend polling until a backend is configured).
+
+---
+
 # Quick reference
 
 | Method | Path | Auth | Description |
@@ -587,16 +810,34 @@ Remove a member from the workspace. OWNER or ADMIN can remove others; members ca
 | POST | `/api/workspaces/:id/invite` | Bearer + OWNER/ADMIN | Invite by email |
 | PATCH | `/api/workspaces/:id/members/:memberId/role` | Bearer + OWNER | Change role |
 | DELETE | `/api/workspaces/:id/members/:memberId` | Bearer + OWNER/ADMIN | Remove member |
+| POST | `/api/workspaces/:id/videos` | Bearer + member | Create video |
+| GET | `/api/workspaces/:id/videos` | Bearer + member | List videos |
+| GET | `/api/workspaces/:id/videos/:videoId` | Bearer + member | Get video |
+| PATCH | `/api/workspaces/:id/videos/:videoId` | Bearer + member | Update video |
+| DELETE | `/api/workspaces/:id/videos/:videoId` | Bearer + member | Delete video |
+| POST | `/api/workspaces/:id/videos/:videoId/scenes` | Bearer + member | Create scene |
+| GET | `/api/workspaces/:id/videos/:videoId/scenes` | Bearer + member | List scenes |
+| GET | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` | Bearer + member | Get scene |
+| PATCH | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` | Bearer + member | Update scene |
+| DELETE | `/api/workspaces/:id/videos/:videoId/scenes/:sceneId` | Bearer + member | Delete scene |
+| POST | `/api/workspaces/:id/videos/:videoId/align-timeline` | Bearer + member | Align timeline from TTS (scene duration/startTime) |
+| POST | `/api/workspaces/:id/videos/:videoId/render` | Bearer + member | Start video render |
+| GET | `/api/workspaces/:id/render/:jobId` | Bearer + member | Get render job status |
 
 ---
 
 # Environment (for reference)
 
-Frontend may need to know:
+**Frontend:**
 
 - **API base URL** – e.g. `process.env.REACT_APP_API_URL` or `NEXT_PUBLIC_API_URL` pointing to `https://your-backend.com/api`.
 - **Google OAuth** – Backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`. Frontend should read token from hash and optionally store it.
 - **Cookie** – Refresh token is HTTP-only; ensure requests to the API (e.g. `/api/auth/refresh`) are same-origin or CORS is configured so cookies are sent when needed.
+
+**Backend (render worker):**
+
+- **`HEYGEN_API_KEY`** – When set, the render worker uses HeyGen to generate videos (one API call per video; combined script, single avatar/voice from first scene).
+- **`RENDER_SERVICE_URL`** – Optional. When HeyGen is not used, POST `{ inputProps }` here; response should include `{ outputUrl }`. If neither `HEYGEN_API_KEY` nor `RENDER_SERVICE_URL` is set, jobs complete with `outputUrl` null.
 
 ---
 

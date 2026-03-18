@@ -60,9 +60,66 @@ model Workspace {
   owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members     WorkspaceMember[]
   invitations Invitation[]
+  videos Video[]
 
   @@index([ownerId])
   @@map("workspaces")
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  scenes    Scene[]
+
+  @@index([workspaceId])
+  @@map("videos")
+}
+
+model Scene {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  order     Int      @default(0)
+  startTime Float    @default(0) @map("start_time")
+  duration  Float    @default(0) @map("duration")
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([videoId, order])
+  @@map("scenes")
+}
+
+enum RenderJobStatus {
+  PENDING
+  RENDERING
+  COMPLETED
+  FAILED
+}
+
+model RenderJob {
+  id          String         @id @default(uuid())
+  videoId     String         @map("video_id")
+  workspaceId String         @map("workspace_id")
+  userId      String         @map("user_id")
+  status      RenderJobStatus @default(PENDING)
+  outputUrl   String?        @map("output_url")
+  error       String?        @map("error")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@index([videoId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("render_jobs")
 }
 
 model WorkspaceMember {

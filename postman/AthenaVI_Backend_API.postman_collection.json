@@ -1,0 +1,545 @@
+{
+  "info": {
+    "name": "Athena VI Backend API",
+    "description": "Complete API collection for Athena VI (Virtual Instructor) backend. Set {{baseUrl}} (e.g. http://localhost:9000) and run Login to set {{accessToken}} for protected routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "workspaceId", "value": "" },
+    { "key": "videoId", "value": "" },
+    { "key": "sceneId", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "memberId", "value": "" },
+    { "key": "invitationId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/otp/generate",
+            "description": "Send OTP to the given email. No auth required."
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/otp/resend",
+            "description": "Resend OTP to the same email."
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"otp\": 123456\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Register with OTP. Replace otp with the code received by email."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login. Saves accessToken to collection variable for protected requests."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Get new access token. Requires refresh token cookie (same origin)."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Logout current device. Uses cookie."
+          }
+        },
+        {
+          "name": "Logout All Devices",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout-all",
+            "description": "Logout all devices. Bearer token required."
+          }
+        },
+        {
+          "name": "Forget Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/forget-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/reset-password"
+          }
+        },
+        {
+          "name": "Google OAuth Redirect",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/google",
+            "description": "Redirects to Google. Use in browser."
+          }
+        },
+        {
+          "name": "Google OAuth Callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/google/callback?code=:code&state=:state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "google", "callback"],
+              "query": [
+                { "key": "code", "value": "auth_code_from_google" },
+                { "key": "state", "value": "state_value" }
+              ]
+            },
+            "description": "Callback URL. code and state come from Google redirect."
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/user/getall"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/user/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phoneNumber\": \"+1234567890\"\n}"
+            },
+            "url": "{{baseUrl}}/api/user/profile",
+            "description": "At least one of name or phoneNumber. phoneNumber pattern: +? digits, (), -, one space."
+          }
+        },
+        {
+          "name": "Upload Profile Image",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "profileImage", "type": "file", "src": [] }]
+            },
+            "url": "{{baseUrl}}/api/user/upload/profile-image",
+            "description": "Multipart form-data; field name: profileImage"
+          }
+        },
+        {
+          "name": "Delete Profile Image",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/user/profile-image"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workspaces",
+      "item": [
+        {
+          "name": "Create Workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('workspaceId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Team Workspace\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces",
+            "description": "Create team workspace. Name 3-100 chars. Saves workspaceId to collection variable."
+          }
+        },
+        {
+          "name": "Get My Workspaces",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces"
+          }
+        },
+        {
+          "name": "Get Workspace By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+            "description": "Requires workspace member. Use {{workspaceId}} or replace with UUID."
+          }
+        },
+        {
+          "name": "Delete Workspace",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+            "description": "OWNER only."
+          }
+        },
+        {
+          "name": "Get Workspace Invitations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations",
+            "description": "OWNER or ADMIN."
+          }
+        },
+        {
+          "name": "Invite Member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invitee@example.com\",\n  \"role\": \"MEMBER\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invite",
+            "description": "role: OWNER | ADMIN | MEMBER. OWNER or ADMIN only."
+          }
+        },
+        {
+          "name": "Cancel Invitation",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations/{{invitationId}}",
+            "description": "OWNER or ADMIN. Set invitationId from Get Workspace Invitations."
+          }
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"invitation-token-from-email\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/invitations/accept",
+            "description": "No workspace id in path; token in body."
+          }
+        },
+        {
+          "name": "Get Workspace Members",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members",
+            "description": "OWNER or ADMIN. Response includes memberId for role/remove."
+          }
+        },
+        {
+          "name": "Change Member Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/role",
+            "description": "role: OWNER | ADMIN | MEMBER. OWNER only."
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}",
+            "description": "OWNER or ADMIN."
+          }
+        },
+        {
+          "name": "Get Render Job Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/render/{{jobId}}",
+            "description": "Poll until status is COMPLETED or FAILED. jobId from Start Render."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Videos",
+      "item": [
+        {
+          "name": "Create Video",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('videoId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Video\",\n  \"aspectRatio\": \"16:9\",\n  \"title\": \"Optional title\",\n  \"description\": \"Optional description\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos",
+            "description": "All body fields optional. name max 255; aspectRatio max 20; title 500; description 2000. Saves videoId."
+          }
+        },
+        {
+          "name": "Get Videos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos"
+          }
+        },
+        {
+          "name": "Get Video By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}"
+          }
+        },
+        {
+          "name": "Update Video",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Video Name\",\n  \"aspectRatio\": \"9:16\"\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}"
+          }
+        },
+        {
+          "name": "Delete Video",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}"
+          }
+        },
+        {
+          "name": "Align Timeline",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/align-timeline",
+            "description": "No body. Sets each scene duration/startTime from TTS (word-count estimate). Returns video with updated scenes."
+          }
+        },
+        {
+          "name": "Start Render",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.job && json.data.job.id) {",
+                  "  pm.collectionVariables.set('jobId', json.data.job.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/render",
+            "description": "Creates render job. Poll Get Render Job Status with jobId. Saves jobId to collection."
+          }
+        },
+        {
+          "name": "Create Scene",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('sceneId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order\": 0,\n  \"startTime\": 0,\n  \"duration\": 5,\n  \"payload\": {\n    \"scriptText\": \"Hello, this is the first scene.\",\n    \"avatar\": \"avatar_id_from_heygen\",\n    \"avatarSettings\": { \"voice\": \"voice_id_from_heygen\" },\n    \"background\": { \"type\": \"color\", \"value\": \"#FFFFFF\" }\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/scenes",
+            "description": "order, startTime, duration, payload optional. For HeyGen render, first scene should have payload.avatar and payload.avatarSettings.voice."
+          }
+        },
+        {
+          "name": "Get Scenes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/scenes"
+          }
+        },
+        {
+          "name": "Get Scene By Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/scenes/{{sceneId}}"
+          }
+        },
+        {
+          "name": "Update Scene",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order\": 1,\n  \"startTime\": 5,\n  \"duration\": 10,\n  \"payload\": {\n    \"scriptText\": \"Updated script for scene two.\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/scenes/{{sceneId}}"
+          }
+        },
+        {
+          "name": "Delete Scene",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos/{{videoId}}/scenes/{{sceneId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credits",
+      "item": [
+        {
+          "name": "Get Workspace Credits",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}",
+            "description": "OWNER or ADMIN. :id = workspaceId."
+          }
+        },
+        {
+          "name": "Get Workspace Credit History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/history",
+            "description": "OWNER or ADMIN."
+          }
+        },
+        {
+          "name": "Get My Credit History",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/my-history",
+            "description": "Any workspace member."
+          }
+        }
+      ]
+    }
+  ]
+}
