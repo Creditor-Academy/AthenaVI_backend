@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { sendEmail } = require('../../shared/notification/email.service');
 const invitationTemplate = require('../../shared/templates/invitation.template');
 
-const INVITATION_EXPIRY_DAYS = 7;
+const INVITATION_EXPIRY_DAYS = 1;
 const MAX_WORKSPACE_NAME_LENGTH = 255;
 
 async function createPrivateWorkspaceForUser(userId) {

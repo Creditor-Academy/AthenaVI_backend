@@ -32,11 +32,16 @@ const userRoutes = require('./modules/user/user.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const workspaceRoutes = require('./modules/workspace/workspace.routes');
 const creditRoutes = require('./modules/credit/credit.routes');
+const heygenRoutes = require('./modules/heygen/heygen.routes');
+const videoRoutes = require('./modules/video/video.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/credits', creditRoutes);
+app.use('/api/heygen', heygenRoutes);
+app.use('/api/video', videoRoutes);
+
 
 app.use(errorHandler);
 

@@ -1,12 +1,11 @@
-const asyncHandler = require("../../shared/utils/asyncHandler");
-const { successResponse } = require("../../shared/utils/apiResponse");
-const videoService = require("../video/heygen.service");
+const videoService = require("./video.service");
 
-// POST /api/heygen/generate
-const generateVideo = asyncHandler(async (req, res) =>{
-
+async function generateVideo(req, res) {
+  try {
     const { scenes } = req.body;
-    const userId = req.user?.id ;
+    console.log(scenes);
+    
+    const userId = req.user?.id || "demo-user";
 
     if (!scenes || !scenes.length) {
       return res.status(400).json({
@@ -20,12 +19,16 @@ const generateVideo = asyncHandler(async (req, res) =>{
     res.json({
       success: true,
       jobId: job.id,
-      job 
     });
-    
-})
-
- async function getVideoStatus(req, res) {
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate video",
+    });
+  }
+}
+async function getVideoStatus(req, res) {
   try {
     const { jobId } = req.params;
 
@@ -40,8 +43,7 @@ const generateVideo = asyncHandler(async (req, res) =>{
   }
 }
 
-
 module.exports = {
-    generateVideo,
-    getVideoStatus
-}
+  generateVideo,
+  getVideoStatus
+};
