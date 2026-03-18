@@ -37,20 +37,27 @@ function aspectRatioToDimension(aspectRatio) {
   return { width: 1920, height: 1080 };
 }
 
+/** Build HeyGen background object from scene payload.background (defaults to color #FFFFFF). */
+function sceneBackgroundToHeyGen(background) {
+  const bg = background && typeof background === 'object' ? background : {};
+  const bgType = bg.type === 'image' || bg.type === 'video' ? bg.type : 'color';
+  const bgValue = bg.value && /^#[0-9a-fA-F]{6}$/.test(bg.value) ? bg.value : '#FFFFFF';
+  return bgType === 'color'
+    ? { type: 'color', value: bgValue }
+    : { type: bgType, url: bg.url || '' };
+}
+
 /**
- * Build HeyGen createVideo payload from video + scenes (one-call per video).
- * Combined script from all scenes; avatar/voice/background from first scene or defaults.
+ * Build HeyGen createVideo payload: one video_inputs entry per scene.
+ * Avatar and voice are the same for the whole video (from first scene).
+ * Each scene has its own script (input_text) and background.
  */
 function buildHeyGenPayload(video, scenes) {
-  const combinedScript = scenes
-    .map((s) => {
-      const p = s.payload && typeof s.payload === 'object' ? s.payload : {};
-      return p.scriptText != null ? String(p.scriptText).trim() : '';
-    })
-    .filter(Boolean)
-    .join('\n\n');
+  if (!scenes.length) {
+    throw new Error('HeyGen requires at least one scene');
+  }
 
-  const firstPayload = (scenes[0]?.payload && typeof scenes[0].payload === 'object')
+  const firstPayload = (scenes[0].payload && typeof scenes[0].payload === 'object')
     ? scenes[0].payload
     : {};
   const avatarId = firstPayload.avatar != null ? String(firstPayload.avatar) : null;
@@ -58,33 +65,23 @@ function buildHeyGenPayload(video, scenes) {
     ? String(firstPayload.avatarSettings.voice)
     : null;
 
-  const metadata = video.metadata && typeof video.metadata === 'object' ? video.metadata : {};
-  const dimension = aspectRatioToDimension(metadata.aspectRatio);
-
-  const background = firstPayload.background && typeof firstPayload.background === 'object'
-    ? firstPayload.background
-    : {};
-  const bgType = background.type === 'image' || background.type === 'video'
-    ? background.type
-    : 'color';
-  const bgValue = background.value && /^#[0-9a-fA-F]{6}$/.test(background.value)
-    ? background.value
-    : '#FFFFFF';
-  const backgroundInput = bgType === 'color'
-    ? { type: 'color', value: bgValue }
-    : { type: bgType, url: background.url || '' };
-
   if (!avatarId || !voiceId) {
     throw new Error('HeyGen requires avatar and voice (set in first scene payload.avatar and payload.avatarSettings.voice)');
   }
 
-  const video_inputs = [
-    {
+  const metadata = video.metadata && typeof video.metadata === 'object' ? video.metadata : {};
+  const dimension = aspectRatioToDimension(metadata.aspectRatio);
+
+  const video_inputs = scenes.map((scene) => {
+    const p = scene.payload && typeof scene.payload === 'object' ? scene.payload : {};
+    const scriptText = p.scriptText != null ? String(p.scriptText).trim() : '';
+    const background = sceneBackgroundToHeyGen(p.background);
+    return {
       character: { type: 'avatar', avatar_id: avatarId },
-      voice: { type: 'text', voice_id: voiceId, input_text: combinedScript || ' ' },
-      background: backgroundInput,
-    },
-  ];
+      voice: { type: 'text', voice_id: voiceId, input_text: scriptText || ' ' },
+      background,
+    };
+  });
 
   return {
     video_inputs,
