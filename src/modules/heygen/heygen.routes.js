@@ -3,6 +3,8 @@ const router = express.Router();
 const heygenController = require('./heygen.controller');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 
+router.get('/tts', authMiddleware, heygenController.getVoiceList);
+
 // router.post('/generate',authMiddleware, heygenController.generateVideo);
 
 

@@ -81,4 +81,7 @@ module.exports = {
   // Credit
   CREDITS_FETCHED: 'Credits fetched successfully',
   CREDIT_HISTORY_FETCHED: 'Credit history fetched successfully',
+
+  // HeyGen
+  VOICE_LIST_FETCHED: 'Voice list fetched successfully',
 };
