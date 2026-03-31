@@ -81,4 +81,13 @@ module.exports = {
   // Credit
   CREDITS_FETCHED: 'Credits fetched successfully',
   CREDIT_HISTORY_FETCHED: 'Credit history fetched successfully',
+
+  // Folder
+  FOLDER_NAME_REQUIRED: 'Folder name is required',
+  FOLDER_NOT_FOUND: 'Folder not found',
+  FOLDER_FORBIDDEN: 'You do not have permission to access this folder',
+  FOLDER_DELETED: 'Folder deleted successfully',
+  FOLDER_RENAMED: 'Folder renamed successfully',
+  FOLDER_CREATED: 'Folder created successfully',
+  FOLDERS_FETCHED_SUCCESSFULLY: 'Folders fetched successfully',
 };

@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const {
   requireWorkspaceRole,
@@ -19,10 +19,14 @@ const {
 } = require('./workspace.controller');
 const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
+const folderRoutes = require('../folder/folder.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
+
+// nested routes
+router.use('/:id/folders', authMiddleware, folderRoutes);
 
 // workspace routes
 router.post(
