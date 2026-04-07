@@ -31,6 +31,8 @@ model User {
   profileImage  String?  @map("profile_image")
   phoneNumber   String?  @map("phone_number")
   emailVerified Boolean  @default(false) @map("email_verified")
+  storageLimit      Int      @default(1073741824) // 1 GB default limit
+  storageUsed       Int      @default(0)
   
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -63,6 +65,7 @@ model Workspace {
 
   folders  Folder[]
   projects Project[]
+  assets    Asset[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -228,4 +231,15 @@ model Project {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   folder    Folder    @relation(fields: [folderId], references: [id])
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  workspaceId String
+  uploadedBy  String
+  size        Int
+  url         String
+  type        String
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }

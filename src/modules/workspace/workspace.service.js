@@ -216,7 +216,6 @@ async function acceptInvitation(token, userId) {
     await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
     return existingMember.workspace;
   }
-
   await workspaceDao.createWorkspaceMember({
     workspaceId: invitation.workspaceId,
     userId,

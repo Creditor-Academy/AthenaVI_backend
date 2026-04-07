@@ -90,4 +90,11 @@ module.exports = {
   FOLDER_RENAMED: 'Folder renamed successfully',
   FOLDER_CREATED: 'Folder created successfully',
   FOLDERS_FETCHED_SUCCESSFULLY: 'Folders fetched successfully',
+
+
+  // Asset
+  INVALID_FILE_TYPE: 'Only JPG, PNG, WEBP images and MP4 videos are allowed',
+  WORKSPACE_OWNER_NOT_FOUND: 'Workspace owner not found',
+  STORAGE_LIMIT_EXCEEDED: 'Storage limit exceeded for the owner',
+  ASSET_UPLOADED_SUCCESSFULLY: 'Asset uploaded successfully',
 };

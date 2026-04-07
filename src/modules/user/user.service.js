@@ -38,6 +38,7 @@ const updateUserProfile = async (userId, data) => {
 const uploadProfileImageService = async (userId, file) => {
   const result = await uploadFile(
     file.buffer,
+    'users',
     userId,
     'profile-images',
     file.originalname,

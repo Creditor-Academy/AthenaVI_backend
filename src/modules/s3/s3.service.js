@@ -1,19 +1,25 @@
-const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const { v4: uuidv4 } = require("uuid");
-const path = require("path");
+const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
-const s3 = require("../../shared/config/s3");
+const s3 = require('../../shared/config/s3');
 
 const BUCKET = process.env.AWS_S3_BUCKET;
 
-async function uploadFile(fileBuffer, userId, folder, originalName, contentType) {
-
+async function uploadFile(
+  fileBuffer,
+  entityType,   // 'users' | 'workspace'
+  entityId,     // userId | workspaceId
+  folder = '',  // profile | assets | thumbnails etc
+  originalName,
+  contentType
+) {
   // extract file extension
   const extension = path.extname(originalName);
 
   // generate unique key
-  const key = `users/${folder}/${userId}/${uuidv4()}${extension}`;
-  
+  const key = `${entityType}/${entityId}/${folder}/${uuidv4()}${extension}`;
+
   const command = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
@@ -25,7 +31,7 @@ async function uploadFile(fileBuffer, userId, folder, originalName, contentType)
 
   return {
     key,
-    url: `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
+    url: `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
   };
 }
 

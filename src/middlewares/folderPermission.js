@@ -29,7 +29,7 @@ const folderPermission = asyncHandler(async (req, res, next) => {
   }
 
   // permission check
-  const isOwnerOrAdmin = member.role === 'owner' || member.role === 'admin';
+  const isOwnerOrAdmin = member.role === 'OWNER' || member.role === 'ADMIN';
 
   const isCreator = folder.createdBy === userId;
 

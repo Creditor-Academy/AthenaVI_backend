@@ -4,7 +4,7 @@ const userController = require('./user.controller');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
 const userValidation = require('../validations/user.validation');
-const upload = require('../../middlewares/upload.middleware');
+const {uploadProfile} = require('../../middlewares/upload.middleware');
 
 // GET /api/user - Get all users (public route for now)
 router.get('/getall', authMiddleware, userController.getAllUsers);
@@ -24,7 +24,7 @@ router.patch(
 router.post(
   '/upload/profile-image',
   authMiddleware,
-  upload.single('profileImage'),
+  uploadProfile.single('profileImage'),
   userController.uploadProfileImage
 );
 
