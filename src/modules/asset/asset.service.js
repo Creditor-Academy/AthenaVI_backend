@@ -1,5 +1,5 @@
 const messages = require('../../shared/utils/messages');
-const  assetDao = require('./asset.dao');
+const assetDao = require('./asset.dao');
 const { uploadFile, deleteFile } = require('../s3/s3.service');
 const prisma = require('../../shared/config/prismaClient');
 
@@ -19,7 +19,14 @@ const uploadAsset = async ({ userId, workspace, file }) => {
     }
 
     // Upload to S3 first
-    const { key, url } = await uploadFile(file.stream,"workspace", workspace.id, "assets",file.originalname, file.mimetype);
+    const { key, url } = await uploadFile(
+      file.stream,
+      'workspace',
+      workspace.id,
+      'assets',
+      file.originalname,
+      file.mimetype
+    );
     uploadedKey = key;
 
     // DB Transaction
@@ -46,6 +53,20 @@ const uploadAsset = async ({ userId, workspace, file }) => {
   }
 };
 
+const getAssets = async (userId, workspace, query) => {
+  const isPrivate = workspace.type === "PRIVATE";
+
+  return await assetDao.findAssets({
+    workspaceId: workspace.id,
+    userId,
+    isPrivate,
+    take: query.take,
+    skip: query.skip,
+  });
+};
+
+
 module.exports = {
   uploadAsset,
+  getAssets
 };

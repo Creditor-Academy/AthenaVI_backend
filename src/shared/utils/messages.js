@@ -97,4 +97,5 @@ module.exports = {
   WORKSPACE_OWNER_NOT_FOUND: 'Workspace owner not found',
   STORAGE_LIMIT_EXCEEDED: 'Storage limit exceeded for the owner',
   ASSET_UPLOADED_SUCCESSFULLY: 'Asset uploaded successfully',
+  ASSETS_FETCHED_SUCCESSFULLY: 'Assets fetched successfully',
 };

@@ -234,12 +234,20 @@ model Project {
 }
 
 model Asset {
-  id          String   @id @default(uuid())
-  workspaceId String
-  uploadedBy  String
-  size        Int
-  url         String
-  type        String
+  id           String   @id @default(uuid())
+  workspaceId  String
+  uploadedBy   String
+
+  name         String   @default("untitled")
+
+  size         Int
+  type         String
+
+  url          String   // current (public bucket)
+  key          String?  // future use (private bucket)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }

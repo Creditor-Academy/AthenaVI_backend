@@ -13,5 +13,11 @@ router.post(
   assetController.uploadAsset
 );
 
+router.get(
+  "/:workspaceId",
+  authMiddleware,
+  checkWorkspaceAccess,
+  assetController.getAssets
+);
 
 module.exports = router;
