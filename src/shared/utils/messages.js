@@ -96,6 +96,9 @@ module.exports = {
   INVALID_FILE_TYPE: 'Only JPG, PNG, WEBP images and MP4 videos are allowed',
   WORKSPACE_OWNER_NOT_FOUND: 'Workspace owner not found',
   STORAGE_LIMIT_EXCEEDED: 'Storage limit exceeded for the owner',
+  ASSET_NOT_FOUND: 'Asset not found',
   ASSET_UPLOADED_SUCCESSFULLY: 'Asset uploaded successfully',
   ASSETS_FETCHED_SUCCESSFULLY: 'Assets fetched successfully',
+  ASSET_RENAMED_SUCCESSFULLY: 'Asset renamed successfully',
+  ASSET_DELETED_SUCCESSFULLY: 'Asset deleted successfully',
 };

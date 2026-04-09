@@ -7,8 +7,6 @@ const findUserById = (userId) => {
 };
 
 const createAsset = (db, data) => {
-  console.log(db, data);
-
   return db.asset.create({ data });
 };
 
@@ -40,9 +38,46 @@ const findAssets = ({ workspaceId, userId, isPrivate, take, skip }) => {
   });
 };
 
+const findAssetById = (assetId, workspaceId) => {
+  return prisma.asset.findFirst({
+    where: {
+      id: assetId,
+      workspaceId,
+    },
+  });
+};
+
+const updateAssetName = (assetId, name) => {
+  return prisma.asset.update({
+    where: { id: assetId },
+    data: { name },
+  });
+};
+
+const decrementUserStorage = (db, userId, size) => {
+  return db.user.update({
+    where: { id: userId },
+    data: {
+      storageUsed: {
+        decrement: size,
+      },
+    },
+  });
+};
+
+const deleteAssetById = (db, assetId) => {
+  return db.asset.delete({
+    where: { id: assetId },
+  });
+};
+
 module.exports = {
   findUserById,
   createAsset,
   incrementUserStorage,
   findAssets,
+  findAssetById,
+  updateAssetName,
+  decrementUserStorage,
+  deleteAssetById,
 };

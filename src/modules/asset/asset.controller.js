@@ -37,10 +37,50 @@ const getAssets = asyncHandler(async (req, res) => {
   );
 });
 
+const renameAsset = asyncHandler(async (req, res) => {
+  const { assetId } = req.params;
+  const { name } = req.body;
+  const workspace = req.workspace;
+
+  const asset = await assetService.renameAsset({
+    assetId,
+    workspaceId: workspace.id,
+    name,
+  });
+
+  return successResponse(
+    req,
+    res,
+    { asset },
+    200,
+    messages.ASSET_RENAMED_SUCCESSFULLY
+  );
+});
+
+const deleteAsset = asyncHandler(async (req, res) => {
+  const { assetId } = req.params;
+  const workspace = req.workspace;
+
+  const asset = await assetService.deleteAsset({
+    assetId,
+    workspace,
+  });
+
+  return successResponse(
+    req,
+    res,
+    { asset },
+    200,
+    messages.ASSET_DELETED_SUCCESSFULLY
+  );
+});
+
 
 
 
 module.exports = {
   uploadAsset,
   getAssets,
+  renameAsset,
+  deleteAsset,
 };
