@@ -1,9 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
 
-/* =========================
-   CREATE
-========================= */
-
 // Create User
 const createUser = async (data) => {
   return await prisma.user.create({
@@ -37,11 +33,6 @@ const createPasswordResetToken = async({userId,tokenHash, expiresAt})=>{
   })
 }
 
-
-/* =========================
-   READ
-========================= */
-
 // Find user by email
 const findUserByEmail = async (email) => {
   return await prisma.user.findUnique({
@@ -59,27 +50,12 @@ const findValidPasswordResetTokenByHash =async (tokenHash) => {
   });
 };
 
-// Find OTP by email
-// const findOtpByEmail = async (email) => {
-//   return await prisma.otp.findUnique({
-//     where: { email },
-//   });
-// };
-
-
-/* =========================
-   DELETE
-========================= */
-
 // Delete old OTPs
 const deleteOldOtp = async (email) => {
   return await prisma.otp.deleteMany({
     where: { email },
   });
 };
-
-
-
 
 // mix 
 const updatePasswordAndInvalidateResetTokens= async({userId ,hashedPassword})=>{ 
@@ -94,10 +70,6 @@ const updatePasswordAndInvalidateResetTokens= async({userId ,hashedPassword})=>{
     }),
   ]);
 }
-
-
-//update
-
 
 // OAuth / Account
 const findAccountByProvider = async (provider, providerAccountId) => {

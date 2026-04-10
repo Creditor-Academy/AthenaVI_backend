@@ -243,8 +243,8 @@ model Asset {
   size         Int
   type         String
 
-  url          String   // current (public bucket)
-  key          String?  // future use (private bucket)
+  url          String   
+  key          String  
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
