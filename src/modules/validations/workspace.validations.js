@@ -8,7 +8,7 @@ const createWorkspaceSchema = Joi.object({
 
 const workspaceByIdSchema = Joi.object({
   params: Joi.object({
-    id: Joi.string().uuid().required(),
+    workspaceId: Joi.string().uuid().required(),
   }),
 });
 
@@ -18,13 +18,13 @@ const inviteMemberSchema = Joi.object({
     role: Joi.string().valid('OWNER', 'ADMIN', 'MEMBER').required(),
   }),
   params: Joi.object({
-    id: Joi.string().uuid().required(),
+    workspaceId: Joi.string().uuid().required(),
   }),
 });
 
 const cancelInvitationSchema = Joi.object({
   params: Joi.object({
-    id: Joi.string().uuid().required(),
+    workspaceId: Joi.string().uuid().required(),
     invitationId: Joi.string().uuid().required(),
   }),
 });
@@ -36,14 +36,14 @@ const acceptInvitationSchema = Joi.object({
 });
 
 const removeMemberSchema = Joi.object({ params: Joi.object({
-  id: Joi.string().uuid().required(),
+  workspaceId: Joi.string().uuid().required(),
   memberId: Joi.string().uuid().required(),
 }) });
 
 const changeMemberRoleSchema = Joi.object({ body: Joi.object({
   role: Joi.string().valid('OWNER', 'ADMIN', 'MEMBER').required(),
 }), params: Joi.object({
-  id: Joi.string().uuid().required(),
+  workspaceId: Joi.string().uuid().required(),
   memberId: Joi.string().uuid().required(),
 }) });
 

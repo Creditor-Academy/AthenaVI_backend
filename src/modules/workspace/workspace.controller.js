@@ -32,7 +32,7 @@ const getUserWorkspaces = asyncHandler(async (req, res) => {
 
 const getWorkspaceById = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const workspace = await workspaceService.getWorkspaceById(
     userId,
     workspaceId
@@ -42,14 +42,14 @@ const getWorkspaceById = asyncHandler(async (req, res) => {
 
 const deleteWorkspace = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   await workspaceService.deleteWorkspace(userId, workspaceId);
   return successResponse(req, res, null, 200, messages.WORKSPACE_DELETED);
 });
 
 const getWorkspaceMembers = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const members = await workspaceService.getWorkspaceMembers(
     workspaceId,
     userId
@@ -60,7 +60,7 @@ const getWorkspaceMembers = asyncHandler(async (req, res) => {
 // INVITATION & MEMBER MANAGEMENT
 
 const inviteMember = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const inviterId = req.user.id;
   const { email, role } = req.body;
 
@@ -69,7 +69,7 @@ const inviteMember = asyncHandler(async (req, res) => {
 });
 
 const getWorkspaceInvitations = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const userId = req.user.id;
   const invitations = await workspaceService.getWorkspaceInvitations(
     workspaceId,
@@ -79,7 +79,7 @@ const getWorkspaceInvitations = asyncHandler(async (req, res) => {
 });
 
 const cancelInvitation = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const invitationId = req.params.invitationId;
 
   const result = await workspaceService.cancelInvitation(
@@ -111,7 +111,7 @@ const acceptInvitation = asyncHandler(async (req, res) => {
 });
 
 const removeMember = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const memberId = req.params.memberId;
   const requesterId = req.user.id;
   await workspaceService.removeMember(workspaceId, requesterId, memberId);
@@ -125,7 +125,7 @@ const removeMember = asyncHandler(async (req, res) => {
 });
 
 const changeMemberRole = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const memberId = req.params.memberId;
   const requesterId = req.user.id;
   const { role: newRole } = req.body;

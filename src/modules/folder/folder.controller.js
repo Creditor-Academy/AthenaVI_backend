@@ -5,7 +5,7 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 
 const getFolders = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const userId = req.user.id;
 
   const folders = await folderService.listFolders(workspaceId, userId);
@@ -14,7 +14,7 @@ const getFolders = asyncHandler(async (req, res) => {
 });
 
 const createFolder = asyncHandler(async (req, res) => {
-  const workspaceId = req.params.id;
+  const workspaceId = req.params.workspaceId;
   const name  = req.body.name;
   const userId = req.user.id;
 

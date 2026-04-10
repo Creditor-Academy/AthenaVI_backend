@@ -5,13 +5,13 @@ const workspaceDao = require('../modules/workspace/workspace.dao');
 
 /**
  * Middleware factory: require current user to be a member of the workspace with one of the allowed roles.
- * Expects workspace id in req.params.id (e.g. /workspaces/:id/...).
+ * Expects workspace id in req.params.workspaceId (e.g. /workspaces/:workspaceId/...).
  * Sets req.workspaceMembership and req.workspace for use in controllers.
  * @param {string[]} allowedRoles - e.g. ['OWNER'], ['OWNER', 'ADMIN']
  */
 function requireWorkspaceRole(allowedRoles) {
   return asyncHandler(async (req, res, next) => {
-    const workspaceId = req.params.id;
+    const workspaceId = req.params.workspaceId;
     if (!workspaceId) {
       throw new AppError(messages.INVALID_REQUEST, 400);
     }

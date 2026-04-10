@@ -26,7 +26,7 @@ const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
-router.use('/:id/folders', authMiddleware, folderRoutes);
+router.use('/:workspaceId/folders', authMiddleware, folderRoutes);
 
 // workspace routes
 router.post(
@@ -38,14 +38,14 @@ router.post(
 
 router.get('/', authMiddleware, getUserWorkspaces);
 router.get(
-  '/:id',
+  '/:workspaceId',
   authMiddleware,
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(anyMember),
   getWorkspaceById
 );
 router.delete(
-  '/:id',
+  '/:workspaceId',
   authMiddleware,
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(ownerOnly),
@@ -54,7 +54,7 @@ router.delete(
 
 //invitation routes
 router.get(
-  '/:id/invitations',
+  '/:workspaceId/invitations',
   authMiddleware,
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(ownerOrAdmin),
@@ -62,7 +62,7 @@ router.get(
 );
 
 router.post(
-  '/:id/invite',
+  '/:workspaceId/invite',
   authMiddleware,
   validate(workspaceValidations.inviteMemberSchema),
   requireWorkspaceRole(ownerOrAdmin),
@@ -70,7 +70,7 @@ router.post(
 );
 
 router.delete(
-  '/:id/invitations/:invitationId',
+  '/:workspaceId/invitations/:invitationId',
   authMiddleware,
   validate(workspaceValidations.cancelInvitationSchema),
   requireWorkspaceRole(ownerOrAdmin),
@@ -86,14 +86,14 @@ router.post(
 
 //member management routes
 router.get(
-  '/:id/members',
+  '/:workspaceId/members',
   authMiddleware,
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(ownerOrAdmin),
   getWorkspaceMembers
 );
 router.patch(
-  '/:id/members/:memberId/role',
+  '/:workspaceId/members/:memberId/role',
   authMiddleware,
   validate(workspaceValidations.changeMemberRoleSchema),
   requireWorkspaceRole(ownerOnly),
