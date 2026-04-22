@@ -39,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/credits', creditRoutes);
 app.use("/api/assets", assetRoutes);
+app.use('/api/video', require('./modules/video/video.routes'));
 
 app.use(errorHandler);
 
