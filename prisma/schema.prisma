@@ -24,18 +24,18 @@ enum InvitationStatus {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
+  id            String  @id @default(uuid())
+  email         String  @unique
   name          String?
   password      String?
-  profileImage  String?  @map("profile_image")
-  phoneNumber   String?  @map("phone_number")
-  emailVerified Boolean  @default(false) @map("email_verified")
-  storageLimit      Int      @default(1073741824) // 1 GB default limit
-  storageUsed       Int      @default(0)
-  
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  profileImage  String? @map("profile_image")
+  phoneNumber   String? @map("phone_number")
+  emailVerified Boolean @default(false) @map("email_verified")
+  storageLimit  Int     @default(1073741824) // 1 GB default limit
+  storageUsed   Int     @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   accounts            Account[]
@@ -63,9 +63,10 @@ model Workspace {
   members     WorkspaceMember[]
   invitations Invitation[]
 
-  folders  Folder[]
-  projects Project[]
-  assets    Asset[]
+  folders         Folder[]
+  projects        Project[]
+  assets          Asset[]
+  heygenResponses HeygenResponse[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -111,7 +112,7 @@ model Account {
   userId String @map("user_id")
 
   type              String
-  provider          String
+  provider          String 
   providerAccountId String @map("provider_account_id")
 
   refreshToken String? @map("refresh_token")
@@ -203,51 +204,67 @@ model CreditTransaction {
 }
 
 model Folder {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   workspaceId String
   createdBy   String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  projects    Project[] 
-  createdAt   DateTime @default(now())
+  projects    Project[]
+  createdAt   DateTime  @default(now())
 
   @@unique([name, workspaceId]) // prevent duplicate folder names in same workspace
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   name        String
   workspaceId String
   folderId    String
   createdBy   String
 
-  data        Json     // 🔥 whole editor state (autosave)
-  thumbnail   String?  // preview image
-  duration    Int?     // optional
-  status      String   @default("draft") // draft | rendering | completed
+  data      Json // 🔥 whole editor state (autosave)
+  thumbnail String? // preview image
+  duration  Int? // optional
+  status    String  @default("draft") // draft | rendering | completed
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  folder    Folder    @relation(fields: [folderId], references: [id])
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id])
+  folder          Folder           @relation(fields: [folderId], references: [id])
+  heygenResponses HeygenResponse[]
 }
 
 model Asset {
-  id           String   @id @default(uuid())
-  workspaceId  String
-  uploadedBy   String
+  id          String @id @default(uuid())
+  workspaceId String
+  uploadedBy  String
 
-  name         String   @default("untitled")
+  name String @default("untitled")
 
-  size         Int
-  type         String
+  size Int
+  type String
 
-  url          String   
-  key          String  
+  url String
+  key String
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model HeygenResponse {
+  id          String @id @default(uuid())
+  workspaceId String
+  projectId   String
+  videoId     String
+  videoUrl    String
+  status      String @default("processing") // processing | completed | failed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  project   Project   @relation(fields: [projectId], references: [id])
 }

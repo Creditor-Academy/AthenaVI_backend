@@ -101,4 +101,7 @@ module.exports = {
   ASSETS_FETCHED_SUCCESSFULLY: 'Assets fetched successfully',
   ASSET_RENAMED_SUCCESSFULLY: 'Asset renamed successfully',
   ASSET_DELETED_SUCCESSFULLY: 'Asset deleted successfully',
+
+  // Video (HeyGen)
+  VIDEO_GENERATION_SUCCESS: 'Avatar video generated successfully',
 };

@@ -1,81 +1,75 @@
-const axios = require("axios");
+const axios = require('axios');
+const heygenDao = require('../heygen.dao');
 
 const API_KEY = process.env.HEYGEN_API_KEY;
 
 // helper sleep
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
-async function generateAvatarVideo(task) {
-  // 1️⃣ Create video
-  const createRes = await axios.post(
-    "https://api.heygen.com/v2/video/generate",
+const generateAvatarVideo = async (
+  avatarId,
+  title,
+  resolution,
+  aspectRatio,
+  backgroundColor,
+  voiceId,
+  script,
+  expressiveness
+) => {
+  const response = await axios.post(
+    `${process.env.HEYGEN_BASE_URL}/v3/videos`,
     {
-      video_inputs: [
-        {
-          character: {
-            type: "avatar",
-            avatar_id: task.avatarId
-          },
-          voice: {
-            type: "text",
-            input_text: task.script
-          }
-        }
-      ]
+      type: 'avatar',
+      avatar_id: avatarId,
+      title: title,
+      resolution: resolution,
+      aspect_ratio: aspectRatio,
+      background: {
+        type: 'color',
+        value: backgroundColor,
+      },
+      remove_background: false,
+      output_format: 'mp4',
+      script: script,
+      voice_id: voiceId,
+      voice_settings: {
+        speed: 1,
+        pitch: 0,
+        volume: 1,
+        locale: '<string>',
+        engine_settings: {
+          engine_type: 'elevenlabs',
+          model: 'eleven_multilingual_v2',
+          similarity_boost: 0.5,
+          stability: 0.5,
+          style: 0.5,
+          use_speaker_boost: true,
+        },
+      },
+      expressiveness: expressiveness,
     },
     {
       headers: {
-        Authorization: `Bearer ${API_KEY}`
-      }
+        'x-api-key': `${process.env.HEYGEN_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
     }
   );
+  console.log(response.data);
 
-  const videoId = createRes.data.video_id;
+  const heygenResponse = await heygenDao.saveHeygenResponse({
+    avatarId,
+    title,
+    resolution,
+    aspectRatio,
+    backgroundColor,
+    voiceId,
+    script,
+    expressiveness,
+    heygenResponse: response.data,
+  });
 
-  if (!videoId) {
-    throw new Error("Failed to create HeyGen video");
-  }
-
-  // 2️⃣ Poll status
-  let status = "processing";
-  let videoUrl = null;
-  let attempts = 0;
-
-  while (status === "processing" && attempts < 20) {
-    await wait(3000);
-    attempts++;
-
-    const statusRes = await axios.get(
-      `https://api.heygen.com/v2/video/status?video_id=${videoId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`
-        }
-      }
-    );
-
-    status = statusRes.data.status;
-
-    console.log(`⏳ Avatar ${videoId} status:`, status);
-
-    if (status === "completed") {
-      videoUrl = statusRes.data.video_url;
-    }
-
-    if (status === "failed") {
-      throw new Error(`Avatar generation failed for ${videoId}`);
-    }
-  }
-
-  if (!videoUrl) {
-    throw new Error("Timeout: Avatar generation took too long");
-  }
-
-  return {
-    sceneIndex: task.sceneIndex,
-    elementIndex: task.elementIndex,
-    url: videoUrl
-  };
-}
+  return response.data;
+};
 
 module.exports = { generateAvatarVideo };

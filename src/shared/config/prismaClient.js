@@ -19,7 +19,7 @@ const prisma =
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prismaGlobal = prisma;
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";                     
 }
 
 module.exports = prisma;

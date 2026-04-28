@@ -4,7 +4,7 @@ const videoController = require('./video.controller');
 const router = express.Router();
 
 
-router.post("/generate", videoController.generateVideo);
+router.post("/avatar/generate", videoController.generateAvatarVideo);
 
 
 module.exports = router;

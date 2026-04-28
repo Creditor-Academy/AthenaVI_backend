@@ -1,37 +1,50 @@
 const { successResponse } = require('../../shared/utils/apiResponse');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const videoService = require('./services/video.service');
+const axios = require('axios');
+const heygenService = require('./services/heygen.service');
+const messages = require('../../shared/utils/messages');
 
-const generateVideo = async (req, res) => {
-  try {
-    const { project } = req.body;
+const generateAvatarVideo = asyncHandler(async (req, res) => {
+  const {
+    avatarId,
+    title,
+    resolution,
+    aspectRatio,
+    backgroundColor,
+    voiceId,
+    script,
+    expressiveness,
+  } = req.body;
+  console.log('Received request to generate video with data:', {
+    avatarId,
+    title,
+    voiceId,
+    script,
+  });
 
-    // ✅ Basic validation
-    if (!project || !project.timeline) {
-      return res.status(400).json({
-        error: "Invalid project data. 'project.timeline' is required."
-      });
-    }
+  const heygenResponse = await heygenService.generateAvatarVideo(
+    avatarId,
+    title,
+    resolution,
+    aspectRatio,
+    backgroundColor,
+    voiceId,
+    script,
+    expressiveness
+  );
 
-    const timeline = project.timeline;
+  console.log('HeyGen API response :', heygenResponse);
 
-    // 👉 call service (we'll build next)
-    const result = await videoService.generateVideo(timeline);
-
-    return res.json({
-      success: true,
-      videoUrl: result.videoUrl
-    });
-
-  } catch (error) {
-    console.error("Error generating video:", error);
-
-    return res.status(500).json({
-      error: error.message || "Something went wrong"
-    });
-  }
-};
+  return successResponse(
+    req,
+    res,
+    heygenResponse,
+    200,
+    messages.VIDEO_GENERATION_SUCCESS
+  );
+});
 
 module.exports = {
-  generateVideo,
+  generateAvatarVideo,
 };
