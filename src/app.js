@@ -33,12 +33,14 @@ const authRoutes = require('./modules/auth/auth.routes');
 const workspaceRoutes = require('./modules/workspace/workspace.routes');
 const creditRoutes = require('./modules/credit/credit.routes');
 const assetRoutes = require('./modules/asset/asset.routes');
+const heygenRoutes = require('./modules/heygen/heygen.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/credits', creditRoutes);
 app.use("/api/assets", assetRoutes);
+app.use('/api/heygen', heygenRoutes);
 
 app.use(errorHandler);
 
