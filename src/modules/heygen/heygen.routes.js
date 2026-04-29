@@ -38,6 +38,20 @@ router.post(
 );
 
 router.post(
+  '/voices/clone',
+  validate(heygenValidation.cloneVoiceBody),
+  heygenController.cloneVoice
+);
+
+router.get(
+  '/voices/:voiceId',
+  validate(heygenValidation.getVoiceParams),
+  heygenController.getVoice
+);
+
+router.post('/voices', validate(heygenValidation.designVoiceBody), heygenController.designVoice);
+
+router.post(
   '/assets',
   uploadHeygenAsset.single('file'),
   heygenController.uploadAsset

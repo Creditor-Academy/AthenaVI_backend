@@ -1003,7 +1003,7 @@ Credit transactions for the **current user** only in the given workspace.
 
 Base path: **`/api/heygen`**
 
-Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices, asset upload, speech preview). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**.
+Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview — asset upload). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**.
 
 All routes require **`Authorization: Bearer <access_token>`**.
 
@@ -1107,6 +1107,59 @@ Returns a consent / onboarding URL for a pending avatar group.
 - `token` – pagination cursor
 
 **Response (200)** – `data`: HeyGen voices payload.
+
+---
+
+## Design a voice (semantic search)
+
+Maps to HeyGen **`POST /v3/voices`** — returns up to **3** suggested voices for a natural-language prompt.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/voices` |
+| **Auth** | Bearer |
+
+**Request body**
+
+- `prompt`: string, **1–1000** chars (required) — e.g. “warm, confident female narrator”.
+- Optional: `gender` (`male` \| `female`), `locale` (BCP-47), `seed` (integer ≥ 0 for alternate batches).
+
+**Response (200)** – `data`: HeyGen payload (`voices`, `seed`).
+
+---
+
+## Clone a voice
+
+Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voiceId`** with the returned clone id until status is **`complete`**.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/voices/clone` |
+| **Auth** | Bearer |
+
+**Request body**
+
+- `voice_name`: string, **1–100** chars (required).
+- `audio`: object (required) — HeyGen asset union: `{ type: "url", url }` \| `{ type: "asset_id", asset_id }` \| `{ type: "base64", media_type, data }`.
+- Optional: `language`, `remove_background_noise` (boolean, default per HeyGen).
+
+**Response (200)** – `data`: HeyGen clone job payload (includes id to poll).
+
+---
+
+## Get voice by id
+
+Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **status** (`processing` \| `complete` \| `failed`) when applicable.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/heygen/voices/:voiceId` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: HeyGen voice detail payload.
 
 ---
 
@@ -1224,6 +1277,9 @@ Reserved for future use.
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar |
 | POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent URL |
 | GET | `/api/heygen/voices` | Bearer | List HeyGen voices |
+| POST | `/api/heygen/voices` | Bearer | Design a voice (semantic search; HeyGen `POST /v3/voices`) |
+| POST | `/api/heygen/voices/clone` | Bearer | Clone a voice from audio |
+| GET | `/api/heygen/voices/:voiceId` | Bearer | Get voice detail / clone status |
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
 | POST | `/api/heygen/assets` | Bearer | Upload file to HeyGen (multipart `file`) |
 | GET | `/api/heygen/assets/audio-proxy` | Bearer | Proxy audio from HeyGen hosts (`url` query) |

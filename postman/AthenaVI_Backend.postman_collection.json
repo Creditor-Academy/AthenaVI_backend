@@ -13,7 +13,8 @@
     { "key": "assetId", "value": "00000000-0000-4000-8000-000000000003" },
     { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
     { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
-    { "key": "groupId", "value": "replace-with-heygen-group-id" }
+    { "key": "groupId", "value": "replace-with-heygen-group-id" },
+    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" }
   ],
   "item": [
     {
@@ -552,6 +553,43 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/heygen/voices?type=public&limit=50"
+          }
+        },
+        {
+          "name": "Design a voice (POST /v3/voices)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Warm, confident female narrator for e-learning\",\n  \"gender\": \"female\",\n  \"seed\": 0\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices",
+            "description": "HeyGen `POST /v3/voices` — returns up to 3 matching voices. Same path as list voices; method is POST."
+          }
+        },
+        {
+          "name": "Clone a voice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voice_name\": \"My cloned voice\",\n  \"audio\": {\n    \"type\": \"asset_id\",\n    \"asset_id\": \"REPLACE_WITH_ASSET_ID_FROM_UPLOAD\"\n  },\n  \"remove_background_noise\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/clone",
+            "description": "HeyGen `POST /v3/voices/clone`. Poll GET voice with returned id until complete."
+          }
+        },
+        {
+          "name": "Get voice by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
+            "description": "HeyGen `GET /v3/voices/{voice_id}` — use for clone status or voice metadata."
           }
         },
         {

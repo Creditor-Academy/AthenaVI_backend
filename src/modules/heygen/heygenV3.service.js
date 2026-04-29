@@ -20,6 +20,18 @@ async function listVoices(query) {
   return getJson('/v3/voices', query);
 }
 
+async function designVoice(body) {
+  return postJson('/v3/voices', body);
+}
+
+async function cloneVoice(body) {
+  return postJson('/v3/voices/clone', body);
+}
+
+async function getVoice(voiceId) {
+  return getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
+}
+
 async function generateSpeechPreview(body) {
   return postJson('/v3/voices/speech', body);
 }
@@ -34,6 +46,9 @@ module.exports = {
   createAvatar,
   createAvatarConsent,
   listVoices,
+  designVoice,
+  cloneVoice,
+  getVoice,
   generateSpeechPreview,
   uploadAsset,
 };

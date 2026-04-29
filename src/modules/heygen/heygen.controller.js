@@ -64,6 +64,28 @@ const listVoices = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICES_OK);
 });
 
+const designVoice = asyncHandler(async (req, res) => {
+  const data = await heygenV3Service.designVoice(req.body);
+  return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DESIGNED);
+});
+
+const cloneVoice = asyncHandler(async (req, res) => {
+  const { audio } = req.body;
+  if (!audio || typeof audio !== 'object' || !audio.type) {
+    throw new AppError(
+      'audio is required with type (HeyGen union: { type, url } | { type, asset_id } | { type, base64, media_type, data })',
+      400
+    );
+  }
+  const data = await heygenV3Service.cloneVoice(req.body);
+  return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_CLONE_STARTED);
+});
+
+const getVoice = asyncHandler(async (req, res) => {
+  const data = await heygenV3Service.getVoice(req.params.voiceId);
+  return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DETAIL_OK);
+});
+
 const previewSpeech = asyncHandler(async (req, res) => {
   const payload = {
     text: req.body.text,
@@ -125,6 +147,9 @@ module.exports = {
   createAvatar,
   createAvatarConsent,
   listVoices,
+  designVoice,
+  cloneVoice,
+  getVoice,
   previewSpeech,
   uploadAsset,
   proxyAudio,

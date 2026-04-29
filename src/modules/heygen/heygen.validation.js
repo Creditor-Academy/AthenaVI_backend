@@ -35,6 +35,36 @@ const listVoicesQuery = Joi.object({
   }).unknown(true),
 });
 
+const designVoiceBody = Joi.object({
+  body: Joi.object({
+    prompt: Joi.string().min(1).max(1000).required(),
+    gender: Joi.string().valid('male', 'female').allow(null, ''),
+    locale: Joi.string().allow(null, ''),
+    seed: Joi.number().integer().min(0),
+  }).unknown(false),
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+});
+
+const cloneVoiceBody = Joi.object({
+  body: Joi.object({
+    voice_name: Joi.string().min(1).max(100).required(),
+    audio: Joi.object().unknown(true).required(),
+    language: Joi.string().allow(null, ''),
+    remove_background_noise: Joi.boolean(),
+  }).unknown(false),
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+});
+
+const getVoiceParams = Joi.object({
+  body: Joi.object({}).unknown(false),
+  params: Joi.object({
+    voiceId: Joi.string().required(),
+  }).unknown(false),
+  query: Joi.object({}).unknown(false),
+});
+
 const createAvatarConsentBody = Joi.object({
   body: Joi.object({
     reroute_url: Joi.string().uri().allow(null, ''),
@@ -81,6 +111,9 @@ module.exports = {
   listAvatarGroupsQuery,
   listAvatarLooksQuery,
   listVoicesQuery,
+  designVoiceBody,
+  cloneVoiceBody,
+  getVoiceParams,
   createAvatarConsentBody,
   previewSpeechBody,
   audioProxyQuery,
