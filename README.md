@@ -68,7 +68,7 @@ Authorization: Bearer <access_token>
 ### Unprotected vs protected
 
 - **Unprotected**: OTP generate/resend, register, login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` (redirect).
-- **Protected**: All `/api/user/*`, `/api/workspaces/*`, and `/api/credits/*` require `Authorization: Bearer <access_token>`. Workspace and credit routes additionally require workspace membership and specific roles where noted.
+- **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted.
 
 ---
 
@@ -443,6 +443,8 @@ All workspace routes require **`Authorization: Bearer <access_token>`**. Some ro
 
 `:id` in paths below is the **workspace UUID**.
 
+**Folders** for a workspace are documented under **`/api/workspaces/:workspaceId/folders`** (see **Folders** below in this section).
+
 Each user has exactly one **private** workspace (created on registration). Users can create additional **team** workspaces.
 
 ---
@@ -718,6 +720,193 @@ OWNER or ADMIN can remove others; a **MEMBER** can remove only themselves. **OWN
 
 ---
 
+## Folders
+
+Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below require **`Authorization: Bearer <access_token>`**.
+
+`rename` and `delete` run **`folderPermission`**: the user must be a **workspace member** with role **OWNER** or **ADMIN**, or be the **creator** of the folder.
+
+---
+
+### List folders
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/folders` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "folders": [
+    {
+      "id": "uuid",
+      "name": "My folder",
+      "workspaceId": "uuid",
+      "createdBy": "uuid",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    }
+  ]
+}
+```
+
+---
+
+### Create folder
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/folders` |
+| **Auth** | Bearer |
+
+**Request body**
+
+- `name`: string, **1–255** characters (trimmed).
+
+```json
+{
+  "name": "New folder"
+}
+```
+
+**Response (201)** – `data`:
+
+```json
+{
+  "folder": {
+    "id": "uuid",
+    "name": "New folder",
+    "createdAt": "ISO8601"
+  }
+}
+```
+
+---
+
+### Rename folder
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/folders/:folderId` |
+| **Auth** | Bearer |
+| **Permission** | Folder creator, or workspace OWNER/ADMIN |
+
+**Request body**
+
+```json
+{
+  "name": "Renamed folder"
+}
+```
+
+**Response (200)** – `data`: `{ "folder": { ... } }`.
+
+---
+
+### Delete folder
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/workspaces/:workspaceId/folders/:folderId` |
+| **Auth** | Bearer |
+| **Permission** | Folder creator, or workspace OWNER/ADMIN |
+
+**Response (200)** – `data`: `{ "folder": { ... } }`.
+
+---
+
+# Assets API
+
+Base path: **`/api/assets`**
+
+Workspace uploads are stored in **S3**; metadata is tied to the workspace and counts against the **workspace owner’s** storage quota.
+
+All routes require **`Authorization: Bearer <access_token>`** and **`checkWorkspaceAccess`**:
+
+- **PRIVATE** workspace: only the **owner** may access routes for that `workspaceId`.
+- **TEAM** workspace: any **member** may access.
+
+---
+
+## Upload asset
+
+`multipart/form-data` with a single file field **`file`**.
+
+Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`video/mp4`**, **`audio/mp3`**. Maximum size **50 MB**.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/assets/:workspaceId/upload` |
+| **Auth** | Bearer (see workspace rules above) |
+
+**Response (201)** – `data`: `{ "asset": { ... } }` (includes URL, name, size, type, etc.).
+
+- **400** if file type invalid or storage limit exceeded.
+
+---
+
+## List assets
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/assets/:workspaceId` |
+| **Auth** | Bearer (see workspace rules above) |
+
+**Query (optional)**
+
+- `take` – page size, **1–100** (default **20** when omitted).
+- `skip` – offset, default **0**.
+
+For **PRIVATE** workspaces, only assets **uploaded by the current user** are returned. For **TEAM** workspaces, assets for the whole workspace are listed.
+
+**Response (200)** – `data`: `{ "assets": [ ... ] }`.
+
+---
+
+## Rename asset
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/assets/:workspaceId/:assetId/rename` |
+| **Auth** | Bearer (see workspace rules above) |
+
+**Request body**
+
+```json
+{
+  "name": "new-name.webp"
+}
+```
+
+- `name`: string, **1–255** characters (trimmed).
+
+**Response (200)** – `data`: `{ "asset": { ... } }`.
+
+---
+
+## Delete asset
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/assets/:workspaceId/:assetId` |
+| **Auth** | Bearer (see workspace rules above) |
+
+Removes the object from storage (when applicable) and decrements the owner’s **storageUsed**.
+
+**Response (200)** – `data`: `{ "asset": { ... } }`.
+
+---
+
 # Credits API
 
 Base path: **`/api/credits`**
@@ -810,6 +999,184 @@ Credit transactions for the **current user** only in the given workspace.
 
 ---
 
+# HeyGen API
+
+Base path: **`/api/heygen`**
+
+Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices, asset upload, speech preview). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**.
+
+All routes require **`Authorization: Bearer <access_token>`**.
+
+---
+
+## List avatar groups
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/heygen/avatars/groups` |
+| **Auth** | Bearer |
+
+**Query (optional)** – forwarded to HeyGen; common keys include:
+
+- `ownership` – `public` or `private`
+- `limit` – integer **1–50**
+- `token` – pagination cursor (string)
+
+**Response (200)** – `data`: HeyGen payload (avatar groups).
+
+---
+
+## List avatar looks
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/heygen/avatars/looks` |
+| **Auth** | Bearer |
+
+**Query (optional)**
+
+- `group_id`
+- `avatar_type` – `studio_avatar`, `digital_twin`, or `photo_avatar`
+- `ownership` – `public` or `private`
+- `limit` – **1–50**
+- `token` – pagination cursor
+
+**Response (200)** – `data`: HeyGen payload.
+
+---
+
+## Create avatar
+
+Starts HeyGen avatar creation (`digital_twin`, `photo`, or `prompt`).
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/avatars` |
+| **Auth** | Bearer |
+
+**Request body** (JSON)
+
+- `type`: **`digital_twin`** | **`photo`** | **`prompt`** (required).
+- `name`: string, max **200** chars (required).
+- For **`prompt`**: `prompt` text is required (non-empty).
+- For **`digital_twin`** or **`photo`**: `file` is required — object shaped per HeyGen v3 (`type`: `url` \| `asset_id` \| `base64`, plus applicable fields).
+- Optional: `reference_images` (array, max **20** items), `avatar_group_id`, etc.
+
+**Response (200)** – `data`: HeyGen creation response.
+
+---
+
+## Avatar consent URL
+
+Returns a consent / onboarding URL for a pending avatar group.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/avatars/:groupId/consent` |
+| **Auth** | Bearer |
+
+**Request body** (optional)
+
+```json
+{
+  "reroute_url": "https://your-app.com/after-consent"
+}
+```
+
+**Response (200)** – `data`: HeyGen payload.
+
+---
+
+## List voices
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/heygen/voices` |
+| **Auth** | Bearer |
+
+**Query (optional)**
+
+- `type` – `public` or `private`
+- `engine`, `language`, `gender` (`male` \| `female`)
+- `limit` – **1–100**
+- `token` – pagination cursor
+
+**Response (200)** – `data`: HeyGen voices payload.
+
+---
+
+## Preview speech (voice synthesis)
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/voices/preview-speech` |
+| **Auth** | Bearer |
+
+**Request body**
+
+- `text`: string, **1–5000** chars (required).
+- `voice_id`: string (required).
+- `input_type`: **`text`** (default) or **`ssml`**.
+- Optional: `speed` (**0.5–2**), `language`, `locale`.
+
+**Response (200)** – `data`: HeyGen speech preview payload.
+
+---
+
+## Upload HeyGen asset
+
+Uploads a file to HeyGen via **`POST /v3/assets`**. `multipart/form-data` field **`file`**.
+
+Allowed types include **`image/png`**, **`image/jpeg`**, **`video/mp4`**, **`video/webm`**, **`audio/mpeg`**, **`audio/mp3`**, **`audio/wav`**, **`application/pdf`**. Max **32 MB**.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/assets` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: HeyGen asset metadata.
+
+---
+
+## Audio proxy
+
+Streams audio from allowed HeyGen file hosts for playback (HTTPS only). Host must be one of: `files.heygen.com`, `files.heygen.ai`, `files2.heygen.ai`, `files2.heygen.com`, `resource2.heygen.ai`.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/heygen/assets/audio-proxy` |
+| **Auth** | Bearer |
+
+**Query**
+
+- `url` – full **HTTPS** URL to the audio file (required).
+
+**Response (200)** – raw audio bytes (`Content-Type` from upstream). **403** if host not allowed. **502** if fetch fails.
+
+---
+
+## Generate HeyGen video
+
+Reserved for future use.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/generate` |
+| **Auth** | Bearer |
+
+**Response (501)** – not implemented (`message` explains).
+
+---
+
 # Quick reference
 
 | Method | Path | Auth | Description |
@@ -841,9 +1208,26 @@ Credit transactions for the **current user** only in the given workspace.
 | DELETE | `/api/workspaces/:id/invitations/:invitationId` | Bearer + OWNER/ADMIN | Cancel invitation |
 | PATCH | `/api/workspaces/:id/members/:memberId/role` | Bearer + OWNER | Change role |
 | DELETE | `/api/workspaces/:id/members/:memberId` | Bearer + OWNER/ADMIN or self | Remove member |
+| GET | `/api/workspaces/:workspaceId/folders` | Bearer | List folders |
+| POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
+| PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
+| DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
+| POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
+| GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`) |
+| PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |
+| DELETE | `/api/assets/:workspaceId/:assetId` | Bearer + workspace access | Delete asset |
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
+| GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups |
+| GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks |
+| POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar |
+| POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent URL |
+| GET | `/api/heygen/voices` | Bearer | List HeyGen voices |
+| POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
+| POST | `/api/heygen/assets` | Bearer | Upload file to HeyGen (multipart `file`) |
+| GET | `/api/heygen/assets/audio-proxy` | Bearer | Proxy audio from HeyGen hosts (`url` query) |
+| POST | `/api/heygen/generate` | Bearer | Video generation (501 — not implemented) |
 
 ---
 
@@ -855,6 +1239,7 @@ Frontend may need to know:
 - **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`.
 - **Invitations** – Email links use `{FRONTEND_URL}/invitations/accept/<token>`; your app should route the user to login if needed, then `POST /api/workspaces/invitations/accept` with `{ "token" }`.
 - **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh` (same-origin or CORS `credentials` as configured).
+- **HeyGen** – Server-side **`HEYGEN_API_KEY`** must be set for `/api/heygen/*` routes to call HeyGen successfully.
 
 ---
 
