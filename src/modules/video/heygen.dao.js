@@ -1,46 +1,36 @@
-const prisma = require("../../shared/config/prismaClient");
+const prisma = require('../../shared/config/prismaClient');
+
+const findHeygenResponseByRequestHash = async (requestHash) => {
+  return prisma.heygenResponse.findUnique({
+    where: { requestHash },
+  });
+};
 
 const saveHeygenResponse = async ({
   workspaceId,
   projectId,
   videoId,
   videoUrl,
-  status,
-  heygenResponse,
+  requestHash,
+  status = 'processing',
 }) => {
-  if (!workspaceId || !projectId) {
-    throw new Error("workspaceId and projectId are required to save Heygen response");
+  if (!workspaceId || !projectId || !videoId || !requestHash) {
+    throw new Error('workspaceId, projectId, videoId, and requestHash are required');
   }
 
-  const resolvedVideoId =
-    videoId ||
-    heygenResponse?.id ||
-    heygenResponse?.video?.id ||
-    heygenResponse?.videoId ||
-    heygenResponse?.video_id;
-
-  const resolvedVideoUrl =
-    videoUrl ||
-    heygenResponse?.url ||
-    heygenResponse?.video?.url ||
-    heygenResponse?.videoUrl ||
-    heygenResponse?.video_url ||
-    heygenResponse?.output?.url ||
-    "";
-
-  if (!resolvedVideoId) {
-    throw new Error("Unable to derive videoId from Heygen response");
-  }
-
-  return await prisma.heygenResponse.create({
+  return prisma.heygenResponse.create({
     data: {
       workspaceId,
       projectId,
-      videoId: resolvedVideoId,
-      videoUrl: resolvedVideoUrl,
-      status: status || heygenResponse?.status || "processing",
+      videoId,
+      videoUrl,
+      requestHash,
+      status,
     },
   });
 };
 
-module.exports = { saveHeygenResponse };
+module.exports = {
+  findHeygenResponseByRequestHash,
+  saveHeygenResponse,
+};

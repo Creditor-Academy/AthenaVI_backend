@@ -1,12 +1,9 @@
 const axios = require('axios');
+const { Prisma } = require('@prisma/client');
 const heygenDao = require('../heygen.dao');
+const { generateHeygenRequestHash } = require('../../../shared/utils/requestHash')
 
-const API_KEY = process.env.HEYGEN_API_KEY;
-
-// helper sleep
-const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-
-const generateAvatarVideo = async (
+const generateAvatarVideo = async ({
   avatarId,
   title,
   resolution,
@@ -14,8 +11,23 @@ const generateAvatarVideo = async (
   backgroundColor,
   voiceId,
   script,
-  expressiveness
-) => {
+  expressiveness,
+  workspaceId,
+  projectId,
+}) => {
+  const requestHash = generateHeygenRequestHash({
+    workspaceId,
+    projectId,
+    avatarId,
+    voiceId,
+    script,
+  });
+
+  const existingResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
+  if (existingResponse) {
+    return existingResponse;
+  }
+
   const response = await axios.post(
     `${process.env.HEYGEN_BASE_URL}/v3/videos`,
     {
@@ -55,21 +67,42 @@ const generateAvatarVideo = async (
       },
     }
   );
-  console.log(response.data);
 
-  const heygenResponse = await heygenDao.saveHeygenResponse({
-    avatarId,
-    title,
-    resolution,
-    aspectRatio,
-    backgroundColor,
-    voiceId,
-    script,
-    expressiveness,
-    heygenResponse: response.data,
-  });
+  const payload = response.data;
+  const videoId =
+    payload?.id ||
+    payload?.video?.id ||
+    payload?.videoId ||
+    payload?.video_id;
+  const videoUrl =
+    payload?.url ||
+    payload?.video?.url ||
+    payload?.videoUrl ||
+    payload?.video_url ||
+    payload?.output?.url ||
+    '';
 
-  return response.data;
+  try {
+    return await heygenDao.saveHeygenResponse({
+      workspaceId,
+      projectId,
+      videoId,
+      videoUrl,
+      requestHash,
+      status: payload?.status || 'processing',
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      const duplicateResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
+      if (duplicateResponse) {
+        return duplicateResponse;
+      }
+    }
+    throw error;
+  }
 };
 
 module.exports = { generateAvatarVideo };

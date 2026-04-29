@@ -1,7 +1,5 @@
 const { successResponse } = require('../../shared/utils/apiResponse');
 const asyncHandler = require('../../shared/utils/asyncHandler');
-const videoService = require('./services/video.service');
-const axios = require('axios');
 const heygenService = require('./services/heygen.service');
 const messages = require('../../shared/utils/messages');
 
@@ -15,15 +13,11 @@ const generateAvatarVideo = asyncHandler(async (req, res) => {
     voiceId,
     script,
     expressiveness,
+    workspaceId,
+    projectId,
   } = req.body;
-  console.log('Received request to generate video with data:', {
-    avatarId,
-    title,
-    voiceId,
-    script,
-  });
 
-  const heygenResponse = await heygenService.generateAvatarVideo(
+  const heygenResponse = await heygenService.generateAvatarVideo({
     avatarId,
     title,
     resolution,
@@ -31,10 +25,10 @@ const generateAvatarVideo = asyncHandler(async (req, res) => {
     backgroundColor,
     voiceId,
     script,
-    expressiveness
-  );
-
-  console.log('HeyGen API response :', heygenResponse);
+    expressiveness,
+    workspaceId,
+    projectId,
+  });
 
   return successResponse(
     req,

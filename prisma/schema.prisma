@@ -260,6 +260,7 @@ model HeygenResponse {
   projectId   String
   videoId     String
   videoUrl    String
+  requestHash String @unique
   status      String @default("processing") // processing | completed | failed
 
   createdAt DateTime @default(now())
