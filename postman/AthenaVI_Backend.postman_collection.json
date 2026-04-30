@@ -1,0 +1,646 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "AthenaVI Backend",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Asset upload, HeyGen asset upload, and profile image use `form-data` with the field names shown on each request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "workspaceId", "value": "00000000-0000-4000-8000-000000000001" },
+    { "key": "folderId", "value": "00000000-0000-4000-8000-000000000002" },
+    { "key": "assetId", "value": "00000000-0000-4000-8000-000000000003" },
+    { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
+    { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
+    { "key": "groupId", "value": "replace-with-heygen-group-id" },
+    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/otp/generate"
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/otp/resend"
+          }
+        },
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"otp\": 123456\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Sends `refreshToken` cookie from prior Login/Register."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        },
+        {
+          "name": "Logout all devices",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout-all"
+          }
+        },
+        {
+          "name": "Forget password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/forget-password"
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"newpassword123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/reset-password"
+          }
+        },
+        {
+          "name": "Google OAuth start",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/google",
+            "description": "302 redirect to Google; use a browser or disable redirect following to inspect."
+          }
+        },
+        {
+          "name": "Google OAuth callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/google/callback?code=&state="
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Get all users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/getall"
+          }
+        },
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/profile"
+          }
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phoneNumber\": \"+15551234567\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/user/profile"
+          }
+        },
+        {
+          "name": "Upload profile image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/user/upload/profile-image"
+          }
+        },
+        {
+          "name": "Delete profile image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/profile-image"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workspaces",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Create workspace",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Team Workspace\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/"
+          }
+        },
+        {
+          "name": "List my workspaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/"
+          }
+        },
+        {
+          "name": "Get workspace by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "Delete workspace",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "List invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations"
+          }
+        },
+        {
+          "name": "Invite member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"MEMBER\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invite"
+          }
+        },
+        {
+          "name": "Cancel invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations/{{invitationId}}"
+          }
+        },
+        {
+          "name": "Accept invitation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"invitation-jwt-or-token\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/invitations/accept"
+          }
+        },
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members"
+          }
+        },
+        {
+          "name": "Change member role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/role"
+          }
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}",
+            "description": "Route in app is registered as `/:id/members/:memberId`. If validation fails unexpectedly, check that `workspaceId` matches the path param name your server expects."
+          }
+        },
+        {
+          "name": "Folders — Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Folder\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+          }
+        },
+        {
+          "name": "Folders — List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+          }
+        },
+        {
+          "name": "Folders — Rename",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed Folder\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+          }
+        },
+        {
+          "name": "Folders — Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credits",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Get credits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "Workspace credit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/history"
+          }
+        },
+        {
+          "name": "My credit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/my-history"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Upload asset",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": [] }]
+            },
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/upload"
+          }
+        },
+        {
+          "name": "List assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0"
+          }
+        },
+        {
+          "name": "Rename asset",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"new-asset-name.pdf\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}/rename"
+          }
+        },
+        {
+          "name": "Delete asset",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HeyGen",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List avatar groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20"
+          }
+        },
+        {
+          "name": "List avatar looks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks?group_id=&avatar_type=studio_avatar&limit=20"
+          }
+        },
+        {
+          "name": "Create avatar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"prompt\",\n  \"name\": \"My Avatar\",\n  \"prompt\": \"A professional instructor in a studio\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars"
+          }
+        },
+        {
+          "name": "Create avatar consent",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reroute_url\": \"https://example.com/after-consent\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent"
+          }
+        },
+        {
+          "name": "List voices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices?type=public&limit=50"
+          }
+        },
+        {
+          "name": "Design a voice (POST /v3/voices)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Warm, confident female narrator for e-learning\",\n  \"gender\": \"female\",\n  \"seed\": 0\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices",
+            "description": "HeyGen `POST /v3/voices` — returns up to 3 matching voices. Same path as list voices; method is POST."
+          }
+        },
+        {
+          "name": "Clone a voice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voice_name\": \"My cloned voice\",\n  \"audio\": {\n    \"type\": \"asset_id\",\n    \"asset_id\": \"REPLACE_WITH_ASSET_ID_FROM_UPLOAD\"\n  },\n  \"remove_background_noise\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/clone",
+            "description": "HeyGen `POST /v3/voices/clone`. Poll GET voice with returned id until complete."
+          }
+        },
+        {
+          "name": "Get voice by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
+            "description": "HeyGen `GET /v3/voices/{voice_id}` — use for clone status or voice metadata."
+          }
+        },
+        {
+          "name": "Preview speech",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Hello from AthenaVI.\",\n  \"voice_id\": \"replace-with-voice-id\",\n  \"input_type\": \"text\",\n  \"speed\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/preview-speech"
+          }
+        },
+        {
+          "name": "Upload HeyGen asset",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": [] }]
+            },
+            "url": "{{baseUrl}}/api/heygen/assets"
+          }
+        },
+        {
+          "name": "Audio proxy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/assets/audio-proxy?url=https%3A%2F%2Ffiles.heygen.com%2Fexample",
+            "description": "`url` must be https and host must be allowed (e.g. files.heygen.com)."
+          }
+        },
+        {
+          "name": "Generate video (placeholder)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/generate",
+            "description": "Controller currently returns 501 Not Implemented."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -104,4 +104,24 @@ module.exports = {
 
   // Video (HeyGen)
   VIDEO_GENERATION_SUCCESS: 'Avatar video generated successfully',
+
+  // HeyGen v3 (Phase 1)
+  HEYGEN_NOT_CONFIGURED: 'HeyGen is not configured (missing HEYGEN_API_KEY)',
+  HEYGEN_REQUEST_FAILED: 'HeyGen API request failed',
+  HEYGEN_AVATAR_GROUPS_OK: 'Avatar groups fetched',
+  HEYGEN_AVATAR_LOOKS_OK: 'Avatar looks fetched',
+  HEYGEN_AVATAR_CREATED: 'Avatar creation submitted',
+  HEYGEN_CONSENT_OK: 'Consent flow initiated',
+  HEYGEN_VOICES_OK: 'Voices fetched',
+  HEYGEN_VOICE_DESIGNED: 'Voice design suggestions returned',
+  HEYGEN_VOICE_CLONE_STARTED: 'Voice clone job created',
+  HEYGEN_VOICE_DETAIL_OK: 'Voice details fetched',
+  HEYGEN_SPEECH_PREVIEW_OK: 'Speech preview generated',
+  HEYGEN_ASSET_UPLOADED: 'Asset uploaded to HeyGen',
+  HEYGEN_ASSET_FILE_REQUIRED: 'File is required (field name: file)',
+  HEYGEN_INVALID_ASSET_TYPE: 'File type not allowed for HeyGen upload',
+  HEYGEN_PROXY_INVALID_URL: 'Invalid or missing audio URL',
+  HEYGEN_PROXY_HOST_NOT_ALLOWED: 'Audio proxy is only allowed for HeyGen CDN hosts',
+  HEYGEN_PROXY_FETCH_FAILED: 'Could not fetch audio from HeyGen',
+  HEYGEN_VIDEO_GENERATE_NOT_IMPLEMENTED: 'Video generation is not implemented yet',
 };
