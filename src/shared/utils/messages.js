@@ -90,6 +90,7 @@ module.exports = {
   FOLDER_RENAMED: 'Folder renamed successfully',
   FOLDER_CREATED: 'Folder created successfully',
   FOLDERS_FETCHED_SUCCESSFULLY: 'Folders fetched successfully',
+  PROJECT_CREATED: 'Project created successfully',
 
 
   // Asset

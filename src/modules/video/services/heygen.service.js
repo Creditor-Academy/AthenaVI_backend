@@ -67,42 +67,24 @@ const generateAvatarVideo = async ({
       },
     }
   );
+  console.log('HeyGen API response:', response.data);
+  console.log('HeyGen API response:', response.data.data.video_id);
 
-  const payload = response.data;
-  const videoId =
-    payload?.id ||
-    payload?.video?.id ||
-    payload?.videoId ||
-    payload?.video_id;
-  const videoUrl =
-    payload?.url ||
-    payload?.video?.url ||
-    payload?.videoUrl ||
-    payload?.video_url ||
-    payload?.output?.url ||
-    '';
-
-  try {
-    return await heygenDao.saveHeygenResponse({
+  const saveHeygenResponse = await heygenDao.saveHeygenResponse({
       workspaceId,
       projectId,
-      videoId,
-      videoUrl,
+      videoId: response.data?.data?.video_id || '',
       requestHash,
-      status: payload?.status || 'processing',
+      status: response.data?.status || 'processing',
     });
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      const duplicateResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
-      if (duplicateResponse) {
-        return duplicateResponse;
-      }
-    }
-    throw error;
-  }
+
+  console.log('Saving HeyGen response to DB with hash:', requestHash);
+
+    console.log(saveHeygenResponse);
+    
+  
+
+  
 };
 
 module.exports = { generateAvatarVideo };

@@ -10,10 +10,12 @@ const saveHeygenResponse = async ({
   workspaceId,
   projectId,
   videoId,
-  videoUrl,
+  videoUrl="",
   requestHash,
   status = 'processing',
 }) => {
+  console.log(`workspaceId: ${workspaceId}, projectId: ${projectId}, videoId: ${videoId}, requestHash: ${requestHash}`);
+  
   if (!workspaceId || !projectId || !videoId || !requestHash) {
     throw new Error('workspaceId, projectId, videoId, and requestHash are required');
   }
