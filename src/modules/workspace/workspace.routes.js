@@ -21,6 +21,7 @@ const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
 const folderRoutes = require('../folder/folder.routes');
 const projectRoutes = require('../project/project.routes');
+const heygenVideoRoutes = require('../video/heygenVideo.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
@@ -28,6 +29,12 @@ const ownerOnly = ['OWNER'];
 
 // nested routes
 router.use('/:workspaceId/folders', authMiddleware, folderRoutes);
+router.use(
+  '/:workspaceId/projects/:projectId/heygen',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  heygenVideoRoutes
+);
 router.use('/:workspaceId/projects', authMiddleware, projectRoutes);
 
 // workspace routes

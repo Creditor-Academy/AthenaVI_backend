@@ -9,13 +9,14 @@ const findHeygenResponseByRequestHash = async (requestHash) => {
 const saveHeygenResponse = async ({
   workspaceId,
   projectId,
+  sceneId,
   videoId,
-  videoUrl="",
+  videoUrl = '',
+  s3Key = null,
   requestHash,
   status = 'processing',
+  rawResponse = null,
 }) => {
-  console.log(`workspaceId: ${workspaceId}, projectId: ${projectId}, videoId: ${videoId}, requestHash: ${requestHash}`);
-  
   if (!workspaceId || !projectId || !videoId || !requestHash) {
     throw new Error('workspaceId, projectId, videoId, and requestHash are required');
   }
@@ -24,15 +25,41 @@ const saveHeygenResponse = async ({
     data: {
       workspaceId,
       projectId,
+      sceneId: sceneId ?? '',
       videoId,
       videoUrl,
+      s3Key,
       requestHash,
       status,
+      rawResponse,
     },
+  });
+};
+
+const listHeygenResponsesByProject = async (workspaceId, projectId) => {
+  return prisma.heygenResponse.findMany({
+    where: { workspaceId, projectId },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+const findHeygenResponseByIdForProject = async (id, workspaceId, projectId) => {
+  return prisma.heygenResponse.findFirst({
+    where: { id, workspaceId, projectId },
+  });
+};
+
+const updateHeygenResponse = async (id, data) => {
+  return prisma.heygenResponse.update({
+    where: { id },
+    data,
   });
 };
 
 module.exports = {
   findHeygenResponseByRequestHash,
   saveHeygenResponse,
+  listHeygenResponsesByProject,
+  findHeygenResponseByIdForProject,
+  updateHeygenResponse,
 };

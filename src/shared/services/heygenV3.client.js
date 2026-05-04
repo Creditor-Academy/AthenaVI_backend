@@ -1,7 +1,9 @@
 const AppError = require('../utils/AppError');
 const messages = require('../utils/messages');
 
-const HEYGEN_BASE = 'https://api.heygen.com';
+const HEYGEN_BASE =
+  (process.env.HEYGEN_BASE_URL && String(process.env.HEYGEN_BASE_URL).trim().replace(/\/$/, '')) ||
+  'https://api.heygen.com';
 
 function getApiKey() {
   const key = process.env.HEYGEN_API_KEY;

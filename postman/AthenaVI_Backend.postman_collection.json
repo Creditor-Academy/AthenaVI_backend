@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "AthenaVI Backend",
-    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Asset upload, HeyGen asset upload, and profile image use `form-data` with the field names shown on each request.",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Asset upload, HeyGen asset upload, and profile image use `form-data` with the field names shown on each request.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -14,7 +14,9 @@
     { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
     { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
     { "key": "groupId", "value": "replace-with-heygen-group-id" },
-    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" }
+    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" },
+    { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
+    { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000011" }
   ],
   "item": [
     {
@@ -412,6 +414,67 @@
             "header": [],
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
           }
+        },
+        {
+          "name": "HeyGen videos (project)",
+          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3, returns presigned download URLs. Replace `projectId` with a real project in `workspaceId`.",
+          "item": [
+            {
+              "name": "Create avatar video",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.heygenVideo && j.data.heygenVideo.id;",
+                      "  if (id) { pm.collectionVariables.set('heygenVideoId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sceneId\": \"scene-1\",\n  \"avatarId\": \"replace-with-heygen-avatar-id\",\n  \"title\": \"Scene 1 take\",\n  \"resolution\": \"1080p\",\n  \"aspectRatio\": \"16:9\",\n  \"backgroundColor\": \"#008000\",\n  \"voiceId\": \"replace-with-heygen-voice-id\",\n  \"script\": \"Hello, this is a test line for lip sync.\",\n  \"expressiveness\": \"medium\",\n  \"voiceSettings\": {\n    \"speed\": 1,\n    \"pitch\": 0,\n    \"locale\": \"en-US\"\n  },\n  \"removeBackground\": false,\n  \"outputFormat\": \"mp4\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos",
+                "description": "201 — Idempotent per (workspace, project, scene, script, avatar, voice). **HEYGEN_API_KEY** and **AWS S3** env must be set for end-to-end flow."
+              }
+            },
+            {
+              "name": "List HeyGen videos for project",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos"
+              }
+            },
+            {
+              "name": "Get HeyGen video (poll + sync to S3)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}",
+                "description": "Polls HeyGen until complete (bounded), downloads to S3 when done. May take time while rendering."
+              }
+            },
+            {
+              "name": "Download HeyGen video (presigned URL)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/download?expiresIn=300",
+                "description": "409 if not ready. `presignedUrl` in response is short-lived; call again to refresh. Optional query `expiresIn` seconds: **60–3600** (server default **300** if omitted)."
+              }
+            }
+          ]
         }
       ]
     },
@@ -623,21 +686,7 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/heygen/assets/audio-proxy?url=https%3A%2F%2Ffiles.heygen.com%2Fexample",
-            "description": "`url` must be https and host must be allowed (e.g. files.heygen.com)."
-          }
-        },
-        {
-          "name": "Generate video (placeholder)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": "{{baseUrl}}/api/heygen/generate",
-            "description": "Controller currently returns 501 Not Implemented."
+            "description": "`url` must be https and host must be allowed (e.g. files.heygen.com). **Avatar video generation** is under **Workspaces → HeyGen videos (project)**, not here."
           }
         }
       ]

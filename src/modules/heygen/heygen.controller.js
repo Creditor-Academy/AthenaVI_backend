@@ -1,5 +1,5 @@
 const asyncHandler = require('../../shared/utils/asyncHandler');
-const { successResponse, errorResponse } = require('../../shared/utils/apiResponse');
+const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const FormData = require('form-data');
@@ -137,10 +137,6 @@ const proxyAudio = asyncHandler(async (req, res) => {
   return res.status(200).send(buf);
 });
 
-const generateHeygenVideo = asyncHandler(async (req, res) => {
-  return errorResponse(req, res, 501, messages.HEYGEN_VIDEO_GENERATE_NOT_IMPLEMENTED);
-});
-
 module.exports = {
   listAvatarGroups,
   listAvatarLooks,
@@ -153,5 +149,4 @@ module.exports = {
   previewSpeech,
   uploadAsset,
   proxyAudio,
-  generateHeygenVideo,
 };

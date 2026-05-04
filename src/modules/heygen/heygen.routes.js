@@ -63,6 +63,4 @@ router.get(
   heygenController.proxyAudio
 );
 
-router.post('/generate', heygenController.generateHeygenVideo);
-
 module.exports = router;

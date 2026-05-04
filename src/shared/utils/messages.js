@@ -124,5 +124,7 @@ module.exports = {
   HEYGEN_PROXY_INVALID_URL: 'Invalid or missing audio URL',
   HEYGEN_PROXY_HOST_NOT_ALLOWED: 'Audio proxy is only allowed for HeyGen CDN hosts',
   HEYGEN_PROXY_FETCH_FAILED: 'Could not fetch audio from HeyGen',
-  HEYGEN_VIDEO_GENERATE_NOT_IMPLEMENTED: 'Video generation is not implemented yet',
+  HEYGEN_VIDEO_NOT_READY: 'Video is not ready for download yet',
+  HEYGEN_VIDEOS_FETCHED: 'HeyGen videos fetched',
+  HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
 };

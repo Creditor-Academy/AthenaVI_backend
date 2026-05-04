@@ -1,4 +1,5 @@
-const { PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
@@ -44,7 +45,16 @@ async function deleteFile(key) {
   return s3.send(command);
 }
 
+async function getPresignedGetUrl(key, expiresInSeconds = 300) {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+  });
+  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
 module.exports = {
   uploadFile,
   deleteFile,
+  getPresignedGetUrl,
 };

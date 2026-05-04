@@ -68,7 +68,7 @@ Authorization: Bearer <access_token>
 ### Unprotected vs protected
 
 - **Unprotected**: OTP generate/resend, register, login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` (redirect).
-- **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted.
+- **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted. **HeyGen avatar videos** at `/api/workspaces/:workspaceId/projects/:projectId/heygen/*` require a workspace **member** role (OWNER, ADMIN, or MEMBER) and the `projectId` must belong to that workspace.
 
 ---
 
@@ -1003,9 +1003,11 @@ Credit transactions for the **current user** only in the given workspace.
 
 Base path: **`/api/heygen`**
 
-Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview — asset upload). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**.
+Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview — asset upload). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**. Optional **`HEYGEN_BASE_URL`** overrides the API host (default `https://api.heygen.com`).
 
-All routes require **`Authorization: Bearer <access_token>`**.
+**Avatar / lip-sync video generation** (create job, list, status, S3 storage, presigned download) is **not** on this path — see **HeyGen avatar videos (workspace project)** later in this document (`/api/workspaces/.../heygen/...`).
+
+All routes in this section require **`Authorization: Bearer <access_token>`**.
 
 ---
 
@@ -1216,17 +1218,86 @@ Streams audio from allowed HeyGen file hosts for playback (HTTPS only). Host mus
 
 ---
 
-## Generate HeyGen video
+# HeyGen avatar videos (workspace project)
 
-Reserved for future use.
+Creates HeyGen **`POST /v3/videos`** avatar jobs per **workspace → project → scene**, polls **`GET /v3/videos/:video_id`**, downloads the finished MP4 to **S3** (`workspace/{workspaceId}/heygen/{projectId}/{sceneId}/...`), and serves **private** access via **presigned GET** URLs.
+
+| | |
+|---|---|
+| **Base path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen` |
+| **Auth** | **Bearer** + workspace **member** (OWNER, ADMIN, or MEMBER via `requireWorkspaceRole`) |
+| **Server** | **`HEYGEN_API_KEY`**, **`AWS_S3_BUCKET`**, **`AWS_REGION`**, AWS credentials, and optional **`HEYGEN_BASE_URL`** (same as other HeyGen calls) |
+
+**Note:** The legacy unauthenticated `POST /api/video/avatar/generate` route and `POST /api/heygen/generate` have been **removed**; use the routes below only.
+
+---
+
+## Create avatar video
 
 | | |
 |---|---|
 | **Method** | `POST` |
-| **Path** | `/api/heygen/generate` |
-| **Auth** | Bearer |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` |
+| **Auth** | Bearer + member |
 
-**Response (501)** – not implemented (`message` explains).
+**Request body (JSON, camelCase)**
+
+| Field | Required | Description |
+|--------|----------|-------------|
+| `sceneId` | yes | Client scene key from the editor (1–256 chars); one stored video per idempotent hash per scene |
+| `avatarId` | yes | HeyGen avatar id |
+| `title` | yes | Video title for HeyGen |
+| `resolution` | yes | `1080p` or `720p` |
+| `aspectRatio` | yes | `16:9` or `9:16` |
+| `backgroundColor` | yes | Solid background, e.g. `#008000` (hex) |
+| `voiceId` | yes | HeyGen voice id |
+| `script` | yes | Spoken script (TTS + lip sync) |
+| `expressiveness` | yes | `low`, `medium`, or `high` |
+| `voiceSettings` | no | Optional: `speed`, `pitch`, `volume`, `locale`, `engine_settings` |
+| `removeBackground` | no | Boolean |
+| `outputFormat` | no | `mp4` (default) |
+
+**Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice returns the **existing** row (idempotent).
+
+---
+
+## List HeyGen videos for project
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data.heygenVideos`: array of stored records for that project.
+
+---
+
+## Get HeyGen video (poll + sync to S3)
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` |
+| **Auth** | Bearer + member |
+
+Polls HeyGen (bounded) and, when **completed**, downloads to S3 if not already stored. **Response (200)** – `data.heygenVideo` with updated `status`, `s3Key`, `videoUrl`, etc.
+
+---
+
+## Download HeyGen video (presigned URL)
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/download` |
+| **Auth** | Bearer + member |
+
+**Query (optional)**
+
+- `expiresIn` – presigned URL lifetime in seconds (**60–3600**; default **300**).
+
+Runs sync first. **Response (200)** – includes `data.presignedUrl`, `data.expiresInSeconds`, and `data.heygenVideo`. **409** if the video is not ready or not yet in S3.
 
 ---
 
@@ -1283,7 +1354,10 @@ Reserved for future use.
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
 | POST | `/api/heygen/assets` | Bearer | Upload file to HeyGen (multipart `file`) |
 | GET | `/api/heygen/assets/audio-proxy` | Bearer | Proxy audio from HeyGen hosts (`url` query) |
-| POST | `/api/heygen/generate` | Bearer | Video generation (501 — not implemented) |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | Create HeyGen avatar video (scene, script, lip sync) |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` | Bearer + member | Get / poll / sync to S3 |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/download` | Bearer + member | Presigned MP4 URL (`expiresIn` optional) |
 
 ---
 
@@ -1295,7 +1369,7 @@ Frontend may need to know:
 - **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`.
 - **Invitations** – Email links use `{FRONTEND_URL}/invitations/accept/<token>`; your app should route the user to login if needed, then `POST /api/workspaces/invitations/accept` with `{ "token" }`.
 - **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh` (same-origin or CORS `credentials` as configured).
-- **HeyGen** – Server-side **`HEYGEN_API_KEY`** must be set for `/api/heygen/*` routes to call HeyGen successfully.
+- **HeyGen** – Server-side **`HEYGEN_API_KEY`** must be set for `/api/heygen/*` routes to call HeyGen successfully. Optional **`HEYGEN_BASE_URL`** (e.g. override API host). Avatar video jobs also need **AWS S3** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials) for storing rendered MP4s and presigned downloads.
 
 ---
 
