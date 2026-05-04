@@ -127,4 +127,5 @@ module.exports = {
   HEYGEN_VIDEO_NOT_READY: 'Video is not ready for download yet',
   HEYGEN_VIDEOS_FETCHED: 'HeyGen videos fetched',
   HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
+  HEYGEN_VIDEO_S3_LOCATION: 'S3 object location for IAM access',
 };

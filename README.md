@@ -1005,7 +1005,7 @@ Base path: **`/api/heygen`**
 
 Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview — asset upload). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**. Optional **`HEYGEN_BASE_URL`** overrides the API host (default `https://api.heygen.com`).
 
-**Avatar / lip-sync video generation** (create job, list, status, S3 storage, presigned download) is **not** on this path — see **HeyGen avatar videos (workspace project)** later in this document (`/api/workspaces/.../heygen/...`).
+**Avatar / lip-sync video generation** (create job, list, status, S3 storage, **stream** & **presigned** playback) is **not** on this path — see **HeyGen avatar videos (workspace project)** later in this document (`/api/workspaces/.../heygen/...`).
 
 All routes in this section require **`Authorization: Bearer <access_token>`**.
 
@@ -1220,15 +1220,42 @@ Streams audio from allowed HeyGen file hosts for playback (HTTPS only). Host mus
 
 # HeyGen avatar videos (workspace project)
 
-Creates HeyGen **`POST /v3/videos`** avatar jobs per **workspace → project → scene**, polls **`GET /v3/videos/:video_id`**, downloads the finished MP4 to **S3** (`workspace/{workspaceId}/heygen/{projectId}/{sceneId}/...`), and serves **private** access via **presigned GET** URLs.
+Creates HeyGen **`POST /v3/videos`** avatar jobs per **workspace → project → scene**, polls **`GET /v3/videos/:video_id`**, downloads the finished MP4 to **S3** (`workspace/{workspaceId}/heygen/{projectId}/{sceneId}/...`). Playback uses **`/download`** (presigned URL), **`/stream`** (authenticated pipe-through API), or optional **`/s3-location`** metadata—see below.
 
 | | |
 |---|---|
 | **Base path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen` |
 | **Auth** | **Bearer** + workspace **member** (OWNER, ADMIN, or MEMBER via `requireWorkspaceRole`) |
-| **Server** | **`HEYGEN_API_KEY`**, **`AWS_S3_BUCKET`**, **`AWS_REGION`**, AWS credentials, and optional **`HEYGEN_BASE_URL`** (same as other HeyGen calls) |
+| **Server** | **`HEYGEN_API_KEY`**, **`AWS_S3_BUCKET`**, **`AWS_REGION`**, AWS credentials used by this backend, and optional **`HEYGEN_BASE_URL`** |
 
 **Note:** The legacy unauthenticated `POST /api/video/avatar/generate` route and `POST /api/heygen/generate` have been **removed**; use the routes below only.
+
+---
+
+## App developer checklist (editor & preview)
+
+Use this for the **scene-based editor** and **in-browser preview**. **Batch / offline rendering** workflows are **not** covered here.
+
+**1. Server environment**
+
+| Variable | Purpose |
+|----------|---------|
+| **`HEYGEN_API_KEY`** | Required. HeyGen API returns **500** if missing. |
+| **`HEYGEN_BASE_URL`** | Optional. Override HeyGen API base (default `https://api.heygen.com`). |
+| **`AWS_S3_BUCKET`**, **`AWS_REGION`**, **`AWS_ACCESS_KEY_ID`**, **`AWS_SECRET_ACCESS_KEY`** | Required for uploading rendered MP4s from HeyGen and for **`/download`**, **`/stream`**, **`/s3-location`**. |
+
+**2. Auth** — Send **`Authorization: Bearer <access_token>`** on every request under this base path. The user must be a **member** of the workspace in the URL.
+
+**3. Project / scene state** — After **Create**, persist **`heygenVideoId`** (from `data.heygenVideo.id`) in your project or scene model. **Do not** store presigned URLs in saved JSON; they expire. When the user reopens a project **days later**, call **`/download`** or **`/stream`** again to obtain a **fresh** playback source (your app can do this **automatically** on load—no user action required).
+
+**4. Preview: choose one pattern**
+
+- **`GET .../stream`** — The **path** stays the same for the life of the project; the server enforces access on every request. A raw **`<video src="https://.../stream">`** **cannot** send a **Bearer** token, so use **`fetch(url, { headers: { Authorization: … } })`**, then **`URL.createObjectURL(blob)`** for `src` (or use **same-origin cookie** session if you implement it). Supports **`Range`** for seeking.
+- **`GET .../download`** — Returns a **`presignedUrl`** you can place directly in **`video.src`**. It **expires**; call **`/download`** again when loading a scene or on playback error (again, automate in the app).
+
+**5. CORS** — Allow your **frontend origin** to call this **API** with the headers you use (e.g. `Authorization`). Traffic for **`/stream`** goes through your **backend**, not straight to S3 in the browser, so align CORS with your API host.
+
+**6. Polling** — After **Create**, HeyGen may still be rendering. Use **`GET .../heygen/videos/:heygenVideoId`** (or **`/download`** / **`/stream`**, which run sync first) until **`status`** is **`completed`** or handle **409** / retry in the UI.
 
 ---
 
@@ -1301,6 +1328,43 @@ Runs sync first. **Response (200)** – includes `data.presignedUrl`, `data.expi
 
 ---
 
+## Stream HeyGen video (stable preview URL)
+
+Same **path shape forever**: no presigned query string that expires. The API validates **Bearer** access then pipes bytes from S3. Supports **`Range`** requests (**206 Partial Content**) so browsers can seek in `<video>`.
+
+| | |
+|---|---|
+| **Method** | `GET` or `HEAD` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/stream` |
+| **Auth** | Bearer + member |
+
+**Headers**
+
+- **`Authorization: Bearer <token>`** (required for GET/HEAD).
+- **`Range`** (optional, GET only) – forwarded to S3 for seeking; e.g. `bytes=0-1048575`.
+
+Runs sync first. **GET** returns **`video/mp4`** bytes. **HEAD** returns metadata only (`Content-Length`, `ETag`, etc.).
+
+**Preview integration:** See **App developer checklist** above (Bearer + `<video>`, **`fetch` + blob**, **`/download`** alternative).
+
+---
+
+## S3 object metadata (optional, advanced)
+
+This endpoint exists for **automation** that needs the canonical **bucket**, **key**, and **region** after sync (e.g. future batch jobs reading objects with **IAM**). **You do not need it** for the web editor or in-browser preview—use **`/stream`** or **`/download`** above.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/s3-location` |
+| **Auth** | Bearer + member |
+
+Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.region`, `data.objectArn`, and `data.heygenVideo`. **409** if not completed / not in S3 yet.
+
+**Offline / batch rendering pipelines** are still under development and are **not** documented here.
+
+---
+
 # Quick reference
 
 | Method | Path | Auth | Description |
@@ -1358,6 +1422,9 @@ Runs sync first. **Response (200)** – includes `data.presignedUrl`, `data.expi
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` | Bearer + member | Get / poll / sync to S3 |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/download` | Bearer + member | Presigned MP4 URL (`expiresIn` optional) |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/stream` | Bearer + member | Stream MP4 through API (stable path; use fetch+blob or cookies for `<video>`) |
+| HEAD | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/stream` | Bearer + member | Video metadata before streaming |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/s3-location` | Bearer + member | S3 bucket/key metadata (optional; not needed for editor preview) |
 
 ---
 
@@ -1369,7 +1436,7 @@ Frontend may need to know:
 - **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`.
 - **Invitations** – Email links use `{FRONTEND_URL}/invitations/accept/<token>`; your app should route the user to login if needed, then `POST /api/workspaces/invitations/accept` with `{ "token" }`.
 - **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh` (same-origin or CORS `credentials` as configured).
-- **HeyGen** – Server-side **`HEYGEN_API_KEY`** must be set for `/api/heygen/*` routes to call HeyGen successfully. Optional **`HEYGEN_BASE_URL`** (e.g. override API host). Avatar video jobs also need **AWS S3** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials) for storing rendered MP4s and presigned downloads.
+- **HeyGen avatar videos** – Server **`HEYGEN_API_KEY`** (optional **`HEYGEN_BASE_URL`**), plus **AWS** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). Editor preview: see **HeyGen avatar videos → App developer checklist** (`/stream` vs `/download`, persisting **`heygenVideoId`**, CORS).
 
 ---
 

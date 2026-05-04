@@ -60,9 +60,24 @@ const downloadHeygenVideoSchema = Joi.object({
   body: emptyBody,
 });
 
+const getS3LocationSchema = Joi.object({
+  params: heygenVideoIdParams,
+  query: Joi.object({}).unknown(false),
+  body: emptyBody,
+});
+
+/** GET/HEAD stream — browsers may send Range query via Range header (not validated here). */
+const getStreamSchema = Joi.object({
+  params: heygenVideoIdParams,
+  query: Joi.object({}).unknown(false),
+  body: emptyBody,
+});
+
 module.exports = {
   createHeygenVideoSchema,
   listHeygenVideosSchema,
   getHeygenVideoSchema,
   downloadHeygenVideoSchema,
+  getS3LocationSchema,
+  getStreamSchema,
 };

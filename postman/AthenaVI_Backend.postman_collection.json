@@ -417,7 +417,7 @@
         },
         {
           "name": "HeyGen videos (project)",
-          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3, returns presigned download URLs. Replace `projectId` with a real project in `workspaceId`.",
+          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3. Use **s3-location** for IAM workers (Remotion) or **download** for presigned URLs. Replace `projectId` with a real project in `workspaceId`.",
           "item": [
             {
               "name": "Create avatar video",
@@ -466,12 +466,34 @@
               }
             },
             {
+              "name": "Get S3 location (IAM / Remotion worker)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/s3-location",
+                "description": "Returns `bucket`, `key`, `region`, `objectArn` for `GetObject` with IAM. No secrets. 409 until file is in S3."
+              }
+            },
+            {
               "name": "Download HeyGen video (presigned URL)",
               "request": {
                 "method": "GET",
                 "header": [],
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/download?expiresIn=300",
                 "description": "409 if not ready. `presignedUrl` in response is short-lived; call again to refresh. Optional query `expiresIn` seconds: **60–3600** (server default **300** if omitted)."
+              }
+            },
+            {
+              "name": "Stream HeyGen video (stable preview URL)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/stream",
+                "description": "Pipes S3 through API; same path does not expire like presigned URLs. Use `fetch` + blob `src` for `<video>` (native `src` cannot send Bearer). Optional `Range` header for seeking."
               }
             }
           ]

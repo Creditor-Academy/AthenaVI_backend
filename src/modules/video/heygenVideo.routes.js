@@ -18,15 +18,33 @@ router.get(
 );
 
 router.get(
-  '/videos/:heygenVideoId',
-  validate(heygenVideoValidation.getHeygenVideoSchema),
-  heygenVideoController.getHeygenVideo
+  '/videos/:heygenVideoId/s3-location',
+  validate(heygenVideoValidation.getS3LocationSchema),
+  heygenVideoController.getHeygenVideoS3Location
+);
+
+router.head(
+  '/videos/:heygenVideoId/stream',
+  validate(heygenVideoValidation.getStreamSchema),
+  heygenVideoController.headHeygenVideoStream
+);
+
+router.get(
+  '/videos/:heygenVideoId/stream',
+  validate(heygenVideoValidation.getStreamSchema),
+  heygenVideoController.streamHeygenVideo
 );
 
 router.get(
   '/videos/:heygenVideoId/download',
   validate(heygenVideoValidation.downloadHeygenVideoSchema),
   heygenVideoController.downloadHeygenVideo
+);
+
+router.get(
+  '/videos/:heygenVideoId',
+  validate(heygenVideoValidation.getHeygenVideoSchema),
+  heygenVideoController.getHeygenVideo
 );
 
 module.exports = router;

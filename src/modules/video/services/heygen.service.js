@@ -236,18 +236,48 @@ const getProjectHeygenVideo = async (workspaceId, projectId, id, options = {}) =
   return row;
 };
 
+/**
+ * Sync HeyGen job and ensure MP4 exists in S3; throws 409 if not ready.
+ */
+const assertHeygenVideoReadyInS3 = async (workspaceId, projectId, id) => {
+  const updated = await getProjectHeygenVideo(workspaceId, projectId, id, { sync: true });
+  if (updated.status !== 'completed' || !updated.s3Key) {
+    throw new AppError(messages.HEYGEN_VIDEO_NOT_READY, 409);
+  }
+  return updated;
+};
+
 const getPresignedDownloadForVideo = async (
   workspaceId,
   projectId,
   id,
   expiresInSeconds = PRESIGN_DEFAULT_TTL
 ) => {
-  const updated = await getProjectHeygenVideo(workspaceId, projectId, id, { sync: true });
-  if (updated.status !== 'completed' || !updated.s3Key) {
-    throw new AppError(messages.HEYGEN_VIDEO_NOT_READY, 409);
-  }
+  const updated = await assertHeygenVideoReadyInS3(workspaceId, projectId, id);
   const url = await getPresignedGetUrl(updated.s3Key, expiresInSeconds);
   return { presignedUrl: url, expiresInSeconds, heygenResponse: updated };
+};
+
+/**
+ * Bucket/key/region for render workers using IAM (GetObject), not presigned URLs.
+ */
+
+const getS3ObjectLocationForVideo = async (workspaceId, projectId, id) => {
+  const updated = await assertHeygenVideoReadyInS3(workspaceId, projectId, id);
+  const bucket = process.env.AWS_S3_BUCKET;
+  const region = process.env.AWS_REGION;
+  if (!bucket || !String(bucket).trim() || !region || !String(region).trim()) {
+    throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
+  }
+  const key = updated.s3Key;
+  const objectArn = `arn:aws:s3:::${bucket}/${key}`;
+  return {
+    bucket,
+    key,
+    region: String(region).trim(),
+    objectArn,
+    heygenVideo: updated,
+  };
 };
 
 module.exports = {
@@ -255,5 +285,7 @@ module.exports = {
   syncHeygenVideoToS3AndDb,
   listProjectHeygenVideos,
   getProjectHeygenVideo,
+  assertHeygenVideoReadyInS3,
   getPresignedDownloadForVideo,
+  getS3ObjectLocationForVideo,
 };
