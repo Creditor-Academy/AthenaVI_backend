@@ -1059,13 +1059,24 @@ Starts HeyGen avatar creation (`digital_twin`, `photo`, or `prompt`).
 | **Path** | `/api/heygen/avatars` |
 | **Auth** | Bearer |
 
-**Request body** (JSON)
+**Option A — JSON** (`Content-Type: application/json`)
 
 - `type`: **`digital_twin`** | **`photo`** | **`prompt`** (required).
 - `name`: string, max **200** chars (required).
 - For **`prompt`**: `prompt` text is required (non-empty).
 - For **`digital_twin`** or **`photo`**: `file` is required — object shaped per HeyGen v3 (`type`: `url` \| `asset_id` \| `base64`, plus applicable fields).
 - Optional: `reference_images` (array, max **20** items), `avatar_group_id`, etc.
+
+**Option B — Multipart file** (`Content-Type: multipart/form-data`)
+
+Use this to upload an image or video directly from Postman or the app without hosting a public URL.
+
+- Form fields: **`type`** (`photo` or **`digital_twin` only**), **`name`** (required).
+- Binary field **`file`** (required): **photo** → `image/jpeg`, `image/png`, or `image/webp`; **digital_twin** → same images or **`video/mp4`** / **`video/webm`**.
+- Optional text fields: **`avatar_group_id`**, **`reference_images`** as a **JSON string** array (same shape as JSON API).
+- Max **32 MB** per file. **`prompt`** avatars — use **JSON** only (no `file`).
+
+The server converts the upload into HeyGen’s **`file`: `{ type: base64, media_type, data }`** payload.
 
 **Response (200)** – `data`: HeyGen creation response.
 

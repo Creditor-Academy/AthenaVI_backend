@@ -1,6 +1,7 @@
 const express = require('express');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
+const { heygenCreateAvatarMultipart } = require('../../middlewares/heygenAvatarCreate.middleware');
 const heygenController = require('./heygen.controller');
 const heygenValidation = require('./heygen.validation');
 
@@ -20,7 +21,7 @@ router.get(
   heygenController.listAvatarLooks
 );
 
-router.post('/avatars', heygenController.createAvatar);
+router.post('/avatars', heygenCreateAvatarMultipart, heygenController.createAvatar);
 
 router.post(
   '/avatars/:groupId/consent',

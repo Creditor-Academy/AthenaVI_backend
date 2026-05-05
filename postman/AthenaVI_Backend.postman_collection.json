@@ -620,6 +620,23 @@
           }
         },
         {
+          "name": "Create avatar (multipart photo or digital twin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "type", "value": "photo", "type": "text" },
+                { "key": "name", "value": "My photo avatar", "type": "text" },
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars",
+            "description": "Use **photo** + image file (JPEG/PNG/WebP), or **digital_twin** + image or MP4/WebM. Field name must be **file**. Switch type to **digital_twin** for instant avatar video. Max 32 MB."
+          }
+        },
+        {
           "name": "Create avatar consent",
           "request": {
             "method": "POST",
