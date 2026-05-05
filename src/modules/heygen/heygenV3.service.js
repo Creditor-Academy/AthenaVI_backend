@@ -1,4 +1,4 @@
-const { getJson, postJson, postForm } = require('../../shared/services/heygenV3.client');
+const { getJson, postJson } = require('../../shared/services/heygenV3.client');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 
@@ -36,10 +36,6 @@ async function getVoice(voiceId) {
 
 async function generateSpeechPreview(body) {
   return postJson('/v3/voices/speech', body);
-}
-
-async function uploadAsset(formData) {
-  return postForm('/v3/assets', formData);
 }
 
 /** Normalize POST /v3/videos response */
@@ -96,7 +92,6 @@ module.exports = {
   cloneVoice,
   getVoice,
   generateSpeechPreview,
-  uploadAsset,
   createVideo,
   getVideoStatus,
 };

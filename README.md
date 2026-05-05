@@ -1003,7 +1003,7 @@ Credit transactions for the **current user** only in the given workspace.
 
 Base path: **`/api/heygen`**
 
-Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview — asset upload). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**. Optional **`HEYGEN_BASE_URL`** overrides the API host (default `https://api.heygen.com`).
+Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices — list, design, clone, detail, speech preview). The server must set **`HEYGEN_API_KEY`**; without it, HeyGen calls return **500**. Optional **`HEYGEN_BASE_URL`** overrides the API host (default `https://api.heygen.com`).
 
 **Avatar / lip-sync video generation** (create job, list, status, S3 storage, **stream** & **presigned** playback) is **not** on this path — see **HeyGen avatar videos (workspace project)** later in this document (`/api/workspaces/.../heygen/...`).
 
@@ -1181,40 +1181,6 @@ Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **sta
 - Optional: `speed` (**0.5–2**), `language`, `locale`.
 
 **Response (200)** – `data`: HeyGen speech preview payload.
-
----
-
-## Upload HeyGen asset
-
-Uploads a file to HeyGen via **`POST /v3/assets`**. `multipart/form-data` field **`file`**.
-
-Allowed types include **`image/png`**, **`image/jpeg`**, **`video/mp4`**, **`video/webm`**, **`audio/mpeg`**, **`audio/mp3`**, **`audio/wav`**, **`application/pdf`**. Max **32 MB**.
-
-| | |
-|---|---|
-| **Method** | `POST` |
-| **Path** | `/api/heygen/assets` |
-| **Auth** | Bearer |
-
-**Response (200)** – `data`: HeyGen asset metadata.
-
----
-
-## Audio proxy
-
-Streams audio from allowed HeyGen file hosts for playback (HTTPS only). Host must be one of: `files.heygen.com`, `files.heygen.ai`, `files2.heygen.ai`, `files2.heygen.com`, `resource2.heygen.ai`.
-
-| | |
-|---|---|
-| **Method** | `GET` |
-| **Path** | `/api/heygen/assets/audio-proxy` |
-| **Auth** | Bearer |
-
-**Query**
-
-- `url` – full **HTTPS** URL to the audio file (required).
-
-**Response (200)** – raw audio bytes (`Content-Type` from upstream). **403** if host not allowed. **502** if fetch fails.
 
 ---
 
@@ -1416,8 +1382,6 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | POST | `/api/heygen/voices/clone` | Bearer | Clone a voice from audio |
 | GET | `/api/heygen/voices/:voiceId` | Bearer | Get voice detail / clone status |
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
-| POST | `/api/heygen/assets` | Bearer | Upload file to HeyGen (multipart `file`) |
-| GET | `/api/heygen/assets/audio-proxy` | Bearer | Proxy audio from HeyGen hosts (`url` query) |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | Create HeyGen avatar video (scene, script, lip sync) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` | Bearer + member | Get / poll / sync to S3 |

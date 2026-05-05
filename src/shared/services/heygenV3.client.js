@@ -45,7 +45,7 @@ function mapHeyGenStatus(res, body) {
 }
 
 async function heygenFetch(path, options = {}) {
-  const { method = 'GET', searchParams, jsonBody, formBody } = options;
+  const { method = 'GET', searchParams, jsonBody } = options;
   const qs = searchParams ? buildQueryString(searchParams) : '';
   const url = `${HEYGEN_BASE}${path}${qs}`;
 
@@ -60,8 +60,6 @@ async function heygenFetch(path, options = {}) {
   if (jsonBody !== undefined) {
     headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(jsonBody);
-  } else if (formBody !== undefined) {
-    init.body = formBody;
   }
 
   const res = await fetch(url, init);
@@ -84,21 +82,10 @@ async function postJson(path, jsonBody) {
   return heygenFetch(path, { method: 'POST', jsonBody });
 }
 
-async function postForm(path, formData) {
-  const multipartHeaders =
-    typeof formData.getHeaders === 'function' ? formData.getHeaders() : {};
-  return heygenFetch(path, {
-    method: 'POST',
-    headers: multipartHeaders,
-    formBody: formData,
-  });
-}
-
 module.exports = {
   HEYGEN_BASE,
   getApiKey,
   getJson,
   postJson,
-  postForm,
   buildQueryString,
 };

@@ -2,17 +2,8 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
-const FormData = require('form-data');
 const heygenV3Service = require('./heygenV3.service');
 const { createAvatarBodySchema } = require('./heygen.validation');
-
-const ALLOWED_AUDIO_PROXY_HOSTS = new Set([
-  'files.heygen.com',
-  'files.heygen.ai',
-  'files2.heygen.ai',
-  'files2.heygen.com',
-  'resource2.heygen.ai',
-]);
 
 function assertCreateAvatarPayload(body) {
   if (body.type === 'prompt') {
@@ -100,43 +91,6 @@ const previewSpeech = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.HEYGEN_SPEECH_PREVIEW_OK);
 });
 
-const uploadAsset = asyncHandler(async (req, res) => {
-  if (!req.file?.buffer) {
-    throw new AppError(messages.HEYGEN_ASSET_FILE_REQUIRED, 400);
-  }
-  const form = new FormData();
-  form.append('file', req.file.buffer, {
-    filename: req.file.originalname || 'upload.bin',
-    contentType: req.file.mimetype,
-  });
-  const data = await heygenV3Service.uploadAsset(form);
-  return successResponse(req, res, data, 200, messages.HEYGEN_ASSET_UPLOADED);
-});
-
-const proxyAudio = asyncHandler(async (req, res) => {
-  let parsed;
-  try {
-    parsed = new URL(req.query.url);
-  } catch {
-    throw new AppError(messages.HEYGEN_PROXY_INVALID_URL, 400);
-  }
-  if (parsed.protocol !== 'https:') {
-    throw new AppError(messages.HEYGEN_PROXY_INVALID_URL, 400);
-  }
-  if (!ALLOWED_AUDIO_PROXY_HOSTS.has(parsed.hostname)) {
-    throw new AppError(messages.HEYGEN_PROXY_HOST_NOT_ALLOWED, 403);
-  }
-  const upstream = await fetch(parsed.href, { method: 'GET' });
-  if (!upstream.ok) {
-    throw new AppError(messages.HEYGEN_PROXY_FETCH_FAILED, 502);
-  }
-  const ct = upstream.headers.get('content-type') || 'application/octet-stream';
-  res.setHeader('Content-Type', ct);
-  res.setHeader('Cache-Control', 'private, max-age=300');
-  const buf = Buffer.from(await upstream.arrayBuffer());
-  return res.status(200).send(buf);
-});
-
 module.exports = {
   listAvatarGroups,
   listAvatarLooks,
@@ -147,6 +101,4 @@ module.exports = {
   cloneVoice,
   getVoice,
   previewSpeech,
-  uploadAsset,
-  proxyAudio,
 };

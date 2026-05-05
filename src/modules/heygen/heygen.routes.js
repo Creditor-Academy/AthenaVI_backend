@@ -1,7 +1,6 @@
 const express = require('express');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
-const { uploadHeygenAsset } = require('../../middlewares/heygenUpload.middleware');
 const heygenController = require('./heygen.controller');
 const heygenValidation = require('./heygen.validation');
 
@@ -50,17 +49,5 @@ router.get(
 );
 
 router.post('/voices', validate(heygenValidation.designVoiceBody), heygenController.designVoice);
-
-router.post(
-  '/assets',
-  uploadHeygenAsset.single('file'),
-  heygenController.uploadAsset
-);
-
-router.get(
-  '/assets/audio-proxy',
-  validate(heygenValidation.audioProxyQuery),
-  heygenController.proxyAudio
-);
 
 module.exports = router;

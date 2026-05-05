@@ -88,14 +88,6 @@ const previewSpeechBody = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
-const audioProxyQuery = Joi.object({
-  body: Joi.object({}).unknown(false),
-  params: Joi.object({}).unknown(false),
-  query: Joi.object({
-    url: Joi.string().uri().required(),
-  }).unknown(false),
-});
-
 const createAvatarBodySchema = Joi.object({
   type: Joi.string().valid('digital_twin', 'photo', 'prompt').required(),
   name: Joi.string().max(200).required(),
@@ -116,6 +108,5 @@ module.exports = {
   getVoiceParams,
   createAvatarConsentBody,
   previewSpeechBody,
-  audioProxyQuery,
   createAvatarBodySchema,
 };
