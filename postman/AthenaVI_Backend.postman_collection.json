@@ -637,8 +637,23 @@
                   "try {",
                   "  const j = pm.response.json();",
                   "  const outer = j.data;",
-                  "  const inner = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
-                  "  const gid = inner && (inner.avatar_group_id || inner.group_id || inner.id);",
+                  "  const chain = [];",
+                  "  let cur = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  for (let i = 0; i < 6 && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {",
+                  "    chain.push(cur);",
+                  "    const next = cur.data;",
+                  "    if (next && typeof next === 'object' && !Array.isArray(next)) cur = next;",
+                  "    else break;",
+                  "  }",
+                  "  function gidFrom(o) {",
+                  "    if (!o || typeof o !== 'object') return null;",
+                  "    const ag = o.avatar_group;",
+                  "    return (o.avatar_group_id || o.group_id || o.avatarGroupId || o.groupId ||",
+                  "      (ag && typeof ag === 'object' && (ag.avatar_group_id || ag.group_id || ag.id)) || null);",
+                  "  }",
+                  "  let gid = null;",
+                  "  for (const n of chain) { gid = gidFrom(n); if (gid) break; }",
+                  "  if (!gid) for (const n of chain) { if (n.id) { gid = n.id; break; } }",
                   "  if (gid) pm.collectionVariables.set('groupId', String(gid));",
                   "} catch (e) {}"
                 ],
@@ -660,6 +675,38 @@
         },
         {
           "name": "Create avatar (multipart photo or digital twin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const chain = [];",
+                  "  let cur = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  for (let i = 0; i < 6 && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {",
+                  "    chain.push(cur);",
+                  "    const next = cur.data;",
+                  "    if (next && typeof next === 'object' && !Array.isArray(next)) cur = next;",
+                  "    else break;",
+                  "  }",
+                  "  function gidFrom(o) {",
+                  "    if (!o || typeof o !== 'object') return null;",
+                  "    const ag = o.avatar_group;",
+                  "    return (o.avatar_group_id || o.group_id || o.avatarGroupId || o.groupId ||",
+                  "      (ag && typeof ag === 'object' && (ag.avatar_group_id || ag.group_id || ag.id)) || null);",
+                  "  }",
+                  "  let gid = null;",
+                  "  for (const n of chain) { gid = gidFrom(n); if (gid) break; }",
+                  "  if (!gid) for (const n of chain) { if (n.id) { gid = n.id; break; } }",
+                  "  if (gid) pm.collectionVariables.set('groupId', String(gid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
@@ -672,7 +719,7 @@
               ]
             },
             "url": "{{baseUrl}}/api/heygen/avatars",
-            "description": "Use **photo** + image file (JPEG/PNG/WebP), or **digital_twin** + image or MP4/WebM. Field name must be **file**. Switch type to **digital_twin** for instant avatar video. Max 32 MB."
+            "description": "Use **photo** + image file (JPEG/PNG/WebP), or **digital_twin** + image or MP4/WebM. Field name must be **file**. Same nested-response `groupId` test script as JSON Create avatar. Max 32 MB."
           }
         },
         {

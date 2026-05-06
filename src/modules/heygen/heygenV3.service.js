@@ -20,18 +20,48 @@ function pickArray(data, keys) {
 
 function itemAvatarGroupId(item) {
   if (!item || typeof item !== 'object') return null;
-  return (
+  function groupFields(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+    const v =
+      o.avatar_group_id ??
+      o.group_id ??
+      o.avatarGroupId ??
+      o.groupId ??
+      o.id ??
+      null;
+    return v != null && String(v).trim() !== '' ? String(v).trim() : null;
+  }
+  const nested = groupFields(item.avatar_group);
+  const direct =
     item.avatar_group_id ??
     item.group_id ??
-    (item.avatar_group && typeof item.avatar_group === 'object' && item.avatar_group.id) ??
-    item.id ??
-    null
-  );
+    item.avatarGroupId ??
+    item.groupId;
+  if (direct != null && String(direct).trim() !== '') return String(direct).trim();
+  if (nested) return nested;
+  if (item.id != null && String(item.id).trim() !== '') return String(item.id).trim();
+  return null;
 }
 
 function itemVoiceId(item) {
   if (!item || typeof item !== 'object') return null;
-  return item.voice_id ?? item.id ?? null;
+  const v = item.voice_id ?? item.voiceId ?? item.id ?? null;
+  return v != null && String(v).trim() !== '' ? String(v).trim() : null;
+}
+
+/** Unwrap HeyGen-style `{ data: { data: … } }` envelopes (shared by avatar create + voice responses). */
+function buildHeyGenDataChain(body, maxDepth = 6) {
+  const chain = [];
+  if (!body || typeof body !== 'object') return chain;
+  let cur = body.data !== undefined && body.data !== null ? body.data : body;
+  if (Array.isArray(cur)) return chain;
+  for (let i = 0; i < maxDepth && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {
+    chain.push(cur);
+    const next = cur.data;
+    if (next != null && typeof next === 'object' && !Array.isArray(next)) cur = next;
+    else break;
+  }
+  return chain;
 }
 
 function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
@@ -72,11 +102,43 @@ function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
   return nextTarget;
 }
 
+/**
+ * HeyGen create-avatar responses vary: group id may live under nested `data`, `avatar_group`,
+ * or camelCase aliases. We unwrap a short `data` chain and prefer explicit group keys before `id`.
+ */
 function extractAvatarGroupIdFromCreateResponse(body) {
-  const data = body && typeof body === 'object' && 'data' in body ? body.data : body;
-  if (!data || typeof data !== 'object') return null;
-  const id = data.avatar_group_id ?? data.group_id ?? data.id;
-  return id != null && id !== '' ? String(id) : null;
+  if (!body || typeof body !== 'object') return null;
+
+  function explicitGroupId(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    const ag = obj.avatar_group;
+    const nested =
+      ag && typeof ag === 'object' && !Array.isArray(ag)
+        ? ag.avatar_group_id ?? ag.group_id ?? ag.avatarGroupId ?? ag.groupId ?? ag.id
+        : null;
+    const v =
+      obj.avatar_group_id ??
+      obj.group_id ??
+      obj.avatarGroupId ??
+      obj.groupId ??
+      nested;
+    return v != null && String(v).trim() !== '' ? String(v).trim() : null;
+  }
+
+  let chain = buildHeyGenDataChain(body);
+  if (chain.length === 0) {
+    const fb = body.data !== undefined && body.data !== null ? body.data : body;
+    if (fb && typeof fb === 'object' && !Array.isArray(fb)) chain = [fb];
+  }
+
+  for (const node of chain) {
+    const hit = explicitGroupId(node);
+    if (hit) return hit;
+  }
+  for (const node of chain) {
+    if (node.id != null && String(node.id).trim() !== '') return String(node.id).trim();
+  }
+  return null;
 }
 
 /** Same candidate keys as private voice listing so POST clone/design records ids HeyGen nests under `data`, etc. */
@@ -91,22 +153,43 @@ const VOICE_LIST_ARRAY_KEYS = [
 ];
 
 function extractVoiceIdsFromVoiceResponse(body) {
-  let data = body && typeof body === 'object' && body.data !== undefined ? body.data : body;
-  if (data == null || typeof data !== 'object') return [];
-  if (Array.isArray(data)) {
-    const ids = data.map(itemVoiceId).filter((id) => id != null && id !== '');
-    return [...new Set(ids.map(String))];
+  if (!body || typeof body !== 'object') return [];
+  const ids = new Set();
+
+  function addFromItem(item) {
+    const id = itemVoiceId(item);
+    if (id) ids.add(id);
   }
-  if (data.voice_id != null && data.voice_id !== '') {
-    return [String(data.voice_id)];
+
+  function scanNode(node) {
+    if (node == null) return;
+    if (Array.isArray(node)) {
+      node.forEach(addFromItem);
+      return;
+    }
+    if (typeof node !== 'object') return;
+
+    const direct = node.voice_id ?? node.voiceId;
+    if (direct != null && String(direct).trim() !== '') ids.add(String(direct).trim());
+
+    const vObj = node.voice;
+    if (vObj && typeof vObj === 'object' && !Array.isArray(vObj)) addFromItem(vObj);
+
+    const picked = pickArray(node, VOICE_LIST_ARRAY_KEYS);
+    if (picked.list && Array.isArray(picked.list)) picked.list.forEach(addFromItem);
   }
-  const picked = pickArray(data, VOICE_LIST_ARRAY_KEYS);
-  if (picked.key && Array.isArray(picked.list) && picked.list.length > 0) {
-    const ids = picked.list.map(itemVoiceId).filter((id) => id != null && id !== '');
-    if (ids.length) return [...new Set(ids.map(String))];
+
+  const root = body.data !== undefined && body.data !== null ? body.data : body;
+  if (Array.isArray(root)) {
+    scanNode(root);
+    return [...ids];
   }
-  const single = itemVoiceId(data);
-  return single ? [String(single)] : [];
+
+  const chain = buildHeyGenDataChain(body);
+  const nodes = chain.length > 0 ? chain : root && typeof root === 'object' ? [root] : [];
+  for (const node of nodes) scanNode(node);
+
+  return [...ids];
 }
 
 async function listAvatarGroups(userId, query) {
