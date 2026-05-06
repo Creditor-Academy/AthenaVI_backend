@@ -85,12 +85,14 @@ function payloadFromMultipart(req) {
 }
 
 const listAvatarGroups = asyncHandler(async (req, res) => {
-  const data = await heygenV3Service.listAvatarGroups(req.query);
+  const userId = req.user.id;
+  const data = await heygenV3Service.listAvatarGroups(userId, req.query);
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_GROUPS_OK);
 });
 
 const listAvatarLooks = asyncHandler(async (req, res) => {
-  const data = await heygenV3Service.listAvatarLooks(req.query);
+  const userId = req.user.id;
+  const data = await heygenV3Service.listAvatarLooks(userId, req.query);
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_LOOKS_OK);
 });
 
@@ -109,23 +111,27 @@ const createAvatar = asyncHandler(async (req, res) => {
     );
   }
   assertCreateAvatarPayload(value);
-  const data = await heygenV3Service.createAvatar(value);
+  const userId = req.user.id;
+  const data = await heygenV3Service.createAvatar(userId, value);
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_CREATED);
 });
 
 const createAvatarConsent = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const data = await heygenV3Service.createAvatarConsent(groupId, req.body || {});
+  const userId = req.user.id;
+  const data = await heygenV3Service.createAvatarConsent(userId, groupId, req.body || {});
   return successResponse(req, res, data, 200, messages.HEYGEN_CONSENT_OK);
 });
 
 const listVoices = asyncHandler(async (req, res) => {
-  const data = await heygenV3Service.listVoices(req.query);
+  const userId = req.user.id;
+  const data = await heygenV3Service.listVoices(userId, req.query);
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICES_OK);
 });
 
 const designVoice = asyncHandler(async (req, res) => {
-  const data = await heygenV3Service.designVoice(req.body);
+  const userId = req.user.id;
+  const data = await heygenV3Service.designVoice(userId, req.body);
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DESIGNED);
 });
 
@@ -137,12 +143,14 @@ const cloneVoice = asyncHandler(async (req, res) => {
       400
     );
   }
-  const data = await heygenV3Service.cloneVoice(req.body);
+  const userId = req.user.id;
+  const data = await heygenV3Service.cloneVoice(userId, req.body);
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_CLONE_STARTED);
 });
 
 const getVoice = asyncHandler(async (req, res) => {
-  const data = await heygenV3Service.getVoice(req.params.voiceId);
+  const userId = req.user.id;
+  const data = await heygenV3Service.getVoice(userId, req.params.voiceId);
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DETAIL_OK);
 });
 

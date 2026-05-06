@@ -1,36 +1,178 @@
 const { getJson, postJson } = require('../../shared/services/heygenV3.client');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
+const heygenDao = require('./heygen.dao');
 
-async function listAvatarGroups(query) {
-  return getJson('/v3/avatars', query);
+function pickArray(data, keys) {
+  if (!data || typeof data !== 'object') return { key: null, list: [] };
+  for (const k of keys) {
+    if (Array.isArray(data[k])) return { key: k, list: data[k] };
+  }
+  return { key: null, list: [] };
 }
 
-async function listAvatarLooks(query) {
-  return getJson('/v3/avatars/looks', query);
+function itemAvatarGroupId(item) {
+  if (!item || typeof item !== 'object') return null;
+  return (
+    item.avatar_group_id ??
+    item.group_id ??
+    (item.avatar_group && typeof item.avatar_group === 'object' && item.avatar_group.id) ??
+    item.id ??
+    null
+  );
 }
 
-async function createAvatar(body) {
-  return postJson('/v3/avatars', body);
+function itemVoiceId(item) {
+  if (!item || typeof item !== 'object') return null;
+  return item.voice_id ?? item.id ?? null;
 }
 
-async function createAvatarConsent(groupId, body) {
+function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
+  if (!body || typeof body !== 'object') return body;
+  const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
+  const target = hasEnvelope ? body.data : body;
+  const { key, list } = pickArray(target, arrayKeys);
+  if (!key || !Array.isArray(list)) return body;
+  const filtered = list.filter((item) => {
+    const id = getIdFromItem(item);
+    return id != null && id !== '' && allowedSet.has(String(id));
+  });
+  const nextTarget = { ...target, [key]: filtered };
+  if (typeof nextTarget.total === 'number') nextTarget.total = filtered.length;
+  if (typeof nextTarget.count === 'number') nextTarget.count = filtered.length;
+  if (hasEnvelope) return { ...body, data: nextTarget };
+  return nextTarget;
+}
+
+function extractAvatarGroupIdFromCreateResponse(body) {
+  const data = body && typeof body === 'object' && 'data' in body ? body.data : body;
+  if (!data || typeof data !== 'object') return null;
+  const id = data.avatar_group_id ?? data.group_id ?? data.id;
+  return id != null && id !== '' ? String(id) : null;
+}
+
+function extractVoiceIdsFromVoiceResponse(body) {
+  const data = body && typeof body === 'object' && body.data !== undefined ? body.data : body;
+  if (!data || typeof data !== 'object') return [];
+  if (data.voice_id != null && data.voice_id !== '') {
+    return [String(data.voice_id)];
+  }
+  const arrayKeys = ['voices', 'suggestions', 'voice_list', 'results', 'list'];
+  for (const k of arrayKeys) {
+    if (Array.isArray(data[k])) {
+      const ids = data[k].map(itemVoiceId).filter((id) => id != null && id !== '');
+      if (ids.length) return [...new Set(ids.map(String))];
+    }
+  }
+  const single = itemVoiceId(data);
+  return single ? [String(single)] : [];
+}
+
+async function listAvatarGroups(userId, query) {
+  const raw = await getJson('/v3/avatars', query);
+  if (query?.ownership !== 'private') return raw;
+  const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+  return filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
+    'avatar_groups',
+    'avatars',
+    'groups',
+    'list',
+  ]);
+}
+
+async function listAvatarLooks(userId, query) {
+  if (query?.ownership === 'private' && query.group_id) {
+    const owns = await heygenDao.userOwnsAvatarGroup(userId, String(query.group_id));
+    if (!owns) {
+      throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+    }
+  }
+  const raw = await getJson('/v3/avatars/looks', query);
+  if (query?.ownership !== 'private') return raw;
+  const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+  return filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
+    'looks',
+    'avatar_looks',
+    'avatars',
+    'list',
+  ]);
+}
+
+async function createAvatar(userId, body) {
+  const raw = await postJson('/v3/avatars', body);
+  const avatarGroupId = extractAvatarGroupIdFromCreateResponse(raw);
+  if (avatarGroupId) {
+    const status =
+      (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object' && raw.data.status) ||
+      'processing';
+    await heygenDao.recordAvatar({
+      userId,
+      avatarGroupId,
+      avatarId: null,
+      name: body?.name != null ? String(body.name) : null,
+      type: body?.type != null ? String(body.type) : 'unknown',
+      status: status != null ? String(status) : 'processing',
+      raw,
+    });
+  }
+  return raw;
+}
+
+async function createAvatarConsent(userId, groupId, body) {
+  const owns = await heygenDao.userOwnsAvatarGroup(userId, groupId);
+  if (!owns) {
+    throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+  }
   return postJson(`/v3/avatars/${encodeURIComponent(groupId)}/consent`, body || {});
 }
 
-async function listVoices(query) {
-  return getJson('/v3/voices', query);
+async function listVoices(userId, query) {
+  const raw = await getJson('/v3/voices', query);
+  if (query?.type !== 'private') return raw;
+  const allowed = new Set(await heygenDao.listVoiceIdsForUser(userId));
+  return filterPrivateListBody(raw, allowed, itemVoiceId, ['voices', 'voice_list', 'list']);
 }
 
-async function designVoice(body) {
-  return postJson('/v3/voices', body);
+async function designVoice(userId, body) {
+  const raw = await postJson('/v3/voices', body);
+  const voiceIds = extractVoiceIdsFromVoiceResponse(raw);
+  const nameHint =
+    body?.prompt != null ? String(body.prompt).slice(0, 200) : null;
+  for (const voiceId of voiceIds) {
+    await heygenDao.recordVoice({
+      userId,
+      voiceId,
+      name: nameHint,
+      source: 'design',
+      language: body?.language != null ? String(body.language) : null,
+      raw,
+    });
+  }
+  return raw;
 }
 
-async function cloneVoice(body) {
-  return postJson('/v3/voices/clone', body);
+async function cloneVoice(userId, body) {
+  const raw = await postJson('/v3/voices/clone', body);
+  const voiceIds = extractVoiceIdsFromVoiceResponse(raw);
+  const name = body?.voice_name != null ? String(body.voice_name) : null;
+  for (const voiceId of voiceIds) {
+    await heygenDao.recordVoice({
+      userId,
+      voiceId,
+      name,
+      source: 'clone',
+      language: body?.language != null ? String(body.language) : null,
+      raw,
+    });
+  }
+  return raw;
 }
 
-async function getVoice(voiceId) {
+async function getVoice(userId, voiceId) {
+  const ownerId = await heygenDao.voiceTrackedUserId(voiceId);
+  if (ownerId && ownerId !== userId) {
+    throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+  }
   return getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
 }
 

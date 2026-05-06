@@ -1069,14 +1069,99 @@ This document provides comprehensive documentation for all API endpoints in the 
 
 ### Base URL: `/api/heygen`
 
-#### 1. Generate HeyGen Video
+All endpoints below require **`Authorization: Bearer <access_token>`**.
+
+Proxies **HeyGen v3** (avatars, voices). Requires **`HEYGEN_API_KEY`** on the server (otherwise **500**). Optional **`HEYGEN_BASE_URL`** overrides the API host.
+
+Avatar/lip-sync **video** generation lives under **`/api/workspaces/:workspaceId/projects/:projectId/heygen`** — not on `/api/heygen`.
+
+### User-scoped private assets
+
+Because the server shares one HeyGen API key, “private” listings from HeyGen would mix all tenants. This backend **persists ownership per user** (`heygen_avatars`, `heygen_voices`):
+
+| Endpoint | Extra behavior |
+|----------|----------------|
+| `GET /avatars/groups?ownership=private` | Only groups recorded when **this user** called `POST /avatars`. |
+| `GET /avatars/looks?ownership=private` | Only looks for groups owned by **this user**. With **`group_id`** + **`ownership=private`**, group must be owned or **403** (`HEYGEN_FORBIDDEN`). |
+| `GET /voices?type=private` | Only voices from **this user’s** `POST /voices` (design) or `POST /voices/clone`. |
+| `POST /avatars/:groupId/consent` | **403** if `groupId` is not owned by **this user**. |
+| `GET /voices/:voiceId` | **403** if the voice id is stored as **another user’s** private voice; untracked ids still proxy HeyGen (public catalog). |
+
+Public queries (`ownership=public`, `type=public`, etc.) are **not** user-filtered. Assets created before tracking shipped are **not** in private filtered lists until recreated or backfilled.
+
+---
+
+#### List avatar groups
+- **Method:** `GET`
+- **Route:** `/avatars/groups`
+- **Query:** `ownership` (`public` \| `private`), `limit` (1–50), `token` (cursor), optional extras forwarded to HeyGen
+- **Response:** **200** — `data`: HeyGen payload
+
+---
+
+#### List avatar looks
+- **Method:** `GET`
+- **Route:** `/avatars/looks`
+- **Query:** `group_id`, `avatar_type` (`studio_avatar` \| `digital_twin` \| `photo_avatar`), `ownership`, `limit`, `token`
+- **Response:** **200** — `data`: HeyGen payload
+- **403** — private listing with another user’s `group_id`
+
+---
+
+#### Create avatar
 - **Method:** `POST`
-- **Route:** `/generate`
-- **Token Required:** No (to be implemented)
-- **Body Parameters:** (Implementation pending)
-- **Query Parameters:** None
-- **Path Parameters:** None
-- **Response:** (Implementation pending)
+- **Route:** `/avatars`
+- **Body (JSON):** `type`: `digital_twin` \| `photo` \| `prompt` (required); `name` (required, max 200); for `prompt`, non-empty `prompt`; for `digital_twin` / `photo`, `file` object per HeyGen v3; optional `reference_images`, `avatar_group_id`, …
+- **Response:** **200** — `data`: HeyGen response; server records avatar group id when returned for private filtering
+
+---
+
+#### Avatar consent
+- **Method:** `POST`
+- **Route:** `/avatars/:groupId/consent`
+- **Body (optional):** `{ "reroute_url": "https://..." }`
+- **Response:** **200** — `data`: HeyGen payload
+- **403** — `HEYGEN_FORBIDDEN` if not owner of `groupId`
+
+---
+
+#### List voices
+- **Method:** `GET`
+- **Route:** `/voices`
+- **Query:** `type` (`public` \| `private`), `engine`, `language`, `gender`, `limit` (1–100), `token`
+- **Response:** **200** — `data`: HeyGen payload
+
+---
+
+#### Design voice (POST /v3/voices)
+- **Method:** `POST`
+- **Route:** `/voices`
+- **Body:** `prompt` (1–1000 chars, required); optional `gender`, `locale`, `seed`
+- **Response:** **200** — `data`: HeyGen payload; returned voice ids recorded for current user
+
+---
+
+#### Clone voice
+- **Method:** `POST`
+- **Route:** `/voices/clone`
+- **Body:** `voice_name` (required); `audio` object (required, HeyGen asset union); optional `language`, `remove_background_noise`
+- **Response:** **200** — `data`: HeyGen clone payload; clone id recorded for current user
+
+---
+
+#### Get voice by id
+- **Method:** `GET`
+- **Route:** `/voices/:voiceId`
+- **Response:** **200** — `data`: HeyGen voice payload
+- **403** — another user’s private tracked voice
+
+---
+
+#### Preview speech
+- **Method:** `POST`
+- **Route:** `/voices/preview-speech`
+- **Body:** `text` (1–5000, required); `voice_id` (required); optional `input_type`, `speed`, `language`, `locale`
+- **Response:** **200** — `data`: HeyGen payload
 
 ---
 
@@ -1168,6 +1253,6 @@ Error responses will follow this format:
 1. All timestamps are in ISO 8601 format
 2. All UUIDs are in standard UUID v4 format
 3. Workspace roles: OWNER, ADMIN, MEMBER
-4. Some endpoints are still under development (HeyGen module)
+4. HeyGen v3 proxy and workspace HeyGen video routes are implemented; see **HeyGen Module** and README **HeyGen API** / **HeyGen avatar videos** for behavior details
 5. File uploads use multipart/form-data
 6. Images are stored on S3 and URLs are returned in responses

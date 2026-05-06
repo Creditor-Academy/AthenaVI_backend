@@ -1009,6 +1009,21 @@ Proxies **[HeyGen](https://www.heygen.com/)** v3 capabilities (avatars, voices �
 
 All routes in this section require **`Authorization: Bearer <access_token>`**.
 
+### User-scoped private avatars and voices
+
+The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” listings would normally include assets from every user of your app. This API **records ownership per authenticated user** and applies extra rules:
+
+| Case | Behavior |
+|------|----------|
+| **`GET /api/heygen/avatars/groups?ownership=private`** | Response lists only avatar groups **created with `POST /api/heygen/avatars` while logged in as that user** (persisted after a successful create). |
+| **`GET /api/heygen/avatars/looks?ownership=private`** | Response lists only looks whose avatar group id is **owned by that user**. If **`group_id`** is set together with **`ownership=private`**, the user must own that group or the API returns **403** (`message`: **`HEYGEN_FORBIDDEN`**). |
+| **`GET /api/heygen/voices?type=private`** | Only voices returned from **`POST /api/heygen/voices`** (design) or **`POST /api/heygen/voices/clone`** under that user. |
+| **`POST /api/heygen/avatars/:groupId/consent`** | **403** if `groupId` is not owned by the current user. |
+| **`GET /api/heygen/voices/:voiceId`** | **403** if this voice id was recorded as **another user’s** private voice; ids **not** in our DB still proxy HeyGen (e.g. public catalog voices). |
+| **`ownership=public`**, **`type=public`**, or omitted filters | Unchanged passthrough to HeyGen (no user filtering). |
+
+**Legacy:** Avatars/voices created before this ownership tracking was deployed were never recorded and **will not appear** in the filtered private lists until recreated or backfilled.
+
 ---
 
 ## List avatar groups
@@ -1021,11 +1036,13 @@ All routes in this section require **`Authorization: Bearer <access_token>`**.
 
 **Query (optional)** – forwarded to HeyGen; common keys include:
 
-- `ownership` – `public` or `private`
+- `ownership` – `public` or `private` (**private**: filtered to the current user’s recorded avatar groups — see **User-scoped private avatars and voices** above)
 - `limit` – integer **1–50**
 - `token` – pagination cursor (string)
 
 **Response (200)** – `data`: HeyGen payload (avatar groups).
+
+**403** – **`HEYGEN_FORBIDDEN`** is not used here; filtering narrows the list instead.
 
 ---
 
@@ -1041,11 +1058,13 @@ All routes in this section require **`Authorization: Bearer <access_token>`**.
 
 - `group_id`
 - `avatar_type` – `studio_avatar`, `digital_twin`, or `photo_avatar`
-- `ownership` – `public` or `private`
+- `ownership` – `public` or `private` (**private**: filtered to groups owned by the current user; **`group_id` + private** requires ownership or **403**)
 - `limit` – **1–50**
 - `token` – pagination cursor
 
 **Response (200)** – `data`: HeyGen payload.
+
+**403** – **`HEYGEN_FORBIDDEN`** — private listing with a **`group_id`** that belongs to another user.
 
 ---
 
@@ -1067,6 +1086,7 @@ Starts HeyGen avatar creation (`digital_twin`, `photo`, or `prompt`).
 - For **`digital_twin`** or **`photo`**: `file` is required — object shaped per HeyGen v3 (`type`: `url` \| `asset_id` \| `base64`, plus applicable fields).
 - Optional: `reference_images` (array, max **20** items), `avatar_group_id`, etc.
 
+<<<<<<< HEAD
 **Option B — Multipart file** (`Content-Type: multipart/form-data`)
 
 Use this to upload an image or video directly from Postman or the app without hosting a public URL.
@@ -1079,6 +1099,9 @@ Use this to upload an image or video directly from Postman or the app without ho
 The server converts the upload into HeyGen’s **`file`: `{ type: base64, media_type, data }`** payload.
 
 **Response (200)** – `data`: HeyGen creation response.
+=======
+**Response (200)** – `data`: HeyGen creation response. On success, the server persists the new avatar **group id** for the current user (when HeyGen returns it) so it appears under **`ownership=private`** lists.
+>>>>>>> 9c4e2087762f8d6f1bd31b322bbc6e29741bf921
 
 ---
 
@@ -1102,6 +1125,8 @@ Returns a consent / onboarding URL for a pending avatar group.
 
 **Response (200)** – `data`: HeyGen payload.
 
+**403** – **`HEYGEN_FORBIDDEN`** — `:groupId` is not owned by the current user.
+
 ---
 
 ## List voices
@@ -1114,7 +1139,7 @@ Returns a consent / onboarding URL for a pending avatar group.
 
 **Query (optional)**
 
-- `type` – `public` or `private`
+- `type` – `public` or `private` (**private**: filtered to voices recorded for the current user from design or clone — see **User-scoped private avatars and voices** above)
 - `engine`, `language`, `gender` (`male` \| `female`)
 - `limit` – **1–100**
 - `token` – pagination cursor
@@ -1138,7 +1163,7 @@ Maps to HeyGen **`POST /v3/voices`** — returns up to **3** suggested voices fo
 - `prompt`: string, **1–1000** chars (required) — e.g. “warm, confident female narrator”.
 - Optional: `gender` (`male` \| `female`), `locale` (BCP-47), `seed` (integer ≥ 0 for alternate batches).
 
-**Response (200)** – `data`: HeyGen payload (`voices`, `seed`).
+**Response (200)** – `data`: HeyGen payload (`voices`, `seed`). Returned **`voice_id`** values (or equivalent fields in structured arrays) are **stored for the current user** so they appear under **`GET .../voices?type=private`**.
 
 ---
 
@@ -1158,7 +1183,7 @@ Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voic
 - `audio`: object (required) — HeyGen asset union: `{ type: "url", url }` \| `{ type: "asset_id", asset_id }` \| `{ type: "base64", media_type, data }`.
 - Optional: `language`, `remove_background_noise` (boolean, default per HeyGen).
 
-**Response (200)** – `data`: HeyGen clone job payload (includes id to poll).
+**Response (200)** – `data`: HeyGen clone job payload (includes id to poll). The clone **voice id** is **stored for the current user**.
 
 ---
 
@@ -1173,6 +1198,8 @@ Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **sta
 | **Auth** | Bearer |
 
 **Response (200)** – `data`: HeyGen voice detail payload.
+
+**403** – **`HEYGEN_FORBIDDEN`** — voice id is recorded as another user’s private voice.
 
 ---
 
@@ -1384,14 +1411,14 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
-| GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups |
-| GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks |
-| POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar |
-| POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent URL |
-| GET | `/api/heygen/voices` | Bearer | List HeyGen voices |
-| POST | `/api/heygen/voices` | Bearer | Design a voice (semantic search; HeyGen `POST /v3/voices`) |
-| POST | `/api/heygen/voices/clone` | Bearer | Clone a voice from audio |
-| GET | `/api/heygen/voices/:voiceId` | Bearer | Get voice detail / clone status |
+| GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user) |
+| GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered per user) |
+| POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |
+| POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent (own group only; else **403**) |
+| GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered per user) |
+| POST | `/api/heygen/voices` | Bearer | Design voice (records ids for private list) |
+| POST | `/api/heygen/voices/clone` | Bearer | Clone voice (records id for private list) |
+| GET | `/api/heygen/voices/:voiceId` | Bearer | Voice detail / clone status (another user’s private voice → **403**) |
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | Create HeyGen avatar video (scene, script, lip sync) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |
