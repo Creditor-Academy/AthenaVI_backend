@@ -1024,6 +1024,8 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 
 **Legacy:** Avatars/voices created before this ownership tracking was deployed were never recorded and **will not appear** in the filtered private lists until recreated or backfilled.
 
+**Implementation note:** For **`ownership=private`** and **`type=private`**, the server still calls HeyGen with those params, then **filters the JSON locally** so other tenants’ rows disappear from the response. HeyGen’s list payloads vary (e.g. nested **`data`** arrays, **`avatar_group_list`**, **`looks`**, **`voices`**, **`suggestions`**); this backend discovers those containers and keeps only rows whose **group id** or **voice id** is stored for **your** JWT user (`heygen_avatars`, `heygen_voices`). It prefers **non-empty** array fields when several keys exist, rewrites pagination totals (**`total`**, **`count`**, **`total_count`**) when present to match the filtered length, and records voice ids from design/clone responses using the same conventions so **private voice lists** stay consistent.
+
 ---
 
 ## List avatar groups
@@ -1097,8 +1099,7 @@ Use this to upload an image or video directly from Postman or the app without ho
 
 The server converts the upload into HeyGen’s **`file`: `{ type: base64, media_type, data }`** payload.
 
-**Response (200)** – `data`: HeyGen creation response.
-**Response (200)** – `data`: HeyGen creation response. On success, the server persists the new avatar **group id** for the current user (when HeyGen returns it) so it appears under **`ownership=private`** lists.
+**Response (200)** – `data`: HeyGen creation response. On success, the server persists the new avatar **group id** for the current user (when HeyGen returns it) so it appears under **`ownership=private`** lists (groups and looks).
 
 ---
 

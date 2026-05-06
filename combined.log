@@ -1943,3 +1943,13 @@
 {"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-05T09:53:18.053Z"}
 {"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-05T09:53:22.525Z"}
 {"level":"error","message":"Error: Unsupported file type; use image/jpeg, image/png, image/webp, video/mp4, or video/webm\n    at fileFilter (D:\\code\\AthenaVI_backend\\src\\middlewares\\heygenAvatarCreate.middleware.js:22:9)\n    at wrappedFileFilter (D:\\code\\AthenaVI_backend\\node_modules\\multer\\index.js:45:7)\n    at Multipart.<anonymous> (D:\\code\\AthenaVI_backend\\node_modules\\multer\\lib\\make-middleware.js:183:7)\n    at Multipart.emit (node:events:509:28)\n    at HeaderParser.cb (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:358:14)\n    at HeaderParser.push (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:162:20)\n    at SBMH.ssCb [as _cb] (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:394:37)\n    at feed (D:\\code\\AthenaVI_backend\\node_modules\\streamsearch\\lib\\sbmh.js:200:10)\n    at SBMH.push (D:\\code\\AthenaVI_backend\\node_modules\\streamsearch\\lib\\sbmh.js:104:16)\n    at Multipart._write (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:567:19)","timestamp":"2026-05-05T09:56:33.928Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:11:42.606Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:16:47.904Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:19:18.165Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:19:21.058Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:20:36.925Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:21:58.892Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:22:00.219Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:22:02.850Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:22:06.633Z"}
+{"level":"info","message":"Server running bHYon port 9000","timestamp":"2026-05-06T11:22:08.663Z"}
