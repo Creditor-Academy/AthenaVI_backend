@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "AthenaVI Backend",
-    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: private avatar/voice lists are **filtered per logged-in user** (`ownership=private`, `type=private`). Run **Create avatar** first to capture `groupId` in collection variables; use **Design voice** or **Clone a voice** to populate `voiceId`. Consent and read-by-id enforce ownership (**403** if another user's asset).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -585,29 +585,67 @@
     },
     {
       "name": "HeyGen",
+      "description": "HeyGen v3 proxy (`/api/heygen`). The server uses one shared HeyGen API key; **private** avatar/voice lists are filtered so each JWT-authenticated user only sees assets **they created** through these endpoints (stored in `heygen_avatars` / `heygen_voices`). Public lists are unchanged.\n\n**403** `You do not have access to this HeyGen resource` — consent for another user's avatar group, GET voice for another user's recorded private voice, or private looks with another user's `group_id`.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
       },
       "item": [
         {
-          "name": "List avatar groups",
+          "name": "List avatar groups (public)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20"
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20",
+            "description": "Forwarded to HeyGen; full public catalog (not user-filtered)."
           }
         },
         {
-          "name": "List avatar looks",
+          "name": "List avatar groups (private — current user)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/heygen/avatars/looks?group_id=&avatar_type=studio_avatar&limit=20"
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&limit=20",
+            "description": "Only avatar groups recorded when **you** called POST `/avatars` (same Bearer user). Assets created before ownership tracking or outside this API are omitted."
+          }
+        },
+        {
+          "name": "List avatar looks (public group)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks?group_id={{groupId}}&avatar_type=studio_avatar&limit=20",
+            "description": "Set `groupId` (collection variable) from a public catalog group when exploring looks."
+          }
+        },
+        {
+          "name": "List avatar looks (private — current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks?ownership=private&limit=20",
+            "description": "Filtered to looks whose avatar group id belongs to you. Use `group_id={{groupId}}` plus `ownership=private` only for **your** group — otherwise **403**."
           }
         },
         {
           "name": "Create avatar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const inner = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  const gid = inner && (inner.avatar_group_id || inner.group_id || inner.id);",
+                  "  if (gid) pm.collectionVariables.set('groupId', String(gid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -616,7 +654,8 @@
               "raw": "{\n  \"type\": \"prompt\",\n  \"name\": \"My Avatar\",\n  \"prompt\": \"A professional instructor in a studio\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": "{{baseUrl}}/api/heygen/avatars"
+            "url": "{{baseUrl}}/api/heygen/avatars",
+            "description": "Registers the returned avatar group for your user (for private list filtering). Test script saves `groupId` when HeyGen returns an id."
           }
         },
         {
@@ -629,19 +668,53 @@
               "raw": "{\n  \"reroute_url\": \"https://example.com/after-consent\"\n}",
               "options": { "raw": { "language": "json" } }
             },
-            "url": "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent"
+            "url": "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent",
+            "description": "Only allowed if `groupId` was recorded for your user (e.g. after Create avatar). **403** otherwise."
           }
         },
         {
-          "name": "List voices",
+          "name": "List voices (public)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/heygen/voices?type=public&limit=50"
+            "url": "{{baseUrl}}/api/heygen/voices?type=public&limit=50",
+            "description": "HeyGen public voice catalog (not user-filtered)."
+          }
+        },
+        {
+          "name": "List voices (private — current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices?type=private&limit=50",
+            "description": "Only voices recorded when **you** called POST `/voices` (design) or POST `/voices/clone`."
           }
         },
         {
           "name": "Design a voice (POST /v3/voices)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const d = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  let vid = d && d.voice_id;",
+                  "  if (!vid && d && Array.isArray(d.voices) && d.voices[0]) {",
+                  "    vid = d.voices[0].voice_id || d.voices[0].id;",
+                  "  }",
+                  "  if (!vid && d && Array.isArray(d.suggestions) && d.suggestions[0]) {",
+                  "    vid = d.suggestions[0].voice_id || d.suggestions[0].id;",
+                  "  }",
+                  "  if (vid) pm.collectionVariables.set('voiceId', String(vid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -651,11 +724,29 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/heygen/voices",
-            "description": "HeyGen `POST /v3/voices` — returns up to 3 matching voices. Same path as list voices; method is POST."
+            "description": "HeyGen `POST /v3/voices` — up to 3 suggested voices. This API records returned voice ids for your user (private list). Same path as list voices; method is POST. Test script saves first `voiceId` when present."
           }
         },
         {
           "name": "Clone a voice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const d = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  let vid = d && (d.voice_id || d.id);",
+                  "  if (!vid && d && Array.isArray(d.voices) && d.voices[0]) vid = d.voices[0].voice_id || d.voices[0].id;",
+                  "  if (vid) pm.collectionVariables.set('voiceId', String(vid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -665,7 +756,7 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/heygen/voices/clone",
-            "description": "HeyGen `POST /v3/voices/clone`. Poll GET voice with returned id until complete."
+            "description": "HeyGen `POST /v3/voices/clone`. Records clone voice id for your user. Poll **Get voice by id** until complete. Test script saves `voiceId` when present."
           }
         },
         {
@@ -674,7 +765,7 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
-            "description": "HeyGen `GET /v3/voices/{voice_id}` — use for clone status or voice metadata."
+            "description": "Proxies HeyGen `GET /v3/voices/{voice_id}`. **403** if this voice id is stored as another user's private voice; ids not stored are treated as public catalog reads."
           }
         },
         {
@@ -684,7 +775,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"text\": \"Hello from AthenaVI.\",\n  \"voice_id\": \"replace-with-voice-id\",\n  \"input_type\": \"text\",\n  \"speed\": 1\n}",
+              "raw": "{\n  \"text\": \"Hello from AthenaVI.\",\n  \"voice_id\": \"{{voiceId}}\",\n  \"input_type\": \"text\",\n  \"speed\": 1\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/heygen/voices/preview-speech"

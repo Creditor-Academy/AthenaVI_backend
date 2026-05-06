@@ -47,6 +47,9 @@ model User {
   ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
 
+  heygenAvatars HeygenAvatar[]
+  heygenVoices  HeygenVoice[]
+
   @@map("users")
 }
 
@@ -258,8 +261,10 @@ model HeygenResponse {
   id          String @id @default(uuid())
   workspaceId String
   projectId   String
+  sceneId     String  @default("") // client scene key from editor; required on new creates (validated in API)
   videoId     String
   videoUrl    String
+  s3Key       String? // S3 object key after upload; used for presigned GET
   requestHash String @unique
   status      String @default("processing") // processing | completed | failed
   rawResponse Json?
@@ -269,4 +274,45 @@ model HeygenResponse {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   project   Project   @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, workspaceId])
+}
+
+model HeygenAvatar {
+  id            String @id @default(uuid())
+  userId        String @map("user_id")
+  avatarGroupId String @map("avatar_group_id")
+  avatarId      String? @map("avatar_id")
+  name          String?
+  type          String
+  status        String  @default("processing")
+  raw           Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, avatarGroupId])
+  @@index([userId])
+  @@index([avatarGroupId])
+  @@map("heygen_avatars")
+}
+
+model HeygenVoice {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  voiceId   String  @unique @map("voice_id")
+  name      String?
+  source    String
+  language  String?
+  raw       Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("heygen_voices")
 }
