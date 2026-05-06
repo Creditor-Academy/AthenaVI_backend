@@ -1086,7 +1086,6 @@ Starts HeyGen avatar creation (`digital_twin`, `photo`, or `prompt`).
 - For **`digital_twin`** or **`photo`**: `file` is required — object shaped per HeyGen v3 (`type`: `url` \| `asset_id` \| `base64`, plus applicable fields).
 - Optional: `reference_images` (array, max **20** items), `avatar_group_id`, etc.
 
-<<<<<<< HEAD
 **Option B — Multipart file** (`Content-Type: multipart/form-data`)
 
 Use this to upload an image or video directly from Postman or the app without hosting a public URL.
@@ -1099,9 +1098,7 @@ Use this to upload an image or video directly from Postman or the app without ho
 The server converts the upload into HeyGen’s **`file`: `{ type: base64, media_type, data }`** payload.
 
 **Response (200)** – `data`: HeyGen creation response.
-=======
 **Response (200)** – `data`: HeyGen creation response. On success, the server persists the new avatar **group id** for the current user (when HeyGen returns it) so it appears under **`ownership=private`** lists.
->>>>>>> 9c4e2087762f8d6f1bd31b322bbc6e29741bf921
 
 ---
 
