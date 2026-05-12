@@ -3,33 +3,33 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const folderDao = require('./folder.dao');
 
-// async function validateWorkspaceAccess(workspaceId, userId) {
-//   const workspace = await folderDao.findWorkspaceById(workspaceId);
-//   if (!workspace) {
-//     throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
-//   }
+async function validateWorkspaceAccess(workspaceId, userId) {
+  const workspace = await folderDao.findWorkspaceById(workspaceId);
+  if (!workspace) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
 
-//   const member = await folderDao.findWorkspaceMember(workspaceId, userId);
-//   if (!member) {
-//     throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
-//   }
+  const member = await folderDao.findWorkspaceMember(workspaceId, userId);
+  if (!member) {
+    throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  }
 
-//   return { workspace, member };
-// }
+  return { workspace, member };
+}
 
 async function listFolders(workspaceId, userId) {
-//   await validateWorkspaceAccess(workspaceId, userId);
+  await validateWorkspaceAccess(workspaceId, userId);
 
-    const folders = await prisma.folder.findMany({
+  const folders = await prisma.folder.findMany({
     where: { workspaceId },
     orderBy: { createdAt: 'desc' },
   });
 
-  // Folder persistence is not implemented yet.
-  return folders;}
+  return folders;
+}
 
 async function createFolder(workspaceId, userId, name) {
-  //   await validateWorkspaceAccess(workspaceId, userId);
+  await validateWorkspaceAccess(workspaceId, userId);
   const folder = await prisma.folder.create({
     data: {
       name,
@@ -43,17 +43,17 @@ async function createFolder(workspaceId, userId, name) {
 const renameFolder = async (folderId, name) => {
   const folder = await folderDao.renameFolder(folderId, name);
   return folder;
-}
+};
 
 const deleteFolder = async (folderId) => {
-  const deletedFolder =  await folderDao.deleteFolder(folderId);
+  const deletedFolder = await folderDao.deleteFolder(folderId);
   return deletedFolder;
-}
+};
 
 module.exports = {
-  // validateWorkspaceAccess,
+  validateWorkspaceAccess,
   listFolders,
   createFolder,
   renameFolder,
-  deleteFolder
+  deleteFolder,
 };

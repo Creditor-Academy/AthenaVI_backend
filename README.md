@@ -68,7 +68,7 @@ Authorization: Bearer <access_token>
 ### Unprotected vs protected
 
 - **Unprotected**: OTP generate/resend, register, login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` (redirect).
-- **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted. **HeyGen avatar videos** at `/api/workspaces/:workspaceId/projects/:projectId/heygen/*` require a workspace **member** role (OWNER, ADMIN, or MEMBER) and the `projectId` must belong to that workspace.
+- **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, project, render, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted. **Project**, **render**, and **HeyGen avatar video** routes under `/api/workspaces/:workspaceId/projects/*` require a workspace **member** role (OWNER, ADMIN, or MEMBER), and the `projectId` must belong to that workspace.
 
 ---
 
@@ -821,6 +821,374 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
 
 ---
 
+## Projects
+
+Nested routes under **`/api/workspaces/:workspaceId/projects`**. All routes below require **`Authorization: Bearer <access_token>`** and workspace **member** access.
+
+`Project.data` stores the full video editor state. The backend validates:
+
+- `videoSettings.width`
+- `videoSettings.height`
+- `videoSettings.fps`
+- `scenes[]`
+- each scene's `sceneId`, `durationInFrames`, `background`, `elements[]`
+- each element's `id`, `type`, `layer`, `startFrame`, `durationInFrames`, `placement`, `content`, and `animations[]`
+
+Supported V1 element types:
+
+- `avatar`
+- `text`
+- `image`
+- `video`
+- `audio`
+- `shape`
+- `subtitle`
+
+Supported V1 transition types:
+
+- `cut`
+- `fade`
+- `slide-left`
+- `slide-right`
+- `slide-up`
+- `slide-down`
+- `wipe-left`
+- `wipe-right`
+- `zoom-in`
+- `zoom-out`
+
+Supported V1 animation types:
+
+- `fade-in`
+- `fade-out`
+- `slide-up`
+- `slide-down`
+- `slide-left`
+- `slide-right`
+- `zoom-in`
+- `zoom-out`
+- `scale-in`
+- `scale-out`
+- `rotate-in`
+- `rotate-out`
+- `typewriter`
+- `bounce`
+- `pulse`
+
+---
+
+### Create project
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/projects` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+Use either `data` or `projectState` for the editor payload. Both are validated the same way.
+
+```json
+{
+  "name": "My Video Project",
+  "folderId": "folder-uuid",
+  "data": {
+    "videoSettings": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "backgroundColor": "#000000"
+    },
+    "scenes": []
+  },
+  "thumbnail": "https://example.com/project-preview.png",
+  "status": "draft"
+}
+```
+
+**Response (201)** – `data.project`: created project row with `folder`, `data`, `duration`, and timestamps.
+
+---
+
+### List projects
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects` |
+| **Auth** | Bearer + member |
+
+**Query (optional)**
+
+- `folderId` – filter projects inside one folder
+
+**Response (200)** – `data.projects`: array ordered by `updatedAt desc`.
+
+---
+
+### Get project
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data.project`: project row including `folder` and saved `data`.
+
+---
+
+### Update project metadata
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId` |
+| **Auth** | Bearer + member |
+
+**Request body** (any one or more fields)
+
+```json
+{
+  "name": "Renamed video",
+  "thumbnail": "https://example.com/new-preview.png",
+  "duration": 450,
+  "status": "draft"
+}
+```
+
+**Response (200)** – `data.project`: updated project row.
+
+---
+
+### Save editor state
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/data` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+```json
+{
+  "data": {
+    "videoSettings": {
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "backgroundColor": "#000000"
+    },
+    "scenes": [
+      {
+        "sceneId": "scene_001",
+        "name": "Intro Scene",
+        "durationInFrames": 150,
+        "background": {
+          "type": "color",
+          "value": "#101828"
+        },
+        "transition": {
+          "in": {
+            "type": "fade",
+            "durationInFrames": 12,
+            "easing": "easeOut"
+          },
+          "out": {
+            "type": "slide-left",
+            "durationInFrames": 12,
+            "easing": "easeInOut"
+          }
+        },
+        "elements": [
+          {
+            "id": "avatar_001",
+            "type": "avatar",
+            "layer": 10,
+            "startFrame": 0,
+            "durationInFrames": 150,
+            "placement": {
+              "x": 1180,
+              "y": 180,
+              "width": 520,
+              "height": 820,
+              "rotation": 0,
+              "scale": 1,
+              "opacity": 1
+            },
+            "content": {
+              "provider": "heygen",
+              "sceneId": "scene_001",
+              "avatarId": "heygen-avatar-id",
+              "voiceId": "heygen-voice-id",
+              "script": "Welcome to our platform.",
+              "heygenVideoId": "heygen-response-id"
+            },
+            "animations": [
+              {
+                "type": "fade-in",
+                "startFrame": 0,
+                "durationInFrames": 10,
+                "easing": "easeOut"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Important rules:
+
+- `sceneId` must stay stable across edits
+- scene order is the order of `scenes[]`
+- avatar elements must send `heygenVideoId` once the scene clip has been generated
+- frontend should send `assetId`, not raw S3 keys
+
+**Response (200)** – `data.project`: updated project row with normalized `data` and computed `duration`.
+
+---
+
+### Move project to another folder
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+```json
+{
+  "folderId": "new-folder-uuid"
+}
+```
+
+When a project moves folders, the backend also migrates folder-aware S3 paths for:
+
+- generated HeyGen scene clips
+- cached rendered scene clips
+- final rendered exports
+
+**Response (200)** – `data.project`: updated project row now pointing at the new folder.
+
+---
+
+### Delete project
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId` |
+| **Auth** | Bearer + member |
+
+Deletes the project and attempts to delete related HeyGen scene clips, scene render caches, and final render files from S3.
+
+**Response (200)** – `data`: `{}`.
+
+---
+
+## Project renders
+
+Nested routes under **`/api/workspaces/:workspaceId/projects/:projectId/renders`**. These routes render the full project in the same backend using Remotion.
+
+Render behavior in V1:
+
+- resolves `assetId` references to real assets
+- resolves avatar scene clips from saved `heygenVideoId`
+- hashes scenes for cache reuse
+- reuses unchanged cached scene renders
+- stitches cached and newly rendered scene clips into one final MP4
+
+Final output is stored under a folder-aware S3 key:
+
+- `workspaces/{workspaceId}/folders/{folderId}/projects/{projectId}/renders/{renderId}/final.mp4`
+
+Scene caches use:
+
+- `workspaces/{workspaceId}/folders/{folderId}/projects/{projectId}/scene-cache/{sceneId}/{sceneHash}.mp4`
+
+---
+
+### Start render
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders` |
+| **Auth** | Bearer + member |
+
+**Request body**
+
+```json
+{
+  "forceRebuild": false
+}
+```
+
+- `forceRebuild: true` ignores cached scene renders and rebuilds every scene.
+
+**Response (202)** – `data.render`: queued render row with `status`, `progress`, and ids.
+
+---
+
+### List renders
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data.renders`: render history ordered by `createdAt desc`.
+
+---
+
+### Get render
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` |
+| **Auth** | Bearer + member |
+
+**Response (200)** – `data.render`: render row including `status`, `progress`, `sceneHashes`, `s3Key`, `outputUrl`, timestamps, and `error`.
+
+---
+
+### Download final render
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` |
+| **Auth** | Bearer + member |
+
+Returns a fresh presigned URL for the completed final MP4.
+
+**Response (200)** – `data`:
+
+```json
+{
+  "presignedUrl": "https://...",
+  "expiresInSeconds": 3600,
+  "render": {
+    "id": "render-uuid",
+    "status": "completed",
+    "s3Key": "workspaces/.../final.mp4"
+  }
+}
+```
+
+**409** if the render is not completed yet.
+
+---
+
 # Assets API
 
 Base path: **`/api/assets`**
@@ -1222,7 +1590,7 @@ Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **sta
 
 # HeyGen avatar videos (workspace project)
 
-Creates HeyGen **`POST /v3/videos`** avatar jobs per **workspace → project → scene**, polls **`GET /v3/videos/:video_id`**, downloads the finished MP4 to **S3** (`workspace/{workspaceId}/heygen/{projectId}/{sceneId}/...`). Playback uses **`/download`** (presigned URL), **`/stream`** (authenticated pipe-through API), or optional **`/s3-location`** metadata—see below.
+Creates HeyGen **`POST /v3/videos`** avatar jobs per **workspace → folder → project → scene**, polls **`GET /v3/videos/:video_id`**, downloads the finished MP4 to **S3** (`workspaces/{workspaceId}/folders/{folderId}/projects/{projectId}/scenes/{sceneId}/heygen/{heygenVideoId}.mp4`). Playback uses **`/download`** (presigned URL), **`/stream`** (authenticated pipe-through API), or optional **`/s3-location`** metadata—see below.
 
 | | |
 |---|---|
@@ -1402,6 +1770,17 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
+| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create project |
+| GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId` optional) |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |
+| DELETE | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Delete project and related assets |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | Start Remotion render |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | List project renders |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` | Bearer + member | Get render status/details |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` | Bearer + member | Get final render presigned URL |
 | POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
 | GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |

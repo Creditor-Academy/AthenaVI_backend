@@ -91,6 +91,22 @@ module.exports = {
   FOLDER_CREATED: 'Folder created successfully',
   FOLDERS_FETCHED_SUCCESSFULLY: 'Folders fetched successfully',
   PROJECT_CREATED: 'Project created successfully',
+  PROJECTS_FETCHED: 'Projects fetched successfully',
+  PROJECT_FETCHED: 'Project fetched successfully',
+  PROJECT_UPDATED: 'Project updated successfully',
+  PROJECT_DATA_SAVED: 'Project data saved successfully',
+  PROJECT_MOVED: 'Project moved successfully',
+  PROJECT_DELETED: 'Project deleted successfully',
+  PROJECT_NOT_FOUND: 'Project not found',
+  PROJECT_RENDER_STARTED: 'Project render started successfully',
+  PROJECT_RENDERS_FETCHED: 'Project renders fetched successfully',
+  PROJECT_RENDER_FETCHED: 'Project render fetched successfully',
+  PROJECT_RENDER_DOWNLOAD_READY: 'Project render download URL generated successfully',
+  PROJECT_RENDER_NOT_FOUND: 'Project render not found',
+  PROJECT_RENDER_NOT_READY: 'Project render is not ready for download yet',
+  PROJECT_RENDER_FAILED: 'Project render failed',
+  PROJECT_SCENE_ASSET_NOT_READY: 'A required scene asset is not ready yet',
+  PROJECT_SCENES_REQUIRED: 'At least one scene is required to render the project',
 
 
   // Asset

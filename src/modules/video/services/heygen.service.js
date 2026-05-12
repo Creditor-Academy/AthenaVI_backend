@@ -2,10 +2,10 @@ const prisma = require('../../../shared/config/prismaClient');
 const heygenDao = require('../heygen.dao');
 const heygenV3Service = require('../../heygen/heygenV3.service');
 const { generateHeygenRequestHash } = require('../../../shared/utils/requestHash');
-const { uploadFile, getPresignedGetUrl } = require('../../s3/s3.service');
+const { uploadFileToKey, getPresignedGetUrl } = require('../../s3/s3.service');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
-const { v4: uuidv4 } = require('uuid');
+const { buildHeygenSceneVideoKey } = require('../../../shared/utils/videoStorageKeys');
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 20;
@@ -15,23 +15,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function sanitizePathSegment(seg) {
-  return String(seg).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 128);
-}
-
 function isTerminalHeygenStatus(status) {
   const s = String(status || '').toLowerCase();
   return s === 'completed' || s === 'failed';
 }
 
-async function assertProjectInWorkspace(workspaceId, projectId) {
+async function getProjectInWorkspace(workspaceId, projectId) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, workspaceId },
-    select: { id: true },
+    select: { id: true, folderId: true },
   });
   if (!project) {
     throw new AppError(messages.NOT_FOUND, 404);
   }
+  return project;
 }
 
 function buildHeyGenVideoPayload(body) {
@@ -99,7 +96,7 @@ const generateAvatarVideo = async (input) => {
     outputFormat,
   } = input;
 
-  await assertProjectInWorkspace(workspaceId, projectId);
+  const project = await getProjectInWorkspace(workspaceId, projectId);
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -133,6 +130,7 @@ const generateAvatarVideo = async (input) => {
 
   return heygenDao.saveHeygenResponse({
     workspaceId,
+    folderId: project.folderId,
     projectId,
     sceneId,
     videoId: created.videoId,
@@ -200,18 +198,23 @@ const syncHeygenVideoToS3AndDb = async (record) => {
   }
 
   const buffer = await downloadVideoBuffer(remote.video_url);
-  const safeScene = sanitizePathSegment(record.sceneId || 'scene');
-  const folder = `heygen/${record.projectId}/${safeScene}`;
-  const { key, url } = await uploadFile(
-    buffer,
-    'workspace',
-    record.workspaceId,
-    folder,
-    `${uuidv4()}.mp4`,
-    'video/mp4'
-  );
+  let folderId = record.folderId;
+  if (!folderId) {
+    const project = await getProjectInWorkspace(record.workspaceId, record.projectId);
+    folderId = project.folderId;
+  }
+
+  const key = buildHeygenSceneVideoKey({
+    workspaceId: record.workspaceId,
+    folderId,
+    projectId: record.projectId,
+    sceneId: record.sceneId || 'scene',
+    heygenVideoId: record.id,
+  });
+  const { url } = await uploadFileToKey(buffer, key, 'video/mp4');
 
   return heygenDao.updateHeygenResponse(record.id, {
+    folderId,
     status: 'completed',
     s3Key: key,
     videoUrl: url,
@@ -220,12 +223,12 @@ const syncHeygenVideoToS3AndDb = async (record) => {
 };
 
 const listProjectHeygenVideos = async (workspaceId, projectId) => {
-  await assertProjectInWorkspace(workspaceId, projectId);
+  await getProjectInWorkspace(workspaceId, projectId);
   return heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
 };
 
 const getProjectHeygenVideo = async (workspaceId, projectId, id, options = {}) => {
-  await assertProjectInWorkspace(workspaceId, projectId);
+  await getProjectInWorkspace(workspaceId, projectId);
   const row = await heygenDao.findHeygenResponseByIdForProject(id, workspaceId, projectId);
   if (!row) {
     throw new AppError(messages.NOT_FOUND, 404);
@@ -288,4 +291,5 @@ module.exports = {
   assertHeygenVideoReadyInS3,
   getPresignedDownloadForVideo,
   getS3ObjectLocationForVideo,
+  getProjectInWorkspace,
 };

@@ -3,17 +3,35 @@ const router = express.Router({ mergeParams: true });
 const projectController = require('./project.controller');
 const projectValidations = require('../validations/project.validations');
 const validate = require('../../middlewares/validate.middleware');
-const { requireWorkspaceRole } = require('../../middlewares/requireWorkspaceRole');
-const { authMiddleware } = require('../../middlewares/auth.middlware');
 
-const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
+router.get('/', validate(projectValidations.listProjectsSchema), projectController.listProjects);
 
-router.post(
-  '/:workspaceId',
-  authMiddleware,
-  requireWorkspaceRole(anyMember),
-  validate(projectValidations.createProjectSchema),
-  projectController.createProject
+router.post('/', validate(projectValidations.createProjectSchema), projectController.createProject);
+
+router.get('/:projectId', validate(projectValidations.projectByIdSchema), projectController.getProject);
+
+router.patch(
+  '/:projectId',
+  validate(projectValidations.updateProjectSchema),
+  projectController.updateProject
+);
+
+router.patch(
+  '/:projectId/data',
+  validate(projectValidations.saveProjectDataSchema),
+  projectController.saveProjectData
+);
+
+router.patch(
+  '/:projectId/move-folder',
+  validate(projectValidations.moveProjectFolderSchema),
+  projectController.moveProjectToFolder
+);
+
+router.delete(
+  '/:projectId',
+  validate(projectValidations.deleteProjectSchema),
+  projectController.deleteProject
 );
 
 module.exports = router;

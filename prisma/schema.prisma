@@ -66,10 +66,12 @@ model Workspace {
   members     WorkspaceMember[]
   invitations Invitation[]
 
-  folders         Folder[]
-  projects        Project[]
-  assets          Asset[]
-  heygenResponses HeygenResponse[]
+  folders           Folder[]
+  projects          Project[]
+  assets            Asset[]
+  heygenResponses   HeygenResponse[]
+  projectRenders    ProjectRender[]
+  sceneRenderCaches SceneRenderCache[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -115,7 +117,7 @@ model Account {
   userId String @map("user_id")
 
   type              String
-  provider          String 
+  provider          String
   providerAccountId String @map("provider_account_id")
 
   refreshToken String? @map("refresh_token")
@@ -233,9 +235,11 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace       Workspace        @relation(fields: [workspaceId], references: [id])
-  folder          Folder           @relation(fields: [folderId], references: [id])
-  heygenResponses HeygenResponse[]
+  workspace         Workspace          @relation(fields: [workspaceId], references: [id])
+  folder            Folder             @relation(fields: [folderId], references: [id])
+  heygenResponses   HeygenResponse[]
+  projectRenders    ProjectRender[]
+  sceneRenderCaches SceneRenderCache[]
 }
 
 model Asset {
@@ -258,15 +262,16 @@ model Asset {
 }
 
 model HeygenResponse {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   workspaceId String
+  folderId    String?
   projectId   String
   sceneId     String  @default("") // client scene key from editor; required on new creates (validated in API)
   videoId     String
   videoUrl    String
   s3Key       String? // S3 object key after upload; used for presigned GET
-  requestHash String @unique
-  status      String @default("processing") // processing | completed | failed
+  requestHash String  @unique
+  status      String  @default("processing") // processing | completed | failed
   rawResponse Json?
 
   createdAt DateTime @default(now())
@@ -278,10 +283,57 @@ model HeygenResponse {
   @@index([projectId, workspaceId])
 }
 
+model ProjectRender {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  folderId      String
+  projectId     String
+  triggeredBy   String?
+  status        String    @default("queued")
+  progress      Int       @default(0)
+  s3Key         String?
+  outputUrl     String?
+  inputSnapshot Json?
+  sceneHashes   Json?
+  error         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, projectId])
+  @@map("project_renders")
+}
+
+model SceneRenderCache {
+  id          String   @id @default(uuid())
+  workspaceId String
+  folderId    String
+  projectId   String
+  sceneId     String
+  sceneHash   String
+  s3Key       String
+  outputUrl   String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneId, sceneHash])
+  @@index([workspaceId, projectId])
+  @@map("scene_render_caches")
+}
+
 model HeygenAvatar {
-  id            String @id @default(uuid())
-  userId        String @map("user_id")
-  avatarGroupId String @map("avatar_group_id")
+  id            String  @id @default(uuid())
+  userId        String  @map("user_id")
+  avatarGroupId String  @map("avatar_group_id")
   avatarId      String? @map("avatar_id")
   name          String?
   type          String
@@ -300,13 +352,13 @@ model HeygenAvatar {
 }
 
 model HeygenVoice {
-  id        String  @id @default(uuid())
-  userId    String  @map("user_id")
-  voiceId   String  @unique @map("voice_id")
-  name      String?
-  source    String
-  language  String?
-  raw       Json?
+  id       String  @id @default(uuid())
+  userId   String  @map("user_id")
+  voiceId  String  @unique @map("voice_id")
+  name     String?
+  source   String
+  language String?
+  raw      Json?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

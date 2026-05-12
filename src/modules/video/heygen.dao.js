@@ -8,6 +8,7 @@ const findHeygenResponseByRequestHash = async (requestHash) => {
 
 const saveHeygenResponse = async ({
   workspaceId,
+  folderId,
   projectId,
   sceneId,
   videoId,
@@ -24,6 +25,7 @@ const saveHeygenResponse = async ({
   return prisma.heygenResponse.create({
     data: {
       workspaceId,
+      folderId,
       projectId,
       sceneId: sceneId ?? '',
       videoId,

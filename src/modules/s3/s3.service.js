@@ -1,5 +1,6 @@
 const {
   PutObjectCommand,
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -14,6 +15,26 @@ const messages = require('../../shared/utils/messages');
 
 const BUCKET = process.env.AWS_S3_BUCKET;
 
+function buildPublicUrl(key) {
+  return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+}
+
+async function uploadBodyToKey(body, key, contentType) {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+
+  await s3.send(command);
+
+  return {
+    key,
+    url: buildPublicUrl(key),
+  };
+}
+
 async function uploadFile(
   fileBuffer,
   entityType,   // 'users' | 'workspace'
@@ -27,20 +48,11 @@ async function uploadFile(
 
   // generate unique key
   const key = `${entityType}/${entityId}/${folder}/${uuidv4()}${extension}`;
+  return uploadBodyToKey(fileBuffer, key, contentType);
+}
 
-  const command = new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: fileBuffer,
-    ContentType: contentType,
-  });
-
-  await s3.send(command);
-
-  return {
-    key,
-    url: `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
-  };
+async function uploadFileToKey(fileBuffer, key, contentType) {
+  return uploadBodyToKey(fileBuffer, key, contentType);
 }
 
 async function deleteFile(key) {
@@ -50,6 +62,34 @@ async function deleteFile(key) {
   });
 
   return s3.send(command);
+}
+
+async function copyFile(sourceKey, destinationKey) {
+  const command = new CopyObjectCommand({
+    Bucket: BUCKET,
+    CopySource: `${BUCKET}/${sourceKey}`,
+    Key: destinationKey,
+  });
+
+  await s3.send(command);
+
+  return {
+    key: destinationKey,
+    url: buildPublicUrl(destinationKey),
+  };
+}
+
+async function moveFile(sourceKey, destinationKey) {
+  if (sourceKey === destinationKey) {
+    return {
+      key: destinationKey,
+      url: buildPublicUrl(destinationKey),
+    };
+  }
+
+  const copied = await copyFile(sourceKey, destinationKey);
+  await deleteFile(sourceKey);
+  return copied;
 }
 
 async function getPresignedGetUrl(key, expiresInSeconds = 300) {
@@ -161,8 +201,12 @@ async function headObjectMeta(key) {
 
 module.exports = {
   uploadFile,
+  uploadFileToKey,
   deleteFile,
+  copyFile,
+  moveFile,
   getPresignedGetUrl,
   streamObjectToResponse,
   headObjectMeta,
+  buildPublicUrl,
 };

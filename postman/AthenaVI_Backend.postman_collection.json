@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "AthenaVI Backend",
-    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call (handles varying JSON shapes such as nested **`data`** arrays). Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. Run **Create avatar** to capture `groupId`; **Design voice** / **Clone a voice** to capture `voiceId`. Consent and GET voice-by-id enforce ownership (**403** if another user's recorded asset).",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call (handles varying JSON shapes such as nested **`data`** arrays). Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. Run **Create avatar** to capture `groupId`; **Design voice** / **Clone a voice** to capture `voiceId`. Consent and GET voice-by-id enforce ownership (**403** if another user's recorded asset).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -16,7 +16,8 @@
     { "key": "groupId", "value": "replace-with-heygen-group-id" },
     { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" },
     { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
-    { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000011" }
+    { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
+    { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" }
   ],
   "item": [
     {
@@ -416,8 +417,166 @@
           }
         },
         {
+          "name": "Projects",
+          "description": "Project CRUD, editor state save, folder move, and final Remotion render APIs. Create project first to save `projectId`. Start render saves `renderId`.",
+          "item": [
+            {
+              "name": "Create project",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.project && j.data.project.id;",
+                      "  if (id) { pm.collectionVariables.set('projectId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"My Video Project\",\n  \"folderId\": \"{{folderId}}\",\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": []\n  },\n  \"thumbnail\": \"https://example.com/project-preview.png\",\n  \"status\": \"draft\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects"
+              }
+            },
+            {
+              "name": "List projects",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}"
+              }
+            },
+            {
+              "name": "Get project",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Update project metadata",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Project Name\",\n  \"thumbnail\": \"https://example.com/updated-project-preview.png\",\n  \"status\": \"draft\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Save project data",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": [\n      {\n        \"sceneId\": \"scene_001\",\n        \"name\": \"Intro Scene\",\n        \"durationInFrames\": 150,\n        \"background\": {\n          \"type\": \"color\",\n          \"value\": \"#101828\"\n        },\n        \"transition\": {\n          \"in\": {\n            \"type\": \"fade\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeOut\"\n          },\n          \"out\": {\n            \"type\": \"slide-left\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeInOut\"\n          }\n        },\n        \"elements\": [\n          {\n            \"id\": \"text_001\",\n            \"type\": \"text\",\n            \"layer\": 20,\n            \"startFrame\": 0,\n            \"durationInFrames\": 120,\n            \"placement\": {\n              \"x\": 120,\n              \"y\": 120,\n              \"width\": 760,\n              \"height\": 180,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"text\": \"Welcome\",\n              \"fontFamily\": \"Inter\",\n              \"fontSize\": 64,\n              \"fontWeight\": 700,\n              \"color\": \"#FFFFFF\",\n              \"textAlign\": \"left\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"slide-up\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"distance\": 40,\n                \"easing\": \"easeOut\"\n              },\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"avatar_001\",\n            \"type\": \"avatar\",\n            \"layer\": 10,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 1180,\n              \"y\": 180,\n              \"width\": 520,\n              \"height\": 820,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"provider\": \"heygen\",\n              \"sceneId\": \"scene_001\",\n              \"avatarId\": \"replace-with-heygen-avatar-id\",\n              \"voiceId\": \"replace-with-heygen-voice-id\",\n              \"script\": \"Welcome to our platform.\",\n              \"heygenVideoId\": \"{{heygenVideoId}}\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 10,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"image_001\",\n            \"type\": \"image\",\n            \"layer\": 5,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 0,\n              \"y\": 0,\n              \"width\": 1920,\n              \"height\": 1080,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"assetId\": \"{{assetId}}\",\n              \"fit\": \"cover\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"zoom-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 150,\n                \"fromScale\": 1,\n                \"toScale\": 1.08,\n                \"easing\": \"linear\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/data",
+                "description": "Sends the validated V1 editor payload. Replace `{{heygenVideoId}}` after generating a scene avatar clip, and `{{assetId}}` with a real uploaded asset."
+              }
+            },
+            {
+              "name": "Move project to folder",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"folderId\": \"{{folderId}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/move-folder",
+                "description": "Moves the project and migrates folder-aware S3 keys for HeyGen scene clips, cached scene renders, and final exports."
+              }
+            },
+            {
+              "name": "Delete project",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Renders",
+              "item": [
+                {
+                  "name": "Start render",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "try {",
+                          "  const j = pm.response.json();",
+                          "  const id = j.data && j.data.render && j.data.render.id;",
+                          "  if (id) { pm.collectionVariables.set('renderId', id); }",
+                          "} catch (e) {}"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"forceRebuild\": false\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders",
+                    "description": "Queues a background Remotion render. The backend resolves assetId references, checks HeyGen avatar clips, reuses scene cache when possible, and writes the final MP4 to S3."
+                  }
+                },
+                {
+                  "name": "List renders",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders"
+                  }
+                },
+                {
+                  "name": "Get render",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}"
+                  }
+                },
+                {
+                  "name": "Download final render",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}/download",
+                    "description": "Returns a fresh presigned URL for the final MP4. This succeeds only when render status is `completed`."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "HeyGen videos (project)",
-          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3. Use **s3-location** for IAM workers (Remotion) or **download** for presigned URLs. Replace `projectId` with a real project in `workspaceId`.",
+          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3 under the folder-aware scene path, and exposes download/stream/S3-location helpers. Replace `projectId` with a real project in `workspaceId`.",
           "item": [
             {
               "name": "Create avatar video",
