@@ -30,3 +30,5 @@ Thumbs.db
 # Cache
 .cache/
 
+# Graphify (local graph outputs + AST cache; regenerate with `graphify update .`)
+graphify-out/
