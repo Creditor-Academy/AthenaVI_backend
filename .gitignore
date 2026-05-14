@@ -27,6 +27,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Cursor — rules, hooks, and other project Cursor config (local only; not shared via git)
+.cursor/
+
 # Cache
 .cache/
 
