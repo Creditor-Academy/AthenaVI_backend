@@ -1516,7 +1516,7 @@ Returns a consent / onboarding URL for a pending avatar group.
 
 ## Design a voice (semantic search)
 
-Maps to HeyGen **`POST /v3/voices`** — returns up to **3** suggested voices for a natural-language prompt.
+Maps to HeyGen **`POST /v3/voices`** — returns up to **3** suggested voices for a natural-language prompt. **Do not send `voice_id` on this route** (that field is for **`POST /api/heygen/voices/select`** after the user picks a suggestion).
 
 | | |
 |---|---|
@@ -1547,11 +1547,15 @@ Call this when the user clicks **Select** on a designed/suggested voice. It reco
 
 **Request body**
 
+Either field is accepted (use the id from the design suggestion object — often `voice_id`):
+
 ```json
 {
-  "voiceId": "heygen-voice-id-from-design-response"
+  "voice_id": "heygen-voice-id-from-design-response"
 }
 ```
+
+or `{ "voiceId": "..." }`.
 
 **Response (200)** – `data`:
 
@@ -1576,7 +1580,7 @@ Call this when the user clicks **Select** on a designed/suggested voice. It reco
 
 ## Clone a voice
 
-Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voiceId`** with the returned clone id until status is **`complete`**.
+Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voiceId`** with the returned **`voice_clone_id`** until status is **`complete`**.
 
 | | |
 |---|---|
@@ -1584,13 +1588,36 @@ Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voic
 | **Path** | `/api/heygen/voices/clone` |
 | **Auth** | Bearer |
 
-**Request body**
+**Request body** (proxied to HeyGen; use snake_case or camelCase for the name field)
 
-- `voice_name`: string, **1–100** chars (required).
-- `audio`: object (required) — HeyGen asset union: `{ type: "url", url }` \| `{ type: "asset_id", asset_id }` \| `{ type: "base64", media_type, data }`.
-- Optional: `language`, `remove_background_noise` (boolean, default per HeyGen).
+- `voice_name` or `voiceName`: string, **1–100** chars (required).
+- `audio`: object (required) — HeyGen asset union:
+  - `{ "type": "url", "url": "https://..." }`
+  - `{ "type": "asset_id", "asset_id": "..." }`
+  - `{ "type": "base64", "media_type": "audio/mpeg", "data": "..." }`
+- Optional: `language`, `remove_background_noise` / `removeBackgroundNoise` (boolean; HeyGen default **true**).
 
-**Response (200)** – `data`: HeyGen clone job payload (includes id to poll). The clone **voice id** is **stored for the current user**.
+Example:
+
+```json
+{
+  "voice_name": "My cloned voice",
+  "audio": {
+    "type": "url",
+    "url": "https://example.com/sample.mp3"
+  },
+  "remove_background_noise": true
+}
+```
+
+**Response (200)** – `data` includes HeyGen’s payload plus normalized ids when present:
+
+- `voice_clone_id` from HeyGen (poll with this id).
+- `voiceCloneId` / `voiceId` — same id, duplicated for convenience.
+
+The clone id is **stored for the current user** (`source: clone`) so it appears under **`GET .../voices?type=private`** once HeyGen returns it.
+
+**Do not send `voice_id` on clone** — that field is only for **`POST /api/heygen/voices/select`** after design suggestions.
 
 ---
 

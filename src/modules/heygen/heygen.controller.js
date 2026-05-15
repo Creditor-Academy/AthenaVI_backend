@@ -142,13 +142,6 @@ const selectVoice = asyncHandler(async (req, res) => {
 });
 
 const cloneVoice = asyncHandler(async (req, res) => {
-  const { audio } = req.body;
-  if (!audio || typeof audio !== 'object' || !audio.type) {
-    throw new AppError(
-      'audio is required with type (HeyGen union: { type, url } | { type, asset_id } | { type, base64, media_type, data })',
-      400
-    );
-  }
   const userId = req.user.id;
   const data = await heygenV3Service.cloneVoice(userId, req.body);
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_CLONE_STARTED);

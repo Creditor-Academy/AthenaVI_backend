@@ -37,30 +37,80 @@ const listVoicesQuery = Joi.object({
 
 const designVoiceBody = Joi.object({
   body: Joi.object({
-    prompt: Joi.string().min(1).max(1000).required(),
+    prompt: Joi.string().min(1).max(1000),
     gender: Joi.string().valid('male', 'female').allow(null, ''),
     locale: Joi.string().allow(null, ''),
     seed: Joi.number().integer().min(0),
-  }).unknown(false),
+    voiceId: Joi.string().min(1),
+    voice_id: Joi.string().min(1),
+  })
+    .unknown(true)
+    .custom((value, helpers) => {
+      const hasPrompt = value.prompt != null && String(value.prompt).trim() !== '';
+      const hasVoiceId =
+        (value.voiceId != null && String(value.voiceId).trim() !== '') ||
+        (value.voice_id != null && String(value.voice_id).trim() !== '');
+      if (hasVoiceId && !hasPrompt) {
+        return helpers.message(
+          'voice_id belongs on POST /api/heygen/voices/select, not on voice design (POST /api/heygen/voices requires prompt)'
+        );
+      }
+      if (!hasPrompt) {
+        return helpers.message('prompt is required for voice design (HeyGen POST /v3/voices)');
+      }
+      return value;
+    }),
   params: Joi.object({}).unknown(false),
   query: Joi.object({}).unknown(false),
 });
 
 const selectVoiceBody = Joi.object({
   body: Joi.object({
-    voiceId: Joi.string().min(1).required(),
-  }).unknown(false),
+    voiceId: Joi.string().min(1),
+    voice_id: Joi.string().min(1),
+  })
+    .or('voiceId', 'voice_id')
+    .unknown(true)
+    .custom((value, helpers) => {
+      const voiceId = (value.voiceId || value.voice_id || '').trim();
+      if (!voiceId) {
+        return helpers.message('voice_id or voiceId is required');
+      }
+      return { voiceId };
+    }),
   params: Joi.object({}).unknown(false),
   query: Joi.object({}).unknown(false),
 });
 
 const cloneVoiceBody = Joi.object({
   body: Joi.object({
-    voice_name: Joi.string().min(1).max(100).required(),
+    voice_name: Joi.string().min(1).max(100),
+    voiceName: Joi.string().min(1).max(100),
     audio: Joi.object().unknown(true).required(),
     language: Joi.string().allow(null, ''),
     remove_background_noise: Joi.boolean(),
-  }).unknown(false),
+    removeBackgroundNoise: Joi.boolean(),
+  })
+    .or('voice_name', 'voiceName')
+    .unknown(true)
+    .custom((value, helpers) => {
+      const voice_name = (value.voice_name || value.voiceName || '').trim();
+      if (!voice_name) {
+        return helpers.message('voice_name or voiceName is required (HeyGen POST /v3/voices/clone)');
+      }
+      if (!value.audio || typeof value.audio !== 'object' || !value.audio.type) {
+        return helpers.message(
+          'audio is required with type: url | asset_id | base64 (HeyGen POST /v3/voices/clone)'
+        );
+      }
+      const payload = { voice_name, audio: value.audio };
+      if (value.language != null && String(value.language).trim() !== '') {
+        payload.language = String(value.language).trim();
+      }
+      const rbn = value.remove_background_noise ?? value.removeBackgroundNoise;
+      if (rbn !== undefined) payload.remove_background_noise = Boolean(rbn);
+      return payload;
+    }),
   params: Joi.object({}).unknown(false),
   query: Joi.object({}).unknown(false),
 });

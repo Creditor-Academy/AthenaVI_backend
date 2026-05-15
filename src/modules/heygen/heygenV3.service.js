@@ -45,7 +45,13 @@ function itemAvatarGroupId(item) {
 
 function itemVoiceId(item) {
   if (!item || typeof item !== 'object') return null;
-  const v = item.voice_id ?? item.voiceId ?? item.id ?? null;
+  const v =
+    item.voice_id ??
+    item.voiceId ??
+    item.voice_clone_id ??
+    item.voiceCloneId ??
+    item.id ??
+    null;
   return v != null && String(v).trim() !== '' ? String(v).trim() : null;
 }
 
@@ -169,7 +175,11 @@ function extractVoiceIdsFromVoiceResponse(body) {
     }
     if (typeof node !== 'object') return;
 
-    const direct = node.voice_id ?? node.voiceId;
+    const direct =
+      node.voice_id ??
+      node.voiceId ??
+      node.voice_clone_id ??
+      node.voiceCloneId;
     if (direct != null && String(direct).trim() !== '') ids.add(String(direct).trim());
 
     const vObj = node.voice;
@@ -265,7 +275,10 @@ async function listVoices(userId, query) {
 }
 
 async function designVoice(_userId, body) {
-  return postJson('/v3/voices', body);
+  const payload = { ...(body || {}) };
+  delete payload.voiceId;
+  delete payload.voice_id;
+  return postJson('/v3/voices', payload);
 }
 
 async function cloneVoice(userId, body) {
@@ -281,6 +294,14 @@ async function cloneVoice(userId, body) {
       language: body?.language != null ? String(body.language) : null,
       raw,
     });
+  }
+  const voiceCloneId = voiceIds[0] || null;
+  if (voiceCloneId) {
+    return {
+      voiceCloneId,
+      voiceId: voiceCloneId,
+      ...raw,
+    };
   }
   return raw;
 }
