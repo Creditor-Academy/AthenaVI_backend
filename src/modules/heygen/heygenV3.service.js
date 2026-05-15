@@ -108,6 +108,90 @@ function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
   return nextTarget;
 }
 
+/** Voice ids currently present in list payload (same shape as filterPrivateListBody). */
+function extractVoiceIdsFromListBody(body) {
+  const ids = new Set();
+  if (!body || typeof body !== 'object') return ids;
+  const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
+  const target = hasEnvelope ? body.data : body;
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      const id = itemVoiceId(item);
+      if (id) ids.add(id);
+    }
+    return ids;
+  }
+  const picked = pickArray(target, VOICE_LIST_ARRAY_KEYS);
+  if (!Array.isArray(picked.list)) return ids;
+  for (const item of picked.list) {
+    const id = itemVoiceId(item);
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
+/** Append list rows (e.g. from DB) and fix common pagination fields. */
+function appendItemsToVoiceListBody(body, newItems) {
+  if (!newItems.length) return body;
+  if (!body || typeof body !== 'object') {
+    return {
+      data: {
+        voices: newItems,
+        total: newItems.length,
+        count: newItems.length,
+      },
+    };
+  }
+  const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
+  const target = hasEnvelope ? body.data : body;
+
+  if (Array.isArray(target)) {
+    const merged = [...target, ...newItems];
+    if (hasEnvelope) return { ...body, data: merged };
+    return merged;
+  }
+
+  const picked = pickArray(target, VOICE_LIST_ARRAY_KEYS);
+  const arrayKey = picked.key || 'voices';
+  const existing = Array.isArray(picked.list) ? picked.list : [];
+  const merged = [...existing, ...newItems];
+  const nextTarget = { ...target, [arrayKey]: merged };
+  if (typeof nextTarget.total === 'number') nextTarget.total = merged.length;
+  if (typeof nextTarget.count === 'number') nextTarget.count = merged.length;
+  if (typeof nextTarget.total_count === 'number') nextTarget.total_count = merged.length;
+  if (hasEnvelope) return { ...body, data: nextTarget };
+  return nextTarget;
+}
+
+function dbRowToVoiceListItem(row) {
+  const raw = row.raw;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const inner = raw.data !== undefined && raw.data !== null ? raw.data : raw;
+    if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+      const id = itemVoiceId(inner) || row.voiceId;
+      return { ...inner, voice_id: id, voiceId: id };
+    }
+  }
+  const id = row.voiceId;
+  return {
+    voice_id: id,
+    voiceId: id,
+    ...(row.name != null ? { name: row.name } : {}),
+    ...(row.language != null ? { language: row.language } : {}),
+  };
+}
+
+async function augmentPrivateVoiceListFromDb(body, userId, allowedSet) {
+  if (!allowedSet || allowedSet.size === 0) return body;
+  const present = extractVoiceIdsFromListBody(body);
+  const missing = [...allowedSet].filter((id) => !present.has(id));
+  if (missing.length === 0) return body;
+  const rows = await heygenDao.listHeygenVoicesForUser(userId, missing);
+  const missingSet = new Set(missing);
+  const items = rows.filter((r) => missingSet.has(r.voiceId)).map(dbRowToVoiceListItem);
+  return appendItemsToVoiceListBody(body, items);
+}
+
 /**
  * HeyGen create-avatar responses vary: group id may live under nested `data`, `avatar_group`,
  * or camelCase aliases. We unwrap a short `data` chain and prefer explicit group keys before `id`.
@@ -271,7 +355,8 @@ async function listVoices(userId, query) {
   const raw = await getJson('/v3/voices', query);
   if (query?.type !== 'private') return raw;
   const allowed = new Set(await heygenDao.listVoiceIdsForUser(userId));
-  return filterPrivateListBody(raw, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
+  const filtered = filterPrivateListBody(raw, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
+  return augmentPrivateVoiceListFromDb(filtered, userId, allowed);
 }
 
 async function designVoice(_userId, body) {

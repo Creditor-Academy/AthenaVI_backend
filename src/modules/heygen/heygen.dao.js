@@ -96,6 +96,20 @@ async function listVoiceIdsForUser(userId) {
   return rows.map((r) => r.voiceId);
 }
 
+/** Full rows for merging into private list when HeyGen’s list omits design/selected ids */
+async function listHeygenVoicesForUser(userId, voiceIdsFilter = null) {
+  return prisma.heygenVoice.findMany({
+    where: {
+      userId,
+      ...(Array.isArray(voiceIdsFilter) && voiceIdsFilter.length > 0
+        ? { voiceId: { in: voiceIdsFilter } }
+        : {}),
+    },
+    select: { voiceId: true, name: true, source: true, language: true, raw: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+}
+
 async function userOwnsAvatarGroup(userId, groupId) {
   if (!groupId) return false;
   const row = await prisma.heygenAvatar.findUnique({
@@ -131,6 +145,7 @@ module.exports = {
   recordVoice,
   listAvatarGroupIdsForUser,
   listVoiceIdsForUser,
+  listHeygenVoicesForUser,
   userOwnsAvatarGroup,
   userOwnsVoice,
   cloneVoiceOwnedByOtherUser,
