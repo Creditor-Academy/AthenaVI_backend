@@ -264,22 +264,8 @@ async function listVoices(userId, query) {
   return filterPrivateListBody(raw, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
 }
 
-async function designVoice(userId, body) {
-  const raw = await postJson('/v3/voices', body);
-  const voiceIds = extractVoiceIdsFromVoiceResponse(raw);
-  const nameHint =
-    body?.prompt != null ? String(body.prompt).slice(0, 200) : null;
-  for (const voiceId of voiceIds) {
-    await heygenDao.recordVoice({
-      userId,
-      voiceId,
-      name: nameHint,
-      source: 'design',
-      language: body?.language != null ? String(body.language) : null,
-      raw,
-    });
-  }
-  return raw;
+async function designVoice(_userId, body) {
+  return postJson('/v3/voices', body);
 }
 
 async function cloneVoice(userId, body) {
@@ -299,9 +285,34 @@ async function cloneVoice(userId, body) {
   return raw;
 }
 
+async function selectVoice(userId, voiceId) {
+  const raw = await getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
+  const data = raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw;
+  const name =
+    data && typeof data === 'object'
+      ? (data.name ?? data.voice_name ?? data.title ?? null)
+      : null;
+  const language =
+    data && typeof data === 'object' ? (data.language ?? data.locale ?? null) : null;
+
+  await heygenDao.recordVoice({
+    userId,
+    voiceId: String(voiceId),
+    name: name != null ? String(name).slice(0, 255) : null,
+    source: 'select',
+    language: language != null ? String(language).slice(0, 50) : null,
+    raw,
+  });
+
+  return {
+    selected: true,
+    voiceId: String(voiceId),
+    voice: raw,
+  };
+}
+
 async function getVoice(userId, voiceId) {
-  const ownerId = await heygenDao.voiceTrackedUserId(voiceId);
-  if (ownerId && ownerId !== userId) {
+  if (await heygenDao.cloneVoiceOwnedByOtherUser(userId, voiceId)) {
     throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
   }
   return getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
@@ -363,6 +374,7 @@ module.exports = {
   listVoices,
   designVoice,
   cloneVoice,
+  selectVoice,
   getVoice,
   generateSpeechPreview,
   createVideo,

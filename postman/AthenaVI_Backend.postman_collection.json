@@ -952,6 +952,20 @@
           }
         },
         {
+          "name": "Select voice (persist to my voices)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voiceId\": \"{{voiceId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/select",
+            "description": "Call this when user clicks Select in UI. It records the chosen voiceId for the current user so it shows up in `GET /api/heygen/voices?type=private`."
+          }
+        },
+        {
           "name": "Clone a voice",
           "event": [
             {

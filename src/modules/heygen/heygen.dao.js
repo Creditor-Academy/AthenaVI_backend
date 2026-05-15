@@ -47,7 +47,7 @@ async function recordAvatar({
  * @param {string} params.userId
  * @param {string} params.voiceId
  * @param {string|null|undefined} params.name
- * @param {string} params.source - 'design' | 'clone'
+ * @param {string} params.source - 'select' | 'clone'
  * @param {string|null|undefined} params.language
  * @param {object|null} [params.raw]
  */
@@ -60,7 +60,9 @@ async function recordVoice({
   raw = null,
 }) {
   return prisma.heygenVoice.upsert({
-    where: { voiceId },
+    where: {
+      userId_voiceId: { userId, voiceId },
+    },
     create: {
       userId,
       voiceId,
@@ -70,7 +72,6 @@ async function recordVoice({
       raw,
     },
     update: {
-      userId,
       name: name !== undefined ? name : undefined,
       source,
       language: language !== undefined ? language : undefined,
@@ -115,14 +116,14 @@ async function userOwnsVoice(userId, voiceId) {
   return Boolean(row);
 }
 
-/** @returns {string|null} userId if this voice is tracked as a private user voice, else null */
-async function voiceTrackedUserId(voiceId) {
-  if (!voiceId) return null;
-  const row = await prisma.heygenVoice.findUnique({
-    where: { voiceId },
+/** Clone voices are user-specific; block other users from detail when a clone row exists for someone else. */
+async function cloneVoiceOwnedByOtherUser(userId, voiceId) {
+  if (!voiceId) return false;
+  const row = await prisma.heygenVoice.findFirst({
+    where: { voiceId, source: 'clone' },
     select: { userId: true },
   });
-  return row ? row.userId : null;
+  return Boolean(row && row.userId !== userId);
 }
 
 module.exports = {
@@ -132,5 +133,5 @@ module.exports = {
   listVoiceIdsForUser,
   userOwnsAvatarGroup,
   userOwnsVoice,
-  voiceTrackedUserId,
+  cloneVoiceOwnedByOtherUser,
 };

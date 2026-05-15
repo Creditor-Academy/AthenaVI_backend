@@ -1385,14 +1385,14 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 |------|----------|
 | **`GET /api/heygen/avatars/groups?ownership=private`** | Response lists only avatar groups **created with `POST /api/heygen/avatars` while logged in as that user** (persisted after a successful create). |
 | **`GET /api/heygen/avatars/looks?ownership=private`** | Response lists only looks whose avatar group id is **owned by that user**. If **`group_id`** is set together with **`ownership=private`**, the user must own that group or the API returns **403** (`message`: **`HEYGEN_FORBIDDEN`**). |
-| **`GET /api/heygen/voices?type=private`** | Only voices returned from **`POST /api/heygen/voices`** (design) or **`POST /api/heygen/voices/clone`** under that user. |
+| **`GET /api/heygen/voices?type=private`** | Only voices **recorded for the current user** in `heygen_voices`: from **`POST /api/heygen/voices/select`** (after picking a design suggestion) or **`POST /api/heygen/voices/clone`**. Design suggestions alone are **not** stored. |
 | **`POST /api/heygen/avatars/:groupId/consent`** | **403** if `groupId` is not owned by the current user. |
-| **`GET /api/heygen/voices/:voiceId`** | **403** if this voice id was recorded as **another user’s** private voice; ids **not** in our DB still proxy HeyGen (e.g. public catalog voices). |
+| **`GET /api/heygen/voices/:voiceId`** | **403** only for **another user’s cloned** voice (`source: clone` in `heygen_voices`). Public / selected catalog voices are readable by anyone; **select** can add the same `voiceId` to each user’s My voices separately. |
 | **`ownership=public`**, **`type=public`**, or omitted filters | Unchanged passthrough to HeyGen (no user filtering). |
 
 **Legacy:** Avatars/voices created before this ownership tracking was deployed were never recorded and **will not appear** in the filtered private lists until recreated or backfilled.
 
-**Implementation note:** For **`ownership=private`** and **`type=private`**, the server still calls HeyGen with those params, then **filters the JSON locally** so other tenants’ rows disappear from the response. HeyGen’s list payloads vary (e.g. nested **`data`** arrays, **`avatar_group_list`**, **`looks`**, **`voices`**, **`suggestions`**); this backend discovers those containers and keeps only rows whose **group id** or **voice id** is stored for **your** JWT user (`heygen_avatars`, `heygen_voices`). **`POST /api/heygen/avatars`** resolves the avatar **group id** from nested **`data`** / **`avatar_group`** fields in HeyGen’s create response (not only a single top-level object) before writing **`heygen_avatars`**; if the response truly omits a group id until a future poll, nothing is recorded yet and private lists stay empty until creation returns one. It prefers **non-empty** array fields when several keys exist, rewrites pagination totals (**`total`**, **`count`**, **`total_count`**) when present to match the filtered length, and records voice ids from design/clone responses using the same conventions so **private voice lists** stay consistent.
+**Implementation note:** For **`ownership=private`** and **`type=private`**, the server still calls HeyGen with those params, then **filters the JSON locally** so other tenants’ rows disappear from the response. HeyGen’s list payloads vary (e.g. nested **`data`** arrays, **`avatar_group_list`**, **`looks`**, **`voices`**, **`suggestions`**); this backend discovers those containers and keeps only rows whose **group id** or **voice id** is stored for **your** JWT user (`heygen_avatars`, `heygen_voices`). **`POST /api/heygen/avatars`** resolves the avatar **group id** from nested **`data`** / **`avatar_group`** fields in HeyGen’s create response (not only a single top-level object) before writing **`heygen_avatars`**; if the response truly omits a group id until a future poll, nothing is recorded yet and private lists stay empty until creation returns one. It prefers **non-empty** array fields when several keys exist, rewrites pagination totals (**`total`**, **`count`**, **`total_count`**) when present to match the filtered length, and records voice ids from **clone** or **`POST .../voices/select`** so **private voice lists** stay consistent (design suggestions are not auto-recorded).
 
 ---
 
@@ -1505,7 +1505,7 @@ Returns a consent / onboarding URL for a pending avatar group.
 
 **Query (optional)**
 
-- `type` – `public` or `private` (**private**: filtered to voices recorded for the current user from design or clone — see **User-scoped private avatars and voices** above)
+- `type` – `public` or `private` (**private**: filtered to voices recorded for the current user from **select** or **clone** — see **User-scoped private avatars and voices** above)
 - `engine`, `language`, `gender` (`male` \| `female`)
 - `limit` – **1–100**
 - `token` – pagination cursor
@@ -1529,7 +1529,48 @@ Maps to HeyGen **`POST /v3/voices`** — returns up to **3** suggested voices fo
 - `prompt`: string, **1–1000** chars (required) — e.g. “warm, confident female narrator”.
 - Optional: `gender` (`male` \| `female`), `locale` (BCP-47), `seed` (integer ≥ 0 for alternate batches).
 
-**Response (200)** – `data`: HeyGen payload (`voices`, `seed`). Returned **`voice_id`** values (or equivalent fields in structured arrays) are **stored for the current user** so they appear under **`GET .../voices?type=private`**.
+**Response (200)** – `data`: HeyGen payload (`voices`, `seed`). Suggestion **`voice_id`** values are **not** written to **`heygen_voices`** — same idea as avatar create vs. listing: only an explicit user action persists ownership.
+
+**Frontend:** Show the suggestions, then on **Select** call **`POST /api/heygen/voices/select`** with the chosen id, then refresh **`GET .../voices?type=private`**.
+
+---
+
+## Select voice (persist to My voices)
+
+Call this when the user clicks **Select** on a designed/suggested voice. It records the chosen **`voiceId`** for the current user in **`heygen_voices`** so it appears under **`GET /api/heygen/voices?type=private`**.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/voices/select` |
+| **Auth** | Bearer |
+
+**Request body**
+
+```json
+{
+  "voiceId": "heygen-voice-id-from-design-response"
+}
+```
+
+**Response (200)** – `data`:
+
+```json
+{
+  "selected": true,
+  "voiceId": "heygen-voice-id-from-design-response",
+  "voice": { }
+}
+```
+
+- `voice` is the proxied HeyGen **`GET /v3/voices/{voice_id}`** payload for that id.
+- The server upserts a row in **`heygen_voices`** with `source: "select"`.
+
+**Typical frontend flow**
+
+1. `POST /api/heygen/voices` with `prompt` → show suggestion list.
+2. User clicks **Select** on one suggestion → `POST /api/heygen/voices/select` with that `voiceId`.
+3. Refresh **My voices** with `GET /api/heygen/voices?type=private`.
 
 ---
 
@@ -1565,7 +1606,7 @@ Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **sta
 
 **Response (200)** – `data`: HeyGen voice detail payload.
 
-**403** – **`HEYGEN_FORBIDDEN`** — voice id is recorded as another user’s private voice.
+**403** – **`HEYGEN_FORBIDDEN`** — voice id is another user’s **clone** (not shared public/catalog voices).
 
 ---
 
@@ -1793,9 +1834,10 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |
 | POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent (own group only; else **403**) |
 | GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered per user) |
-| POST | `/api/heygen/voices` | Bearer | Design voice (records ids for private list) |
+| POST | `/api/heygen/voices` | Bearer | Design voice (suggestions only; does not add to My voices) |
+| POST | `/api/heygen/voices/select` | Bearer | Persist user’s chosen voiceId to My voices |
 | POST | `/api/heygen/voices/clone` | Bearer | Clone voice (records id for private list) |
-| GET | `/api/heygen/voices/:voiceId` | Bearer | Voice detail / clone status (another user’s private voice → **403**) |
+| GET | `/api/heygen/voices/:voiceId` | Bearer | Voice detail / clone status (another user’s **clone** → **403**) |
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | Create HeyGen avatar video (scene, script, lip sync) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |

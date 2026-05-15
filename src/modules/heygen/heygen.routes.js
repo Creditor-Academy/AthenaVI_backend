@@ -49,6 +49,12 @@ router.get(
   heygenController.getVoice
 );
 
+router.post(
+  '/voices/select',
+  validate(heygenValidation.selectVoiceBody),
+  heygenController.selectVoice
+);
+
 router.post('/voices', validate(heygenValidation.designVoiceBody), heygenController.designVoice);
 
 module.exports = router;

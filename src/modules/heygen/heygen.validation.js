@@ -46,6 +46,14 @@ const designVoiceBody = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const selectVoiceBody = Joi.object({
+  body: Joi.object({
+    voiceId: Joi.string().min(1).required(),
+  }).unknown(false),
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+});
+
 const cloneVoiceBody = Joi.object({
   body: Joi.object({
     voice_name: Joi.string().min(1).max(100).required(),
@@ -104,6 +112,7 @@ module.exports = {
   listAvatarLooksQuery,
   listVoicesQuery,
   designVoiceBody,
+  selectVoiceBody,
   cloneVoiceBody,
   getVoiceParams,
   createAvatarConsentBody,

@@ -354,7 +354,7 @@ model HeygenAvatar {
 model HeygenVoice {
   id       String  @id @default(uuid())
   userId   String  @map("user_id")
-  voiceId  String  @unique @map("voice_id")
+  voiceId  String  @map("voice_id")
   name     String?
   source   String
   language String?
@@ -365,6 +365,8 @@ model HeygenVoice {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, voiceId])
   @@index([userId])
+  @@index([voiceId])
   @@map("heygen_voices")
 }

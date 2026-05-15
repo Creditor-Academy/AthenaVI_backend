@@ -135,6 +135,12 @@ const designVoice = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DESIGNED);
 });
 
+const selectVoice = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const data = await heygenV3Service.selectVoice(userId, req.body.voiceId);
+  return successResponse(req, res, data, 200, messages.HEYGEN_VOICES_OK);
+});
+
 const cloneVoice = asyncHandler(async (req, res) => {
   const { audio } = req.body;
   if (!audio || typeof audio !== 'object' || !audio.type) {
@@ -175,6 +181,7 @@ module.exports = {
   createAvatarConsent,
   listVoices,
   designVoice,
+  selectVoice,
   cloneVoice,
   getVoice,
   previewSpeech,
