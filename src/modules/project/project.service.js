@@ -4,6 +4,7 @@ const projectDao = require('./project.dao');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
   DEFAULT_VIDEO_SETTINGS,
+  CANVAS_PRESETS,
 } = require('../../shared/constants/videoEditor');
 const {
   buildHeygenSceneVideoKey,
@@ -23,7 +24,7 @@ function normalizeProjectState(projectState) {
     return buildDefaultProjectData();
   }
 
-  return {
+  const normalized = {
     ...projectState,
     videoSettings: {
       ...DEFAULT_VIDEO_SETTINGS,
@@ -31,6 +32,100 @@ function normalizeProjectState(projectState) {
     },
     scenes: Array.isArray(projectState.scenes) ? projectState.scenes : [],
   };
+
+  if (projectState.meta && typeof projectState.meta === 'object') {
+    normalized.meta = { ...projectState.meta };
+  }
+
+  return normalized;
+}
+
+function resolveVideoSettingsFromCanvas({
+  aspectRatio,
+  canvasSize,
+  customWidth,
+  customHeight,
+  videoSettings,
+}) {
+  const base = {
+    ...DEFAULT_VIDEO_SETTINGS,
+    ...(videoSettings && typeof videoSettings === 'object' ? videoSettings : {}),
+  };
+
+  const aspect = aspectRatio || canvasSize;
+  if (!aspect) {
+    return base;
+  }
+
+  if (aspect === 'custom') {
+    return {
+      ...base,
+      width: Number(customWidth),
+      height: Number(customHeight),
+    };
+  }
+
+  const preset = CANVAS_PRESETS[aspect];
+  if (!preset) {
+    return base;
+  }
+
+  return {
+    ...base,
+    width: preset.width,
+    height: preset.height,
+  };
+}
+
+function buildProjectMeta({ aspectRatio, canvasSize, tags, existingMeta }) {
+  const meta = {
+    ...(existingMeta && typeof existingMeta === 'object' ? existingMeta : {}),
+  };
+  const aspect = aspectRatio || canvasSize;
+  if (aspect) meta.aspectRatio = aspect;
+  if (Array.isArray(tags) && tags.length > 0) {
+    meta.tags = tags.map((t) => String(t).trim()).filter(Boolean);
+  }
+  return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+function buildCreateProjectEditorState({
+  editorState,
+  aspectRatio,
+  canvasSize,
+  customWidth,
+  customHeight,
+  tags,
+}) {
+  const partial =
+    editorState && typeof editorState === 'object' ? editorState : { scenes: [] };
+
+  const videoSettings = resolveVideoSettingsFromCanvas({
+    aspectRatio,
+    canvasSize,
+    customWidth,
+    customHeight,
+    videoSettings: partial.videoSettings,
+  });
+
+  const meta = buildProjectMeta({
+    aspectRatio,
+    canvasSize,
+    tags: tags ?? partial.meta?.tags,
+    existingMeta: partial.meta,
+  });
+
+  const state = {
+    ...partial,
+    videoSettings,
+    scenes: Array.isArray(partial.scenes) ? partial.scenes : [],
+  };
+
+  if (meta) {
+    state.meta = meta;
+  }
+
+  return normalizeProjectState(state);
 }
 
 function estimateProjectDuration(projectState) {
@@ -60,18 +155,30 @@ async function assertProjectInWorkspace(workspaceId, projectId) {
   return project;
 }
 
-const createProject = async (
-  workspaceId,
-  userId,
-  name,
-  folderId,
-  projectState,
-  thumbnail,
-  duration,
-  status
-) => {
+const createProject = async (workspaceId, userId, input) => {
+  const {
+    name,
+    folderId,
+    editorState,
+    thumbnail,
+    duration,
+    status,
+    aspectRatio,
+    canvasSize,
+    customWidth,
+    customHeight,
+    tags,
+  } = input;
+
   await assertFolderInWorkspace(folderId, workspaceId);
-  const normalizedState = normalizeProjectState(projectState);
+  const normalizedState = buildCreateProjectEditorState({
+    editorState,
+    aspectRatio,
+    canvasSize,
+    customWidth,
+    customHeight,
+    tags,
+  });
 
   const project = await projectDao.createProject({
     name,

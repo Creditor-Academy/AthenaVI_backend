@@ -5,6 +5,7 @@ const {
   ANIMATION_TYPES,
   PROJECT_STATUSES,
   DEFAULT_VIDEO_SETTINGS,
+  CANVAS_ASPECT_RATIOS,
 } = require('../../shared/constants/videoEditor');
 
 const uuidParam = Joi.string().uuid().required();
@@ -71,33 +72,85 @@ const sceneSchema = Joi.object({
   elements: Joi.array().items(baseElementSchema).required(),
 }).required();
 
+const videoSettingsSchema = Joi.object({
+  width: Joi.number().integer().min(1).required(),
+  height: Joi.number().integer().min(1).required(),
+  fps: Joi.number().integer().min(1).required(),
+  backgroundColor: Joi.string().trim().optional(),
+});
+
+const projectMetaSchema = Joi.object({
+  aspectRatio: Joi.string()
+    .valid(...CANVAS_ASPECT_RATIOS)
+    .optional(),
+  tags: Joi.array().items(Joi.string().trim().min(1).max(64)).max(32).optional(),
+}).unknown(true);
+
 const editorStateSchema = Joi.object({
-  videoSettings: Joi.object({
-    width: Joi.number().integer().min(1).required(),
-    height: Joi.number().integer().min(1).required(),
-    fps: Joi.number().integer().min(1).required(),
-    backgroundColor: Joi.string().trim().optional(),
-  })
-    .default(DEFAULT_VIDEO_SETTINGS)
-    .required(),
+  videoSettings: videoSettingsSchema.default(DEFAULT_VIDEO_SETTINGS).required(),
   scenes: Joi.array().items(sceneSchema).required(),
+  meta: projectMetaSchema.optional(),
 }).required();
+
+/** Partial editor payload allowed on create (wizard may send empty scenes). */
+const createEditorStateSchema = Joi.object({
+  videoSettings: videoSettingsSchema.optional(),
+  /** Empty array allowed on create; full scene shape validated on PATCH .../data */
+  scenes: Joi.array().default([]),
+  meta: projectMetaSchema.optional(),
+});
+
+const canvasAspectField = Joi.string().valid(...CANVAS_ASPECT_RATIOS);
 
 const createProjectSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
   }),
   body: Joi.object({
-    name: Joi.string().trim().min(1).max(255).required(),
+    name: Joi.string().trim().min(1).max(255),
+    title: Joi.string().trim().min(1).max(255),
+    /** Optional echo of URL `:workspaceId` (Details workspace dropdown); must match params when sent */
+    workspaceId: Joi.string().uuid().optional(),
     folderId: Joi.string().uuid().required(),
-    projectState: editorStateSchema.optional(),
-    data: editorStateSchema.optional(),
+    projectState: createEditorStateSchema.optional(),
+    data: createEditorStateSchema.optional(),
+    aspectRatio: canvasAspectField,
+    canvasSize: canvasAspectField,
+    customWidth: Joi.number().integer().min(1).max(7680),
+    customHeight: Joi.number().integer().min(1).max(7680),
+    tags: Joi.array().items(Joi.string().trim().min(1).max(64)).max(32),
     thumbnail: Joi.string().uri().optional(),
     duration: Joi.number().integer().min(0).optional(),
     status: Joi.string()
       .valid(...PROJECT_STATUSES)
       .optional(),
-  }).xor('projectState', 'data'),
+  })
+    .or('name', 'title')
+    .custom((value, helpers) => {
+      if (value.projectState && value.data) {
+        return helpers.message('Provide either data or projectState, not both');
+      }
+      const aspect = value.aspectRatio || value.canvasSize;
+      if (aspect === 'custom') {
+        if (!value.customWidth || !value.customHeight) {
+          return helpers.message(
+            'customWidth and customHeight are required when aspectRatio (or canvasSize) is custom'
+          );
+        }
+      }
+      return value;
+    }),
+  query: Joi.object({}).unknown(false),
+}).custom((value, helpers) => {
+  const bodyWorkspaceId = value.body?.workspaceId;
+  if (
+    bodyWorkspaceId &&
+    value.params?.workspaceId &&
+    bodyWorkspaceId !== value.params.workspaceId
+  ) {
+    return helpers.message('workspaceId in body must match workspaceId in the URL path');
+  }
+  return value;
 });
 
 const listProjectsSchema = Joi.object({

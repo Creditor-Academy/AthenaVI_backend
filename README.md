@@ -887,7 +887,48 @@ Supported V1 animation types:
 
 **Request body**
 
-Use either `data` or `projectState` for the editor payload. Both are validated the same way.
+Supports the **Create Video** wizard (**canvas size** → **details**) in one call when the user clicks **Create Video**.
+
+| UI (Details step) | API | Required |
+|-------------------|-----|----------|
+| Video title | `title` or `name` | Yes |
+| Tags | `tags` — string array, e.g. `["Professional", "Presentation"]` | No |
+| Workspace | **URL** `:workspaceId` (from workspace dropdown). Optional body `workspaceId` must match the URL if sent. Load options: `GET /api/workspaces` |
+| Choose folder | `folderId` — must belong to that workspace. Load options: `GET /api/workspaces/:workspaceId/folders` | Yes |
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `aspectRatio` or `canvasSize` | No | From canvas step: `16:9` \| `9:16` \| `1:1` \| `4:5` \| `custom` |
+| `customWidth`, `customHeight` | If `custom` | Pixel size when canvas is **Custom** |
+| `data` or `projectState` | No | Full editor JSON; omit for empty `scenes` + canvas preset only |
+| `thumbnail`, `duration`, `status` | No | Unchanged |
+
+Use **either** `data` **or** `projectState` for the editor payload (not both). Canvas presets set `videoSettings.width` / `height` when not overridden in `data.videoSettings`:
+
+| Preset | Default size |
+|--------|----------------|
+| `16:9` | 1920 × 1080 |
+| `9:16` | 1080 × 1920 |
+| `1:1` | 1080 × 1080 |
+| `4:5` | 1080 × 1350 |
+| `custom` | `customWidth` × `customHeight` |
+
+**Wizard example (canvas + details)**
+
+```http
+POST /api/workspaces/{workspaceId-from-dropdown}/projects
+```
+
+```json
+{
+  "title": "Untitled Video",
+  "folderId": "folder-uuid-from-dropdown",
+  "aspectRatio": "16:9",
+  "tags": ["Professional", "Presentation"]
+}
+```
+
+**Full editor example (unchanged)**
 
 ```json
 {
@@ -906,6 +947,8 @@ Use either `data` or `projectState` for the editor payload. Both are validated t
   "status": "draft"
 }
 ```
+
+Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 
 **Response (201)** – `data.project`: created project row with `folder`, `data`, `duration`, and timestamps.
 

@@ -442,10 +442,40 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"My Video Project\",\n  \"folderId\": \"{{folderId}}\",\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": []\n  },\n  \"thumbnail\": \"https://example.com/project-preview.png\",\n  \"status\": \"draft\"\n}",
+                  "raw": "{\n  \"title\": \"Untitled Video\",\n  \"folderId\": \"{{folderId}}\",\n  \"aspectRatio\": \"16:9\",\n  \"tags\": [\"Professional\", \"Presentation\"]\n}",
                   "options": { "raw": { "language": "json" } }
                 },
-                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects"
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
+                "description": "Create Video wizard: canvas (aspectRatio) + details (title, tags, folderId). Workspace is :workspaceId in the URL. List folders: GET .../folders."
+              }
+            },
+            {
+              "name": "Create project (full editor payload)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.project && j.data.project.id;",
+                      "  if (id) { pm.collectionVariables.set('projectId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"My Video Project\",\n  \"folderId\": \"{{folderId}}\",\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": []\n  },\n  \"status\": \"draft\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
+                "description": "Optional: explicit data / projectState with videoSettings and pre-built scenes (advanced / editor import)."
               }
             },
             {

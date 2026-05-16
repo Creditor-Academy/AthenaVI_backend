@@ -14,19 +14,35 @@ const listProjects = asyncHandler(async (req, res) => {
 const createProject = asyncHandler(async (req, res) => {
   const workspaceId = req.params.workspaceId;
   const userId = req.user.id;
-  const { name, folderId, projectState, data, thumbnail, duration, status } = req.body;
-  const editorState = projectState ?? data ?? {};
-
-  const project = await projectService.createProject(
-    workspaceId,
-    userId,
+  const {
     name,
+    title,
     folderId,
-    editorState,
+    projectState,
+    data,
     thumbnail,
     duration,
-    status
-  );
+    status,
+    aspectRatio,
+    canvasSize,
+    customWidth,
+    customHeight,
+    tags,
+  } = req.body;
+
+  const project = await projectService.createProject(workspaceId, userId, {
+    name: name ?? title,
+    folderId,
+    editorState: projectState ?? data,
+    thumbnail,
+    duration,
+    status,
+    aspectRatio,
+    canvasSize,
+    customWidth,
+    customHeight,
+    tags,
+  });
 
   return successResponse(req, res, { project }, 201, messages.PROJECT_CREATED);
 });

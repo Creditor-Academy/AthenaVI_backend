@@ -49,6 +49,16 @@ const DEFAULT_VIDEO_SETTINGS = {
   backgroundColor: '#000000',
 };
 
+/** Matches Create Video wizard canvas presets (step 1). */
+const CANVAS_ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:5', 'custom'];
+
+const CANVAS_PRESETS = {
+  '16:9': { width: 1920, height: 1080 },
+  '9:16': { width: 1080, height: 1920 },
+  '1:1': { width: 1080, height: 1080 },
+  '4:5': { width: 1080, height: 1350 },
+};
+
 module.exports = {
   ELEMENT_TYPES,
   TRANSITION_TYPES,
@@ -56,4 +66,6 @@ module.exports = {
   PROJECT_STATUSES,
   RENDER_STATUSES,
   DEFAULT_VIDEO_SETTINGS,
+  CANVAS_ASPECT_RATIOS,
+  CANVAS_PRESETS,
 };
