@@ -745,13 +745,19 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
       "id": "uuid",
       "name": "My folder",
       "workspaceId": "uuid",
-      "createdBy": "uuid",
-      "createdAt": "ISO8601",
-      "updatedAt": "ISO8601"
+      "createdBy": "user-uuid",
+      "createdAt": "2026-05-16T12:00:00.000Z",
+      "creator": {
+        "id": "user-uuid",
+        "name": "Jane Doe",
+        "email": "jane@example.com"
+      }
     }
   ]
 }
 ```
+
+`createdBy` is the creator’s user id. `createdAt` is when the folder was created (ISO 8601). `creator` is populated from the user record when available.
 
 ---
 
@@ -780,7 +786,14 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
   "folder": {
     "id": "uuid",
     "name": "New folder",
-    "createdAt": "ISO8601"
+    "workspaceId": "uuid",
+    "createdBy": "user-uuid",
+    "createdAt": "2026-05-16T12:00:00.000Z",
+    "creator": {
+      "id": "user-uuid",
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
   }
 }
 ```

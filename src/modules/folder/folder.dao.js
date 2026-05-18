@@ -1,13 +1,21 @@
 const prisma = require('../../shared/config/prismaClient');
 
+const folderSelect = {
+  id: true,
+  name: true,
+  workspaceId: true,
+  createdBy: true,
+  createdAt: true,
+};
+
 const findWorkspaceById = async (workspaceId) => {
-  return await prisma.workspace.findUnique({
+  return prisma.workspace.findUnique({
     where: { id: workspaceId },
   });
 };
 
 const findWorkspaceMember = async (workspaceId, userId) => {
-  return await prisma.workspaceMember.findUnique({
+  return prisma.workspaceMember.findUnique({
     where: {
       workspaceId_userId: { workspaceId, userId },
     },
@@ -18,24 +26,51 @@ const findWorkspaceMember = async (workspaceId, userId) => {
   });
 };
 
+const listFoldersByWorkspace = async (workspaceId) => {
+  return prisma.folder.findMany({
+    where: { workspaceId },
+    select: folderSelect,
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+const createFolder = async ({ name, workspaceId, createdBy }) => {
+  return prisma.folder.create({
+    data: { name, workspaceId, createdBy },
+    select: folderSelect,
+  });
+};
+
+const findUsersByIds = async (userIds) => {
+  if (!userIds.length) return [];
+  return prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, name: true, email: true },
+  });
+};
 
 const renameFolder = async (folderId, name) => {
-  const folder = await prisma.folder.update({
-    where: { id: folderId },data: { name },
+  return prisma.folder.update({
+    where: { id: folderId },
+    data: { name },
+    select: folderSelect,
   });
-  return folder;
-}
+};
 
 const deleteFolder = async (folderId) => {
-  const deletedFolder = await prisma.folder.delete({
+  return prisma.folder.delete({
     where: { id: folderId },
+    select: folderSelect,
   });
-  return deletedFolder;
-}
+};
 
 module.exports = {
+  folderSelect,
   findWorkspaceById,
   findWorkspaceMember,
+  listFoldersByWorkspace,
+  createFolder,
+  findUsersByIds,
   renameFolder,
   deleteFolder,
 };
