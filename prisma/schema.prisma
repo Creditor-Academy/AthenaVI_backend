@@ -37,6 +37,10 @@ enum ThemePalette {
   CUSTOM
 }
 
+enum InboxNotificationType {
+  WORKSPACE_INVITATION
+}
+
 model User {
   id            String  @id @default(uuid())
   email         String  @unique
@@ -65,6 +69,7 @@ model User {
   heygenVoices  HeygenVoice[]
 
   settings UserSettings?
+  inboxNotifications UserInboxNotification[]
 
   @@map("users")
 }
@@ -72,9 +77,13 @@ model User {
 model UserSettings {
   id                String         @id @default(uuid())
   userId            String         @unique @map("user_id")
-  interfaceMode     InterfaceMode  @default(LIGHT) @map("interface_mode")
-  themePalette      ThemePalette   @default(SAPPHIRE) @map("theme_palette")
-  customAccentColor String         @default("#2563EB") @map("custom_accent_color")
+  interfaceMode         InterfaceMode @default(LIGHT) @map("interface_mode")
+  themePalette          ThemePalette  @default(SAPPHIRE) @map("theme_palette")
+  customAccentColor     String        @default("#2563EB") @map("custom_accent_color")
+  pushNotifications     Boolean       @default(true) @map("push_notifications")
+  commentsAndMentions   Boolean       @default(true) @map("comments_and_mentions")
+  weeklyDigestEmail     Boolean       @default(false) @map("weekly_digest_email")
+  productEmails         Boolean       @default(false) @map("product_emails")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -142,6 +151,25 @@ model Invitation {
   @@index([token])
   @@index([expiresAt])
   @@map("invitations")
+}
+
+model UserInboxNotification {
+  id           String                @id @default(uuid())
+  userId       String                @map("user_id")
+  type         InboxNotificationType
+  title        String
+  message      String
+  readAt       DateTime?             @map("read_at")
+  metadata     Json?
+  invitationId String?               @map("invitation_id")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, invitationId])
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("user_inbox_notifications")
 }
 
 model Account {

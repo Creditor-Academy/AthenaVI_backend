@@ -24,6 +24,19 @@ const updateAppearanceValidation = Joi.object({
     .required(),
 });
 
+const updateNotificationsValidation = Joi.object({
+  body: Joi.object({
+    pushNotifications: Joi.boolean(),
+    commentsAndMentions: Joi.boolean(),
+    weeklyDigestEmail: Joi.boolean(),
+    productEmails: Joi.boolean(),
+  })
+    .min(1)
+    .unknown(false)
+    .required(),
+});
+
 module.exports = {
   updateAppearanceValidation,
+  updateNotificationsValidation,
 };

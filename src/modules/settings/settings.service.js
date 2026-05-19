@@ -8,6 +8,7 @@ const {
   THEME_PALETTE_TO_DB,
   THEME_PALETTE_FROM_DB,
 } = require('./appearance.constants');
+const { DEFAULT_NOTIFICATIONS } = require('./notifications.constants');
 
 const toAppearanceResponse = (record) => ({
   interfaceMode: INTERFACE_MODE_FROM_DB[record.interfaceMode],
@@ -52,11 +53,53 @@ const updateAppearance = async (userId, payload) => {
     throw new AppError(messages.NO_VALID_FIELDS_PROVIDED, 400);
   }
 
-  const settings = await settingsDao.upsertAppearance(userId, updateData);
+  const settings = await settingsDao.upsertSettings(userId, updateData);
   return toAppearanceResponse(settings);
+};
+
+const toNotificationsResponse = (record) => ({
+  pushNotifications: record.pushNotifications,
+  commentsAndMentions: record.commentsAndMentions,
+  weeklyDigestEmail: record.weeklyDigestEmail,
+  productEmails: record.productEmails,
+});
+
+const getNotifications = async (userId) => {
+  const settings = await settingsDao.findByUserId(userId);
+
+  if (!settings) {
+    return { ...DEFAULT_NOTIFICATIONS };
+  }
+
+  return toNotificationsResponse(settings);
+};
+
+const updateNotifications = async (userId, payload) => {
+  const updateData = {};
+  const booleanFields = [
+    'pushNotifications',
+    'commentsAndMentions',
+    'weeklyDigestEmail',
+    'productEmails',
+  ];
+
+  booleanFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      updateData[field] = payload[field];
+    }
+  });
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(messages.NO_VALID_FIELDS_PROVIDED, 400);
+  }
+
+  const settings = await settingsDao.upsertSettings(userId, updateData);
+  return toNotificationsResponse(settings);
 };
 
 module.exports = {
   getAppearance,
   updateAppearance,
+  getNotifications,
+  updateNotifications,
 };

@@ -1,4 +1,4 @@
-const resetPasswordTemplate = (resetLink) => {
+const resetPasswordTemplate = (resetLink, expiryMinutes = 15) => {
   return `
   <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
     
@@ -27,7 +27,7 @@ const resetPasswordTemplate = (resetLink) => {
       </a>
 
       <p style="color:#4a5568;font-size:14px;margin-top:25px;">
-        This link will expire in <strong>10 minutes</strong>.
+        This link will expire in <strong>${expiryMinutes} minutes</strong>.
       </p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />

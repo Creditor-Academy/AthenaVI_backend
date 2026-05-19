@@ -9,10 +9,12 @@ const otpService = require('../services/otp.service');
 const sessionService = require('../../sessions/session.service');
 const { signAccessToken } = require('../../../shared/utils/jwt');
 const passwordResetService = require('../services/passwordReset.service');
+const logger = require('../../../shared/utils/logger');
 const otpTemplate = require('../../../shared/templates/otp.template');
 const resetPasswordTemplate = require('../../../shared/templates/passwordReset.template');
 const googleOAuth = require('../services/googleOAuth.service');
 const workspaceService = require('../../workspace/workspace.service');
+const inboxService = require('../../inbox/inbox.service');
 
 async function _issueSessionAndTokens({ userId, userAgent, ip }) {
   const sessionId = await sessionService.createSession({ userId, userAgent, ip });
@@ -63,6 +65,7 @@ async function registerUser({ name, email, password, otp, userAgent, ip }) {
   );
   const user = await authDao.createUser({ name, email, password: hashedPassword });
   await workspaceService.createPrivateWorkspaceForUser(user.id);
+  await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
 
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
     userId: user.id,
@@ -117,7 +120,7 @@ async function rotateRefreshToken(incomingRawToken) {
   const isValid = await bcrypt.compare(secret, savedToken.hashedToken);
   if (!isValid) {
     await refreshTokenDao.revokeBySession(savedToken.sessionId);
-    await sessionService.deleteSession(savedToken.sessionId);
+    await sessionService.deleteSession({ sessionId: savedToken.sessionId });
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
 
@@ -188,11 +191,21 @@ async function sendPasswordResetEmail(email) {
   const resetToken = await passwordResetService.generateResetToken(user);
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-  await sendEmail({
-    to: user.email,
-    subject: 'Password Reset',
-    html: resetPasswordTemplate(resetUrl),
-  });
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Password Reset',
+      html: resetPasswordTemplate(
+        resetUrl,
+        passwordResetService.RESET_TOKEN_EXPIRY_MINUTES
+      ),
+    });
+  } catch (err) {
+    logger.error('Password reset email failed', {
+      email: user.email,
+      error: err.message,
+    });
+  }
 }
 
 async function resetPassword({ token, newPassword }) {
@@ -247,6 +260,7 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
         emailVerified: email_verified ? new Date() : null,
       });
       await workspaceService.createPrivateWorkspaceForUser(user.id);
+      await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
     }
     await authDao.upsertGoogleAccount({
       userId: user.id,

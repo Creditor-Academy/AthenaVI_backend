@@ -16,6 +16,7 @@ module.exports = {
   LOGOUT_SUCCESSFULLY: 'Logged out successfully',
   PASSWORD_LINK_SEND: 'If the email exists, a password reset link has been sent',
   PASSWORD_RESET: 'Password reset successful. Please login again',
+  PASSWORD_RESET_TOKEN_INVALID: 'Invalid or expired password reset token',
 
   // User
   USER_NOT_FOUND: 'User not found',
@@ -31,6 +32,15 @@ module.exports = {
   // Settings
   SETTINGS_APPEARANCE_FETCHED: 'Appearance settings fetched successfully',
   SETTINGS_APPEARANCE_UPDATED: 'Appearance settings updated successfully',
+  SETTINGS_NOTIFICATIONS_FETCHED: 'Notification settings fetched successfully',
+  SETTINGS_NOTIFICATIONS_UPDATED: 'Notification settings updated successfully',
+
+  // Inbox
+  INBOX_FETCHED: 'Inbox notifications fetched successfully',
+  INBOX_UNREAD_COUNT_FETCHED: 'Unread notification count fetched successfully',
+  INBOX_NOTIFICATION_MARKED_READ: 'Notification marked as read',
+  INBOX_NOTIFICATION_NOT_FOUND: 'Notification not found',
+  INBOX_ALL_MARKED_READ: 'All notifications marked as read',
 
   // Database
   DUPLICATE_ENTRY: 'Record already exists',

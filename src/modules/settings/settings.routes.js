@@ -14,4 +14,13 @@ router.patch(
   settingsController.updateAppearance
 );
 
+router.get('/notifications', authMiddleware, settingsController.getNotifications);
+
+router.patch(
+  '/notifications',
+  authMiddleware,
+  validate(settingsValidation.updateNotificationsValidation),
+  settingsController.updateNotifications
+);
+
 module.exports = router;

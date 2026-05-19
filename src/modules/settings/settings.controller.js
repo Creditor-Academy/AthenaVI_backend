@@ -27,7 +27,33 @@ const updateAppearance = asyncHandler(async (req, res) => {
   );
 });
 
+const getNotifications = asyncHandler(async (req, res) => {
+  const notifications = await settingsService.getNotifications(req.user.id);
+
+  return successResponse(
+    req,
+    res,
+    { notifications },
+    200,
+    messages.SETTINGS_NOTIFICATIONS_FETCHED
+  );
+});
+
+const updateNotifications = asyncHandler(async (req, res) => {
+  const notifications = await settingsService.updateNotifications(req.user.id, req.body);
+
+  return successResponse(
+    req,
+    res,
+    { notifications },
+    200,
+    messages.SETTINGS_NOTIFICATIONS_UPDATED
+  );
+});
+
 module.exports = {
   getAppearance,
   updateAppearance,
+  getNotifications,
+  updateNotifications,
 };

@@ -261,7 +261,16 @@ Sends a password reset link to the email. Response is the same whether or not th
 }
 ```
 
-**Response (200)** – `data`: `{}`.
+**Response (200)** – `data`: `{}`, `message`: `If the email exists, a password reset link has been sent`.
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| **400** | Invalid email (validation). |
+| **200** | Always returned for valid email format, including unknown addresses and SMTP failures (no email enumeration). |
+
+Reset links expire after **15 minutes**. The email link format is `{FRONTEND_URL}/reset-password/{token}` (frontend reads `token` from the URL and sends it in the reset-password body).
 
 ---
 
@@ -284,7 +293,16 @@ Sends a password reset link to the email. Response is the same whether or not th
 }
 ```
 
-**Response (200)** – `data`: `{}`.
+**Response (200)** – `data`: `{}`, `message`: `Password reset successful. Please login again`.
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| **400** | Validation failure (missing fields, `newPassword` shorter than 6 characters). |
+| **400** | Invalid or expired reset token (`Invalid or expired password reset token`). |
+
+On success, all refresh tokens and Redis sessions for the user are revoked; the client must log in again.
 
 ---
 
@@ -431,11 +449,105 @@ At least one of `name` or `phoneNumber` must be present. `phoneNumber` must matc
 
 ---
 
+# User inbox API
+
+Base path: **`/api/user/inbox`**
+
+All routes require **`Authorization: Bearer <access_token>`**. Workspace invitations are delivered by **email** and, when the invitee already has an account (or registers later with the same email), also appear here.
+
+---
+
+## List inbox notifications
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/inbox` |
+| **Auth** | Bearer |
+
+**Query (optional)**
+
+| Param | Type | Description |
+|---|---|---|
+| `unreadOnly` | `true` \| `false` | When `true`, only unread items |
+| `limit` | number | Max items (1–100, default 50) |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "type": "WORKSPACE_INVITATION",
+      "title": "Invitation to Acme Team",
+      "message": "You have been invited to join Acme Team as MEMBER.",
+      "readAt": null,
+      "metadata": {
+        "invitationId": "uuid",
+        "workspaceId": "uuid",
+        "workspaceName": "Acme Team",
+        "role": "MEMBER",
+        "token": "invitation-token",
+        "actionUrl": "{FRONTEND_URL}/invitations/accept/<token>",
+        "inviterName": "Jane Doe",
+        "expiresAt": "ISO8601"
+      },
+      "invitationId": "uuid",
+      "createdAt": "ISO8601"
+    }
+  ],
+  "unreadCount": 1
+}
+```
+
+Use `metadata.token` with **`POST /api/workspaces/invitations/accept`** after login, or open `metadata.actionUrl` in the app.
+
+---
+
+## Get unread count
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/inbox/unread-count` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "unreadCount": 3 }`
+
+---
+
+## Mark one notification read
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/inbox/:notificationId/read` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "notification": { ... } }`
+
+- **404** if the notification does not belong to the user.
+
+---
+
+## Mark all notifications read
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/inbox/read-all` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "unreadCount": 0 }`
+
+---
+
 # User settings API
 
 Base path: **`/api/user/settings`**
 
-All routes require **`Authorization: Bearer <access_token>`**. Settings are stored per authenticated user. Additional tabs (notifications, security, billing) will be added under this base path later.
+All routes require **`Authorization: Bearer <access_token>`**. Settings are stored per authenticated user in `user_settings`. Additional tabs (security, billing) will be added under this base path later.
 
 ---
 
@@ -492,6 +604,65 @@ Partial update; send at least one field. Values are persisted for the current us
 **Response (200)** – `data`: `{ "appearance": { "interfaceMode", "themePalette", "customAccentColor" } }` (full object after merge).
 
 **400** – Validation error (invalid enum, malformed hex, or empty body).
+
+---
+
+## Get notification settings
+
+Returns the user’s **Notifications** preferences (email and in-app toggles). If the user has never saved settings, the API returns the same defaults the UI uses on first load.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/settings/notifications` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "notifications": {
+    "pushNotifications": true,
+    "commentsAndMentions": true,
+    "weeklyDigestEmail": false,
+    "productEmails": false
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pushNotifications` | boolean | Instant alerts for render completion and important workspace activity |
+| `commentsAndMentions` | boolean | Teammate comments and @mentions |
+| `weeklyDigestEmail` | boolean | Weekly usage and activity summary email |
+| `productEmails` | boolean | Feature announcements and product updates |
+
+---
+
+## Update notification settings
+
+Partial update; send at least one boolean field. Persists for the current user (creates `user_settings` on first update if needed).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/settings/notifications` |
+| **Auth** | Bearer |
+
+**Request body** (partial)
+
+```json
+{
+  "pushNotifications": true,
+  "commentsAndMentions": true,
+  "weeklyDigestEmail": false,
+  "productEmails": false
+}
+```
+
+**Response (200)** – `data`: `{ "notifications": { ... } }` (full object after merge).
+
+**400** – Validation error (non-boolean value or empty body).
 
 ---
 
@@ -675,7 +846,7 @@ Returns **PENDING** invitations only.
 
 ## Invite member
 
-Sends an email with an accept link. Effective role for the invite must be **ADMIN** or **MEMBER** (OWNER is rejected by the server with **400** even if it passes generic validation).
+Sends an email with an accept link. If the invitee already has an AthenaVI account, a **`WORKSPACE_INVITATION`** item is also added to their platform inbox (`GET /api/user/inbox`). Users who register later with the same email receive matching inbox items on signup. Effective role for the invite must be **ADMIN** or **MEMBER** (OWNER is rejected by the server with **400** even if it passes generic validation).
 
 | | |
 |---|---|
@@ -1949,6 +2120,10 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | PATCH | `/api/user/profile` | Bearer | Update profile |
 | POST | `/api/user/upload/profile-image` | Bearer | Upload profile image (multipart) |
 | DELETE | `/api/user/profile-image` | Bearer | Remove profile image |
+| GET | `/api/user/inbox` | Bearer | List inbox notifications |
+| GET | `/api/user/inbox/unread-count` | Bearer | Unread inbox count |
+| PATCH | `/api/user/inbox/read-all` | Bearer | Mark all inbox items read |
+| PATCH | `/api/user/inbox/:notificationId/read` | Bearer | Mark one inbox item read |
 | POST | `/api/workspaces` | Bearer | Create team workspace |
 | GET | `/api/workspaces` | Bearer | List my workspaces |
 | POST | `/api/workspaces/invitations/accept` | Bearer | Accept invite |
