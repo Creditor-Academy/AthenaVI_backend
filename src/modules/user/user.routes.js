@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('./user.controller');
+const settingsRoutes = require('../settings/settings.routes');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
 const userValidation = require('../validations/user.validation');
@@ -33,5 +34,7 @@ router.delete(
   authMiddleware,
   userController.deleteProfileImage
 );
+
+router.use('/settings', settingsRoutes);
 
 module.exports = router;

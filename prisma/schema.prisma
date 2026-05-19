@@ -23,6 +23,20 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum InterfaceMode {
+  LIGHT
+  DARK
+}
+
+enum ThemePalette {
+  ORIGINAL
+  SAPPHIRE
+  OCEAN
+  FOREST
+  SUNSET
+  CUSTOM
+}
+
 model User {
   id            String  @id @default(uuid())
   email         String  @unique
@@ -50,7 +64,25 @@ model User {
   heygenAvatars HeygenAvatar[]
   heygenVoices  HeygenVoice[]
 
+  settings UserSettings?
+
   @@map("users")
+}
+
+model UserSettings {
+  id                String         @id @default(uuid())
+  userId            String         @unique @map("user_id")
+  interfaceMode     InterfaceMode  @default(LIGHT) @map("interface_mode")
+  themePalette      ThemePalette   @default(SAPPHIRE) @map("theme_palette")
+  customAccentColor String         @default("#2563EB") @map("custom_accent_color")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_settings")
 }
 
 model Workspace {

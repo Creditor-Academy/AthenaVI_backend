@@ -28,6 +28,10 @@ module.exports = {
   PROFILE_IMAGE_NOT_FOUND: 'Profile image not found',
   PROFILE_IMAGE_DELETED_SUCCESSFULLY: 'Profile image deleted successfully',
 
+  // Settings
+  SETTINGS_APPEARANCE_FETCHED: 'Appearance settings fetched successfully',
+  SETTINGS_APPEARANCE_UPDATED: 'Appearance settings updated successfully',
+
   // Database
   DUPLICATE_ENTRY: 'Record already exists',
 

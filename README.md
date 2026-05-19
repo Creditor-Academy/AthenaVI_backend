@@ -431,6 +431,70 @@ At least one of `name` or `phoneNumber` must be present. `phoneNumber` must matc
 
 ---
 
+# User settings API
+
+Base path: **`/api/user/settings`**
+
+All routes require **`Authorization: Bearer <access_token>`**. Settings are stored per authenticated user. Additional tabs (notifications, security, billing) will be added under this base path later.
+
+---
+
+## Get appearance settings
+
+Returns the user’s **Appearance** preferences (interface mode, theme palette, custom accent). If the user has never saved appearance settings, the API returns the same defaults the UI uses on first load.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/settings/appearance` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "appearance": {
+    "interfaceMode": "light",
+    "themePalette": "sapphire",
+    "customAccentColor": "#2563EB"
+  }
+}
+```
+
+| Field | Type | Values |
+|-------|------|--------|
+| `interfaceMode` | string | `light`, `dark` |
+| `themePalette` | string | `original`, `sapphire`, `ocean`, `forest`, `sunset`, `custom` |
+| `customAccentColor` | string | 6-digit hex with leading `#` (e.g. `#2563EB`) |
+
+---
+
+## Update appearance settings
+
+Partial update; send at least one field. Values are persisted for the current user (row created on first update).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/settings/appearance` |
+| **Auth** | Bearer |
+
+**Request body** (partial)
+
+```json
+{
+  "interfaceMode": "dark",
+  "themePalette": "custom",
+  "customAccentColor": "#7C3AED"
+}
+```
+
+**Response (200)** – `data`: `{ "appearance": { "interfaceMode", "themePalette", "customAccentColor" } }` (full object after merge).
+
+**400** – Validation error (invalid enum, malformed hex, or empty body).
+
+---
+
 # Workspace API
 
 Base path: **`/api/workspaces`**
