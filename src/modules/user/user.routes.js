@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('./user.controller');
+const settingsRoutes = require('../settings/settings.routes');
+const inboxRoutes = require('../inbox/inbox.routes');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
 const userValidation = require('../validations/user.validation');
@@ -33,5 +35,8 @@ router.delete(
   authMiddleware,
   userController.deleteProfileImage
 );
+
+router.use('/settings', settingsRoutes);
+router.use('/inbox', inboxRoutes);
 
 module.exports = router;

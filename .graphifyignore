@@ -1,0 +1,13 @@
+# .graphifyignore
+node_modules/
+dist/
+*.generated.py
+
+# only index src/, ignore everything else
+*
+!src/
+!src/**
+
+# project agent context at repo root (for graphify + Cursor)
+!agent.md
+!AGENTS.md

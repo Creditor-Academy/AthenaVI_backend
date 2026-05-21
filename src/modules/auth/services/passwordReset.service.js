@@ -1,8 +1,10 @@
 const authdao = require('../auth.dao');
-const refreshTokenDao= require('../../sessions/refreshToken.dao');
+const refreshTokenDao = require('../../sessions/refreshToken.dao');
 const sessionService = require('../../sessions/session.service');
+const AppError = require('../../../shared/utils/AppError');
+const messages = require('../../../shared/utils/messages');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
 
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
 
@@ -30,7 +32,7 @@ const resetPassword = async ({ token, newPassword }) => {
   const record = await authdao.findValidPasswordResetTokenByHash(tokenHash);
 
   if (!record) {
-    throw new Error('Invalid or expired token');
+    throw new AppError(messages.PASSWORD_RESET_TOKEN_INVALID, 400);
   }
 
   const hashedPassword = await bcrypt.hash(
@@ -45,12 +47,17 @@ const resetPassword = async ({ token, newPassword }) => {
 
   await refreshTokenDao.revokeAllByUserId(record.userId);
 
-  await Promise.all(tokens.map((token) => sessionService.deleteSession(token.sessionId)));
+  await Promise.all(
+    tokens.map((t) =>
+      sessionService.deleteSession({ sessionId: t.sessionId })
+    )
+  );
 
   return true;
 };
 
 module.exports = {
+  RESET_TOKEN_EXPIRY_MINUTES,
   generateResetToken,
   resetPassword,
 };

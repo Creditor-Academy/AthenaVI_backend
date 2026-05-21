@@ -1,0 +1,1112 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "AthenaVI Backend",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**User settings** under **User → Settings**: appearance and notification preferences (`GET` / `PATCH` under `/api/user/settings/appearance` and `/notifications`). Bearer required.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call (handles varying JSON shapes such as nested **`data`** arrays). Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. Run **Create avatar** to capture `groupId`; **Design voice** / **Clone a voice** to capture `voiceId`. Consent and GET voice-by-id enforce ownership (**403** if another user's recorded asset).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "workspaceId", "value": "00000000-0000-4000-8000-000000000001" },
+    { "key": "folderId", "value": "00000000-0000-4000-8000-000000000002" },
+    { "key": "assetId", "value": "00000000-0000-4000-8000-000000000003" },
+    { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
+    { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
+    { "key": "groupId", "value": "replace-with-heygen-group-id" },
+    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" },
+    { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
+    { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
+    { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Generate OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/otp/generate"
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/otp/resend"
+          }
+        },
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"otp\": 123456\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', j.data.accessToken);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/refresh",
+            "description": "Sends `refreshToken` cookie from prior Login/Register."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        },
+        {
+          "name": "Logout all devices",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout-all"
+          }
+        },
+        {
+          "name": "Forget password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/forget-password"
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"newpassword123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/auth/reset-password"
+          }
+        },
+        {
+          "name": "Google OAuth start",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/google",
+            "description": "302 redirect to Google; use a browser or disable redirect following to inspect."
+          }
+        },
+        {
+          "name": "Google OAuth callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/google/callback?code=&state="
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Get all users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/getall"
+          }
+        },
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/profile"
+          }
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phoneNumber\": \"+15551234567\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/user/profile"
+          }
+        },
+        {
+          "name": "Upload profile image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/user/upload/profile-image"
+          }
+        },
+        {
+          "name": "Delete profile image",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/profile-image"
+          }
+        },
+        {
+          "name": "Settings",
+          "item": [
+            {
+              "name": "Get appearance settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/user/settings/appearance",
+                "description": "Returns interfaceMode (light|dark), themePalette (original|sapphire|ocean|forest|sunset|custom), and customAccentColor (#RRGGBB). Defaults apply when the user has never saved settings."
+              }
+            },
+            {
+              "name": "Update appearance settings",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"interfaceMode\": \"light\",\n  \"themePalette\": \"sapphire\",\n  \"customAccentColor\": \"#2563EB\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/user/settings/appearance",
+                "description": "Partial update; send at least one of interfaceMode, themePalette, customAccentColor. Creates the user_settings row on first save."
+              }
+            },
+            {
+              "name": "Get notification settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/user/settings/notifications",
+                "description": "Returns pushNotifications, commentsAndMentions, weeklyDigestEmail, productEmails (booleans). Defaults: first two true, last two false."
+              }
+            },
+            {
+              "name": "Update notification settings",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pushNotifications\": true,\n  \"commentsAndMentions\": true,\n  \"weeklyDigestEmail\": false,\n  \"productEmails\": false\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/user/settings/notifications",
+                "description": "Partial update; send at least one boolean field. Merges into the same user_settings row as appearance."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Workspaces",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Create workspace",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Team Workspace\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/"
+          }
+        },
+        {
+          "name": "List my workspaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/"
+          }
+        },
+        {
+          "name": "Get workspace by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "Delete workspace",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "List invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations"
+          }
+        },
+        {
+          "name": "Invite member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"MEMBER\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invite"
+          }
+        },
+        {
+          "name": "Cancel invitation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations/{{invitationId}}"
+          }
+        },
+        {
+          "name": "Accept invitation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"invitation-jwt-or-token\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/invitations/accept"
+          }
+        },
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members"
+          }
+        },
+        {
+          "name": "Change member role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/role"
+          }
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}",
+            "description": "Route in app is registered as `/:id/members/:memberId`. If validation fails unexpectedly, check that `workspaceId` matches the path param name your server expects."
+          }
+        },
+        {
+          "name": "Folders — Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Folder\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+          }
+        },
+        {
+          "name": "Folders — List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+          }
+        },
+        {
+          "name": "Folders — Rename",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed Folder\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+          }
+        },
+        {
+          "name": "Folders — Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+          }
+        },
+        {
+          "name": "Projects",
+          "description": "Project CRUD, editor state save, folder move, and final Remotion render APIs. Create project first to save `projectId`. Start render saves `renderId`.",
+          "item": [
+            {
+              "name": "Create project",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.project && j.data.project.id;",
+                      "  if (id) { pm.collectionVariables.set('projectId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Untitled Video\",\n  \"folderId\": \"{{folderId}}\",\n  \"aspectRatio\": \"16:9\",\n  \"tags\": [\"Professional\", \"Presentation\"]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
+                "description": "Create Video wizard: canvas (aspectRatio) + details (title, tags, folderId). Workspace is :workspaceId in the URL. List folders: GET .../folders."
+              }
+            },
+            {
+              "name": "Create project (full editor payload)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.project && j.data.project.id;",
+                      "  if (id) { pm.collectionVariables.set('projectId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"My Video Project\",\n  \"folderId\": \"{{folderId}}\",\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": []\n  },\n  \"status\": \"draft\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
+                "description": "Optional: explicit data / projectState with videoSettings and pre-built scenes (advanced / editor import)."
+              }
+            },
+            {
+              "name": "List projects",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}"
+              }
+            },
+            {
+              "name": "Get project",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Update project metadata",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Project Name\",\n  \"thumbnail\": \"https://example.com/updated-project-preview.png\",\n  \"status\": \"draft\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Save project data",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": [\n      {\n        \"sceneId\": \"scene_001\",\n        \"name\": \"Intro Scene\",\n        \"durationInFrames\": 150,\n        \"background\": {\n          \"type\": \"color\",\n          \"value\": \"#101828\"\n        },\n        \"transition\": {\n          \"in\": {\n            \"type\": \"fade\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeOut\"\n          },\n          \"out\": {\n            \"type\": \"slide-left\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeInOut\"\n          }\n        },\n        \"elements\": [\n          {\n            \"id\": \"text_001\",\n            \"type\": \"text\",\n            \"layer\": 20,\n            \"startFrame\": 0,\n            \"durationInFrames\": 120,\n            \"placement\": {\n              \"x\": 120,\n              \"y\": 120,\n              \"width\": 760,\n              \"height\": 180,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"text\": \"Welcome\",\n              \"fontFamily\": \"Inter\",\n              \"fontSize\": 64,\n              \"fontWeight\": 700,\n              \"color\": \"#FFFFFF\",\n              \"textAlign\": \"left\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"slide-up\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"distance\": 40,\n                \"easing\": \"easeOut\"\n              },\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"avatar_001\",\n            \"type\": \"avatar\",\n            \"layer\": 10,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 1180,\n              \"y\": 180,\n              \"width\": 520,\n              \"height\": 820,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"provider\": \"heygen\",\n              \"sceneId\": \"scene_001\",\n              \"avatarId\": \"replace-with-heygen-avatar-id\",\n              \"voiceId\": \"replace-with-heygen-voice-id\",\n              \"script\": \"Welcome to our platform.\",\n              \"heygenVideoId\": \"{{heygenVideoId}}\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 10,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"image_001\",\n            \"type\": \"image\",\n            \"layer\": 5,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 0,\n              \"y\": 0,\n              \"width\": 1920,\n              \"height\": 1080,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"assetId\": \"{{assetId}}\",\n              \"fit\": \"cover\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"zoom-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 150,\n                \"fromScale\": 1,\n                \"toScale\": 1.08,\n                \"easing\": \"linear\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/data",
+                "description": "Sends the validated V1 editor payload. Replace `{{heygenVideoId}}` after generating a scene avatar clip, and `{{assetId}}` with a real uploaded asset."
+              }
+            },
+            {
+              "name": "Move project to folder",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"folderId\": \"{{folderId}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/move-folder",
+                "description": "Moves the project and migrates folder-aware S3 keys for HeyGen scene clips, cached scene renders, and final exports."
+              }
+            },
+            {
+              "name": "Delete project",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+              }
+            },
+            {
+              "name": "Renders",
+              "item": [
+                {
+                  "name": "Start render",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "try {",
+                          "  const j = pm.response.json();",
+                          "  const id = j.data && j.data.render && j.data.render.id;",
+                          "  if (id) { pm.collectionVariables.set('renderId', id); }",
+                          "} catch (e) {}"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"forceRebuild\": false\n}",
+                      "options": { "raw": { "language": "json" } }
+                    },
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders",
+                    "description": "Queues a background Remotion render. The backend resolves assetId references, checks HeyGen avatar clips, reuses scene cache when possible, and writes the final MP4 to S3."
+                  }
+                },
+                {
+                  "name": "List renders",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders"
+                  }
+                },
+                {
+                  "name": "Get render",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}"
+                  }
+                },
+                {
+                  "name": "Download final render",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}/download",
+                    "description": "Returns a fresh presigned URL for the final MP4. This succeeds only when render status is `completed`."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "HeyGen videos (project)",
+          "description": "Maps to HeyGen `POST /v3/videos`, polls status, stores MP4 in S3 under the folder-aware scene path, and exposes download/stream/S3-location helpers. Replace `projectId` with a real project in `workspaceId`.",
+          "item": [
+            {
+              "name": "Create avatar video",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.heygenVideo && j.data.heygenVideo.id;",
+                      "  if (id) { pm.collectionVariables.set('heygenVideoId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sceneId\": \"scene-1\",\n  \"avatarId\": \"replace-with-heygen-avatar-id\",\n  \"title\": \"Scene 1 take\",\n  \"resolution\": \"1080p\",\n  \"aspectRatio\": \"16:9\",\n  \"backgroundColor\": \"#008000\",\n  \"voiceId\": \"replace-with-heygen-voice-id\",\n  \"script\": \"Hello, this is a test line for lip sync.\",\n  \"expressiveness\": \"medium\",\n  \"voiceSettings\": {\n    \"speed\": 1,\n    \"pitch\": 0,\n    \"locale\": \"en-US\"\n  },\n  \"removeBackground\": false,\n  \"outputFormat\": \"mp4\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos",
+                "description": "201 — Idempotent per (workspace, project, scene, script, avatar, voice). **HEYGEN_API_KEY** and **AWS S3** env must be set for end-to-end flow."
+              }
+            },
+            {
+              "name": "List HeyGen videos for project",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos"
+              }
+            },
+            {
+              "name": "Get HeyGen video (poll + sync to S3)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}",
+                "description": "Polls HeyGen until complete (bounded), downloads to S3 when done. May take time while rendering."
+              }
+            },
+            {
+              "name": "Get S3 location (IAM / Remotion worker)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/s3-location",
+                "description": "Returns `bucket`, `key`, `region`, `objectArn` for `GetObject` with IAM. No secrets. 409 until file is in S3."
+              }
+            },
+            {
+              "name": "Download HeyGen video (presigned URL)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/download?expiresIn=300",
+                "description": "409 if not ready. `presignedUrl` in response is short-lived; call again to refresh. Optional query `expiresIn` seconds: **60–3600** (server default **300** if omitted)."
+              }
+            },
+            {
+              "name": "Stream HeyGen video (stable preview URL)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/stream",
+                "description": "Pipes S3 through API; same path does not expire like presigned URLs. Use `fetch` + blob `src` for `<video>` (native `src` cannot send Bearer). Optional `Range` header for seeking."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Credits",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Get credits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}"
+          }
+        },
+        {
+          "name": "Workspace credit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/history"
+          }
+        },
+        {
+          "name": "My credit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/credits/{{workspaceId}}/my-history"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Upload asset",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": [] }]
+            },
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/upload"
+          }
+        },
+        {
+          "name": "List assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0"
+          }
+        },
+        {
+          "name": "Rename asset",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"new-asset-name.pdf\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}/rename"
+          }
+        },
+        {
+          "name": "Delete asset",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HeyGen",
+      "description": "HeyGen v3 proxy (`/api/heygen`). One shared HeyGen API key: **`ownership=private`** (avatars) and **`type=private`** (voices) trigger **server-side filtering** of the HeyGen JSON (supports nested list envelopes such as `data.data`, `avatar_group_list`, `looks`, `voices`, `suggestions`, etc.) so each JWT user only sees rows recorded for them in **`heygen_avatars`** / **`heygen_voices`**. Public lists are unchanged passthrough.\n\n**403** (`You do not have access to this HeyGen resource`) — avatar consent for another user's group, GET voice by id for another user's **stored** private voice, or **private** looks with another user's `group_id`.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List avatar groups (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20",
+            "description": "Forwarded to HeyGen; full public catalog (not user-filtered)."
+          }
+        },
+        {
+          "name": "List avatar groups (private — current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&limit=20",
+            "description": "Only avatar groups recorded when **you** called POST `/avatars` (same Bearer user). The backend filters HeyGen's payload locally (including nested `data` / `avatar_group_list`-style lists). Assets created before ownership tracking or outside this API are omitted."
+          }
+        },
+        {
+          "name": "List avatar looks (public group)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks?group_id={{groupId}}&avatar_type=studio_avatar&limit=20",
+            "description": "Set `groupId` (collection variable) from a public catalog group when exploring looks."
+          }
+        },
+        {
+          "name": "List avatar looks (private — current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks?ownership=private&limit=20",
+            "description": "Filtered to looks whose avatar **group_id** belongs to you (server strips other tenants' rows from HeyGen's response, including lists nested under `data`). Omit `group_id` for all your looks; add `group_id` + private only for **your** group — otherwise **403**."
+          }
+        },
+        {
+          "name": "Create avatar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const chain = [];",
+                  "  let cur = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  for (let i = 0; i < 6 && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {",
+                  "    chain.push(cur);",
+                  "    const next = cur.data;",
+                  "    if (next && typeof next === 'object' && !Array.isArray(next)) cur = next;",
+                  "    else break;",
+                  "  }",
+                  "  function gidFrom(o) {",
+                  "    if (!o || typeof o !== 'object') return null;",
+                  "    const ag = o.avatar_group;",
+                  "    return (o.avatar_group_id || o.group_id || o.avatarGroupId || o.groupId ||",
+                  "      (ag && typeof ag === 'object' && (ag.avatar_group_id || ag.group_id || ag.id)) || null);",
+                  "  }",
+                  "  let gid = null;",
+                  "  for (const n of chain) { gid = gidFrom(n); if (gid) break; }",
+                  "  if (!gid) for (const n of chain) { if (n.id) { gid = n.id; break; } }",
+                  "  if (gid) pm.collectionVariables.set('groupId', String(gid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"prompt\",\n  \"name\": \"My Avatar\",\n  \"prompt\": \"A professional instructor in a studio\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars",
+            "description": "Registers the returned avatar group for your user (for private list filtering). Test script saves `groupId` when HeyGen returns an id."
+          }
+        },
+        {
+          "name": "Create avatar (multipart photo or digital twin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const chain = [];",
+                  "  let cur = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  for (let i = 0; i < 6 && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {",
+                  "    chain.push(cur);",
+                  "    const next = cur.data;",
+                  "    if (next && typeof next === 'object' && !Array.isArray(next)) cur = next;",
+                  "    else break;",
+                  "  }",
+                  "  function gidFrom(o) {",
+                  "    if (!o || typeof o !== 'object') return null;",
+                  "    const ag = o.avatar_group;",
+                  "    return (o.avatar_group_id || o.group_id || o.avatarGroupId || o.groupId ||",
+                  "      (ag && typeof ag === 'object' && (ag.avatar_group_id || ag.group_id || ag.id)) || null);",
+                  "  }",
+                  "  let gid = null;",
+                  "  for (const n of chain) { gid = gidFrom(n); if (gid) break; }",
+                  "  if (!gid) for (const n of chain) { if (n.id) { gid = n.id; break; } }",
+                  "  if (gid) pm.collectionVariables.set('groupId', String(gid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "type", "value": "photo", "type": "text" },
+                { "key": "name", "value": "My photo avatar", "type": "text" },
+                { "key": "file", "type": "file", "src": [] }
+              ]
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars",
+            "description": "Use **photo** + image file (JPEG/PNG/WebP), or **digital_twin** + image or MP4/WebM. Field name must be **file**. Same nested-response `groupId` test script as JSON Create avatar. Max 32 MB."
+          }
+        },
+        {
+          "name": "Create avatar consent",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reroute_url\": \"https://example.com/after-consent\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent",
+            "description": "Only allowed if `groupId` was recorded for your user (e.g. after Create avatar). **403** otherwise."
+          }
+        },
+        {
+          "name": "List voices (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices?type=public&limit=50",
+            "description": "HeyGen public voice catalog (not user-filtered)."
+          }
+        },
+        {
+          "name": "List voices (private — current user)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices?type=private&limit=50",
+            "description": "Only voices recorded when **you** called POST `/voices` (design) or POST `/voices/clone`. Backend filters HeyGen's JSON locally (`voices`, `suggestions`, nested `data`, etc.)."
+          }
+        },
+        {
+          "name": "Design a voice (POST /v3/voices)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const d = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  const firstId = (row) => (row && (row.voice_id || row.id)) || null;",
+                  "  const fromArr = (arr) => (Array.isArray(arr) && arr[0] ? firstId(arr[0]) : null);",
+                  "  let vid = d && d.voice_id;",
+                  "  if (!vid && Array.isArray(d)) vid = fromArr(d);",
+                  "  if (!vid && d) {",
+                  "    vid = fromArr(d.voices) || fromArr(d.suggestions) || fromArr(d.voice_list)",
+                  "      || fromArr(d.list) || fromArr(d.items) || fromArr(d.results) || fromArr(d.data);",
+                  "  }",
+                  "  if (vid) pm.collectionVariables.set('voiceId', String(vid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Warm, confident female narrator for e-learning\",\n  \"gender\": \"female\",\n  \"seed\": 0\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices",
+            "description": "HeyGen `POST /v3/voices` — up to 3 suggested voices. Server records returned voice ids (matches nested HeyGen shapes: `voices`, `suggestions`, `data`, …). Same path as list voices; method is POST. Test script saves first resolved `voiceId`."
+          }
+        },
+        {
+          "name": "Select voice (persist to my voices)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voiceId\": \"{{voiceId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/select",
+            "description": "Call this when user clicks Select in UI. It records the chosen voiceId for the current user so it shows up in `GET /api/heygen/voices?type=private`."
+          }
+        },
+        {
+          "name": "Clone a voice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  const outer = j.data;",
+                  "  const d = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;",
+                  "  const firstId = (row) => (row && (row.voice_id || row.id)) || null;",
+                  "  const fromArr = (arr) => (Array.isArray(arr) && arr[0] ? firstId(arr[0]) : null);",
+                  "  let vid = d && (d.voice_id || d.id);",
+                  "  if (!vid && Array.isArray(d)) vid = fromArr(d);",
+                  "  if (!vid && d) {",
+                  "    vid = fromArr(d.voices) || fromArr(d.suggestions) || fromArr(d.voice_list)",
+                  "      || fromArr(d.list) || fromArr(d.items) || fromArr(d.results) || fromArr(d.data);",
+                  "  }",
+                  "  if (vid) pm.collectionVariables.set('voiceId', String(vid));",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voice_name\": \"My cloned voice\",\n  \"audio\": {\n    \"type\": \"asset_id\",\n    \"asset_id\": \"REPLACE_WITH_ASSET_ID_FROM_UPLOAD\"\n  },\n  \"remove_background_noise\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/clone",
+            "description": "HeyGen `POST /v3/voices/clone`. Records clone voice id for your user. Poll **Get voice by id** until complete. Test script saves `voiceId` when present."
+          }
+        },
+        {
+          "name": "Get voice by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
+            "description": "Proxies HeyGen `GET /v3/voices/{voice_id}`. **403** if this voice id is stored as another user's private voice; ids not stored are treated as public catalog reads."
+          }
+        },
+        {
+          "name": "Preview speech",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Hello from AthenaVI.\",\n  \"voice_id\": \"{{voiceId}}\",\n  \"input_type\": \"text\",\n  \"speed\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/heygen/voices/preview-speech"
+          }
+        }
+      ]
+    }
+  ]
+}

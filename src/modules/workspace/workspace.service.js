@@ -4,6 +4,7 @@ const messages = require('../../shared/utils/messages');
 const crypto = require('crypto');
 const { sendEmail } = require('../../shared/notification/email.service');
 const invitationTemplate = require('../../shared/templates/invitation.template');
+const inboxService = require('../inbox/inbox.service');
 
 const INVITATION_EXPIRY_DAYS = 7;
 const MAX_WORKSPACE_NAME_LENGTH = 255;
@@ -129,7 +130,7 @@ async function inviteMember(workspaceId, inviterId, email, role) {
     Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
   );
 
-  await workspaceDao.createInvitation({
+  const invitation = await workspaceDao.createInvitation({
     workspaceId,
     email: normalizedEmail,
     role,
@@ -140,12 +141,21 @@ async function inviteMember(workspaceId, inviterId, email, role) {
 
   const invitationLink = `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
 
-  
   await sendEmail({
     to: normalizedEmail,
     subject: 'Invitation to join workspace',
     html: invitationTemplate(invitationLink, workspace.name),
   });
+
+  if (existingUser) {
+    const inviter = await workspaceDao.findUserById(inviterId);
+    await inboxService.notifyWorkspaceInvitation({
+      userId: existingUser.id,
+      invitation,
+      workspace,
+      inviter,
+    });
+  }
 
   return {
     message: messages.WORKSPACE_INVITE_SENT,
@@ -185,6 +195,8 @@ async function cancelInvitation(workspaceId, inviterId, invitationId) {
 
   const updatedInvitation = await workspaceDao.updateInvitationStatus(invitationId, 'EXPIRED');
 
+  await inboxService.removeInvitationNotifications(invitationId);
+
   return {
     updatedInvitation: updatedInvitation.email,
     message: messages.WORKSPACE_INVITE_CANCELLED,
@@ -214,6 +226,7 @@ async function acceptInvitation(token, userId) {
   );
   if (existingMember) {
     await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
+    await inboxService.markInvitationNotificationRead(userId, invitation.id);
     return existingMember.workspace;
   }
   await workspaceDao.createWorkspaceMember({
@@ -222,6 +235,7 @@ async function acceptInvitation(token, userId) {
     role: invitation.role,
   });
   await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
+  await inboxService.markInvitationNotificationRead(userId, invitation.id);
 
   return await workspaceDao.findWorkspaceById(invitation.workspaceId);
 }

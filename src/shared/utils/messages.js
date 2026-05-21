@@ -16,6 +16,7 @@ module.exports = {
   LOGOUT_SUCCESSFULLY: 'Logged out successfully',
   PASSWORD_LINK_SEND: 'If the email exists, a password reset link has been sent',
   PASSWORD_RESET: 'Password reset successful. Please login again',
+  PASSWORD_RESET_TOKEN_INVALID: 'Invalid or expired password reset token',
 
   // User
   USER_NOT_FOUND: 'User not found',
@@ -27,6 +28,19 @@ module.exports = {
   PROFILE_IMAGE_UPLOADED_SUCCESSFULLY: 'Profile image uploaded successfully',
   PROFILE_IMAGE_NOT_FOUND: 'Profile image not found',
   PROFILE_IMAGE_DELETED_SUCCESSFULLY: 'Profile image deleted successfully',
+
+  // Settings
+  SETTINGS_APPEARANCE_FETCHED: 'Appearance settings fetched successfully',
+  SETTINGS_APPEARANCE_UPDATED: 'Appearance settings updated successfully',
+  SETTINGS_NOTIFICATIONS_FETCHED: 'Notification settings fetched successfully',
+  SETTINGS_NOTIFICATIONS_UPDATED: 'Notification settings updated successfully',
+
+  // Inbox
+  INBOX_FETCHED: 'Inbox notifications fetched successfully',
+  INBOX_UNREAD_COUNT_FETCHED: 'Unread notification count fetched successfully',
+  INBOX_NOTIFICATION_MARKED_READ: 'Notification marked as read',
+  INBOX_NOTIFICATION_NOT_FOUND: 'Notification not found',
+  INBOX_ALL_MARKED_READ: 'All notifications marked as read',
 
   // Database
   DUPLICATE_ENTRY: 'Record already exists',
@@ -90,6 +104,23 @@ module.exports = {
   FOLDER_RENAMED: 'Folder renamed successfully',
   FOLDER_CREATED: 'Folder created successfully',
   FOLDERS_FETCHED_SUCCESSFULLY: 'Folders fetched successfully',
+  PROJECT_CREATED: 'Project created successfully',
+  PROJECTS_FETCHED: 'Projects fetched successfully',
+  PROJECT_FETCHED: 'Project fetched successfully',
+  PROJECT_UPDATED: 'Project updated successfully',
+  PROJECT_DATA_SAVED: 'Project data saved successfully',
+  PROJECT_MOVED: 'Project moved successfully',
+  PROJECT_DELETED: 'Project deleted successfully',
+  PROJECT_NOT_FOUND: 'Project not found',
+  PROJECT_RENDER_STARTED: 'Project render started successfully',
+  PROJECT_RENDERS_FETCHED: 'Project renders fetched successfully',
+  PROJECT_RENDER_FETCHED: 'Project render fetched successfully',
+  PROJECT_RENDER_DOWNLOAD_READY: 'Project render download URL generated successfully',
+  PROJECT_RENDER_NOT_FOUND: 'Project render not found',
+  PROJECT_RENDER_NOT_READY: 'Project render is not ready for download yet',
+  PROJECT_RENDER_FAILED: 'Project render failed',
+  PROJECT_SCENE_ASSET_NOT_READY: 'A required scene asset is not ready yet',
+  PROJECT_SCENES_REQUIRED: 'At least one scene is required to render the project',
 
 
   // Asset
@@ -101,4 +132,26 @@ module.exports = {
   ASSETS_FETCHED_SUCCESSFULLY: 'Assets fetched successfully',
   ASSET_RENAMED_SUCCESSFULLY: 'Asset renamed successfully',
   ASSET_DELETED_SUCCESSFULLY: 'Asset deleted successfully',
+
+  // Video (HeyGen)
+  VIDEO_GENERATION_SUCCESS: 'Avatar video generated successfully',
+
+  // HeyGen v3 (Phase 1)
+  HEYGEN_NOT_CONFIGURED: 'HeyGen is not configured (missing HEYGEN_API_KEY)',
+  HEYGEN_FORBIDDEN: 'You do not have access to this HeyGen resource',
+  HEYGEN_REQUEST_FAILED: 'HeyGen API request failed',
+  HEYGEN_AVATAR_GROUPS_OK: 'Avatar groups fetched',
+  HEYGEN_AVATAR_LOOKS_OK: 'Avatar looks fetched',
+  HEYGEN_AVATAR_CREATED: 'Avatar creation submitted',
+  HEYGEN_CONSENT_OK: 'Consent flow initiated',
+  HEYGEN_VOICES_OK: 'Voices fetched',
+  HEYGEN_VOICE_DESIGNED: 'Voice design suggestions returned',
+  HEYGEN_VOICE_CLONE_STARTED: 'Voice clone job created',
+  HEYGEN_VOICE_DETAIL_OK: 'Voice details fetched',
+  HEYGEN_SPEECH_PREVIEW_OK: 'Speech preview generated',
+  HEYGEN_PROXY_FETCH_FAILED: 'Could not fetch audio from HeyGen',
+  HEYGEN_VIDEO_NOT_READY: 'Video is not ready for download yet',
+  HEYGEN_VIDEOS_FETCHED: 'HeyGen videos fetched',
+  HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
+  HEYGEN_VIDEO_S3_LOCATION: 'S3 object location for IAM access',
 };
