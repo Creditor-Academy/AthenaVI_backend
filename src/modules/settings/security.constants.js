@@ -1,0 +1,15 @@
+const ACCOUNT_DELETION_CONFIRMATION = 'delete';
+
+const ACCOUNT_DELETION_GRACE_DAYS = Number(
+  process.env.ACCOUNT_DELETION_GRACE_DAYS || 7
+);
+
+function getDeletionGraceMs() {
+  return ACCOUNT_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
+}
+
+module.exports = {
+  ACCOUNT_DELETION_CONFIRMATION,
+  ACCOUNT_DELETION_GRACE_DAYS,
+  getDeletionGraceMs,
+};

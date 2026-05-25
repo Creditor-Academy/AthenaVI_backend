@@ -1,12 +1,14 @@
 const express = require('express');
-const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const errorHandler = require('./middlewares/errorHandler');
 const { connectRedis } = require("./shared/config/redis");
+const { createCorsMiddleware, logCorsConfig } = require('./shared/config/cors');
 const cookieParser = require('cookie-parser')
 
 const app = express();
+logCorsConfig();
+
 (async () => {
   try {
     await connectRedis();
@@ -17,8 +19,8 @@ const app = express();
   }
 })();
 
+app.use(createCorsMiddleware());
 app.use(helmet());
-app.use(cors());
 /** Base64 voice clone payloads exceed Express's default (~100kb). Override with JSON_BODY_LIMIT (e.g. 32mb). */
 const jsonBodyLimit =
   (process.env.JSON_BODY_LIMIT && String(process.env.JSON_BODY_LIMIT).trim()) || '15mb';

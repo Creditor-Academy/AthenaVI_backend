@@ -36,7 +36,28 @@ const updateNotificationsValidation = Joi.object({
     .required(),
 });
 
+const changePasswordValidation = Joi.object({
+  body: Joi.object({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().min(6).required(),
+  })
+    .unknown(false)
+    .required(),
+});
+
+const deleteAccountValidation = Joi.object({
+  body: Joi.object({
+    confirmation: Joi.string().valid('delete').required().messages({
+      'any.only': 'Type delete to confirm account deletion',
+    }),
+  })
+    .unknown(false)
+    .required(),
+});
+
 module.exports = {
   updateAppearanceValidation,
   updateNotificationsValidation,
+  changePasswordValidation,
+  deleteAccountValidation,
 };

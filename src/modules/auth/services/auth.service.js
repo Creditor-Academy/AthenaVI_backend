@@ -82,10 +82,21 @@ async function loginUser({ email, password, userAgent, ip }) {
     throw new AppError(messages.INVALID_CREDENTIALS, 401);
   }
 
+  if (!user.password) {
+    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new AppError(messages.INVALID_CREDENTIALS, 401);
   }
+
+  const accountRecovered = Boolean(
+    user.deletionScheduledAt && user.deletionScheduledAt > new Date()
+  );
+
+  const securityService = require('../../settings/security.service');
+  await securityService.recoverAccountIfPending(user);
 
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
     userId: user.id,
@@ -93,7 +104,12 @@ async function loginUser({ email, password, userAgent, ip }) {
     ip,
   });
 
-  return { accessToken, rawRefreshToken, user: { name: user.name, email: user.email } };
+  return {
+    accessToken,
+    rawRefreshToken,
+    user: { name: user.name, email: user.email },
+    accountRecovered,
+  };
 }
 
 async function rotateRefreshToken(incomingRawToken) {
@@ -256,8 +272,8 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
         name: name || null,
         email,
         password: null,
-        image: picture || null,
-        emailVerified: email_verified ? new Date() : null,
+        profileImage: picture || null,
+        emailVerified: Boolean(email_verified),
       });
       await workspaceService.createPrivateWorkspaceForUser(user.id);
       await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
@@ -272,13 +288,24 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
     });
   }
 
+  const securityService = require('../../settings/security.service');
+  const accountRecovered = Boolean(
+    user.deletionScheduledAt && user.deletionScheduledAt > new Date()
+  );
+  await securityService.recoverAccountIfPending(user);
+
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
     userId: user.id,
     userAgent,
     ip,
   });
 
-  return { accessToken, rawRefreshToken, user: { name: user.name, email: user.email } };
+  return {
+    accessToken,
+    rawRefreshToken,
+    user: { name: user.name, email: user.email },
+    accountRecovered,
+  };
 }
 
 module.exports = {

@@ -52,6 +52,9 @@ model User {
   storageLimit  Int     @default(1073741824) // 1 GB default limit
   storageUsed   Int     @default(0)
 
+  deletionRequestedAt DateTime? @map("deletion_requested_at")
+  deletionScheduledAt DateTime? @map("deletion_scheduled_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -71,6 +74,7 @@ model User {
   settings UserSettings?
   inboxNotifications UserInboxNotification[]
 
+  @@index([deletionScheduledAt])
   @@map("users")
 }
 

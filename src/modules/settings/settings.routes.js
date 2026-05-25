@@ -23,4 +23,20 @@ router.patch(
   settingsController.updateNotifications
 );
 
+router.get('/security', authMiddleware, settingsController.getSecurity);
+
+router.patch(
+  '/security/password',
+  authMiddleware,
+  validate(settingsValidation.changePasswordValidation),
+  settingsController.changePassword
+);
+
+router.post(
+  '/security/delete-account',
+  authMiddleware,
+  validate(settingsValidation.deleteAccountValidation),
+  settingsController.deleteAccount
+);
+
 module.exports = router;

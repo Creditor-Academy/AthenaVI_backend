@@ -666,6 +666,119 @@ Partial update; send at least one boolean field. Persists for the current user (
 
 ---
 
+## Get security settings
+
+Returns password capability and account-deletion status for the **Security** tab.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/settings/security` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "security": {
+    "hasPassword": true,
+    "canChangePassword": true,
+    "accountDeletion": {
+      "pending": false
+    }
+  }
+}
+```
+
+When deletion is scheduled, `accountDeletion` includes:
+
+```json
+{
+  "pending": true,
+  "requestedAt": "ISO8601",
+  "permanentDeletionAt": "ISO8601",
+  "recoverableUntil": "ISO8601",
+  "daysRemaining": 6,
+  "gracePeriodDays": 7
+}
+```
+
+---
+
+## Change password
+
+For email/password accounts only. OAuth-only accounts receive **400** (`PASSWORD_CHANGE_NOT_AVAILABLE`).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/settings/security/password` |
+| **Auth** | Bearer |
+
+**Request body**
+
+```json
+{
+  "currentPassword": "old-password",
+  "newPassword": "new-password"
+}
+```
+
+`newPassword` must be at least **6** characters.
+
+**Response (200)** – `data`: `{ "passwordChanged": true }`.
+
+**400** – Wrong current password or account cannot change password locally.
+
+---
+
+## Delete account (scheduled)
+
+Two-step confirmation: the client must send **`confirmation": "delete"`** (exact string, lowercase).
+
+Schedules permanent deletion after **7 days** (override with env **`ACCOUNT_DELETION_GRACE_DAYS`**). All sessions are revoked immediately and the refresh cookie is cleared.
+
+**Recovery:** If the user signs in again (email/password or Google) **before** `permanentDeletionAt`, the account and all data are restored automatically. Login/OAuth responses may include **`accountRecovered": true`** in `data`.
+
+After the grace period, a background job permanently deletes the user, owned workspace data, and related S3 objects.
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/user/settings/security/delete-account` |
+| **Auth** | Bearer |
+
+**Request body**
+
+```json
+{
+  "confirmation": "delete"
+}
+```
+
+**Response (200)** – `data`:
+
+```json
+{
+  "accountDeletion": {
+    "pending": true,
+    "requestedAt": "ISO8601",
+    "permanentDeletionAt": "ISO8601",
+    "recoverableUntil": "ISO8601",
+    "daysRemaining": 7,
+    "gracePeriodDays": 7
+  }
+}
+```
+
+**400** – Confirmation text is not exactly `delete`.
+
+**409** – Deletion is already scheduled.
+
+**401** – After permanent deletion, login returns `ACCOUNT_PERMANENTLY_DELETED`.
+
+---
+
 # Workspace API
 
 Base path: **`/api/workspaces`**
@@ -2184,7 +2297,7 @@ Frontend may need to know:
 - **API base URL** – e.g. `process.env.REACT_APP_API_URL` or `NEXT_PUBLIC_API_URL` pointing to `https://your-backend.com/api`.
 - **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`.
 - **Invitations** – Email links use `{FRONTEND_URL}/invitations/accept/<token>`; your app should route the user to login if needed, then `POST /api/workspaces/invitations/accept` with `{ "token" }`.
-- **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh` (same-origin or CORS `credentials` as configured).
+- **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh`, `/api/auth/logout`, etc. (`fetch`/`axios` with `credentials: 'include'` / `withCredentials: true`). The API must allow your frontend origin with credentials (not `Access-Control-Allow-Origin: *`); this server uses **`FRONTEND_URL`** or comma-separated **`CORS_ORIGINS`** for CORS.
 - **HeyGen avatar videos** – Server **`HEYGEN_API_KEY`** (optional **`HEYGEN_BASE_URL`**), plus **AWS** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). Editor preview: see **HeyGen avatar videos → App developer checklist** (`/stream` vs `/download`, persisting **`heygenVideoId`**, CORS).
 - **Large JSON** (e.g. voice clone **base64**) – Optional **`JSON_BODY_LIMIT`** (e.g. `32mb`). If unset, the server defaults to **15mb** for `express.json`.
 

@@ -49,14 +49,20 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const { accessToken, rawRefreshToken, user } = await authService.loginUser({
-    email,
-    password,
-    userAgent: req.headers['user-agent'],
-    ip: req.ip,
-  });
+  const { accessToken, rawRefreshToken, user, accountRecovered } =
+    await authService.loginUser({
+      email,
+      password,
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    });
   setRefreshCookie(res, rawRefreshToken);
-  return successResponse(req, res, { accessToken, user }, 200, messages.LOGIN_SUCCESS);
+  return successResponse(
+    req,
+    res,
+    { accessToken, user, accountRecovered: Boolean(accountRecovered) },
+    200,
+  );
 });
 
 const refreshToken = asyncHandler(async (req, res) => {

@@ -34,6 +34,16 @@ module.exports = {
   SETTINGS_APPEARANCE_UPDATED: 'Appearance settings updated successfully',
   SETTINGS_NOTIFICATIONS_FETCHED: 'Notification settings fetched successfully',
   SETTINGS_NOTIFICATIONS_UPDATED: 'Notification settings updated successfully',
+  SETTINGS_SECURITY_FETCHED: 'Security settings fetched successfully',
+  PASSWORD_CHANGED_SUCCESSFULLY: 'Password changed successfully',
+  CURRENT_PASSWORD_INCORRECT: 'Current password is incorrect',
+  PASSWORD_CHANGE_NOT_AVAILABLE:
+    'Password change is not available for this account. Use Google sign-in or reset password.',
+  ACCOUNT_DELETION_SCHEDULED:
+    'Account scheduled for deletion. You can recover by signing in within 7 days.',
+  ACCOUNT_DELETION_ALREADY_PENDING: 'Account deletion is already scheduled',
+  ACCOUNT_DELETION_CONFIRMATION_INVALID: 'Type delete to confirm account deletion',
+  ACCOUNT_PERMANENTLY_DELETED: 'This account has been permanently deleted',
 
   // Inbox
   INBOX_FETCHED: 'Inbox notifications fetched successfully',

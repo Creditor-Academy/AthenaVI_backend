@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "AthenaVI Backend",
-    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**User settings** under **User → Settings**: appearance and notification preferences (`GET` / `PATCH` under `/api/user/settings/appearance` and `/notifications`). Bearer required.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call (handles varying JSON shapes such as nested **`data`** arrays). Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. Run **Create avatar** to capture `groupId`; **Design voice** / **Clone a voice** to capture `voiceId`. Consent and GET voice-by-id enforce ownership (**403** if another user's recorded asset).",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**User settings** under **User → Settings**: appearance, notification, and security preferences (`/api/user/settings/...`). Bearer required. Delete account requires body `{ \"confirmation\": \"delete\" }`.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos** live under **Workspaces → HeyGen videos (project)**. They require workspace **OWNER, ADMIN, or MEMBER** and a valid `projectId` in that workspace. Set `workspaceId`, `projectId`, and (for create) real `avatarId` / `voiceId` from HeyGen list endpoints. **Create** saves `heygenVideoId` to collection variables when the response is 201.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call (handles varying JSON shapes such as nested **`data`** arrays). Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. Run **Create avatar** to capture `groupId`; **Design voice** / **Clone a voice** to capture `voiceId`. Consent and GET voice-by-id enforce ownership (**403** if another user's recorded asset).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -303,6 +303,43 @@
                 },
                 "url": "{{baseUrl}}/api/user/settings/notifications",
                 "description": "Partial update; send at least one boolean field. Merges into the same user_settings row as appearance."
+              }
+            },
+            {
+              "name": "Get security settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/user/settings/security",
+                "description": "Returns hasPassword, canChangePassword, and accountDeletion status (pending deletion / recoverableUntil)."
+              }
+            },
+            {
+              "name": "Change password",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"new-password123\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/user/settings/security/password",
+                "description": "Email/password accounts only. Requires currentPassword and newPassword (min 6 chars)."
+              }
+            },
+            {
+              "name": "Delete account (schedule)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirmation\": \"delete\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/user/settings/security/delete-account",
+                "description": "Two-step delete: confirmation must be exactly delete. Schedules permanent deletion in 7 days, logs out all devices. Sign in again within 7 days to recover."
               }
             }
           ]
