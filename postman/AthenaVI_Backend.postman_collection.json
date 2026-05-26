@@ -720,11 +720,11 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"sceneId\": \"scene_001\",\n  \"avatarId\": \"{{avatarLookId}}\",\n  \"title\": \"Scene 1 take\",\n  \"resolution\": \"1080p\",\n  \"aspectRatio\": \"16:9\",\n  \"backgroundColor\": \"#008000\",\n  \"voiceId\": \"{{voiceId}}\",\n  \"script\": \"Welcome to our platform.\",\n  \"expressiveness\": \"medium\",\n  \"voiceSettings\": {\n    \"speed\": 1,\n    \"pitch\": 0,\n    \"locale\": \"en-US\"\n  },\n  \"removeBackground\": false,\n  \"outputFormat\": \"mp4\"\n}",
+                  "raw": "{\n  \"sceneId\": \"scene_001\",\n  \"avatarId\": \"{{avatarLookId}}\",\n  \"avatarType\": \"studio_avatar\",\n  \"title\": \"Scene 1 take\",\n  \"resolution\": \"1080p\",\n  \"aspectRatio\": \"16:9\",\n  \"backgroundColor\": \"#008000\",\n  \"voiceId\": \"{{voiceId}}\",\n  \"script\": \"Welcome to our platform.\",\n  \"voiceSettings\": {\n    \"speed\": 1,\n    \"pitch\": 0,\n    \"locale\": \"en-US\"\n  },\n  \"removeBackground\": false,\n  \"outputFormat\": \"mp4\"\n}",
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos",
-                "description": "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). Idempotent per (workspace, project, sceneId, script, avatarId, voiceId). **`avatarId` must be a look id** (`avatarLookId` from List avatar looks), not `groupId`. Call **Get HeyGen video** next to poll and upload to S3. Test script saves `heygenVideoId`. Match `sceneId` / `script` with **Save project data** sample for rehydration."
+                "description": "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). **`avatarId`** = look id (`avatarLookId`). Set **`avatarType`** from the look row (`studio_avatar`, `digital_twin`, `photo_avatar`). Do **not** send `expressiveness` for studio/video avatars; only for `photo_avatar`. Call **Get HeyGen video** to sync S3. Match `sceneId` / `script` with **Save project data**."
               }
             },
             {

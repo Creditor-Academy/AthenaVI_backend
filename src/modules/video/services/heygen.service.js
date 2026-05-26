@@ -31,9 +31,19 @@ async function getProjectInWorkspace(workspaceId, projectId) {
   return project;
 }
 
+/** HeyGen Avatar IV: expressiveness is only valid for photo_avatar looks. */
+function shouldIncludeExpressiveness(avatarType, expressiveness) {
+  if (expressiveness == null || String(expressiveness).trim() === '') {
+    return false;
+  }
+  const type = avatarType != null ? String(avatarType).trim() : '';
+  return type === 'photo_avatar';
+}
+
 function buildHeyGenVideoPayload(body) {
   const {
     avatarId,
+    avatarType,
     title,
     resolution,
     aspectRatio,
@@ -56,7 +66,7 @@ function buildHeyGenVideoPayload(body) {
     }),
   };
 
-  return {
+  const payload = {
     type: 'avatar',
     avatar_id: avatarId,
     title,
@@ -71,8 +81,13 @@ function buildHeyGenVideoPayload(body) {
     script,
     voice_id: voiceId,
     voice_settings,
-    expressiveness,
   };
+
+  if (shouldIncludeExpressiveness(avatarType, expressiveness)) {
+    payload.expressiveness = expressiveness;
+  }
+
+  return payload;
 }
 
 /**
@@ -84,6 +99,7 @@ const generateAvatarVideo = async (input) => {
     projectId,
     sceneId,
     avatarId,
+    avatarType,
     title,
     resolution,
     aspectRatio,
@@ -114,6 +130,7 @@ const generateAvatarVideo = async (input) => {
 
   const jsonBody = buildHeyGenVideoPayload({
     avatarId,
+    avatarType,
     title,
     resolution,
     aspectRatio,

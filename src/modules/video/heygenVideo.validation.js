@@ -25,7 +25,12 @@ const createHeygenVideoSchema = Joi.object({
     backgroundColor: Joi.string().trim().pattern(/^#[0-9A-Fa-f]{6}$/).required(),
     voiceId: Joi.string().trim().required(),
     script: Joi.string().trim().min(1).required(),
-    expressiveness: Joi.string().trim().valid('low', 'medium', 'high').required(),
+    /** HeyGen: photo_avatar only (Avatar IV). Omit for studio_avatar / digital_twin or HeyGen returns 400. */
+    avatarType: Joi.string()
+      .trim()
+      .valid('studio_avatar', 'digital_twin', 'photo_avatar')
+      .optional(),
+    expressiveness: Joi.string().trim().valid('low', 'medium', 'high').optional(),
     voiceSettings: voiceSettingsSchema,
     removeBackground: Joi.boolean().optional(),
     outputFormat: Joi.string().trim().valid('mp4').optional(),

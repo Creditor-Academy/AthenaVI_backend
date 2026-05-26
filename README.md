@@ -2128,7 +2128,8 @@ Use this for the **scene-based editor** and **in-browser preview**. **Batch / of
 | `backgroundColor` | yes | Solid background, e.g. `#008000` (hex) |
 | `voiceId` | yes | HeyGen voice id |
 | `script` | yes | Spoken script (TTS + lip sync) |
-| `expressiveness` | yes | `low`, `medium`, or `high` |
+| `avatarType` | no | `studio_avatar`, `digital_twin`, or `photo_avatar` from the look row — used to decide HeyGen payload shape |
+| `expressiveness` | no | `low`, `medium`, or `high` — **only sent to HeyGen when `avatarType` is `photo_avatar`**; omit for studio / video avatars |
 | `voiceSettings` | no | Optional: `speed`, `pitch`, `volume`, `locale`, `engine_settings` |
 | `removeBackground` | no | Boolean |
 | `outputFormat` | no | `mp4` (default) |
