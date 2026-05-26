@@ -1,6 +1,8 @@
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const projectDao = require('./project.dao');
+const heygenDao = require('../video/heygen.dao');
+const { rehydrateHeygenAvatarsInProjectData } = require('./projectHeygenRehydrate');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
   DEFAULT_VIDEO_SETTINGS,
@@ -202,8 +204,30 @@ const listProjects = async (workspaceId, folderId) => {
   return projectDao.listProjects({ workspaceId, folderId });
 };
 
+async function attachRehydratedProjectData(workspaceId, projectId, project) {
+  const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
+  if (!heygenRows.length || !project?.data) {
+    return project;
+  }
+
+  const { data: rehydrated, changed } = rehydrateHeygenAvatarsInProjectData({
+    workspaceId,
+    projectId,
+    data: project.data,
+    heygenRows,
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  await projectDao.updateProject(projectId, { data: rehydrated });
+  return { ...project, data: rehydrated };
+}
+
 const getProjectById = async (workspaceId, projectId) => {
-  return assertProjectInWorkspace(workspaceId, projectId);
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+  return attachRehydratedProjectData(workspaceId, projectId, project);
 };
 
 const updateProject = async (workspaceId, projectId, payload) => {
@@ -214,10 +238,17 @@ const updateProject = async (workspaceId, projectId, payload) => {
 const saveProjectData = async (workspaceId, projectId, data) => {
   await assertProjectInWorkspace(workspaceId, projectId);
   const normalizedState = normalizeProjectState(data);
+  const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
+  const { data: mergedState } = rehydrateHeygenAvatarsInProjectData({
+    workspaceId,
+    projectId,
+    data: normalizedState,
+    heygenRows,
+  });
 
   return projectDao.updateProject(projectId, {
-    data: normalizedState,
-    duration: estimateProjectDuration(normalizedState),
+    data: mergedState,
+    duration: estimateProjectDuration(mergedState),
   });
 };
 
@@ -368,12 +399,14 @@ const moveProjectToFolder = async (workspaceId, projectId, folderId) => {
   }
 
   if (project.folderId === folderId) {
-    return projectDao.findProjectById(workspaceId, projectId);
+    const current = await projectDao.findProjectById(workspaceId, projectId);
+    return attachRehydratedProjectData(workspaceId, projectId, current);
   }
 
   await assertFolderInWorkspace(folderId, workspaceId);
   await migrateProjectS3Assets(project, folderId);
-  return projectDao.findProjectById(workspaceId, projectId);
+  const moved = await projectDao.findProjectById(workspaceId, projectId);
+  return attachRehydratedProjectData(workspaceId, projectId, moved);
 };
 
 const deleteProject = async (workspaceId, projectId) => {

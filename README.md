@@ -1450,8 +1450,9 @@ Important rules:
 
 - `sceneId` must stay stable across edits
 - scene order is the order of `scenes[]`
-- avatar elements must send `heygenVideoId` once the scene clip has been generated
+- avatar elements should include `heygenVideoId` once the scene clip has been generated (from `POST .../heygen/videos` → `data.heygenVideo.id`)
 - frontend should send `assetId`, not raw S3 keys
+- **Server rehydration:** On **`GET .../projects/:projectId`** and **`PATCH .../projects/:projectId/data`**, the backend merges missing or stale `content.heygenVideoId` on avatar elements from persisted **`heygen_responses`** rows (matched by `sceneId` + idempotent request hash when `avatarId` / `voiceId` / `script` are present, otherwise the best completed clip for that scene). If a scene lost its avatar element but a clip row still exists, a placeholder avatar element is re-added (script/voice fields may be empty — re-save after editing). **`GET`** persists repairs back to `project.data` when changes are detected.
 
 **Response (200)** – `data.project`: updated project row with normalized `data` and computed `duration`.
 
