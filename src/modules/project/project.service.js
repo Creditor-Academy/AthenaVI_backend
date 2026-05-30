@@ -206,8 +206,12 @@ const listProjects = async (workspaceId, folderId) => {
 };
 
 async function attachRehydratedProjectData(workspaceId, projectId, project) {
+  if (!project?.data) {
+    return project;
+  }
+
   const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
-  if (!heygenRows.length || !project?.data) {
+  if (!heygenRows.length) {
     return project;
   }
 
@@ -222,13 +226,21 @@ async function attachRehydratedProjectData(workspaceId, projectId, project) {
     return project;
   }
 
-  await projectDao.updateProject(projectId, { data: rehydrated });
-  return { ...project, data: rehydrated };
+  const data = normalizeEditorProjectData(rehydrated);
+  await projectDao.updateProject(projectId, { data });
+  return { ...project, data };
 }
 
 const getProjectById = async (workspaceId, projectId) => {
   const project = await assertProjectInWorkspace(workspaceId, projectId);
-  return attachRehydratedProjectData(workspaceId, projectId, project);
+  const enriched = await attachRehydratedProjectData(workspaceId, projectId, project);
+  if (!enriched?.data) {
+    return enriched;
+  }
+  return {
+    ...enriched,
+    data: normalizeEditorProjectData(enriched.data),
+  };
 };
 
 const updateProject = async (workspaceId, projectId, payload) => {
@@ -247,9 +259,11 @@ const saveProjectData = async (workspaceId, projectId, data) => {
     heygenRows,
   });
 
+  const finalState = normalizeEditorProjectData(mergedState);
+
   return projectDao.updateProject(projectId, {
-    data: mergedState,
-    duration: estimateProjectDuration(mergedState),
+    data: finalState,
+    duration: estimateProjectDuration(finalState),
   });
 };
 

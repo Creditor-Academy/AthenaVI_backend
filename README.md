@@ -1368,6 +1368,8 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 
 ### Save editor state
 
+> **Frontend integration guide:** [`docs/PROJECT_EDITOR_INTEGRATION.md`](docs/PROJECT_EDITOR_INTEGRATION.md) — full V2 payload, HeyGen flow, save/load, playback, and troubleshooting.
+
 | | |
 |---|---|
 | **Method** | `PATCH` |

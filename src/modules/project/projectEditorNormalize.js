@@ -3,6 +3,121 @@
  * for persistence and Remotion render (expects startFrame, placement, content.*).
  */
 
+/** Typography keys mirrored in both `style` and `content` for text round-trip. */
+const TEXT_TYPOGRAPHY_KEYS = [
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'fontStyle',
+  'textTransform',
+  'color',
+  'backgroundColor',
+  'textAlign',
+  'lineHeight',
+  'letterSpacing',
+  'padding',
+  'textDecoration',
+  'textDecorationLine',
+  'textDecorationColor',
+  'textDecorationStyle',
+  'textShadow',
+  'boxShadow',
+  'whiteSpace',
+  'wordBreak',
+  'headingLevel',
+  'htmlTag',
+  'tag',
+  'underline',
+  'bold',
+  'italic',
+  'variant',
+];
+
+const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
+
+function inferHeadingTag(element, style, content) {
+  const candidates = [
+    style.htmlTag,
+    style.tag,
+    style.headingLevel,
+    content.htmlTag,
+    content.tag,
+    content.headingLevel,
+    element.role,
+    element.headingLevel,
+  ];
+  for (const raw of candidates) {
+    if (raw == null || String(raw).trim() === '') continue;
+    const v = String(raw).trim().toLowerCase();
+    if (HEADING_TAGS.has(v)) return v;
+    const headingMatch = v.match(/^heading[-_]?([1-6])$/);
+    if (headingMatch) return `h${headingMatch[1]}`;
+  }
+  return null;
+}
+
+function applyTextTypographyShortcuts(style, content) {
+  const nextStyle = { ...style };
+  const nextContent = { ...content };
+
+  if (nextStyle.underline === true && !nextStyle.textDecoration && !nextContent.textDecoration) {
+    nextStyle.textDecoration = 'underline';
+    nextContent.textDecoration = 'underline';
+  }
+  if (nextStyle.bold === true && nextStyle.fontWeight == null && nextContent.fontWeight == null) {
+    nextStyle.fontWeight = '700';
+    nextContent.fontWeight = '700';
+  }
+  if (nextStyle.italic === true && !nextStyle.fontStyle && !nextContent.fontStyle) {
+    nextStyle.fontStyle = 'italic';
+    nextContent.fontStyle = 'italic';
+  }
+
+  return { style: nextStyle, content: nextContent };
+}
+
+/**
+ * Keep typography in both `style` and `content` so clients reading either field reload correctly.
+ */
+function syncTextTypography(element) {
+  if (element.type !== 'text' && element.type !== 'subtitle') {
+    return element;
+  }
+
+  let content =
+    element.content && typeof element.content === 'object'
+      ? { ...element.content }
+      : typeof element.content === 'string'
+        ? { text: element.content }
+        : {};
+
+  if (content.text == null && typeof element.text === 'string') {
+    content.text = element.text;
+  }
+
+  let style = element.style && typeof element.style === 'object' ? { ...element.style } : {};
+
+  for (const key of TEXT_TYPOGRAPHY_KEYS) {
+    if (style[key] != null && content[key] == null) {
+      content[key] = style[key];
+    } else if (content[key] != null && style[key] == null) {
+      style[key] = content[key];
+    }
+  }
+
+  const headingTag = inferHeadingTag(element, style, content);
+  if (headingTag) {
+    style.htmlTag = headingTag;
+    style.tag = headingTag;
+    content.htmlTag = headingTag;
+    content.tag = headingTag;
+  }
+
+  ({ style, content } = applyTextTypographyShortcuts(style, content));
+
+  return { ...element, content, style };
+}
+
 function normalizePlacement(placement) {
   const p = placement && typeof placement === 'object' ? placement : {};
   return {
@@ -41,7 +156,7 @@ function mergeContentForRender(element) {
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const filters = element.filters && typeof element.filters === 'object' ? element.filters : {};
 
-  if (element.type === 'text') {
+  if (element.type === 'text' || element.type === 'subtitle') {
     if (content.text == null && typeof element.text === 'string') {
       content.text = element.text;
     }
@@ -82,22 +197,26 @@ function normalizeElement(element) {
     return element;
   }
 
-  const timing = element.timing && typeof element.timing === 'object' ? element.timing : {};
+  const synced = syncTextTypography(element);
+  const timing = synced.timing && typeof synced.timing === 'object' ? synced.timing : {};
   const startFrame =
-    element.startFrame != null ? Number(element.startFrame) : Number(timing.startFrame);
+    synced.startFrame != null ? Number(synced.startFrame) : Number(timing.startFrame);
   const durationInFrames =
-    element.durationInFrames != null
-      ? Number(element.durationInFrames)
+    synced.durationInFrames != null
+      ? Number(synced.durationInFrames)
       : Number(timing.durationInFrames);
 
-  return {
-    ...element,
+  const withContent = {
+    ...synced,
     startFrame: Number.isFinite(startFrame) ? startFrame : 0,
-    durationInFrames: Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
-    placement: normalizePlacement(element.placement),
-    content: mergeContentForRender(element),
-    animations: Array.isArray(element.animations) ? element.animations : [],
+    durationInFrames:
+      Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
+    placement: normalizePlacement(synced.placement),
+    content: mergeContentForRender(synced),
+    animations: Array.isArray(synced.animations) ? synced.animations : [],
   };
+
+  return syncTextTypography(withContent);
 }
 
 function normalizeScene(scene) {
@@ -166,5 +285,7 @@ module.exports = {
   normalizeEditorProjectData,
   normalizeScene,
   normalizeElement,
+  syncTextTypography,
   getEffectiveHeygenFields,
+  TEXT_TYPOGRAPHY_KEYS,
 };

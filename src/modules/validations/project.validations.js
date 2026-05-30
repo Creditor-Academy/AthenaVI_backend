@@ -111,6 +111,7 @@ const baseElementSchema = Joi.object({
   visible: Joi.boolean().optional(),
   editable: Joi.boolean().optional(),
   isBackground: Joi.boolean().optional(),
+  headingLevel: Joi.alternatives().try(Joi.string(), Joi.number()).optional(),
   audio: Joi.object().unknown(true).optional(),
 })
   .unknown(true)

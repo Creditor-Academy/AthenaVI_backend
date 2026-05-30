@@ -2708,3 +2708,26 @@
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T05:06:07.639Z"}
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T05:06:35.394Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T05:06:35.402Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T05:06:45.168Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T05:06:45.172Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-05-30T05:48:04.909Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-05-30T05:48:04.913Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T06:41:56.863Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T06:41:56.866Z"}
+{"error":"\nInvalid `prisma.user.findMany()` invocation in\nD:\\code\\AthenaVI_backend\\src\\modules\\settings\\security.dao.js:41:22\n\n  38 };\n  39 \n  40 const findUsersDueForPermanentDeletion = async () => {\n→ 41   return prisma.user.findMany(\nCan't reach database server at pg-792b027-webx.g.aivencloud.com","level":"error","message":"Account deletion job failed","timestamp":"2026-05-30T08:46:40.325Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T10:57:38.076Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T10:57:38.079Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:42:07.007Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:42:07.011Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:46:43.481Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:46:43.485Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:46:46.751Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:46:46.754Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:46:51.803Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:46:51.807Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:46:56.414Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:46:56.417Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:47:14.314Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:47:14.317Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-05-30T11:47:37.015Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:47:37.019Z"}

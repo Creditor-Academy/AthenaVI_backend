@@ -45,11 +45,18 @@ function BackgroundLayer({ background }) {
 
 function TextLikeElement({ element, frame, fps }) {
   const content = element.content || {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const typography = { ...content, ...style };
   const text = resolveAnimatedText({
     frame,
     text: content.text || '',
     animations: element.animations,
   });
+
+  const textDecoration =
+    typography.textDecoration ||
+    (typography.underline === true ? 'underline' : undefined) ||
+    typography.textDecorationLine;
 
   return (
     <div
@@ -63,18 +70,29 @@ function TextLikeElement({ element, frame, fps }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent:
-          content.textAlign === 'center'
+          typography.textAlign === 'center'
             ? 'center'
-            : content.textAlign === 'right'
+            : typography.textAlign === 'right'
               ? 'flex-end'
               : 'flex-start',
-        whiteSpace: 'pre-wrap',
-        fontFamily: content.fontFamily || 'sans-serif',
-        fontSize: content.fontSize || 32,
-        fontWeight: content.fontWeight || 400,
-        color: content.color || '#FFFFFF',
-        lineHeight: content.lineHeight || 1.2,
-        textAlign: content.textAlign || 'left',
+        whiteSpace: typography.whiteSpace || 'pre-wrap',
+        fontFamily: typography.fontFamily || 'sans-serif',
+        fontSize: typography.fontSize || 32,
+        fontWeight: typography.fontWeight || (typography.bold === true ? 700 : 400),
+        fontStyle: typography.fontStyle || (typography.italic === true ? 'italic' : 'normal'),
+        color: typography.color || '#FFFFFF',
+        lineHeight: typography.lineHeight || 1.2,
+        textAlign: typography.textAlign || 'left',
+        textTransform: typography.textTransform || 'none',
+        letterSpacing: typography.letterSpacing,
+        padding: typography.padding,
+        backgroundColor:
+          typography.backgroundColor && typography.backgroundColor !== 'transparent'
+            ? typography.backgroundColor
+            : undefined,
+        textDecoration,
+        textShadow: typography.textShadow,
+        boxShadow: typography.boxShadow,
       }}
     >
       {text}
