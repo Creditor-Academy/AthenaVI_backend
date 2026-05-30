@@ -1446,13 +1446,24 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 }
 ```
 
+**V2 editor shape (full round-trip)** — The API accepts rich editor payloads; extra fields are **not stripped**. You may send either `elements` or `clips` (normalized to `elements`).
+
+| Level | Optional fields (persisted) |
+|-------|-----------------------------|
+| **Scene** | `order`, `locked`, `layout`, `presenter` (`avatarId`, `voiceId`, `script`, `voiceSettings`, …), `generation` (`status`, `heygenVideoId`, …), flat or `in`/`out` **transition** |
+| **Element** | `role`, `visible`, `editable`, `isBackground`, **`timing`** `{ startFrame, durationInFrames }` (or top-level `startFrame` / `durationInFrames`), **`style`**, **`filters`**, **`audio`** |
+
+HeyGen: store **`presenter`** + **`generation.heygenVideoId`** at scene level and/or on avatar **`content`**. Do **not** rely on **`generation.generatedVideoUrl`** or **`blob:`** URLs after reload — refetch playback via **`GET .../heygen/videos/:heygenVideoId/download`** or **`/stream`**.
+
+Text/image styles: top-level **`style`** / **`filters`** are saved; the server also mirrors key fields into **`content`** for Remotion (e.g. `style.fontSize` → `content.fontSize`, `style.objectFit` → `content.fit`).
+
 Important rules:
 
 - `sceneId` must stay stable across edits
 - scene order is the order of `scenes[]`
-- avatar elements should include `heygenVideoId` once the scene clip has been generated (from `POST .../heygen/videos` → `data.heygenVideo.id`)
-- frontend should send `assetId`, not raw S3 keys
-- **Server rehydration:** On **`GET .../projects/:projectId`** and **`PATCH .../projects/:projectId/data`**, the backend merges missing or stale `content.heygenVideoId` on avatar elements from persisted **`heygen_responses`** rows (matched by `sceneId` + idempotent request hash when `avatarId` / `voiceId` / `script` are present, otherwise the best completed clip for that scene). If a scene lost its avatar element but a clip row still exists, a placeholder avatar element is re-added (script/voice fields may be empty — re-save after editing). **`GET`** persists repairs back to `project.data` when changes are detected.
+- avatar elements should include `heygenVideoId` once the scene clip has been generated (from `POST .../heygen/videos` → `data.heygenVideo.id`), or on **`scene.generation.heygenVideoId`**
+- frontend should send `assetId` for workspace uploads, not raw S3 keys
+- **Server rehydration:** On **`GET .../projects/:projectId`** and **`PATCH .../projects/:projectId/data`**, the backend merges missing `heygenVideoId` from **`heygen_responses`** using **`scene.presenter`**, **`scene.generation`**, and avatar **`content`**. **`GET`** persists repairs when changes are detected.
 
 **Response (200)** – `data.project`: updated project row with normalized `data` and computed `duration`.
 

@@ -3,6 +3,7 @@ const messages = require('../../shared/utils/messages');
 const projectDao = require('./project.dao');
 const heygenDao = require('../video/heygen.dao');
 const { rehydrateHeygenAvatarsInProjectData } = require('./projectHeygenRehydrate');
+const { normalizeEditorProjectData } = require('./projectEditorNormalize');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
   DEFAULT_VIDEO_SETTINGS,
@@ -39,7 +40,7 @@ function normalizeProjectState(projectState) {
     normalized.meta = { ...projectState.meta };
   }
 
-  return normalized;
+  return normalizeEditorProjectData(normalized);
 }
 
 function resolveVideoSettingsFromCanvas({

@@ -1,4 +1,5 @@
 const { generateHeygenRequestHash } = require('../../shared/utils/requestHash');
+const { getEffectiveHeygenFields } = require('./projectEditorNormalize');
 
 function scoreHeygenRow(row) {
   if (row.status === 'completed' && row.s3Key) return 4;
@@ -41,44 +42,44 @@ function resolveHeygenRowForAvatarElement({
   workspaceId,
   projectId,
   sceneId,
+  scene,
   content,
   byHash,
   bySceneId,
   validIds,
 }) {
-  const existingId = content?.heygenVideoId ? String(content.heygenVideoId).trim() : '';
+  const effective = getEffectiveHeygenFields(scene, content);
+  const existingId = effective.heygenVideoId || '';
   if (existingId && validIds.has(existingId)) {
-    return { heygenVideoId: existingId, changed: false };
+    return { heygenVideoId: existingId, changed: false, effective };
   }
 
   const fromHash = tryResolveByRequestHash({
     workspaceId,
     projectId,
     sceneId,
-    content,
+    effective,
     byHash,
   });
   if (fromHash) {
-    return { heygenVideoId: fromHash.id, changed: true };
+    return { heygenVideoId: fromHash.id, changed: true, effective };
   }
 
   const sceneRows = bySceneId.get(sceneId) || [];
   const best = pickBestHeygenRow(sceneRows);
   if (best) {
-    return { heygenVideoId: best.id, changed: true };
+    return { heygenVideoId: best.id, changed: true, effective };
   }
 
   if (existingId) {
-    return { heygenVideoId: undefined, changed: true };
+    return { heygenVideoId: undefined, changed: true, effective };
   }
 
-  return { heygenVideoId: undefined, changed: false };
+  return { heygenVideoId: undefined, changed: false, effective };
 }
 
-function tryResolveByRequestHash({ workspaceId, projectId, sceneId, content, byHash }) {
-  const avatarId = content?.avatarId;
-  const voiceId = content?.voiceId;
-  const script = content?.script;
+function tryResolveByRequestHash({ workspaceId, projectId, sceneId, effective, byHash }) {
+  const { avatarId, voiceId, script } = effective;
 
   if (!avatarId || !voiceId || script == null || String(script).trim() === '') {
     return null;
@@ -99,14 +100,60 @@ function tryResolveByRequestHash({ workspaceId, projectId, sceneId, content, byH
   }
 }
 
-function buildRestoredAvatarElement({ scene, heygenRow }) {
+function applyHeygenFieldsToSceneAndElement(scene, element, heygenVideoId, effective) {
+  const nextContent = {
+    ...(element.content && typeof element.content === 'object' ? element.content : {}),
+    provider: 'heygen',
+    sceneId: String(scene.sceneId).trim(),
+  };
+
+  if (heygenVideoId) {
+    nextContent.heygenVideoId = heygenVideoId;
+  } else {
+    delete nextContent.heygenVideoId;
+  }
+
+  if (effective.avatarId) nextContent.avatarId = effective.avatarId;
+  if (effective.voiceId) nextContent.voiceId = effective.voiceId;
+  if (effective.script != null && String(effective.script).trim() !== '') {
+    nextContent.script = effective.script;
+  }
+  if (effective.avatarType) nextContent.avatarType = effective.avatarType;
+
+  const presenter = {
+    ...(scene.presenter && typeof scene.presenter === 'object' ? scene.presenter : {}),
+  };
+  if (effective.avatarId) presenter.avatarId = effective.avatarId;
+  if (effective.voiceId) presenter.voiceId = effective.voiceId;
+  if (effective.script != null) presenter.script = effective.script;
+  if (effective.avatarType) presenter.avatarType = effective.avatarType;
+
+  const generation = {
+    ...(scene.generation && typeof scene.generation === 'object' ? scene.generation : {}),
+  };
+  if (heygenVideoId) {
+    generation.heygenVideoId = heygenVideoId;
+    if (!generation.status) generation.status = 'completed';
+  } else {
+    delete generation.heygenVideoId;
+  }
+
+  return {
+    scene: { ...scene, presenter, generation },
+    element: { ...element, content: nextContent },
+  };
+}
+
+function buildRestoredAvatarElement({ scene, heygenRow, effective }) {
   const sceneId = String(scene.sceneId).trim();
   const durationInFrames = Number(scene.durationInFrames) > 0 ? Number(scene.durationInFrames) : 150;
 
-  return {
+  const base = {
     id: `avatar_restored_${heygenRow.id.replace(/-/g, '').slice(0, 12)}`,
     type: 'avatar',
+    role: 'avatar',
     layer: 10,
+    visible: true,
     startFrame: 0,
     durationInFrames,
     placement: {
@@ -122,18 +169,30 @@ function buildRestoredAvatarElement({ scene, heygenRow }) {
       provider: 'heygen',
       sceneId,
       heygenVideoId: heygenRow.id,
-      avatarId: '',
-      voiceId: '',
-      script: '',
+      avatarId: effective.avatarId || '',
+      voiceId: effective.voiceId || '',
+      script: effective.script != null ? String(effective.script) : '',
     },
     animations: [],
   };
+
+  const { scene: nextScene, element } = applyHeygenFieldsToSceneAndElement(
+    scene,
+    base,
+    heygenRow.id,
+    {
+      ...effective,
+      heygenVideoId: heygenRow.id,
+      script: effective.script ?? '',
+    }
+  );
+
+  return { scene: nextScene, element };
 }
 
 /**
- * Attach missing or stale `content.heygenVideoId` on avatar elements from persisted HeygenResponse rows.
- * Restores a placeholder avatar element when a scene clip exists but the editor payload dropped the element.
- * @returns {{ data: object, changed: boolean }}
+ * Attach missing or stale heygenVideoId on avatar elements from heygen_responses.
+ * Reads scene.presenter / scene.generation and element.content.
  */
 function rehydrateHeygenAvatarsInProjectData({ workspaceId, projectId, data, heygenRows }) {
   if (!data || !Array.isArray(data.scenes) || !heygenRows?.length) {
@@ -153,6 +212,7 @@ function rehydrateHeygenAvatarsInProjectData({ workspaceId, projectId, data, hey
     const sceneRows = bySceneId.get(sceneId) || [];
     const bestRow = pickBestHeygenRow(sceneRows);
 
+    let nextScene = scene;
     let elements = scene.elements.map((element) => {
       if (element?.type !== 'avatar') {
         return element;
@@ -163,6 +223,7 @@ function rehydrateHeygenAvatarsInProjectData({ workspaceId, projectId, data, hey
         workspaceId,
         projectId,
         sceneId,
+        scene: nextScene,
         content,
         byHash,
         bySceneId,
@@ -174,25 +235,29 @@ function rehydrateHeygenAvatarsInProjectData({ workspaceId, projectId, data, hey
       }
 
       changed = true;
-      const nextContent = { ...content };
-      if (resolved.heygenVideoId) {
-        nextContent.heygenVideoId = resolved.heygenVideoId;
-        if (!nextContent.provider) {
-          nextContent.provider = 'heygen';
-        }
-      } else {
-        delete nextContent.heygenVideoId;
-      }
-
-      return { ...element, content: nextContent };
+      const applied = applyHeygenFieldsToSceneAndElement(
+        nextScene,
+        element,
+        resolved.heygenVideoId,
+        resolved.effective
+      );
+      nextScene = applied.scene;
+      return applied.element;
     });
 
     if (!hasAvatarElement && bestRow) {
       changed = true;
-      elements = [...elements, buildRestoredAvatarElement({ scene, heygenRow: bestRow })];
+      const effective = getEffectiveHeygenFields(nextScene, {});
+      const restored = buildRestoredAvatarElement({
+        scene: nextScene,
+        heygenRow: bestRow,
+        effective,
+      });
+      nextScene = restored.scene;
+      elements = [...elements, restored.element];
     }
 
-    return { ...scene, elements };
+    return { ...nextScene, elements };
   });
 
   if (!changed) {

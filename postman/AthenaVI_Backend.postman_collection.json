@@ -608,7 +608,7 @@
                   "options": { "raw": { "language": "json" } }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/data",
-                "description": "PATCH validated editor `data`. After **Create avatar video**, set avatar `content.heygenVideoId` to `{{heygenVideoId}}` (same as `data.heygenVideo.id`). Use `{{avatarLookId}}` and `{{voiceId}}` for `avatarId` / `voiceId`. If you omit `heygenVideoId`, the server rehydrates from existing `heygen_responses` rows on save. Do not store presigned URLs in JSON. Replace `{{assetId}}` with a real uploaded asset."
+                "description": "PATCH full V2 editor `data`: scene `presenter` / `generation`, element `style`, `filters`, `timing` or flat `startFrame`, `clips` alias for `elements`. Server keeps all fields (no strip). HeyGen: `generation.heygenVideoId` + `presenter.script` / `avatarId` / `voiceId`. Do not persist `blob:` or `generatedVideoUrl` for playback. Sample body uses legacy flat shape; frontend may send richer V2 per README."
               }
             },
             {

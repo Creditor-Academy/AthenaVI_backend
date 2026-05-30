@@ -18,7 +18,9 @@ const placementSchema = Joi.object({
   rotation: Joi.number().default(0),
   scale: Joi.number().positive().default(1),
   opacity: Joi.number().min(0).max(1).default(1),
-}).required();
+})
+  .unknown(true)
+  .required();
 
 const transitionStepSchema = Joi.object({
   type: Joi.string()
@@ -26,14 +28,27 @@ const transitionStepSchema = Joi.object({
     .required(),
   durationInFrames: Joi.number().integer().min(0).required(),
   easing: Joi.string().trim().optional(),
+  direction: Joi.any().optional(),
 }).unknown(true);
 
-const transitionSchema = Joi.object({
+const transitionInOutSchema = Joi.object({
   in: transitionStepSchema.optional(),
   out: transitionStepSchema.optional(),
 })
   .or('in', 'out')
-  .optional();
+  .unknown(true);
+
+/** Flat transition shape from V2 editor: { type, durationInFrames, direction } */
+const transitionFlatSchema = Joi.object({
+  type: Joi.string()
+    .valid(...TRANSITION_TYPES)
+    .required(),
+  durationInFrames: Joi.number().integer().min(0).required(),
+  direction: Joi.any().optional(),
+  easing: Joi.string().trim().optional(),
+}).unknown(true);
+
+const transitionSchema = Joi.alternatives().try(transitionInOutSchema, transitionFlatSchema);
 
 const animationSchema = Joi.object({
   type: Joi.string()
@@ -45,39 +60,128 @@ const animationSchema = Joi.object({
   trigger: Joi.string().trim().optional(),
 }).unknown(true);
 
+const timingSchema = Joi.object({
+  startFrame: Joi.number().integer().min(0).required(),
+  durationInFrames: Joi.number().integer().min(1).required(),
+}).unknown(true);
+
+const presenterSchema = Joi.object({
+  avatarId: Joi.string().allow('', null).optional(),
+  avatarName: Joi.string().allow('', null).optional(),
+  avatarPreviewSrc: Joi.string().allow('', null).optional(),
+  avatarType: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar').optional(),
+  voiceId: Joi.string().allow('', null).optional(),
+  voiceName: Joi.string().allow('', null).optional(),
+  voiceSettings: Joi.object().unknown(true).optional(),
+  script: Joi.string().allow('', null).optional(),
+}).unknown(true);
+
+const generationSchema = Joi.object({
+  status: Joi.string().allow('', null).optional(),
+  heygenVideoId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().trim()).optional(),
+  generatedVideoUrl: Joi.string().allow('', null).optional(),
+  thumbnailUrl: Joi.string().allow('', null).optional(),
+}).unknown(true);
+
 const baseElementSchema = Joi.object({
   id: Joi.string().trim().required(),
   type: Joi.string()
     .valid(...ELEMENT_TYPES)
     .required(),
   layer: Joi.number().integer().required(),
-  startFrame: Joi.number().integer().min(0).required(),
-  durationInFrames: Joi.number().integer().min(1).required(),
-  placement: placementSchema,
-  content: Joi.object().unknown(true).required(),
+  startFrame: Joi.number().integer().min(0).optional(),
+  durationInFrames: Joi.number().integer().min(1).optional(),
+  timing: timingSchema.optional(),
+  placement: Joi.object({
+    x: Joi.number().optional(),
+    y: Joi.number().optional(),
+    width: Joi.number().positive().optional(),
+    height: Joi.number().positive().optional(),
+    rotation: Joi.number().optional(),
+    scale: Joi.number().positive().optional(),
+    opacity: Joi.number().min(0).max(1).optional(),
+  })
+    .unknown(true)
+    .optional(),
+  content: Joi.object().unknown(true).optional(),
+  style: Joi.object().unknown(true).optional(),
+  filters: Joi.object().unknown(true).optional(),
   animations: Joi.array().items(animationSchema).default([]),
-}).required();
+  role: Joi.string().trim().optional(),
+  visible: Joi.boolean().optional(),
+  editable: Joi.boolean().optional(),
+  isBackground: Joi.boolean().optional(),
+  audio: Joi.object().unknown(true).optional(),
+})
+  .unknown(true)
+  .custom((value, helpers) => {
+    const timing = value.timing && typeof value.timing === 'object' ? value.timing : {};
+    const startFrame = value.startFrame != null ? value.startFrame : timing.startFrame;
+    const durationInFrames =
+      value.durationInFrames != null ? value.durationInFrames : timing.durationInFrames;
+
+    if (startFrame == null || durationInFrames == null) {
+      return helpers.message(
+        'Each element requires startFrame and durationInFrames (or timing.startFrame / timing.durationInFrames)'
+      );
+    }
+
+    const placement = value.placement && typeof value.placement === 'object' ? value.placement : {};
+    const normalizedPlacement = {
+      x: Number(placement.x) || 0,
+      y: Number(placement.y) || 0,
+      width: Number(placement.width) > 0 ? Number(placement.width) : 100,
+      height: Number(placement.height) > 0 ? Number(placement.height) : 100,
+      rotation: Number(placement.rotation) || 0,
+      scale: Number(placement.scale) > 0 ? Number(placement.scale) : 1,
+      opacity: placement.opacity != null ? Number(placement.opacity) : 1,
+    };
+
+    return {
+      ...value,
+      startFrame,
+      durationInFrames,
+      placement: normalizedPlacement,
+      content: value.content && typeof value.content === 'object' ? value.content : {},
+      animations: Array.isArray(value.animations) ? value.animations : [],
+    };
+  });
 
 const sceneSchema = Joi.object({
   sceneId: Joi.string().trim().required(),
   name: Joi.string().trim().max(255).optional(),
+  order: Joi.number().integer().min(0).optional(),
   durationInFrames: Joi.number().integer().min(1).required(),
+  locked: Joi.boolean().optional(),
+  layout: Joi.string().trim().optional(),
   background: Joi.object({
     type: Joi.string().trim().required(),
     value: Joi.alternatives().try(Joi.string(), Joi.number(), Joi.object().unknown(true)).optional(),
   })
     .unknown(true)
     .required(),
-  transition: transitionSchema,
-  elements: Joi.array().items(baseElementSchema).required(),
-}).required();
+  transition: transitionSchema.optional(),
+  presenter: presenterSchema.optional(),
+  generation: generationSchema.optional(),
+  elements: Joi.array().items(baseElementSchema).optional(),
+  clips: Joi.array().items(baseElementSchema).optional(),
+})
+  .unknown(true)
+  .custom((value, helpers) => {
+    const elements = value.elements ?? value.clips;
+    if (!Array.isArray(elements)) {
+      return helpers.message('Each scene requires elements (or clips) array');
+    }
+    const { clips: _clips, ...rest } = value;
+    return { ...rest, elements };
+  });
 
 const videoSettingsSchema = Joi.object({
   width: Joi.number().integer().min(1).required(),
   height: Joi.number().integer().min(1).required(),
   fps: Joi.number().integer().min(1).required(),
   backgroundColor: Joi.string().trim().optional(),
-});
+}).unknown(true);
 
 const projectMetaSchema = Joi.object({
   aspectRatio: Joi.string()
@@ -90,15 +194,16 @@ const editorStateSchema = Joi.object({
   videoSettings: videoSettingsSchema.default(DEFAULT_VIDEO_SETTINGS).required(),
   scenes: Joi.array().items(sceneSchema).required(),
   meta: projectMetaSchema.optional(),
-}).required();
+})
+  .unknown(true)
+  .required();
 
 /** Partial editor payload allowed on create (wizard may send empty scenes). */
 const createEditorStateSchema = Joi.object({
   videoSettings: videoSettingsSchema.optional(),
-  /** Empty array allowed on create; full scene shape validated on PATCH .../data */
-  scenes: Joi.array().default([]),
+  scenes: Joi.array().items(Joi.object().unknown(true)).default([]),
   meta: projectMetaSchema.optional(),
-});
+}).unknown(true);
 
 const canvasAspectField = Joi.string().valid(...CANVAS_ASPECT_RATIOS);
 
@@ -109,7 +214,6 @@ const createProjectSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().trim().min(1).max(255),
     title: Joi.string().trim().min(1).max(255),
-    /** Optional echo of URL `:workspaceId` (Details workspace dropdown); must match params when sent */
     workspaceId: Joi.string().uuid().optional(),
     folderId: Joi.string().uuid().required(),
     projectState: createEditorStateSchema.optional(),
