@@ -18,6 +18,8 @@ const {
 } = require('../../shared/utils/videoStorageKeys');
 const { DEFAULT_VIDEO_SETTINGS } = require('../../shared/constants/videoEditor');
 const { buildSceneTimings } = require('./remotion/transitions');
+const { collectAssetIds, extractAssetId } = require('../../shared/utils/projectAssetIds');
+const projectStorageService = require('../project/projectStorage.service');
 
 const PRESIGN_TTL_SECONDS = 3600;
 let remotionBundlePromise = null;
@@ -40,47 +42,6 @@ function getProjectData(project) {
     },
     scenes: Array.isArray(data.scenes) ? data.scenes : [],
   };
-}
-
-function extractAssetId(source) {
-  if (!source || typeof source !== 'object') {
-    return null;
-  }
-
-  if (typeof source.assetId === 'string' && source.assetId.trim()) {
-    return source.assetId;
-  }
-
-  if (
-    source.value &&
-    typeof source.value === 'object' &&
-    typeof source.value.assetId === 'string' &&
-    source.value.assetId.trim()
-  ) {
-    return source.value.assetId;
-  }
-
-  return null;
-}
-
-function collectAssetIds(projectData) {
-  const assetIds = new Set();
-
-  for (const scene of projectData.scenes || []) {
-    const backgroundAssetId = extractAssetId(scene.background);
-    if (backgroundAssetId) {
-      assetIds.add(backgroundAssetId);
-    }
-
-    for (const element of scene.elements || []) {
-      const assetId = extractAssetId(element.content);
-      if (assetId) {
-        assetIds.add(assetId);
-      }
-    }
-  }
-
-  return [...assetIds];
 }
 
 async function buildAssetLookup(workspaceId, projectData) {
@@ -317,11 +278,13 @@ async function renderSceneCaches({
       sceneHash: scene.sceneHash,
       s3Key: uploaded.key,
       outputUrl: uploaded.url,
+      fileSizeBytes: fileBuffer.length,
       metadata: {
         durationInFrames: scene.durationInFrames,
         transition: scene.transition || null,
       },
     });
+    await projectStorageService.recalculateProjectStorage(project.id);
 
     sceneCacheEntries.push({
       sceneId: scene.sceneId,
@@ -394,6 +357,7 @@ async function processProjectRender({ renderId, workspaceId, projectId, forceReb
       progress: 100,
       s3Key: uploaded.key,
       outputUrl: uploaded.url,
+      fileSizeBytes: finalBuffer.length,
       completedAt: new Date(),
       error: null,
     });
@@ -401,6 +365,7 @@ async function processProjectRender({ renderId, workspaceId, projectId, forceReb
       status: 'completed',
       duration: totalDuration,
     });
+    await projectStorageService.recalculateProjectStorage(projectId);
   } catch (error) {
     await renderDao.updateProjectRender(renderId, {
       status: 'failed',

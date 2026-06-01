@@ -5,7 +5,9 @@ const folderSelect = {
   name: true,
   workspaceId: true,
   createdBy: true,
+  updatedBy: true,
   createdAt: true,
+  updatedAt: true,
 };
 
 const findWorkspaceById = async (workspaceId) => {
@@ -34,25 +36,27 @@ const listFoldersByWorkspace = async (workspaceId) => {
   });
 };
 
-const createFolder = async ({ name, workspaceId, createdBy }) => {
+const getFolderProjectStatsByWorkspace = async (workspaceId) => {
+  return prisma.project.groupBy({
+    by: ['folderId'],
+    where: { workspaceId },
+    _count: { id: true },
+    _sum: { storageBytes: true },
+    _max: { updatedAt: true },
+  });
+};
+
+const createFolder = async ({ name, workspaceId, createdBy, updatedBy }) => {
   return prisma.folder.create({
-    data: { name, workspaceId, createdBy },
+    data: { name, workspaceId, createdBy, updatedBy: updatedBy ?? createdBy },
     select: folderSelect,
   });
 };
 
-const findUsersByIds = async (userIds) => {
-  if (!userIds.length) return [];
-  return prisma.user.findMany({
-    where: { id: { in: userIds } },
-    select: { id: true, name: true, email: true },
-  });
-};
-
-const renameFolder = async (folderId, name) => {
+const renameFolder = async (folderId, name, updatedBy) => {
   return prisma.folder.update({
     where: { id: folderId },
-    data: { name },
+    data: { name, updatedBy },
     select: folderSelect,
   });
 };
@@ -69,8 +73,8 @@ module.exports = {
   findWorkspaceById,
   findWorkspaceMember,
   listFoldersByWorkspace,
+  getFolderProjectStatsByWorkspace,
   createFolder,
-  findUsersByIds,
   renameFolder,
   deleteFolder,
 };

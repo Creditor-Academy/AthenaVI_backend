@@ -277,11 +277,14 @@ model Folder {
   name        String
   workspaceId String
   createdBy   String
+  updatedBy   String?
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   projects    Project[]
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([name, workspaceId]) // prevent duplicate folder names in same workspace
+  @@index([updatedBy])
 }
 
 model Project {
@@ -290,11 +293,13 @@ model Project {
   workspaceId String
   folderId    String
   createdBy   String
+  updatedBy   String?
 
-  data      Json // 🔥 whole editor state (autosave)
-  thumbnail String? // preview image
-  duration  Int? // optional
-  status    String  @default("draft") // draft | rendering | completed
+  data          Json // 🔥 whole editor state (autosave)
+  thumbnail     String? // preview image
+  duration      Int? // optional
+  status        String  @default("draft") // draft | rendering | completed
+  storageBytes  Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -304,6 +309,8 @@ model Project {
   heygenResponses   HeygenResponse[]
   projectRenders    ProjectRender[]
   sceneRenderCaches SceneRenderCache[]
+
+  @@index([updatedBy])
 }
 
 model Asset {
@@ -333,10 +340,11 @@ model HeygenResponse {
   sceneId     String  @default("") // client scene key from editor; required on new creates (validated in API)
   videoId     String
   videoUrl    String
-  s3Key       String? // S3 object key after upload; used for presigned GET
-  requestHash String  @unique
-  status      String  @default("processing") // processing | completed | failed
-  rawResponse Json?
+  s3Key         String? // S3 object key after upload; used for presigned GET
+  fileSizeBytes Int?
+  requestHash   String  @unique
+  status        String  @default("processing") // processing | completed | failed
+  rawResponse   Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -356,6 +364,7 @@ model ProjectRender {
   status        String    @default("queued")
   progress      Int       @default(0)
   s3Key         String?
+  fileSizeBytes Int?
   outputUrl     String?
   inputSnapshot Json?
   sceneHashes   Json?
@@ -380,11 +389,12 @@ model SceneRenderCache {
   projectId   String
   sceneId     String
   sceneHash   String
-  s3Key       String
-  outputUrl   String
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  s3Key         String
+  fileSizeBytes Int?
+  outputUrl     String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)

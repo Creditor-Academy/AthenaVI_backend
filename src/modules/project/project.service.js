@@ -2,6 +2,8 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const projectDao = require('./project.dao');
 const heygenDao = require('../video/heygen.dao');
+const { enrichProject, enrichProjects } = require('./project.format');
+const projectStorageService = require('./projectStorage.service');
 const { rehydrateHeygenAvatarsInProjectData } = require('./projectHeygenRehydrate');
 const { normalizeEditorProjectData } = require('./projectEditorNormalize');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
@@ -188,13 +190,16 @@ const createProject = async (workspaceId, userId, input) => {
     workspaceId,
     folderId,
     createdBy: userId,
+    updatedBy: userId,
     data: normalizedState,
     thumbnail,
     duration: duration ?? estimateProjectDuration(normalizedState),
     status: status ?? 'draft',
   });
 
-  return project;
+  await projectStorageService.recalculateProjectStorage(project.id);
+  const refreshed = await projectDao.findProjectById(workspaceId, project.id);
+  return enrichProject(refreshed);
 };
 
 const listProjects = async (workspaceId, folderId) => {
@@ -202,7 +207,8 @@ const listProjects = async (workspaceId, folderId) => {
     await assertFolderInWorkspace(folderId, workspaceId);
   }
 
-  return projectDao.listProjects({ workspaceId, folderId });
+  const projects = await projectDao.listProjects({ workspaceId, folderId });
+  return enrichProjects(projects, { includeData: false });
 };
 
 async function attachRehydratedProjectData(workspaceId, projectId, project) {
@@ -234,21 +240,22 @@ async function attachRehydratedProjectData(workspaceId, projectId, project) {
 const getProjectById = async (workspaceId, projectId) => {
   const project = await assertProjectInWorkspace(workspaceId, projectId);
   const enriched = await attachRehydratedProjectData(workspaceId, projectId, project);
-  if (!enriched?.data) {
-    return enriched;
-  }
-  return {
-    ...enriched,
-    data: normalizeEditorProjectData(enriched.data),
-  };
+  const withData = enriched?.data
+    ? { ...enriched, data: normalizeEditorProjectData(enriched.data) }
+    : enriched;
+  return enrichProject(withData);
 };
 
-const updateProject = async (workspaceId, projectId, payload) => {
+const updateProject = async (workspaceId, projectId, userId, payload) => {
   await assertProjectInWorkspace(workspaceId, projectId);
-  return projectDao.updateProject(projectId, payload);
+  const updated = await projectDao.updateProject(projectId, {
+    ...payload,
+    updatedBy: userId,
+  });
+  return enrichProject(updated);
 };
 
-const saveProjectData = async (workspaceId, projectId, data) => {
+const saveProjectData = async (workspaceId, projectId, userId, data) => {
   await assertProjectInWorkspace(workspaceId, projectId);
   const normalizedState = normalizeProjectState(data);
   const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
@@ -261,13 +268,17 @@ const saveProjectData = async (workspaceId, projectId, data) => {
 
   const finalState = normalizeEditorProjectData(mergedState);
 
-  return projectDao.updateProject(projectId, {
+  await projectDao.updateProject(projectId, {
     data: finalState,
     duration: estimateProjectDuration(finalState),
+    updatedBy: userId,
   });
+  await projectStorageService.recalculateProjectStorage(projectId);
+  const refreshed = await projectDao.findProjectById(workspaceId, projectId);
+  return enrichProject(refreshed);
 };
 
-async function migrateProjectS3Assets(project, nextFolderId) {
+async function migrateProjectS3Assets(project, nextFolderId, userId) {
   const copies = [];
 
   const queueCopy = async (sourceKey, destinationKey) => {
@@ -354,7 +365,7 @@ async function migrateProjectS3Assets(project, nextFolderId) {
     await projectDao.transaction(async (tx) => {
       await tx.project.update({
         where: { id: project.id },
-        data: { folderId: nextFolderId },
+        data: { folderId: nextFolderId, updatedBy: userId },
       });
 
       for (const row of project.heygenResponses) {
@@ -406,7 +417,7 @@ async function migrateProjectS3Assets(project, nextFolderId) {
   }
 }
 
-const moveProjectToFolder = async (workspaceId, projectId, folderId) => {
+const moveProjectToFolder = async (workspaceId, projectId, userId, folderId) => {
   const project = await projectDao.findProjectByIdWithAssets(workspaceId, projectId);
 
   if (!project) {
@@ -415,13 +426,15 @@ const moveProjectToFolder = async (workspaceId, projectId, folderId) => {
 
   if (project.folderId === folderId) {
     const current = await projectDao.findProjectById(workspaceId, projectId);
-    return attachRehydratedProjectData(workspaceId, projectId, current);
+    const rehydrated = await attachRehydratedProjectData(workspaceId, projectId, current);
+    return enrichProject(rehydrated);
   }
 
   await assertFolderInWorkspace(folderId, workspaceId);
-  await migrateProjectS3Assets(project, folderId);
+  await migrateProjectS3Assets(project, folderId, userId);
   const moved = await projectDao.findProjectById(workspaceId, projectId);
-  return attachRehydratedProjectData(workspaceId, projectId, moved);
+  const rehydrated = await attachRehydratedProjectData(workspaceId, projectId, moved);
+  return enrichProject(rehydrated);
 };
 
 const deleteProject = async (workspaceId, projectId) => {

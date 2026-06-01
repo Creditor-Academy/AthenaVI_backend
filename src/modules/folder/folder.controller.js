@@ -26,8 +26,9 @@ const createFolder = asyncHandler(async (req, res) => {
 const renameFolder = asyncHandler(async (req, res) => {
   const folderId = req.params.folderId;
   const { name } = req.body;
+  const userId = req.user.id;
 
-  const folder = await folderService.renameFolder(folderId, name);
+  const folder = await folderService.renameFolder(folderId, userId, name);
 
   return successResponse(req, res, { folder }, 200, messages.FOLDER_RENAMED);
 });

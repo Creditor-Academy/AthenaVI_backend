@@ -6,6 +6,7 @@ const { uploadFileToKey, getPresignedGetUrl } = require('../../s3/s3.service');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 const { buildHeygenSceneVideoKey } = require('../../../shared/utils/videoStorageKeys');
+const projectStorageService = require('../../project/projectStorage.service');
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 20;
@@ -230,13 +231,16 @@ const syncHeygenVideoToS3AndDb = async (record) => {
   });
   const { url } = await uploadFileToKey(buffer, key, 'video/mp4');
 
-  return heygenDao.updateHeygenResponse(record.id, {
+  const updated = await heygenDao.updateHeygenResponse(record.id, {
     folderId,
     status: 'completed',
     s3Key: key,
     videoUrl: url,
+    fileSizeBytes: buffer.length,
     rawResponse: remote.raw,
   });
+  await projectStorageService.recalculateProjectStorage(record.projectId);
+  return updated;
 };
 
 const listProjectHeygenVideos = async (workspaceId, projectId) => {

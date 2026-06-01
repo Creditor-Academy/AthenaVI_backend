@@ -481,7 +481,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders",
+            "description": "Returns folders with owner, lastModifiedAt/By, projectCount, sizeBytes (sum of project storageBytes), and lastActivityAt. `creator` is deprecated alias of `owner`."
           }
         },
         {
@@ -507,7 +508,7 @@
         },
         {
           "name": "Projects",
-          "description": "Project CRUD, editor state save, folder move, and final Remotion render APIs. Create project first to save `projectId`. **Get project** and **Save project data** rehydrate missing `content.heygenVideoId` on avatar elements from persisted HeyGen clips (by scene + request hash). Start render saves `renderId`.",
+          "description": "Project CRUD, editor state save, folder move, and final Remotion render APIs. List responses omit `data` and include owner, lastModifiedAt/By, storageBytes. **Get project** returns full `data`. **Get project** and **Save project data** rehydrate missing `content.heygenVideoId` on avatar elements from persisted HeyGen clips (by scene + request hash). Start render saves `renderId`. Run `npm run backfill:project-storage` after migration for existing rows.",
           "item": [
             {
               "name": "Create project",
@@ -572,7 +573,8 @@
               "request": {
                 "method": "GET",
                 "header": [],
-                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}"
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}",
+                "description": "Summary cards only (no `data`). Includes owner, lastModifiedAt/By, storageBytes. Optional folderId query."
               }
             },
             {

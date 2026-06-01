@@ -9,7 +9,8 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "prisma:studio:development": "dotenv -e .env.development -- npx prisma studio",
-    "prisma:studio:production": "dotenv -e .env.production -- npx prisma studio"
+    "prisma:studio:production": "dotenv -e .env.production -- npx prisma studio",
+    "backfill:project-storage": "dotenv -e .env.development -- node scripts/backfill-project-storage.js"
   },
   "keywords": [],
   "author": "",

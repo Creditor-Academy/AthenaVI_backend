@@ -49,6 +49,7 @@ const upsertSceneRenderCache = ({
   s3Key,
   outputUrl,
   metadata,
+  fileSizeBytes,
 }) => {
   return prisma.sceneRenderCache.upsert({
     where: {
@@ -63,6 +64,7 @@ const upsertSceneRenderCache = ({
       s3Key,
       outputUrl,
       metadata,
+      ...(fileSizeBytes != null ? { fileSizeBytes } : {}),
     },
     create: {
       workspaceId,
@@ -73,6 +75,7 @@ const upsertSceneRenderCache = ({
       s3Key,
       outputUrl,
       metadata,
+      fileSizeBytes: fileSizeBytes ?? null,
     },
   });
 };

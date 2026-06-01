@@ -56,21 +56,34 @@ const getProject = asyncHandler(async (req, res) => {
 
 const updateProject = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
-  const project = await projectService.updateProject(workspaceId, projectId, req.body);
+  const userId = req.user.id;
+  const project = await projectService.updateProject(workspaceId, projectId, userId, req.body);
 
   return successResponse(req, res, { project }, 200, messages.PROJECT_UPDATED);
 });
 
 const saveProjectData = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
-  const project = await projectService.saveProjectData(workspaceId, projectId, req.body.data);
+  const userId = req.user.id;
+  const project = await projectService.saveProjectData(
+    workspaceId,
+    projectId,
+    userId,
+    req.body.data
+  );
 
   return successResponse(req, res, { project }, 200, messages.PROJECT_DATA_SAVED);
 });
 
 const moveProjectToFolder = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
-  const project = await projectService.moveProjectToFolder(workspaceId, projectId, req.body.folderId);
+  const userId = req.user.id;
+  const project = await projectService.moveProjectToFolder(
+    workspaceId,
+    projectId,
+    userId,
+    req.body.folderId
+  );
 
   return successResponse(req, res, { project }, 200, messages.PROJECT_MOVED);
 });

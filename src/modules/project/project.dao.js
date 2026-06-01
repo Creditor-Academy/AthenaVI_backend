@@ -1,5 +1,23 @@
 const prisma = require('../../shared/config/prismaClient');
 
+const projectListSelect = {
+  id: true,
+  name: true,
+  workspaceId: true,
+  folderId: true,
+  createdBy: true,
+  updatedBy: true,
+  thumbnail: true,
+  duration: true,
+  status: true,
+  storageBytes: true,
+  createdAt: true,
+  updatedAt: true,
+  folder: {
+    select: { id: true, name: true },
+  },
+};
+
 const findFolderById = async (folderId) => {
   return prisma.folder.findUnique({
     where: { id: folderId },
@@ -12,11 +30,7 @@ const listProjects = async ({ workspaceId, folderId }) => {
       workspaceId,
       ...(folderId ? { folderId } : {}),
     },
-    include: {
-      folder: {
-        select: { id: true, name: true },
-      },
-    },
+    select: projectListSelect,
     orderBy: { updatedAt: 'desc' },
   });
 };
@@ -91,6 +105,7 @@ const findAssetsByIds = async (workspaceId, assetIds) => {
 const transaction = (fn) => prisma.$transaction(fn);
 
 module.exports = {
+  projectListSelect,
   findFolderById,
   listProjects,
   findProjectById,

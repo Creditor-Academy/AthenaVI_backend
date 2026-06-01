@@ -1094,18 +1094,41 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
       "name": "My folder",
       "workspaceId": "uuid",
       "createdBy": "user-uuid",
+      "updatedBy": "user-uuid",
       "createdAt": "2026-05-16T12:00:00.000Z",
+      "lastModifiedAt": "2026-05-18T09:00:00.000Z",
+      "owner": {
+        "id": "user-uuid",
+        "name": "Jane Doe",
+        "email": "jane@example.com"
+      },
+      "lastModifiedBy": {
+        "id": "user-uuid",
+        "name": "Jane Doe",
+        "email": "jane@example.com"
+      },
       "creator": {
         "id": "user-uuid",
         "name": "Jane Doe",
         "email": "jane@example.com"
-      }
+      },
+      "projectCount": 3,
+      "sizeBytes": 52428800,
+      "lastActivityAt": "2026-05-20T14:30:00.000Z"
     }
   ]
 }
 ```
 
-`createdBy` is the creator’s user id. `createdAt` is when the folder was created (ISO 8601). `creator` is populated from the user record when available.
+| Field | Meaning |
+|-------|---------|
+| `owner` | User who created the folder (`createdBy`). |
+| `creator` | **Deprecated** — same object as `owner`; kept for backward compatibility. |
+| `lastModifiedAt` | When the folder record was last updated (e.g. rename). |
+| `lastModifiedBy` | User who last updated folder metadata. |
+| `projectCount` | Number of projects in the folder. |
+| `sizeBytes` | Sum of each project’s `storageBytes` in this folder (see projects). Shared assets referenced by multiple projects may be counted more than once. |
+| `lastActivityAt` | Latest `updatedAt` among projects in the folder (editor saves), or `null` if empty. |
 
 ---
 
@@ -1136,12 +1159,15 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
     "name": "New folder",
     "workspaceId": "uuid",
     "createdBy": "user-uuid",
+    "updatedBy": "user-uuid",
     "createdAt": "2026-05-16T12:00:00.000Z",
-    "creator": {
-      "id": "user-uuid",
-      "name": "Jane Doe",
-      "email": "jane@example.com"
-    }
+    "lastModifiedAt": "2026-05-16T12:00:00.000Z",
+    "owner": { "id": "user-uuid", "name": "Jane Doe", "email": "jane@example.com" },
+    "lastModifiedBy": { "id": "user-uuid", "name": "Jane Doe", "email": "jane@example.com" },
+    "creator": { "id": "user-uuid", "name": "Jane Doe", "email": "jane@example.com" },
+    "projectCount": 0,
+    "sizeBytes": 0,
+    "lastActivityAt": null
   }
 }
 ```
@@ -1327,7 +1353,16 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 
 - `folderId` – filter projects inside one folder
 
-**Response (200)** – `data.projects`: array ordered by `updatedAt desc`.
+**Response (200)** – `data.projects`: array ordered by `lastModifiedAt` desc. List responses **omit** `data` (editor JSON); use get-by-id for full editor state.
+
+Each project includes:
+
+| Field | Meaning |
+|-------|---------|
+| `owner` | Creator (`createdBy`). |
+| `lastModifiedAt` | `updatedAt` of the project row. |
+| `lastModifiedBy` | User who last saved metadata or editor state (`updatedBy`). System-only rehydration on load does not change `lastModifiedBy`. |
+| `storageBytes` | Denormalized footprint: editor JSON size + referenced workspace `Asset.size` values + HeyGen/render/cache S3 sizes for this project. |
 
 ---
 
@@ -1339,7 +1374,7 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 | **Path** | `/api/workspaces/:workspaceId/projects/:projectId` |
 | **Auth** | Bearer + member |
 
-**Response (200)** – `data.project`: project row including `folder` and saved `data`.
+**Response (200)** – `data.project`: project row including `folder`, saved `data`, and the same metadata fields as list (`owner`, `lastModifiedAt`, `lastModifiedBy`, `storageBytes`).
 
 ---
 
