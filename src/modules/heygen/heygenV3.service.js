@@ -302,6 +302,10 @@ async function listAvatarGroups(userId, query) {
   ]);
 }
 
+async function getAvatarLook(lookId) {
+  return getJson(`/v3/avatars/looks/${encodeURIComponent(lookId)}`);
+}
+
 async function listAvatarLooks(userId, query) {
   if (query?.ownership === 'private' && query.group_id) {
     const owns = await heygenDao.userOwnsAvatarGroup(userId, String(query.group_id));
@@ -475,6 +479,7 @@ async function getVideoStatus(videoId) {
 module.exports = {
   listAvatarGroups,
   listAvatarLooks,
+  getAvatarLook,
   createAvatar,
   createAvatarConsent,
   listVoices,

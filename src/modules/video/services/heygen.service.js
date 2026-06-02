@@ -7,6 +7,12 @@ const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 const { buildHeygenSceneVideoKey } = require('../../../shared/utils/videoStorageKeys');
 const projectStorageService = require('../../project/projectStorage.service');
+const {
+  HEYGEN_AVATAR_ENGINES,
+  normalizeHeygenAvatarEngine,
+  buildHeygenVideoEnginePayload,
+  extractSupportedApiEnginesFromLook,
+} = require('../../../shared/constants/heygen');
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 20;
@@ -32,8 +38,11 @@ async function getProjectInWorkspace(workspaceId, projectId) {
   return project;
 }
 
-/** HeyGen Avatar IV: expressiveness is only valid for photo_avatar looks. */
-function shouldIncludeExpressiveness(avatarType, expressiveness) {
+/** Avatar IV + photo_avatar only; Avatar V rejects expressiveness on HeyGen. */
+function shouldIncludeExpressiveness(avatarEngine, avatarType, expressiveness) {
+  if (normalizeHeygenAvatarEngine(avatarEngine) !== HEYGEN_AVATAR_ENGINES.IV) {
+    return false;
+  }
   if (expressiveness == null || String(expressiveness).trim() === '') {
     return false;
   }
@@ -41,9 +50,32 @@ function shouldIncludeExpressiveness(avatarType, expressiveness) {
   return type === 'photo_avatar';
 }
 
+async function assertLookSupportsAvatarEngine(avatarId, avatarEngine) {
+  let raw;
+  try {
+    raw = await heygenV3Service.getAvatarLook(avatarId);
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === 404) {
+      return;
+    }
+    throw err;
+  }
+  const supported = extractSupportedApiEnginesFromLook(raw);
+  if (!supported || supported.length === 0) {
+    return;
+  }
+  if (!supported.includes(avatarEngine)) {
+    throw new AppError(
+      `${messages.HEYGEN_AVATAR_ENGINE_UNSUPPORTED} (${avatarEngine}). Supported: ${supported.join(', ')}`,
+      400
+    );
+  }
+}
+
 function buildHeyGenVideoPayload(body) {
   const {
     avatarId,
+    avatarEngine,
     avatarType,
     title,
     resolution,
@@ -67,9 +99,12 @@ function buildHeyGenVideoPayload(body) {
     }),
   };
 
+  const engine = normalizeHeygenAvatarEngine(avatarEngine);
+
   const payload = {
     type: 'avatar',
     avatar_id: avatarId,
+    engine: buildHeygenVideoEnginePayload(engine),
     title,
     resolution,
     aspect_ratio: aspectRatio,
@@ -84,7 +119,7 @@ function buildHeyGenVideoPayload(body) {
     voice_settings,
   };
 
-  if (shouldIncludeExpressiveness(avatarType, expressiveness)) {
+  if (shouldIncludeExpressiveness(engine, avatarType, expressiveness)) {
     payload.expressiveness = expressiveness;
   }
 
@@ -100,6 +135,7 @@ const generateAvatarVideo = async (input) => {
     projectId,
     sceneId,
     avatarId,
+    avatarEngine,
     avatarType,
     title,
     resolution,
@@ -114,6 +150,7 @@ const generateAvatarVideo = async (input) => {
   } = input;
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
+  const engine = normalizeHeygenAvatarEngine(avatarEngine);
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -122,6 +159,7 @@ const generateAvatarVideo = async (input) => {
     avatarId,
     voiceId,
     script,
+    avatarEngine: engine,
   });
 
   const existingResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
@@ -129,8 +167,11 @@ const generateAvatarVideo = async (input) => {
     return existingResponse;
   }
 
+  await assertLookSupportsAvatarEngine(avatarId, engine);
+
   const jsonBody = buildHeyGenVideoPayload({
     avatarId,
+    avatarEngine: engine,
     avatarType,
     title,
     resolution,

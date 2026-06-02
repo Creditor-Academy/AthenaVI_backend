@@ -70,6 +70,7 @@ const presenterSchema = Joi.object({
   avatarName: Joi.string().allow('', null).optional(),
   avatarPreviewSrc: Joi.string().allow('', null).optional(),
   avatarType: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar').optional(),
+  avatarEngine: Joi.string().valid('avatar_iv', 'avatar_v').optional(),
   voiceId: Joi.string().allow('', null).optional(),
   voiceName: Joi.string().allow('', null).optional(),
   voiceSettings: Joi.object().unknown(true).optional(),

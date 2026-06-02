@@ -2176,13 +2176,16 @@ Use this for the **scene-based editor** and **in-browser preview**. **Batch / of
 | `backgroundColor` | yes | Solid background, e.g. `#008000` (hex) |
 | `voiceId` | yes | HeyGen voice id |
 | `script` | yes | Spoken script (TTS + lip sync) |
+| `avatarEngine` | no | `avatar_iv` (default) or `avatar_v` — must appear in the look’s **`supported_api_engines`** from **`GET /api/heygen/avatars/looks`**; sent to HeyGen as `engine.type` |
 | `avatarType` | no | `studio_avatar`, `digital_twin`, or `photo_avatar` from the look row — used to decide HeyGen payload shape |
-| `expressiveness` | no | `low`, `medium`, or `high` — **only sent to HeyGen when `avatarType` is `photo_avatar`**; omit for studio / video avatars |
+| `expressiveness` | no | `low`, `medium`, or `high` — **Avatar IV + `photo_avatar` only**; omit for `avatar_v`, studio, or digital-twin looks |
 | `voiceSettings` | no | Optional: `speed`, `pitch`, `volume`, `locale`, `engine_settings` |
 | `removeBackground` | no | Boolean |
 | `outputFormat` | no | `mp4` (default) |
 
-**Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice returns the **existing** row (idempotent).
+**Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice + **`avatarEngine`** returns the **existing** row (idempotent).
+
+**400** – **`HEYGEN_AVATAR_ENGINE_UNSUPPORTED`** (or message listing supported engines) when the look does not support the requested `avatarEngine`.
 
 ---
 

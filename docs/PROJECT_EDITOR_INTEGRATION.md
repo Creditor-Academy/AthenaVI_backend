@@ -408,10 +408,12 @@ HeyGen catalog and project videos use **different path prefixes**.
 | 2 | `GET /api/heygen/avatars/looks?group_id={groupId}&limit=20` | **`avatarLookId`** = look row **`id`** (`lk_…`) |
 | 3 | `GET /api/heygen/voices?type=public&limit=50` | `voiceId` |
 
-**Before offering a look in the UI**, check **`supported_api_engines`** on the look:
+**Before offering a look in the UI**, read **`supported_api_engines`** on each look row:
 
-- Must include **`avatar_iv`** for current backend (default Avatar IV engine).
-- Looks with only `avatar_v` will fail until engine selection is added.
+- Include the look if it supports the user’s chosen engine (`avatar_iv` and/or `avatar_v`).
+- Default generation uses **`avatar_iv`** when the client omits **`avatarEngine`**.
+- Pass **`avatarEngine`: `"avatar_v"`** on **`POST .../heygen/videos`** only when the look lists `avatar_v`.
+- Persist **`presenter.avatarEngine`** in project data so re-generate uses the same engine.
 
 ### 6.2 Create scene clip
 
@@ -423,6 +425,7 @@ POST /api/workspaces/:workspaceId/projects/:projectId/heygen/videos
 {
   "sceneId": "scene_abc123",
   "avatarId": "lk_xxxxx",
+  "avatarEngine": "avatar_iv",
   "avatarType": "studio_avatar",
   "title": "Scene 1 take",
   "resolution": "1080p",
@@ -439,15 +442,16 @@ POST /api/workspaces/:workspaceId/projects/:projectId/heygen/videos
 | Field | Notes |
 |-------|--------|
 | `avatarId` | **Look id** from step 6.1, not group id |
+| `avatarEngine` | `avatar_iv` (default) or `avatar_v`; must be in look’s `supported_api_engines` |
 | `avatarType` | `studio_avatar` \| `digital_twin` \| `photo_avatar` from look row |
-| `expressiveness` | **Only** for `photo_avatar`; omit for studio/video avatars |
+| `expressiveness` | **Avatar IV + `photo_avatar` only**; omit for `avatar_v` and studio/video avatars |
 | `sceneId` | Must match saved scene `sceneId` |
 | `script` | Must match saved script (normalized for idempotency: trim + lowercase hash) |
 
 Response **`201`**: `data.heygenVideo.id` → **`heygenVideoId`**.  
 Create only **starts** HeyGen; `s3Key` is null until sync.
 
-**Idempotent:** Same workspace + project + sceneId + avatarId + voiceId + script returns existing row (no new HeyGen job).
+**Idempotent:** Same workspace + project + sceneId + avatarId + voiceId + script + **avatarEngine** returns existing row (no new HeyGen job).
 
 ### 6.3 Poll & sync to S3
 
@@ -504,8 +508,8 @@ Then **`PATCH .../data`**.
 | Avatar video missing after reload | Saved `blob:` URL or omitted `heygenVideoId` | Save `generation.heygenVideoId`; refetch on load |
 | Script missing | Not in save payload | Save `presenter.script` or `content.script` |
 | Video in S3 but UI empty | UI used dead blob URL | `GET .../download` or `/stream` on load |
-| HeyGen 400 Avatar IV | Wrong look / engine | Filter looks by `supported_api_engines` includes `avatar_iv` |
-| HeyGen 400 expressiveness | Sent for studio avatar | Omit `expressiveness` unless `avatarType === photo_avatar` |
+| HeyGen 400 / engine unsupported | Look missing requested engine | Match `avatarEngine` to look’s `supported_api_engines` |
+| HeyGen 400 expressiveness | Sent for studio avatar or Avatar V | Omit unless `avatarEngine === avatar_iv` and `avatarType === photo_avatar` |
 
 ---
 
@@ -587,9 +591,9 @@ Rehydration **does not** restore video playback URLs — frontend must still cal
 
 | HTTP / message | Meaning | Action |
 |----------------|---------|--------|
-| 400 Avatar IV not supported | Look incompatible with default engine | Pick look with `avatar_iv` in `supported_api_engines` |
-| 400 expressiveness not supported | Sent for studio/video avatar | Omit `expressiveness` or set `avatarType: photo_avatar` only when sending it |
-| 201 duplicate heygen row | Idempotent hit | Reuse returned `heygenVideo`; change script/avatar/voice/scene to force new job |
+| 400 engine unsupported | `avatarEngine` not in look’s `supported_api_engines` | Change engine or pick another look |
+| 400 expressiveness not supported | Sent for studio/video avatar or Avatar V | Omit unless `avatar_iv` + `photo_avatar` |
+| 201 duplicate heygen row | Idempotent hit | Reuse returned `heygenVideo`; change script/avatar/voice/scene/**engine** to force new job |
 | 409 HeyGen video not ready | No S3 file yet | Poll `GET .../heygen/videos/:id` until `completed` |
 | 404 project / asset | Wrong id or workspace | Verify `workspaceId`, `projectId`, `assetId` |
 | Blob URL invalid on reload | Expected | Never persist blob URLs; refetch stream/download |
@@ -604,12 +608,12 @@ Rehydration **does not** restore video playback URLs — frontend must still cal
 - [ ] Login → Bearer token
 - [ ] `POST .../projects` → save `projectId`, `folderId`
 - [ ] Load HeyGen catalog (groups → looks → voices)
-- [ ] Filter looks: `supported_api_engines` includes `avatar_iv`
+- [ ] Filter looks by chosen `avatarEngine` (`avatar_iv` / `avatar_v` in `supported_api_engines`)
 
 ### Generate avatar for a scene
 
 - [ ] Stable `sceneId` assigned in editor
-- [ ] `POST .../heygen/videos` with look id, `avatarType`, voice, script
+- [ ] `POST .../heygen/videos` with look id, `avatarEngine`, `avatarType`, voice, script
 - [ ] Save `heygenVideoId` from response
 - [ ] Poll until `status === completed` and `s3Key` set
 - [ ] Set `presenter` + `generation.heygenVideoId` on scene
