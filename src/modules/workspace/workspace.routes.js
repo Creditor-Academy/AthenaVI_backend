@@ -126,7 +126,7 @@ router.patch(
   changeMemberRole
 );
 router.delete(
-  '/:id/members/:memberId',
+  '/:workspaceId/members/:memberId',
   authMiddleware,
   validate(workspaceValidations.removeMemberSchema),
   requireWorkspaceRole(ownerOrAdmin),

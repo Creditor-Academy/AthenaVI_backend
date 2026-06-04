@@ -141,11 +141,15 @@ async function inviteMember(workspaceId, inviterId, email, role) {
 
   const invitationLink = `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
 
-  await sendEmail({
-    to: normalizedEmail,
-    subject: 'Invitation to join workspace',
-    html: invitationTemplate(invitationLink, workspace.name),
-  });
+  try {
+    await sendEmail({
+      to: normalizedEmail,
+      subject: 'Invitation to join workspace',
+      html: invitationTemplate(invitationLink, workspace.name),
+    });
+  } catch (emailError) {
+    console.error('Failed to send invitation email:', emailError);
+  }
 
   if (existingUser) {
     const inviter = await workspaceDao.findUserById(inviterId);
