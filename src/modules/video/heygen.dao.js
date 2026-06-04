@@ -17,6 +17,8 @@ const saveHeygenResponse = async ({
   requestHash,
   status = 'processing',
   rawResponse = null,
+  triggeredByUserId = null,
+  billingContext = null,
 }) => {
   if (!workspaceId || !projectId || !videoId || !requestHash) {
     throw new Error('workspaceId, projectId, videoId, and requestHash are required');
@@ -34,6 +36,8 @@ const saveHeygenResponse = async ({
       requestHash,
       status,
       rawResponse,
+      triggeredByUserId,
+      billingContext,
     },
   });
 };

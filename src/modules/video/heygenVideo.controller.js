@@ -7,6 +7,7 @@ const s3Service = require('../s3/s3.service');
 const createHeygenVideo = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
   const row = await heygenService.generateAvatarVideo({
+    userId: req.user.id,
     workspaceId,
     projectId,
     ...req.body,

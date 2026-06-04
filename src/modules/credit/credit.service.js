@@ -1,26 +1,94 @@
+const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const creditDao = require('./credit.dao');
+const creditLedger = require('./creditLedger.service');
+const {
+  FEATURE,
+  SCOPE,
+  calculateUsageCredits,
+  estimateDurationFromScript,
+  estimateDurationFromText,
+  estimateDurationFromFrames,
+} = require('../../shared/config/creditPricing');
 
-// Business meaning of "available credits"
-const getAvailableCredits = async (workspaceId) => {
-  const workspace = await creditDao.getWorkspaceCredits(workspaceId);
+const getWorkspaceCreditsView = async (workspaceId, userId) => {
+  const balances = await creditLedger.getBalances({ userId, workspaceId });
+  return balances;
+};
 
-  if (!workspace) {
-    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
-  }
-  return workspace.credits;
+const getPersonalCreditsView = async (userId) => {
+  const user = await creditLedger.getUserOrThrow(userId);
+  return { personalCredits: user.credits };
 };
 
 const getWorkspaceCreditHistory = async ({ workspaceId, page, limit }) => {
-  return creditDao.getWorkspaceCreditHistory(workspaceId, page, limit);
+  return creditDao.getWorkspaceCreditHistory(workspaceId, page, limit, {
+    scope: SCOPE.WORKSPACE,
+  });
 };
 
 const getUserCreditHistory = async ({ workspaceId, userId, page, limit }) => {
   return creditDao.getUserCreditHistory(workspaceId, userId, page, limit);
 };
 
+const getPersonalCreditHistory = async ({ userId, page, limit }) => {
+  return creditDao.getUserScopedCreditHistory(userId, page, limit);
+};
+
+const allocateToWorkspace = async ({ ownerUserId, workspaceId, amount }) => {
+  return creditLedger.allocateToWorkspace({ ownerUserId, workspaceId, amountAc: amount });
+};
+
+const deallocateFromWorkspace = async ({ ownerUserId, workspaceId, amount }) => {
+  return creditLedger.deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc: amount });
+};
+
+const getUsageByMember = async (workspaceId) => {
+  const workspace = await creditLedger.getWorkspaceOrThrow(workspaceId);
+  if (workspace.type !== 'TEAM') {
+    throw new AppError(messages.CREDITS_ALLOCATE_TEAM_ONLY, 400);
+  }
+  const members = await creditDao.usageByMemberInWorkspace(workspaceId);
+  return { members };
+};
+
+function buildWorkspaceEstimate(query) {
+  const feature = query.feature;
+  if (feature === FEATURE.HEYGEN_VIDEO) {
+    const durationSeconds = estimateDurationFromScript(query.script);
+    return calculateUsageCredits({
+      feature,
+      durationSeconds,
+      avatarEngine: query.avatarEngine,
+    });
+  }
+  if (feature === FEATURE.REMOTION_EXPORT) {
+    const durationSeconds = query.durationInFrames
+      ? estimateDurationFromFrames(query.durationInFrames, query.fps)
+      : 60;
+    return calculateUsageCredits({ feature, durationSeconds });
+  }
+  throw new AppError(messages.INVALID_CREDIT_AMOUNT, 400);
+}
+
+function buildPersonalEstimate(query) {
+  const feature = query.feature;
+  if (feature === FEATURE.VOICE_PREVIEW) {
+    const durationSeconds = estimateDurationFromText(query.text);
+    return calculateUsageCredits({ feature, durationSeconds });
+  }
+  return calculateUsageCredits({ feature, durationSeconds: 0 });
+}
+
 module.exports = {
-  getAvailableCredits,
-  getUserCreditHistory,
+  getWorkspaceCreditsView,
+  getPersonalCreditsView,
   getWorkspaceCreditHistory,
+  getUserCreditHistory,
+  getPersonalCreditHistory,
+  allocateToWorkspace,
+  deallocateFromWorkspace,
+  getUsageByMember,
+  buildWorkspaceEstimate,
+  buildPersonalEstimate,
 };

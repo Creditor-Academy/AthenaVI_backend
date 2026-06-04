@@ -477,6 +477,7 @@ async function getVideoStatus(videoId) {
 }
 
 module.exports = {
+  extractAvatarGroupIdFromCreateResponse,
   listAvatarGroups,
   listAvatarLooks,
   getAvatarLook,

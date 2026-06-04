@@ -20,6 +20,13 @@ const { DEFAULT_VIDEO_SETTINGS } = require('../../shared/constants/videoEditor')
 const { buildSceneTimings } = require('./remotion/transitions');
 const { collectAssetIds, extractAssetId } = require('../../shared/utils/projectAssetIds');
 const projectStorageService = require('../project/projectStorage.service');
+const creditLedger = require('../credit/creditLedger.service');
+const {
+  FEATURE,
+  SCOPE,
+  calculateUsageCredits,
+  estimateDurationFromFrames,
+} = require('../../shared/config/creditPricing');
 
 const PRESIGN_TTL_SECONDS = 3600;
 let remotionBundlePromise = null;
@@ -300,7 +307,46 @@ async function renderSceneCaches({
   return sceneCacheEntries;
 }
 
-async function processProjectRender({ renderId, workspaceId, projectId, forceRebuild }) {
+async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInFrames, fps }) {
+  const render = await renderDao.findProjectRenderByIdOnly(renderId);
+  if (!render || render.billingStatus === 'charged' || render.billingStatus === 'skipped') {
+    return;
+  }
+  if (!userId) {
+    await renderDao.updateProjectRender(renderId, { billingStatus: 'skipped' });
+    return;
+  }
+
+  const durationSeconds = estimateDurationFromFrames(durationInFrames, fps);
+  const pricing = calculateUsageCredits({
+    feature: FEATURE.REMOTION_EXPORT,
+    durationSeconds,
+  });
+
+  await creditLedger.chargeUsage({
+    scope: SCOPE.WORKSPACE,
+    workspaceId,
+    userId,
+    amountAc: pricing.athenaCredits,
+    idempotencyKey: `project-render:${renderId}`,
+    reference: renderId,
+    metadata: {
+      feature: FEATURE.REMOTION_EXPORT,
+      renderId,
+      durationSeconds,
+      heygenUsdCost: pricing.heygenUsdCost,
+      scope: SCOPE.WORKSPACE,
+    },
+  });
+
+  await renderDao.updateProjectRender(renderId, {
+    billingStatus: 'charged',
+    creditsCharged: pricing.athenaCredits,
+    billedDurationSec: durationSeconds,
+  });
+}
+
+async function processProjectRender({ renderId, workspaceId, projectId, userId, forceRebuild }) {
   const tempDirectory = await ensureTempDirectory(renderId);
 
   try {
@@ -351,6 +397,7 @@ async function processProjectRender({ renderId, workspaceId, projectId, forceReb
     });
     const uploaded = await uploadFileToKey(finalBuffer, s3Key, 'video/mp4');
     const totalDuration = buildSceneTimings(cachedScenes).durationInFrames;
+    const fps = manifest.videoSettings?.fps || 30;
 
     await renderDao.updateProjectRender(renderId, {
       status: 'completed',
@@ -361,6 +408,13 @@ async function processProjectRender({ renderId, workspaceId, projectId, forceReb
       completedAt: new Date(),
       error: null,
     });
+    await chargeRenderIfNeeded({
+      renderId,
+      workspaceId,
+      userId,
+      durationInFrames: totalDuration,
+      fps,
+    });
     await projectDao.updateProject(projectId, {
       status: 'completed',
       duration: totalDuration,
@@ -369,6 +423,7 @@ async function processProjectRender({ renderId, workspaceId, projectId, forceReb
   } catch (error) {
     await renderDao.updateProjectRender(renderId, {
       status: 'failed',
+      billingStatus: 'failed',
       progress: 100,
       failedAt: new Date(),
       error: error.message,
@@ -394,6 +449,19 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
     throw new AppError(messages.PROJECT_SCENES_REQUIRED, 400);
   }
 
+  const timeline = buildSceneTimings(projectData.scenes);
+  const fps = projectData.videoSettings?.fps || 30;
+  const estimate = calculateUsageCredits({
+    feature: FEATURE.REMOTION_EXPORT,
+    durationSeconds: estimateDurationFromFrames(timeline.durationInFrames, fps),
+  });
+  await creditLedger.assertCanAfford({
+    scope: SCOPE.WORKSPACE,
+    workspaceId,
+    userId,
+    estimatedAc: estimate.athenaCredits,
+  });
+
   const render = await renderDao.createProjectRender({
     workspaceId,
     folderId: project.folderId,
@@ -413,6 +481,7 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
       renderId: render.id,
       workspaceId,
       projectId,
+      userId,
       forceRebuild,
     }).catch(async (error) => {
       try {

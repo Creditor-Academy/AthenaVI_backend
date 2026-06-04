@@ -28,6 +28,12 @@ const findProjectRenderById = (workspaceId, projectId, renderId) => {
   });
 };
 
+const findProjectRenderByIdOnly = (renderId) => {
+  return prisma.projectRender.findUnique({
+    where: { id: renderId },
+  });
+};
+
 const findSceneRenderCache = (projectId, sceneId, sceneHash) => {
   return prisma.sceneRenderCache.findUnique({
     where: {
@@ -85,6 +91,7 @@ module.exports = {
   updateProjectRender,
   listProjectRenders,
   findProjectRenderById,
+  findProjectRenderByIdOnly,
   findSceneRenderCache,
   upsertSceneRenderCache,
 };

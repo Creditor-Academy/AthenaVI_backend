@@ -105,6 +105,16 @@ module.exports = {
   // Credit
   CREDITS_FETCHED: 'Credits fetched successfully',
   CREDIT_HISTORY_FETCHED: 'Credit history fetched successfully',
+  INSUFFICIENT_CREDITS: 'Insufficient credits',
+  INVALID_CREDIT_AMOUNT: 'Credit amount must be a positive integer',
+  CREDITS_GRANTED: 'Credits granted successfully',
+  CREDITS_REVOKED: 'Credits revoked successfully',
+  CREDITS_ALLOCATED: 'Credits allocated to workspace successfully',
+  CREDITS_DEALLOCATED: 'Credits returned from workspace successfully',
+  CREDITS_ESTIMATE_FETCHED: 'Credit estimate calculated successfully',
+  CREDITS_USAGE_BY_MEMBER_FETCHED: 'Workspace usage by member fetched successfully',
+  PLATFORM_SUPERADMIN_REQUIRED: 'Platform superadmin access required',
+  CREDITS_ALLOCATE_TEAM_ONLY: 'Credits can only be allocated to team workspaces',
 
   // Folder
   FOLDER_NAME_REQUIRED: 'Folder name is required',

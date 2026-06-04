@@ -13,6 +13,13 @@ const {
   buildHeygenVideoEnginePayload,
   extractSupportedApiEnginesFromLook,
 } = require('../../../shared/constants/heygen');
+const creditLedger = require('../../credit/creditLedger.service');
+const {
+  FEATURE,
+  SCOPE,
+  calculateUsageCredits,
+  estimateDurationFromScript,
+} = require('../../../shared/config/creditPricing');
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 20;
@@ -129,8 +136,54 @@ function buildHeyGenVideoPayload(body) {
 /**
  * Start HeyGen avatar video generation; idempotent per request hash (includes sceneId).
  */
+async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
+  if (record.billingStatus === 'charged' || record.billingStatus === 'skipped') {
+    return record;
+  }
+  if (!record.triggeredByUserId) {
+    return heygenDao.updateHeygenResponse(record.id, { billingStatus: 'skipped' });
+  }
+
+  const durationSeconds =
+    remote.duration != null && Number(remote.duration) > 0
+      ? Number(remote.duration)
+      : estimateDurationFromScript(
+          record.billingContext?.script || record.billingContext?.scriptText
+        );
+
+  const pricing = calculateUsageCredits({
+    feature: FEATURE.HEYGEN_VIDEO,
+    durationSeconds,
+    avatarEngine: avatarEngine || record.billingContext?.avatarEngine,
+  });
+
+  await creditLedger.chargeUsage({
+    scope: SCOPE.WORKSPACE,
+    workspaceId: record.workspaceId,
+    userId: record.triggeredByUserId,
+    amountAc: pricing.athenaCredits,
+    idempotencyKey: `heygen-video:${record.id}`,
+    metadata: {
+      feature: FEATURE.HEYGEN_VIDEO,
+      heygenVideoId: record.id,
+      heygenJobId: record.videoId,
+      durationSeconds,
+      heygenUsdCost: pricing.heygenUsdCost,
+      scope: SCOPE.WORKSPACE,
+    },
+    reference: record.id,
+  });
+
+  return heygenDao.updateHeygenResponse(record.id, {
+    billingStatus: 'charged',
+    creditsCharged: pricing.athenaCredits,
+    billedDurationSec: durationSeconds,
+  });
+}
+
 const generateAvatarVideo = async (input) => {
   const {
+    userId,
     workspaceId,
     projectId,
     sceneId,
@@ -167,6 +220,19 @@ const generateAvatarVideo = async (input) => {
     return existingResponse;
   }
 
+  const estimatedDuration = estimateDurationFromScript(script);
+  const estimate = calculateUsageCredits({
+    feature: FEATURE.HEYGEN_VIDEO,
+    durationSeconds: estimatedDuration,
+    avatarEngine: engine,
+  });
+  await creditLedger.assertCanAfford({
+    scope: SCOPE.WORKSPACE,
+    workspaceId,
+    userId,
+    estimatedAc: estimate.athenaCredits,
+  });
+
   await assertLookSupportsAvatarEngine(avatarId, engine);
 
   const jsonBody = buildHeyGenVideoPayload({
@@ -198,6 +264,8 @@ const generateAvatarVideo = async (input) => {
     requestHash,
     status: created.status,
     rawResponse: created.raw,
+    triggeredByUserId: userId,
+    billingContext: { avatarEngine: engine, script, estimatedCredits: estimate.athenaCredits },
   });
 };
 
@@ -231,6 +299,7 @@ const syncHeygenVideoToS3AndDb = async (record) => {
   if (remote.status === 'failed') {
     return heygenDao.updateHeygenResponse(record.id, {
       status: 'failed',
+      billingStatus: 'failed',
       rawResponse: remote.raw,
     });
   }
@@ -272,7 +341,7 @@ const syncHeygenVideoToS3AndDb = async (record) => {
   });
   const { url } = await uploadFileToKey(buffer, key, 'video/mp4');
 
-  const updated = await heygenDao.updateHeygenResponse(record.id, {
+  let updated = await heygenDao.updateHeygenResponse(record.id, {
     folderId,
     status: 'completed',
     s3Key: key,
@@ -280,6 +349,7 @@ const syncHeygenVideoToS3AndDb = async (record) => {
     fileSizeBytes: buffer.length,
     rawResponse: remote.raw,
   });
+  updated = await chargeHeygenVideoIfNeeded(updated, remote);
   await projectStorageService.recalculateProjectStorage(record.projectId);
   return updated;
 };

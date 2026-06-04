@@ -8,6 +8,8 @@ const {
   HEYGEN_AVATAR_TWIN_MIMES,
 } = require('../../middlewares/heygenAvatarCreate.middleware');
 const { createAvatarBodySchema } = require('./heygen.validation');
+const userCreditBilling = require('../credit/userCreditBilling');
+const { FEATURE } = require('../../shared/config/creditPricing');
 
 function assertCreateAvatarPayload(body) {
   if (body.type === 'prompt') {
@@ -112,7 +114,15 @@ const createAvatar = asyncHandler(async (req, res) => {
   }
   assertCreateAvatarPayload(value);
   const userId = req.user.id;
+  await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.AVATAR_CREATE);
   const data = await heygenV3Service.createAvatar(userId, value);
+  const groupId = heygenV3Service.extractAvatarGroupIdFromCreateResponse(data);
+  await userCreditBilling.chargeUserFeature({
+    userId,
+    feature: FEATURE.AVATAR_CREATE,
+    idempotencyKey: groupId ? `heygen-avatar:${groupId}` : `heygen-avatar:${userId}:${Date.now()}`,
+    reference: groupId,
+  });
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_CREATED);
 });
 
@@ -131,7 +141,16 @@ const listVoices = asyncHandler(async (req, res) => {
 
 const designVoice = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.VOICE_DESIGN);
   const data = await heygenV3Service.designVoice(userId, req.body);
+  const voiceId =
+    data?.data?.voice_id ?? data?.data?.id ?? data?.voice_id ?? `design-${Date.now()}`;
+  await userCreditBilling.chargeUserFeature({
+    userId,
+    feature: FEATURE.VOICE_DESIGN,
+    idempotencyKey: `heygen-voice-design:${userId}:${voiceId}`,
+    reference: String(voiceId),
+  });
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DESIGNED);
 });
 
@@ -143,7 +162,15 @@ const selectVoice = asyncHandler(async (req, res) => {
 
 const cloneVoice = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.VOICE_CLONE);
   const data = await heygenV3Service.cloneVoice(userId, req.body);
+  const voiceId = data?.voiceId ?? data?.voiceCloneId ?? `clone-${Date.now()}`;
+  await userCreditBilling.chargeUserFeature({
+    userId,
+    feature: FEATURE.VOICE_CLONE,
+    idempotencyKey: `heygen-voice-clone:${voiceId}`,
+    reference: String(voiceId),
+  });
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_CLONE_STARTED);
 });
 
@@ -154,6 +181,7 @@ const getVoice = asyncHandler(async (req, res) => {
 });
 
 const previewSpeech = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
   const payload = {
     text: req.body.text,
     voice_id: req.body.voice_id,
@@ -163,7 +191,20 @@ const previewSpeech = asyncHandler(async (req, res) => {
     locale: req.body.locale,
   };
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+  const estimate = await userCreditBilling.assertUserCanAffordFeature(
+    userId,
+    FEATURE.VOICE_PREVIEW,
+    { text: payload.text }
+  );
   const data = await heygenV3Service.generateSpeechPreview(payload);
+  const durationSeconds = estimate.breakdown?.durationSeconds ?? 0;
+  await userCreditBilling.chargeUserFeature({
+    userId,
+    feature: FEATURE.VOICE_PREVIEW,
+    idempotencyKey: `heygen-voice-preview:${userId}:${payload.voice_id}:${Date.now()}`,
+    durationSeconds,
+    reference: payload.voice_id,
+  });
   return successResponse(req, res, data, 200, messages.HEYGEN_SPEECH_PREVIEW_OK);
 });
 

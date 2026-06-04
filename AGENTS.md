@@ -170,7 +170,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 | Editor | `Folder`, `Project` (large JSON `data`), `Asset` |
 | HeyGen | `HeygenResponse`, `HeygenAvatar`, `HeygenVoice` |
 | Renders | `ProjectRender`, `SceneRenderCache` |
-| Billing | `CreditTransaction` (+ `Workspace.credits`) |
+| Billing | `CreditTransaction`, `User.credits`, `Workspace.credits` (TEAM pool), `/api/superadmin`, `/api/credits` |
 
 **Prisma client:** import `src/shared/config/prismaClient.js` in DAOs/services (follow existing imports).
 

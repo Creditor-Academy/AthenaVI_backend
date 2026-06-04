@@ -51,6 +51,8 @@ model User {
   emailVerified Boolean @default(false) @map("email_verified")
   storageLimit  Int     @default(1073741824) // 1 GB default limit
   storageUsed   Int     @default(0)
+  credits             Int     @default(0)
+  isPlatformSuperadmin Boolean @default(false) @map("is_platform_superadmin")
 
   deletionRequestedAt DateTime? @map("deletion_requested_at")
   deletionScheduledAt DateTime? @map("deletion_scheduled_at")
@@ -254,13 +256,16 @@ model PasswordResetToken {
 }
 
 model CreditTransaction {
-  id          String   @id @default(uuid())
-  userId      String
-  workspaceId String
-  amount      Int
-  type        String // purchase | usage | refund | admin_adjustment
-  reference   String?
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  userId         String
+  workspaceId    String?
+  amount         Int
+  type           String // usage | platform_grant | platform_revoke | allocation | deallocation | refund | purchase
+  scope          String? // user | workspace
+  reference      String?
+  idempotencyKey String?  @unique
+  metadata       Json?
+  createdAt      DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
@@ -269,6 +274,7 @@ model CreditTransaction {
   @@index([createdAt])
   @@index([workspaceId, createdAt])
   @@index([userId, createdAt])
+  @@index([scope])
   @@map("credit_transactions")
 }
 
@@ -345,6 +351,11 @@ model HeygenResponse {
   requestHash   String  @unique
   status        String  @default("processing") // processing | completed | failed
   rawResponse   Json?
+  triggeredByUserId String? @map("triggered_by_user_id")
+  creditsCharged    Int?    @map("credits_charged")
+  billedDurationSec Float?  @map("billed_duration_sec")
+  billingStatus     String  @default("pending") @map("billing_status") // pending | charged | failed | skipped
+  billingContext    Json?   @map("billing_context")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -369,6 +380,9 @@ model ProjectRender {
   inputSnapshot Json?
   sceneHashes   Json?
   error         String?
+  creditsCharged    Int?    @map("credits_charged")
+  billedDurationSec Float?  @map("billed_duration_sec")
+  billingStatus     String  @default("pending") @map("billing_status")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   startedAt     DateTime?

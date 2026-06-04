@@ -1732,91 +1732,142 @@ Removes the object from storage (when applicable) and decrements the owner’s *
 
 Base path: **`/api/credits`**
 
-All routes require **`Authorization: Bearer <access_token>`**. The path parameter **`:id` is the workspace UUID**. Middleware requires you to be a member of that workspace with the role listed per route.
+All routes require **`Authorization: Bearer <access_token>`**.
+
+**Credit pools**
+
+- **`User.credits`** (personal pool) – superadmin grants; consumed by PRIVATE workspaces, user-scoped HeyGen (voices/avatars), and TEAM allocation source.
+- **`Workspace.credits`** (TEAM only) – OWNER allocates from personal pool; consumed by scene HeyGen videos and Remotion exports in that workspace.
+
+**Billing**
+
+- Insufficient balance → **402** with `INSUFFICIENT_CREDITS`.
+- HeyGen videos / Remotion: charge on **success** only.
+- Voice/avatar HeyGen routes: charge **`User.credits`** (`scope: user`); workspace routes use workspace pool (`scope: workspace`).
 
 ---
 
-## Get workspace credit balance
+## Personal balance
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/credits/me` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "personalCredits": 0 }`
+
+---
+
+## Personal history (user-scoped usage)
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/credits/me/history` |
+| **Auth** | Bearer |
+
+Query: `page`, `limit` (optional).
+
+---
+
+## Personal estimate
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/credits/me/estimate` |
+| **Auth** | Bearer |
+
+Query: `feature` = `voice_clone` \| `voice_design` \| `voice_preview` \| `avatar_create`; optional `text` for preview.
+
+---
+
+## Workspace balance
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/credits/:id` |
 | **Auth** | Bearer |
-| **Role** | OWNER or ADMIN |
+| **Role** | OWNER, ADMIN, or MEMBER |
 
-**Response (200)** – `data`:
-
-```json
-{
-  "workspaceId": "uuid",
-  "credits": 0
-}
-```
+**Response (200)** – `data`: `{ workspaceId, personalCredits, workspaceCredits, workspaceType }`
 
 ---
 
-## Workspace credit history
+## Allocate / deallocate (TEAM, OWNER only)
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/credits/:id/allocate` or `/deallocate` |
+| **Body** | `{ "amount": 1000 }` (positive integer AC) |
+
+Moves credits personal → workspace (allocate) or workspace → personal (deallocate).
+
+---
+
+## Workspace history (workspace-scoped only)
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/credits/:id/history` |
-| **Auth** | Bearer |
 | **Role** | OWNER or ADMIN |
-
-**Query (optional)**
-
-- `page` – default `1`
-- `limit` – default `20`
-
-**Response (200)** – `data`:
-
-```json
-{
-  "history": {
-    "transactions": [
-      {
-        "id": "uuid",
-        "userId": "uuid",
-        "workspaceId": "uuid",
-        "amount": 10,
-        "type": "usage",
-        "reference": null,
-        "createdAt": "ISO8601"
-      }
-    ],
-    "pagination": {
-      "total": 100,
-      "page": 1,
-      "limit": 20,
-      "totalPages": 5
-    }
-  }
-}
-```
-
-`type` is stored as a string (e.g. purchase, usage, refund, admin_adjustment).
 
 ---
 
-## My credit history (within workspace)
-
-Credit transactions for the **current user** only in the given workspace.
+## My workspace usage
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/credits/:id/my-history` |
-| **Auth** | Bearer |
-| **Role** | OWNER, ADMIN, or MEMBER |
+| **Role** | Any member |
 
-**Query (optional)**
+---
 
-- `page` – default `1`
-- `limit` – default `20`
+## Usage by member (TEAM)
 
-**Response (200)** – same `history` shape as workspace history (filtered by `userId`).
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/credits/:id/usage-by-member` |
+| **Role** | OWNER or ADMIN |
+
+---
+
+## Workspace estimate
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/credits/:id/estimate` |
+| **Role** | Any member |
+
+Query: `feature` = `heygen_video` \| `remotion_export`; for video: `avatarEngine`, optional `script`; for render: optional `durationInFrames`, `fps`.
+
+Transaction `type` values include: `usage`, `platform_grant`, `platform_revoke`, `allocation`, `deallocation`, `refund`.
+
+---
+
+# Platform Superadmin API
+
+Base path: **`/api/superadmin`**
+
+Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`** comma-separated). Not the same as workspace **ADMIN** role.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/superadmin/users` | List users with balances (`page`, `limit`, `search`) |
+| `GET` | `/api/superadmin/users/:userId/credits` | User personal balance |
+| `GET` | `/api/superadmin/users/:userId/credits/history` | Full user ledger |
+| `POST` | `/api/superadmin/users/:userId/credits/grant` | Body: `{ amount, reason? }` |
+| `POST` | `/api/superadmin/users/:userId/credits/revoke` | Body: `{ amount, reason? }` |
+| `GET` | `/api/superadmin/workspaces/:workspaceId/credits` | TEAM workspace pool summary |
+| `POST` | `/api/superadmin/workspaces/:workspaceId/credits/grant` | Direct workspace top-up |
+| `GET` | `/api/superadmin/reports/credits/usage` | Usage report (`from`, `to`, optional filters) |
 
 ---
 
@@ -2353,6 +2404,7 @@ Frontend may need to know:
 - **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh`, `/api/auth/logout`, etc. (`fetch`/`axios` with `credentials: 'include'` / `withCredentials: true`). The API must allow your frontend origin with credentials (not `Access-Control-Allow-Origin: *`); this server uses **`FRONTEND_URL`** or comma-separated **`CORS_ORIGINS`** for CORS.
 - **HeyGen avatar videos** – Server **`HEYGEN_API_KEY`** (optional **`HEYGEN_BASE_URL`**), plus **AWS** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). Editor preview: see **HeyGen avatar videos → App developer checklist** (`/stream` vs `/download`, persisting **`heygenVideoId`**, CORS).
 - **Large JSON** (e.g. voice clone **base64**) – Optional **`JSON_BODY_LIMIT`** (e.g. `32mb`). If unset, the server defaults to **15mb** for `express.json`.
+- **Credits / billing** – `HEYGEN_BILLING_MODE` (`payg` \| `enterprise`), `ATHENA_MARGIN_PERCENT`, `ATHENA_AC_PER_USD`, `HEYGEN_ENTERPRISE_USD_PER_CREDIT`, `REMOTION_USD_PER_OUTPUT_SEC`, `CREDIT_ESTIMATE_WORDS_PER_MINUTE`, `PLATFORM_SUPERADMIN_EMAILS`.
 
 ---
 
