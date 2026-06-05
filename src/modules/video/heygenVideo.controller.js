@@ -11,21 +11,40 @@ const createHeygenVideo = asyncHandler(async (req, res) => {
     projectId,
     ...req.body,
   });
-  return successResponse(req, res, { heygenVideo: row }, 201, messages.VIDEO_GENERATION_SUCCESS);
+  return successResponse(
+    req,
+    res,
+    { heygenVideo: heygenService.enrichHeygenVideoForClient(row) },
+    201,
+    messages.VIDEO_GENERATION_SUCCESS
+  );
 });
 
 const listHeygenVideos = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
   const rows = await heygenService.listProjectHeygenVideos(workspaceId, projectId);
-  return successResponse(req, res, { heygenVideos: rows }, 200, messages.HEYGEN_VIDEOS_FETCHED);
+  return successResponse(
+    req,
+    res,
+    { heygenVideos: rows.map((row) => heygenService.enrichHeygenVideoForClient(row)) },
+    200,
+    messages.HEYGEN_VIDEOS_FETCHED
+  );
 });
 
 const getHeygenVideo = asyncHandler(async (req, res) => {
   const { workspaceId, projectId, heygenVideoId } = req.params;
+  const sync = req.query.sync ?? 'status';
   const row = await heygenService.getProjectHeygenVideo(workspaceId, projectId, heygenVideoId, {
-    sync: true,
+    sync,
   });
-  return successResponse(req, res, { heygenVideo: row }, 200, messages.HEYGEN_VIDEO_FETCHED);
+  return successResponse(
+    req,
+    res,
+    { heygenVideo: heygenService.enrichHeygenVideoForClient(row) },
+    200,
+    messages.HEYGEN_VIDEO_FETCHED
+  );
 });
 
 const downloadHeygenVideo = asyncHandler(async (req, res) => {
@@ -72,25 +91,32 @@ const getHeygenVideoS3Location = asyncHandler(async (req, res) => {
   );
 });
 
-/** Stable preview URL: pipe S3 bytes through API (Bearer auth). Supports Range for seeking. */
+/** Stable preview URL: pipe S3 or HeyGen CDN bytes through API (Bearer auth). Supports Range for seeking. */
 const streamHeygenVideo = asyncHandler(async (req, res) => {
   const { workspaceId, projectId, heygenVideoId } = req.params;
-  const row = await heygenService.assertHeygenVideoReadyInS3(
+  const row = await heygenService.assertHeygenVideoPlayable(
     workspaceId,
     projectId,
     heygenVideoId
   );
-  await s3Service.streamObjectToResponse(req, res, row.s3Key);
+  if (row.s3Key) {
+    await s3Service.streamObjectToResponse(req, res, row.s3Key);
+    return;
+  }
+  const playbackUrl = heygenService.heygenPlaybackUrl(row);
+  await s3Service.streamRemoteUrlToResponse(req, res, playbackUrl);
 });
 
 const headHeygenVideoStream = asyncHandler(async (req, res) => {
   const { workspaceId, projectId, heygenVideoId } = req.params;
-  const row = await heygenService.assertHeygenVideoReadyInS3(
+  const row = await heygenService.assertHeygenVideoPlayable(
     workspaceId,
     projectId,
     heygenVideoId
   );
-  const meta = await s3Service.headObjectMeta(row.s3Key);
+  const meta = row.s3Key
+    ? await s3Service.headObjectMeta(row.s3Key)
+    : await s3Service.headRemoteUrlMeta(heygenService.heygenPlaybackUrl(row));
   res.setHeader('Content-Type', meta.contentType);
   if (meta.contentLength != null) {
     res.setHeader('Content-Length', String(meta.contentLength));

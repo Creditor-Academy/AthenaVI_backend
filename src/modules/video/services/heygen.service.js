@@ -11,12 +11,14 @@ const {
   HEYGEN_AVATAR_ENGINES,
   normalizeHeygenAvatarEngine,
   buildHeygenVideoEnginePayload,
-  extractSupportedApiEnginesFromLook,
 } = require('../../../shared/constants/heygen');
 
-const POLL_INTERVAL_MS = 2500;
-const MAX_POLL_ATTEMPTS = 20;
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ATTEMPTS = 24;
 const PRESIGN_DEFAULT_TTL = 300;
+
+/** In-flight S3 copies keyed by heygen_responses.id */
+const s3UploadInflight = new Map();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -128,33 +130,7 @@ const generateAvatarVideo = async (input) => {
   } = input;
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
-  const requestedEngine = normalizeHeygenAvatarEngine(avatarEngine);
-
-  // Resolve an effective engine based on the selected look's actual capability.
-  // In particular, some looks claim IV but reject Avatar IV at render time;
-  // we defensively fall back to Avatar V so generation can still succeed.
-  let supportedEngines = null;
-  try {
-    const lookRaw = await heygenV3Service.getAvatarLook(avatarId);
-    supportedEngines = extractSupportedApiEnginesFromLook(lookRaw);
-  } catch (err) {
-    // If the look is missing (or not yet available), let HeyGen validate later.
-    if (!(err instanceof AppError && err.statusCode === 404)) throw err;
-  }
-
-  let engine = requestedEngine;
-  if (supportedEngines && supportedEngines.length > 0) {
-    if (!supportedEngines.includes(engine)) {
-      if (engine === HEYGEN_AVATAR_ENGINES.IV && supportedEngines.includes(HEYGEN_AVATAR_ENGINES.V)) {
-        engine = HEYGEN_AVATAR_ENGINES.V;
-      } else {
-        throw new AppError(
-          `${messages.HEYGEN_AVATAR_ENGINE_UNSUPPORTED} (${requestedEngine}). Supported: ${supportedEngines.join(', ')}`,
-          400
-        );
-      }
-    }
-  }
+  const engine = normalizeHeygenAvatarEngine(avatarEngine);
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -277,16 +253,38 @@ async function downloadVideoBuffer(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-/**
- * Sync HeyGen job state and, when completed, copy MP4 to S3. Returns updated DB row.
- */
-const syncHeygenVideoToS3AndDb = async (record) => {
-  if (record.s3Key && record.status === 'completed') {
-    return record;
-  }
+function heygenPlaybackUrl(record, remote = null) {
+  if (record?.s3Key) return null;
+  const fromRemote = remote?.video_url;
+  const fromRow = record?.videoUrl;
+  const url = fromRemote || fromRow;
+  return url && String(url).trim() !== '' ? String(url).trim() : null;
+}
 
-  const remote = await pollLatestStatus(record.videoId);
+function isHeygenVideoPlayable(record) {
+  return (
+    record?.status === 'completed' &&
+    Boolean(record.s3Key || heygenPlaybackUrl(record))
+  );
+}
 
+function enrichHeygenVideoForClient(record) {
+  const playbackUrl = heygenPlaybackUrl(record);
+  return {
+    ...record,
+    playbackReady: isHeygenVideoPlayable(record),
+    playbackUrl,
+    s3Ready: Boolean(record.s3Key),
+  };
+}
+
+function parseHeygenVideoSyncMode(sync) {
+  if (sync === false || sync === 'false') return 'none';
+  if (sync === 'full') return 'full';
+  return 'status';
+}
+
+async function applyRemoteStatusToRecord(record, remote) {
   if (remote.status === 'failed') {
     return heygenDao.updateHeygenResponse(record.id, {
       status: 'failed',
@@ -301,21 +299,21 @@ const syncHeygenVideoToS3AndDb = async (record) => {
     });
   }
 
-  if (!remote.video_url) {
-    return heygenDao.updateHeygenResponse(record.id, {
-      status: remote.status,
-      rawResponse: remote.raw,
-    });
-  }
+  const playback = heygenPlaybackUrl(record, remote);
+  return heygenDao.updateHeygenResponse(record.id, {
+    status: 'completed',
+    rawResponse: remote.raw,
+    ...(playback ? { videoUrl: playback } : {}),
+  });
+}
 
-  if (record.s3Key) {
-    return heygenDao.updateHeygenResponse(record.id, {
-      status: 'completed',
-      rawResponse: remote.raw,
-    });
-  }
+async function copyHeygenVideoToS3(record, remote = null) {
+  if (record.s3Key) return record;
 
-  const buffer = await downloadVideoBuffer(remote.video_url);
+  const sourceUrl = heygenPlaybackUrl(record, remote);
+  if (!sourceUrl) return record;
+
+  const buffer = await downloadVideoBuffer(sourceUrl);
   let folderId = record.folderId;
   if (!folderId) {
     const project = await getProjectInWorkspace(record.workspaceId, record.projectId);
@@ -337,10 +335,66 @@ const syncHeygenVideoToS3AndDb = async (record) => {
     s3Key: key,
     videoUrl: url,
     fileSizeBytes: buffer.length,
-    rawResponse: remote.raw,
+    rawResponse: remote?.raw ?? record.rawResponse,
   });
   await projectStorageService.recalculateProjectStorage(record.projectId);
   return updated;
+}
+
+function queueHeygenVideoS3Upload(record, remote = null) {
+  if (record.s3Key || s3UploadInflight.has(record.id)) return;
+  const task = copyHeygenVideoToS3(record, remote)
+    .catch(() => null)
+    .finally(() => {
+      s3UploadInflight.delete(record.id);
+    });
+  s3UploadInflight.set(record.id, task);
+}
+
+/**
+ * Refresh HeyGen job status. When completed, stores HeyGen CDN URL for immediate canvas playback.
+ */
+async function refreshHeygenVideoStatus(record, { poll = true, queueS3 = true } = {}) {
+  if (record.s3Key && record.status === 'completed') {
+    return { record, remote: null };
+  }
+
+  const remote = poll
+    ? await pollLatestStatus(record.videoId)
+    : await heygenV3Service.getVideoStatus(record.videoId);
+  const updated = await applyRemoteStatusToRecord(record, remote);
+
+  if (updated.status === 'completed' && !updated.s3Key && queueS3) {
+    queueHeygenVideoS3Upload(updated, remote);
+  }
+
+  return { record: updated, remote };
+}
+
+/**
+ * Sync HeyGen job state and, when completed, copy MP4 to S3. Returns updated DB row.
+ */
+const syncHeygenVideoToS3AndDb = async (record, { poll = true } = {}) => {
+  if (record.s3Key && record.status === 'completed') {
+    return record;
+  }
+
+  const { record: refreshed, remote } = await refreshHeygenVideoStatus(record, {
+    poll,
+    queueS3: false,
+  });
+
+  if (refreshed.status !== 'completed' || refreshed.s3Key) {
+    return refreshed;
+  }
+
+  const inflight = s3UploadInflight.get(refreshed.id);
+  if (inflight) {
+    const done = await inflight;
+    return done || refreshed;
+  }
+
+  return copyHeygenVideoToS3(refreshed, remote);
 };
 
 const listProjectHeygenVideos = async (workspaceId, projectId) => {
@@ -354,17 +408,35 @@ const getProjectHeygenVideo = async (workspaceId, projectId, id, options = {}) =
   if (!row) {
     throw new AppError(messages.NOT_FOUND, 404);
   }
-  if (options.sync !== false) {
-    return syncHeygenVideoToS3AndDb(row);
+
+  const mode = parseHeygenVideoSyncMode(options.sync ?? 'status');
+  if (mode === 'none') return row;
+  if (mode === 'full') return syncHeygenVideoToS3AndDb(row);
+
+  const { record } = await refreshHeygenVideoStatus(row);
+  return record;
+};
+
+/**
+ * Video is playable in the editor (HeyGen CDN or S3). Does not require S3.
+ */
+const assertHeygenVideoPlayable = async (workspaceId, projectId, id) => {
+  let row = await getProjectHeygenVideo(workspaceId, projectId, id, { sync: 'status' });
+  if (isHeygenVideoPlayable(row)) return row;
+
+  if (row.status === 'completed') {
+    row = await syncHeygenVideoToS3AndDb(row);
+    if (isHeygenVideoPlayable(row)) return row;
   }
-  return row;
+
+  throw new AppError(messages.HEYGEN_VIDEO_NOT_READY, 409);
 };
 
 /**
  * Sync HeyGen job and ensure MP4 exists in S3; throws 409 if not ready.
  */
 const assertHeygenVideoReadyInS3 = async (workspaceId, projectId, id) => {
-  const updated = await getProjectHeygenVideo(workspaceId, projectId, id, { sync: true });
+  const updated = await getProjectHeygenVideo(workspaceId, projectId, id, { sync: 'full' });
   if (updated.status !== 'completed' || !updated.s3Key) {
     throw new AppError(messages.HEYGEN_VIDEO_NOT_READY, 409);
   }
@@ -377,9 +449,25 @@ const getPresignedDownloadForVideo = async (
   id,
   expiresInSeconds = PRESIGN_DEFAULT_TTL
 ) => {
-  const updated = await assertHeygenVideoReadyInS3(workspaceId, projectId, id);
-  const url = await getPresignedGetUrl(updated.s3Key, expiresInSeconds);
-  return { presignedUrl: url, expiresInSeconds, heygenResponse: updated };
+  const updated = await assertHeygenVideoPlayable(workspaceId, projectId, id);
+  if (updated.s3Key) {
+    const url = await getPresignedGetUrl(updated.s3Key, expiresInSeconds);
+    return {
+      presignedUrl: url,
+      expiresInSeconds,
+      playbackSource: 's3',
+      heygenResponse: enrichHeygenVideoForClient(updated),
+    };
+  }
+
+  const playbackUrl = heygenPlaybackUrl(updated);
+  queueHeygenVideoS3Upload(updated);
+  return {
+    presignedUrl: playbackUrl,
+    expiresInSeconds: null,
+    playbackSource: 'heygen',
+    heygenResponse: enrichHeygenVideoForClient(updated),
+  };
 };
 
 /**
@@ -409,8 +497,11 @@ module.exports = {
   syncHeygenVideoToS3AndDb,
   listProjectHeygenVideos,
   getProjectHeygenVideo,
+  assertHeygenVideoPlayable,
   assertHeygenVideoReadyInS3,
   getPresignedDownloadForVideo,
   getS3ObjectLocationForVideo,
   getProjectInWorkspace,
+  enrichHeygenVideoForClient,
+  heygenPlaybackUrl,
 };

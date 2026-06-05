@@ -1,3 +1,5 @@
+const { Readable } = require('stream');
+const { pipeline } = require('stream/promises');
 const {
   PutObjectCommand,
   CopyObjectCommand,
@@ -172,6 +174,61 @@ async function streamObjectToResponse(req, res, key) {
   }
 }
 
+/**
+ * Pipe a remote HTTP(S) video URL to Express (e.g. HeyGen CDN while S3 copy is pending).
+ */
+async function streamRemoteUrlToResponse(req, res, url) {
+  const headers = {};
+  const range = req.headers.range;
+  if (range && typeof range === 'string') {
+    headers.Range = range;
+  }
+
+  const remote = await fetch(url, { method: 'GET', headers });
+  if (!remote.ok) {
+    throw new AppError(messages.HEYGEN_PROXY_FETCH_FAILED, 502);
+  }
+
+  res.status(remote.status);
+  const contentType = remote.headers.get('content-type');
+  if (contentType) res.setHeader('Content-Type', contentType);
+  const contentLength = remote.headers.get('content-length');
+  if (contentLength) res.setHeader('Content-Length', contentLength);
+  const contentRange = remote.headers.get('content-range');
+  if (contentRange) res.setHeader('Content-Range', contentRange);
+  res.setHeader('Accept-Ranges', remote.headers.get('accept-ranges') || 'bytes');
+  res.setHeader('Cache-Control', 'private, no-cache');
+
+  if (!remote.body) {
+    res.end();
+    return;
+  }
+
+  const nodeStream = Readable.fromWeb(remote.body);
+  try {
+    await pipeline(nodeStream, res);
+  } catch (err) {
+    if (!res.headersSent) {
+      throw new AppError(messages.HEYGEN_PROXY_FETCH_FAILED, 502);
+    }
+    res.destroy();
+  }
+}
+
+async function headRemoteUrlMeta(url) {
+  const remote = await fetch(url, { method: 'HEAD' });
+  if (!remote.ok) {
+    throw new AppError(messages.HEYGEN_PROXY_FETCH_FAILED, 502);
+  }
+  const contentLength = remote.headers.get('content-length');
+  return {
+    contentType: remote.headers.get('content-type') || 'video/mp4',
+    contentLength: contentLength != null ? Number(contentLength) : null,
+    etag: remote.headers.get('etag'),
+    acceptRanges: remote.headers.get('accept-ranges') || 'bytes',
+  };
+}
+
 async function headObjectMeta(key) {
   if (!BUCKET) {
     throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
@@ -207,6 +264,8 @@ module.exports = {
   moveFile,
   getPresignedGetUrl,
   streamObjectToResponse,
+  streamRemoteUrlToResponse,
+  headRemoteUrlMeta,
   headObjectMeta,
   buildPublicUrl,
 };
