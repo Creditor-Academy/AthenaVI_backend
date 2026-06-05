@@ -20,6 +20,7 @@ const { DEFAULT_VIDEO_SETTINGS } = require('../../shared/constants/videoEditor')
 const { buildSceneTimings } = require('./remotion/transitions');
 const { collectAssetIds, extractAssetId } = require('../../shared/utils/projectAssetIds');
 const projectStorageService = require('../project/projectStorage.service');
+const { getEffectiveHeygenFields, isHeygenAvatarElement } = require('../project/projectEditorNormalize');
 
 const PRESIGN_TTL_SECONDS = 3600;
 let remotionBundlePromise = null;
@@ -95,22 +96,24 @@ async function resolveBackground(background, assetLookup) {
   };
 }
 
-async function resolveElementContent({ workspaceId, projectId, element, assetLookup }) {
+async function resolveElementContent({ workspaceId, projectId, scene, element, assetLookup }) {
   const content = { ...(element.content || {}) };
 
-  if (element.type === 'avatar') {
-    if (!content.heygenVideoId) {
+  if (isHeygenAvatarElement(element)) {
+    const { heygenVideoId } = getEffectiveHeygenFields(scene, content);
+    if (!heygenVideoId) {
       throw new AppError(messages.PROJECT_SCENE_ASSET_NOT_READY, 409);
     }
 
     const heygenRow = await heygenService.assertHeygenVideoReadyInS3(
       workspaceId,
       projectId,
-      content.heygenVideoId
+      heygenVideoId
     );
 
     return {
       ...content,
+      heygenVideoId,
       src: await getPresignedGetUrl(heygenRow.s3Key, PRESIGN_TTL_SECONDS),
       assetKey: heygenRow.s3Key,
     };
@@ -140,6 +143,7 @@ async function buildSceneManifest({ workspaceId, projectId, scene, assetLookup }
       content: await resolveElementContent({
         workspaceId,
         projectId,
+        scene,
         element,
         assetLookup,
       }),

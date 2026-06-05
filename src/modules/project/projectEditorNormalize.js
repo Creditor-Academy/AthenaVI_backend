@@ -158,6 +158,17 @@ function resolvePlacementWithOpacity(element) {
   return placement;
 }
 
+function normalizeLayer(layer) {
+  const n = Number(layer);
+  return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+function normalizeAnimations(animations) {
+  if (Array.isArray(animations)) return animations;
+  if (animations && typeof animations === 'object') return animations;
+  return [];
+}
+
 function normalizeTransition(transition) {
   if (!transition || typeof transition !== 'object') {
     return transition;
@@ -250,12 +261,13 @@ function normalizeElement(element) {
 
   const withContent = {
     ...synced,
+    layer: normalizeLayer(synced.layer),
     startFrame: Number.isFinite(startFrame) ? startFrame : 0,
     durationInFrames:
       Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
     placement: resolvePlacementWithOpacity(synced),
     content: mergeContentForRender(synced),
-    animations: Array.isArray(synced.animations) ? synced.animations : [],
+    animations: normalizeAnimations(synced.animations),
   };
 
   return syncTextTypography(withContent);
@@ -300,6 +312,16 @@ function normalizeEditorProjectData(projectState) {
   };
 }
 
+/** Avatar clip in V2 editor: `type: avatar` or `type: video` + `role: avatar` (+ optional provider). */
+function isHeygenAvatarElement(element) {
+  if (!element || typeof element !== 'object') return false;
+  if (element.role === 'avatar') return true;
+  if (element.type === 'avatar') return true;
+  const content = element.content && typeof element.content === 'object' ? element.content : {};
+  if (element.type === 'video' && content.provider === 'heygen') return true;
+  return false;
+}
+
 /**
  * HeyGen fields may live on scene.presenter / scene.generation or avatar content.
  */
@@ -314,12 +336,16 @@ function getEffectiveHeygenFields(scene, content) {
       ? String(heygenVideoIdRaw).trim()
       : null;
 
+  const avatarIdRaw =
+    c.avatarId ?? presenter.avatarId ?? presenter.avatarLookId ?? null;
+
   return {
-    avatarId: (c.avatarId ?? presenter.avatarId ?? '').toString().trim() || null,
+    avatarId: avatarIdRaw != null ? String(avatarIdRaw).trim() || null : null,
     voiceId: (c.voiceId ?? presenter.voiceId ?? '').toString().trim() || null,
     script: c.script ?? presenter.script ?? null,
     heygenVideoId,
     avatarType: c.avatarType ?? presenter.avatarType ?? null,
+    avatarEngine: c.avatarEngine ?? presenter.avatarEngine ?? null,
   };
 }
 
@@ -327,7 +353,10 @@ module.exports = {
   normalizeEditorProjectData,
   normalizeScene,
   normalizeElement,
+  normalizeLayer,
+  normalizeAnimations,
   syncTextTypography,
+  isHeygenAvatarElement,
   getEffectiveHeygenFields,
   TEXT_TYPOGRAPHY_KEYS,
 };

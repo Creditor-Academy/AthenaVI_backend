@@ -67,6 +67,8 @@ const timingSchema = Joi.object({
 
 const presenterSchema = Joi.object({
   avatarId: Joi.string().allow('', null).optional(),
+  avatarLookId: Joi.string().allow('', null).optional(),
+  avatarGroupId: Joi.string().allow('', null).optional(),
   avatarName: Joi.string().allow('', null).optional(),
   avatarPreviewSrc: Joi.string().allow('', null).optional(),
   avatarType: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar').optional(),
@@ -107,7 +109,9 @@ const baseElementSchema = Joi.object({
   content: Joi.object().unknown(true).optional(),
   style: Joi.object().unknown(true).optional(),
   filters: Joi.object().unknown(true).optional(),
-  animations: Joi.array().items(animationSchema).default([]),
+  animations: Joi.alternatives()
+    .try(Joi.array().items(animationSchema), Joi.object().unknown(true))
+    .default([]),
   role: Joi.string().trim().optional(),
   visible: Joi.boolean().optional(),
   editable: Joi.boolean().optional(),
@@ -139,13 +143,20 @@ const baseElementSchema = Joi.object({
       opacity: placement.opacity != null ? Number(placement.opacity) : 1,
     };
 
+    const animations = Array.isArray(value.animations)
+      ? value.animations
+      : value.animations && typeof value.animations === 'object'
+        ? value.animations
+        : [];
+
     return {
       ...value,
+      layer: Number.isFinite(Number(value.layer)) ? Math.trunc(Number(value.layer)) : value.layer,
       startFrame,
       durationInFrames,
       placement: normalizedPlacement,
       content: value.content && typeof value.content === 'object' ? value.content : {},
-      animations: Array.isArray(value.animations) ? value.animations : [],
+      animations,
     };
   });
 
