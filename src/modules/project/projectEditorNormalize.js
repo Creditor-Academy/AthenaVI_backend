@@ -118,6 +118,14 @@ function syncTextTypography(element) {
   return { ...element, content, style };
 }
 
+function clampOpacity(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return 1;
+  }
+  return Math.min(Math.max(n, 0), 1);
+}
+
 function normalizePlacement(placement) {
   const p = placement && typeof placement === 'object' ? placement : {};
   return {
@@ -127,8 +135,27 @@ function normalizePlacement(placement) {
     height: Number(p.height) > 0 ? Number(p.height) : 100,
     rotation: Number(p.rotation) || 0,
     scale: Number(p.scale) > 0 ? Number(p.scale) : 1,
-    opacity: p.opacity != null ? Number(p.opacity) : 1,
+    opacity: p.opacity != null ? clampOpacity(p.opacity) : 1,
   };
+}
+
+function resolvePlacementWithOpacity(element) {
+  const rawPlacement = element.placement && typeof element.placement === 'object' ? element.placement : {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const content = element.content && typeof element.content === 'object' ? element.content : {};
+  const placement = normalizePlacement(rawPlacement);
+
+  if (rawPlacement.opacity != null) {
+    return placement;
+  }
+  if (style.opacity != null) {
+    return { ...placement, opacity: clampOpacity(style.opacity) };
+  }
+  if (content.opacity != null) {
+    return { ...placement, opacity: clampOpacity(content.opacity) };
+  }
+
+  return placement;
 }
 
 function normalizeTransition(transition) {
@@ -167,6 +194,18 @@ function mergeContentForRender(element) {
     if (style.objectFit && content.fit == null) {
       content.fit = style.objectFit;
     }
+    if (style.shape && content.shape == null) {
+      content.shape = style.shape;
+    }
+    if (style.flipHorizontal != null && content.flipHorizontal == null) {
+      content.flipHorizontal = style.flipHorizontal;
+    }
+    if (style.flipVertical != null && content.flipVertical == null) {
+      content.flipVertical = style.flipVertical;
+    }
+    if (style.opacity != null && content.opacity == null) {
+      content.opacity = style.opacity;
+    }
     if (Object.keys(filters).length > 0) {
       content.filters = { ...(content.filters || {}), ...filters };
     }
@@ -178,6 +217,9 @@ function mergeContentForRender(element) {
   if (element.type === 'shape') {
     if (style.backgroundColor && content.fill == null) {
       content.fill = style.backgroundColor;
+    }
+    if (style.shape && content.shape == null) {
+      content.shape = style.shape;
     }
     if (style.borderRadius != null && content.borderRadius == null) {
       content.borderRadius = style.borderRadius;
@@ -211,7 +253,7 @@ function normalizeElement(element) {
     startFrame: Number.isFinite(startFrame) ? startFrame : 0,
     durationInFrames:
       Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
-    placement: normalizePlacement(synced.placement),
+    placement: resolvePlacementWithOpacity(synced),
     content: mergeContentForRender(synced),
     animations: Array.isArray(synced.animations) ? synced.animations : [],
   };
