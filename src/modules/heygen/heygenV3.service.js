@@ -2,6 +2,7 @@ const { getJson, postJson } = require('../../shared/services/heygenV3.client');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
+const { extractSupportedApiEnginesFromLook } = require('../../shared/constants/heygen');
 
 function pickArray(data, keys) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -286,6 +287,59 @@ function extractVoiceIdsFromVoiceResponse(body) {
   return [...ids];
 }
 
+/**
+ * Adds backend-friendly engine buckets without breaking existing HeyGen payload shape.
+ * Looks supporting both engines appear in both buckets.
+ */
+function appendLookEngineBuckets(body) {
+  if (!body || typeof body !== 'object') return body;
+
+  const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
+  const target = hasEnvelope ? body.data : body;
+  if (!target || typeof target !== 'object' || Array.isArray(target)) return body;
+
+  const picked = pickArray(target, [
+    'looks',
+    'avatar_looks',
+    'avatars',
+    'list',
+    'items',
+    'results',
+    'data',
+  ]);
+  const looks = Array.isArray(picked.list) ? picked.list : [];
+
+  const engineBuckets = {
+    avatar_iv: [],
+    avatar_v: [],
+    unknown: [],
+  };
+
+  for (const look of looks) {
+    const supported = extractSupportedApiEnginesFromLook(look) || [];
+    const hasIv = supported.includes('avatar_iv');
+    const hasV = supported.includes('avatar_v');
+
+    if (hasIv) engineBuckets.avatar_iv.push(look);
+    if (hasV) engineBuckets.avatar_v.push(look);
+    if (!hasIv && !hasV) engineBuckets.unknown.push(look);
+  }
+
+  const nextTarget = {
+    ...target,
+    engineBuckets,
+    engineCounts: {
+      avatar_iv: engineBuckets.avatar_iv.length,
+      avatar_v: engineBuckets.avatar_v.length,
+      unknown: engineBuckets.unknown.length,
+      totalLooks: looks.length,
+    },
+  };
+
+  if (hasEnvelope) return { ...body, data: nextTarget };
+  return nextTarget;
+}
+
 async function listAvatarGroups(userId, query) {
   const raw = await getJson('/v3/avatars', query);
   if (query?.ownership !== 'private') return raw;
@@ -314,9 +368,9 @@ async function listAvatarLooks(userId, query) {
     }
   }
   const raw = await getJson('/v3/avatars/looks', query);
-  if (query?.ownership !== 'private') return raw;
+  if (query?.ownership !== 'private') return appendLookEngineBuckets(raw);
   const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
-  return filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
+  const filtered = filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
     'looks',
     'avatar_looks',
     'avatars',
@@ -325,6 +379,7 @@ async function listAvatarLooks(userId, query) {
     'results',
     'data',
   ]);
+  return appendLookEngineBuckets(filtered);
 }
 
 async function createAvatar(userId, body) {

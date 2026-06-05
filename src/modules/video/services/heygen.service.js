@@ -50,28 +50,6 @@ function shouldIncludeExpressiveness(avatarEngine, avatarType, expressiveness) {
   return type === 'photo_avatar';
 }
 
-async function assertLookSupportsAvatarEngine(avatarId, avatarEngine) {
-  let raw;
-  try {
-    raw = await heygenV3Service.getAvatarLook(avatarId);
-  } catch (err) {
-    if (err instanceof AppError && err.statusCode === 404) {
-      return;
-    }
-    throw err;
-  }
-  const supported = extractSupportedApiEnginesFromLook(raw);
-  if (!supported || supported.length === 0) {
-    return;
-  }
-  if (!supported.includes(avatarEngine)) {
-    throw new AppError(
-      `${messages.HEYGEN_AVATAR_ENGINE_UNSUPPORTED} (${avatarEngine}). Supported: ${supported.join(', ')}`,
-      400
-    );
-  }
-}
-
 function buildHeyGenVideoPayload(body) {
   const {
     avatarId,
@@ -150,7 +128,33 @@ const generateAvatarVideo = async (input) => {
   } = input;
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
-  const engine = normalizeHeygenAvatarEngine(avatarEngine);
+  const requestedEngine = normalizeHeygenAvatarEngine(avatarEngine);
+
+  // Resolve an effective engine based on the selected look's actual capability.
+  // In particular, some looks claim IV but reject Avatar IV at render time;
+  // we defensively fall back to Avatar V so generation can still succeed.
+  let supportedEngines = null;
+  try {
+    const lookRaw = await heygenV3Service.getAvatarLook(avatarId);
+    supportedEngines = extractSupportedApiEnginesFromLook(lookRaw);
+  } catch (err) {
+    // If the look is missing (or not yet available), let HeyGen validate later.
+    if (!(err instanceof AppError && err.statusCode === 404)) throw err;
+  }
+
+  let engine = requestedEngine;
+  if (supportedEngines && supportedEngines.length > 0) {
+    if (!supportedEngines.includes(engine)) {
+      if (engine === HEYGEN_AVATAR_ENGINES.IV && supportedEngines.includes(HEYGEN_AVATAR_ENGINES.V)) {
+        engine = HEYGEN_AVATAR_ENGINES.V;
+      } else {
+        throw new AppError(
+          `${messages.HEYGEN_AVATAR_ENGINE_UNSUPPORTED} (${requestedEngine}). Supported: ${supportedEngines.join(', ')}`,
+          400
+        );
+      }
+    }
+  }
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -166,8 +170,6 @@ const generateAvatarVideo = async (input) => {
   if (existingResponse) {
     return existingResponse;
   }
-
-  await assertLookSupportsAvatarEngine(avatarId, engine);
 
   const jsonBody = buildHeyGenVideoPayload({
     avatarId,
@@ -185,20 +187,77 @@ const generateAvatarVideo = async (input) => {
     outputFormat,
   });
 
-  const created = await heygenV3Service.createVideo(jsonBody);
+  try {
+    const created = await heygenV3Service.createVideo(jsonBody);
+    return heygenDao.saveHeygenResponse({
+      workspaceId,
+      folderId: project.folderId,
+      projectId,
+      sceneId,
+      videoId: created.videoId,
+      videoUrl: '',
+      s3Key: null,
+      requestHash,
+      status: created.status,
+      rawResponse: created.raw,
+    });
+  } catch (err) {
+    // Defensive retry: if the look lied about Avatar IV support (or we couldn't
+    // extract supported engines correctly), retry with Avatar V.
+    const msg = String(err?.message || '');
+    if (
+      engine === HEYGEN_AVATAR_ENGINES.IV &&
+      err instanceof AppError &&
+      err.statusCode === 400 &&
+      /avatar iv/i.test(msg)
+    ) {
+      const fallbackEngine = HEYGEN_AVATAR_ENGINES.V;
+      const fallbackRequestHash = generateHeygenRequestHash({
+        workspaceId,
+        projectId,
+        sceneId,
+        avatarId,
+        voiceId,
+        script,
+        avatarEngine: fallbackEngine,
+      });
 
-  return heygenDao.saveHeygenResponse({
-    workspaceId,
-    folderId: project.folderId,
-    projectId,
-    sceneId,
-    videoId: created.videoId,
-    videoUrl: '',
-    s3Key: null,
-    requestHash,
-    status: created.status,
-    rawResponse: created.raw,
-  });
+      const existingFallback = await heygenDao.findHeygenResponseByRequestHash(fallbackRequestHash);
+      if (existingFallback) return existingFallback;
+
+      const fallbackJsonBody = buildHeyGenVideoPayload({
+        avatarId,
+        avatarEngine: fallbackEngine,
+        avatarType,
+        title,
+        resolution,
+        aspectRatio,
+        backgroundColor,
+        voiceId,
+        script,
+        expressiveness,
+        voiceSettings,
+        removeBackground,
+        outputFormat,
+      });
+
+      const createdFallback = await heygenV3Service.createVideo(fallbackJsonBody);
+      return heygenDao.saveHeygenResponse({
+        workspaceId,
+        folderId: project.folderId,
+        projectId,
+        sceneId,
+        videoId: createdFallback.videoId,
+        videoUrl: '',
+        s3Key: null,
+        requestHash: fallbackRequestHash,
+        status: createdFallback.status,
+        rawResponse: createdFallback.raw,
+      });
+    }
+
+    throw err;
+  }
 };
 
 async function pollLatestStatus(videoId) {
