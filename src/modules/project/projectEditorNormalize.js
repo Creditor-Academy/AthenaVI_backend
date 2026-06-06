@@ -3,6 +3,8 @@
  * for persistence and Remotion render (expects startFrame, placement, content.*).
  */
 
+const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
+
 /** Typography keys mirrored in both `style` and `content` for text round-trip. */
 const TEXT_TYPOGRAPHY_KEYS = [
   'fontFamily',
@@ -170,23 +172,24 @@ function normalizeAnimations(animations) {
 }
 
 function normalizeTransition(transition) {
-  if (!transition || typeof transition !== 'object') {
-    return transition;
+  const coerced = normalizeTransitionPayload(transition);
+  if (coerced === undefined || coerced === null) {
+    return coerced === undefined ? undefined : transition;
   }
-  if (transition.in || transition.out) {
-    return transition;
+  if (coerced.in || coerced.out) {
+    return coerced;
   }
-  if (transition.type) {
+  if (coerced.type) {
     return {
       in: {
-        type: transition.type,
-        durationInFrames: Number(transition.durationInFrames) || 0,
-        ...(transition.easing && { easing: transition.easing }),
-        ...(transition.direction != null && { direction: transition.direction }),
+        type: coerced.type,
+        durationInFrames: coerced.durationInFrames,
+        ...(coerced.easing && { easing: coerced.easing }),
+        ...(coerced.direction != null && { direction: coerced.direction }),
       },
     };
   }
-  return transition;
+  return coerced;
 }
 
 function mergeContentForRender(element) {

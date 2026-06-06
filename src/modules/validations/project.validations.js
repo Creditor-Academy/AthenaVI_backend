@@ -7,6 +7,7 @@ const {
   DEFAULT_VIDEO_SETTINGS,
   CANVAS_ASPECT_RATIOS,
 } = require('../../shared/constants/videoEditor');
+const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
 
 const uuidParam = Joi.string().uuid().required();
 
@@ -48,7 +49,30 @@ const transitionFlatSchema = Joi.object({
   easing: Joi.string().trim().optional(),
 }).unknown(true);
 
-const transitionSchema = Joi.alternatives().try(transitionInOutSchema, transitionFlatSchema);
+const transitionShapeSchema = Joi.alternatives().try(
+  transitionInOutSchema,
+  transitionFlatSchema
+);
+
+/** Accept null, aliases (fadeIn → fade), camelCase, and default missing durationInFrames. */
+const transitionSchema = Joi.custom((value, helpers) => {
+  const normalized = normalizeTransitionPayload(value);
+  if (normalized === undefined) return undefined;
+  if (normalized === null) {
+    return helpers.message(
+      `transition type must be one of: ${TRANSITION_TYPES.join(', ')} (or omit transition / use null)`
+    );
+  }
+  const { error, value: coerced } = transitionShapeSchema.validate(normalized, {
+    abortEarly: false,
+  });
+  if (error) {
+    return helpers.message(error.details.map((d) => d.message.replace(/"/g, '')).join('; '));
+  }
+  return coerced;
+})
+  .optional()
+  .allow(null);
 
 const animationSchema = Joi.object({
   type: Joi.string()
