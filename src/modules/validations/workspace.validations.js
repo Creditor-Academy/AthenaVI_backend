@@ -12,6 +12,15 @@ const workspaceByIdSchema = Joi.object({
   }),
 });
 
+const renameWorkspaceSchema = Joi.object({
+  body: Joi.object({
+    name: Joi.string().min(3).max(100).required(),
+  }),
+  params: Joi.object({
+    workspaceId: Joi.string().uuid().required(),
+  }),
+});
+
 const inviteMemberSchema = Joi.object({
   body: Joi.object({
     email: Joi.string().email().required(),
@@ -50,6 +59,7 @@ const changeMemberRoleSchema = Joi.object({ body: Joi.object({
 module.exports = {
   createWorkspaceSchema,
   workspaceByIdSchema,
+  renameWorkspaceSchema,
   inviteMemberSchema,
   acceptInvitationSchema,
   removeMemberSchema,

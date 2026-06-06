@@ -47,6 +47,18 @@ const deleteWorkspace = asyncHandler(async (req, res) => {
   return successResponse(req, res, null, 200, messages.WORKSPACE_DELETED);
 });
 
+const renameWorkspace = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const workspaceId = req.params.workspaceId;
+  const { name } = req.body;
+  const workspace = await workspaceService.renameWorkspace(
+    userId,
+    workspaceId,
+    name
+  );
+  return successResponse(req, res, { workspace }, 200, messages.WORKSPACE_RENAMED);
+});
+
 const getWorkspaceMembers = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const workspaceId = req.params.workspaceId;
@@ -150,6 +162,7 @@ module.exports = {
   getUserWorkspaces,
   getWorkspaceById,
   deleteWorkspace,
+  renameWorkspace,
   getWorkspaceMembers,
   inviteMember,
   acceptInvitation,

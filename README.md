@@ -785,7 +785,7 @@ Base path: **`/api/workspaces`**
 
 All workspace routes require **`Authorization: Bearer <access_token>`**. Some routes require a specific **workspace role** (OWNER, ADMIN, or MEMBER).
 
-- **OWNER**: Full control; delete TEAM workspace, change roles, invite, cancel invitations, list members and invitations, remove members (per rules below).
+- **OWNER**: Full control; rename workspace, delete TEAM workspace, change roles, invite, cancel invitations, list members and invitations, remove members (per rules below).
 - **ADMIN**: Invite, cancel invitations, list members and invitations, remove members (not owner). Cannot delete workspace or change roles.
 - **MEMBER**: Can view workspace (`GET /:id`), list own credit history, accept invites, remove self (not as owner). Cannot list workspace members or pending invitations.
 
@@ -880,6 +880,48 @@ User must be a member (any role).
 **Response (200)** – `message` may be `null`. `data`: `{ "workspace": { ... } }` (includes `owner`).
 
 - **404** if workspace not found. **403** if user is not a member.
+
+---
+
+## Rename workspace
+
+Only **OWNER**. Applies to both **PRIVATE** and **TEAM** workspaces.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:id` |
+| **Auth** | Bearer |
+| **Role** | OWNER |
+
+**Request body**
+
+- `name`: string, **3–100** characters.
+
+```json
+{
+  "name": "Renamed Team"
+}
+```
+
+**Response (200)** – `data`:
+
+```json
+{
+  "workspace": {
+    "id": "uuid",
+    "name": "Renamed Team",
+    "type": "TEAM",
+    "ownerId": "uuid",
+    "credits": 0,
+    "owner": { "id": "...", "email": "...", "name": "..." },
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
+  }
+}
+```
+
+- **403** if not owner. **404** if workspace not found.
 
 ---
 
@@ -2294,6 +2336,7 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | GET | `/api/workspaces` | Bearer | List my workspaces |
 | POST | `/api/workspaces/invitations/accept` | Bearer | Accept invite |
 | GET | `/api/workspaces/:id` | Bearer + member | Get workspace |
+| PATCH | `/api/workspaces/:id` | Bearer + OWNER | Rename workspace |
 | DELETE | `/api/workspaces/:id` | Bearer + OWNER | Delete workspace |
 | GET | `/api/workspaces/:id/members` | Bearer + OWNER/ADMIN | List members |
 | GET | `/api/workspaces/:id/invitations` | Bearer + OWNER/ADMIN | List pending invitations |

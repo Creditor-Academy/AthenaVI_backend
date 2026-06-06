@@ -70,6 +70,16 @@ const deleteWorkspace = async (workspaceId) => {
   });
 };
 
+const updateWorkspaceName = async (workspaceId, name) => {
+  return await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { name },
+    include: {
+      owner: { select: { id: true, email: true, name: true } },
+    },
+  });
+};
+
 /* =========================
    WORKSPACE MEMBER
 ========================= */
@@ -215,6 +225,7 @@ module.exports = {
   findWorkspaceById,
   findWorkspacesByUserId,
   deleteWorkspace,
+  updateWorkspaceName,
   createWorkspaceMember,
   findWorkspaceMember,
   findWorkspaceMemberById,

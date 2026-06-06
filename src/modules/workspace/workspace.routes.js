@@ -9,6 +9,7 @@ const {
   getUserWorkspaces,
   getWorkspaceById,
   deleteWorkspace,
+  renameWorkspace,
   getWorkspaceMembers,
   inviteMember,
   acceptInvitation,
@@ -69,6 +70,13 @@ router.get(
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(anyMember),
   getWorkspaceById
+);
+router.patch(
+  '/:workspaceId',
+  authMiddleware,
+  validate(workspaceValidations.renameWorkspaceSchema),
+  requireWorkspaceRole(ownerOnly),
+  renameWorkspace
 );
 router.delete(
   '/:workspaceId',
