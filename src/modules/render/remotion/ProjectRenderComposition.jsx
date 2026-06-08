@@ -24,15 +24,22 @@ function SceneClip({ scene }) {
   return (
     <AbsoluteFill
       style={{
-        opacity: transitionStyle.opacity,
-        clipPath: transitionStyle.clipPath,
-        transform: transitionStyle.transform,
+        backgroundColor: transitionStyle.wipeColor || 'transparent',
       }}
     >
-      <OffthreadVideo
-        src={scene.src}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      />
+      <AbsoluteFill
+        style={{
+          opacity: transitionStyle.opacity,
+          clipPath: transitionStyle.clipPath,
+          filter: transitionStyle.filter,
+          transform: transitionStyle.transform,
+        }}
+      >
+        <OffthreadVideo
+          src={scene.src}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 }
