@@ -2,6 +2,9 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { uploadFile, deleteFile } = require('../s3/s3.service');
 const userDao = require('./user.dao');
+const {
+  resolvePlatformSuperadminByUserId,
+} = require('../../shared/services/platformSuperadmin.service');
 
 const getUserProfile = async (userId) => {
   // Implementation for fetching user profile
@@ -13,6 +16,15 @@ const getUserProfile = async (userId) => {
   }
 
   return user;
+};
+
+const getUserCapabilities = async (userId) => {
+  const { canAccess } = await resolvePlatformSuperadminByUserId(userId);
+
+  return {
+    isPlatformSuperadmin: canAccess,
+    canAccessSuperadminPortal: canAccess,
+  };
 };
 
 const updateUserProfile = async (userId, data) => {
@@ -73,7 +85,8 @@ const deleteProfileImageService = async (userId) => {
 
 module.exports = {
   getUserProfile,
+  getUserCapabilities,
   updateUserProfile,
   uploadProfileImageService,
-  deleteProfileImageService
+  deleteProfileImageService,
 };

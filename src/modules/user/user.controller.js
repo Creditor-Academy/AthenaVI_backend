@@ -40,6 +40,11 @@ const getUserProfile = asyncHandler(async (req, res) => {
   );
 });
 
+const getUserCapabilities = asyncHandler(async (req, res) => {
+  const capabilities = await userService.getUserCapabilities(req.user.id);
+  return successResponse(req, res, capabilities, 200, messages.USER_PROFILE_FETCHED_SUCCESSFULLY);
+});
+
 const updateUserProfile = asyncHandler(async (req, res) => {
   // Implementation for updating user profile
 
@@ -97,6 +102,7 @@ const deleteProfileImage = asyncHandler(async (req, res) => {
 module.exports = {
   getAllUsers,
   getUserProfile,
+  getUserCapabilities,
   updateUserProfile,
   uploadProfileImage,
   deleteProfileImage,

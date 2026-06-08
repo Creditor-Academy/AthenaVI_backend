@@ -67,7 +67,7 @@ Authorization: Bearer <access_token>
 
 ### Unprotected vs protected
 
-- **Unprotected**: OTP generate/resend, register, login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` (redirect).
+- **Unprotected**: OTP generate/resend, register, login, superadmin login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` and `GET /api/auth/superadmin/google` (redirect).
 - **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, project, render, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted. **Project**, **render**, and **HeyGen avatar video** routes under `/api/workspaces/:workspaceId/projects/*` require a workspace **member** role (OWNER, ADMIN, or MEMBER), and the `projectId` must belong to that workspace.
 
 ---
@@ -192,6 +192,35 @@ Verify OTP and create a new user. Returns access token and sets refresh token co
 ```
 
 Refresh token is set in an HTTP-only cookie (`path: /`).
+
+---
+
+### Superadmin portal login
+
+For the **platform superadmin portal** only. Same credentials as normal login, but returns **403** if the user is not a platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`**).
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/auth/superadmin/login` |
+| **Auth** | None |
+
+**Request body** – same as login: `{ "email", "password" }`.
+
+**Response (200)** – `data`:
+
+```json
+{
+  "accessToken": "eyJhbG...",
+  "user": { "name": "Admin", "email": "admin@company.com" },
+  "isPlatformSuperadmin": true,
+  "portal": "superadmin"
+}
+```
+
+**403** – Valid credentials but not a platform superadmin (`Platform superadmin access required`).
+
+Issues the **same** JWT and refresh cookie as normal login. Use **`GET /api/user/capabilities`** after main-platform login to decide whether to show the portal toggle.
 
 ---
 
@@ -320,6 +349,18 @@ Redirect the browser to this URL. The user is sent to Google, then to the backen
 
 ---
 
+### Start Google sign-in (superadmin portal)
+
+Same callback URL as main OAuth (`/api/auth/google/callback`). On success, redirects to **`SUPERADMIN_OAUTH_SUCCESS_PATH`** (default `/admin/auth/callback`) instead of the main app path. **403** if the Google account is not a platform superadmin.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/auth/superadmin/google` |
+| **Auth** | None |
+
+---
+
 ### Google OAuth callback
 
 Google redirects here after consent. **Not called by your frontend directly**—configure this URL in the Google Cloud console as the authorized redirect URI.
@@ -337,11 +378,12 @@ Google redirects here after consent. **Not called by your frontend directly**—
 
 On success, the backend redirects to:
 
-`{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>`
+- **Main portal:** `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/auth/callback`)
+- **Superadmin portal** (started via `/api/auth/superadmin/google`): `{FRONTEND_URL}{SUPERADMIN_OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/admin/auth/callback`)
 
 (URL-encoded token in the hash.)
 
-The frontend should read `access_token` from the hash and store it. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user" }` instead of redirecting.
+The frontend should read `access_token` from the hash and store it. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user" }` (superadmin flow also includes `isPlatformSuperadmin` and `portal`) instead of redirecting.
 
 On error, the user is redirected to `{FRONTEND_URL}?error=...` with an error code in the query string.
 
@@ -397,6 +439,29 @@ Returns all user records from the database (intended for admin or internal use).
   }
 }
 ```
+
+---
+
+## Get capabilities
+
+Returns platform-level capabilities for the authenticated user. Call after main-platform login or token refresh to show/hide the **superadmin portal toggle**. Toggle navigation is client-side only (same Bearer token for both portals).
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/capabilities` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "isPlatformSuperadmin": true,
+  "canAccessSuperadminPortal": true
+}
+```
+
+Both fields are `false` for non-superadmin users. Superadmin credit APIs under `/api/superadmin/*` still enforce access on every request.
 
 ---
 
@@ -1896,7 +1961,11 @@ Transaction `type` values include: `usage`, `platform_grant`, `platform_revoke`,
 
 # Platform Superadmin API
 
+> **Frontend integration guide:** [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) — portal login, OAuth, capabilities toggle, and credit admin API examples.
+
 Base path: **`/api/superadmin`**
+
+**Portal auth** (separate login UI): `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. **Toggle** (main app): `GET /api/user/capabilities`. All use the same JWT; this section documents **credit admin** routes only.
 
 Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`** comma-separated). Not the same as workspace **ADMIN** role.
 
@@ -2367,15 +2436,18 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 | POST | `/api/auth/otp/resend` | No | Resend OTP |
 | POST | `/api/auth/register` | No | Register (OTP + password) |
 | POST | `/api/auth/login` | No | Login |
+| POST | `/api/auth/superadmin/login` | No | Superadmin portal login |
 | POST | `/api/auth/refresh` | Cookie | New access token |
 | POST | `/api/auth/logout` | Cookie | Logout current device |
 | POST | `/api/auth/logout-all` | Bearer | Logout all devices |
 | POST | `/api/auth/forget-password` | No | Request reset link |
 | POST | `/api/auth/reset-password` | No | Reset password with token |
 | GET | `/api/auth/google` | No | Start Google OAuth |
+| GET | `/api/auth/superadmin/google` | No | Start Google OAuth (superadmin portal) |
 | GET | `/api/auth/google/callback` | No | Google redirect (OAuth) |
 | GET | `/api/user/getall` | Bearer | List all users |
 | GET | `/api/user/profile` | Bearer | Get profile |
+| GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | PATCH | `/api/user/profile` | Bearer | Update profile |
 | POST | `/api/user/upload/profile-image` | Bearer | Upload profile image (multipart) |
 | DELETE | `/api/user/profile-image` | Bearer | Remove profile image |
@@ -2442,7 +2514,7 @@ Runs sync first. **Response (200)** includes `data.bucket`, `data.key`, `data.re
 Frontend may need to know:
 
 - **API base URL** – e.g. `process.env.REACT_APP_API_URL` or `NEXT_PUBLIC_API_URL` pointing to `https://your-backend.com/api`.
-- **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`.
+- **Google OAuth** – Register redirect URI `.../api/auth/google/callback`. After success, backend redirects to `FRONTEND_URL` + `OAUTH_SUCCESS_PATH` with `#access_token=...`. Superadmin portal OAuth uses the same callback; success redirect uses **`SUPERADMIN_OAUTH_SUCCESS_PATH`** (default `/admin/auth/callback`).
 - **Invitations** – Email links use `{FRONTEND_URL}/invitations/accept/<token>`; your app should route the user to login if needed, then `POST /api/workspaces/invitations/accept` with `{ "token" }`.
 - **Cookie** – Refresh token is HTTP-only; ensure credentials/cookies are sent when calling `/api/auth/refresh`, `/api/auth/logout`, etc. (`fetch`/`axios` with `credentials: 'include'` / `withCredentials: true`). The API must allow your frontend origin with credentials (not `Access-Control-Allow-Origin: *`); this server uses **`FRONTEND_URL`** or comma-separated **`CORS_ORIGINS`** for CORS.
 - **HeyGen avatar videos** – Server **`HEYGEN_API_KEY`** (optional **`HEYGEN_BASE_URL`**), plus **AWS** (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). Editor preview: see **HeyGen avatar videos → App developer checklist** (`/stream` vs `/download`, persisting **`heygenVideoId`**, CORS).

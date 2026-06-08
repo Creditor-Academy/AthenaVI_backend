@@ -1,14 +1,8 @@
 const AppError = require('../shared/utils/AppError');
 const messages = require('../shared/utils/messages');
-const prisma = require('../shared/config/prismaClient');
-
-function parseSuperadminEmails() {
-  const raw = process.env.PLATFORM_SUPERADMIN_EMAILS || '';
-  return raw
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
+const {
+  resolvePlatformSuperadminByUserId,
+} = require('../shared/services/platformSuperadmin.service');
 
 async function requirePlatformSuperadmin(req, res, next) {
   try {
@@ -16,20 +10,13 @@ async function requirePlatformSuperadmin(req, res, next) {
       return next(new AppError(messages.UNAUTHORIZED, 401));
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { id: true, email: true, isPlatformSuperadmin: true },
-    });
+    const { user, canAccess } = await resolvePlatformSuperadminByUserId(req.user.id);
 
     if (!user) {
       return next(new AppError(messages.UNAUTHORIZED, 401));
     }
 
-    const allowlist = parseSuperadminEmails();
-    const emailAllowed =
-      user.email && allowlist.includes(String(user.email).trim().toLowerCase());
-
-    if (!user.isPlatformSuperadmin && !emailAllowed) {
+    if (!canAccess) {
       return next(new AppError(messages.PLATFORM_SUPERADMIN_REQUIRED, 403));
     }
 

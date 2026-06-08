@@ -13,6 +13,7 @@ router.get('/getall', authMiddleware, userController.getAllUsers);
 
 // protected route to get user profile
 router.get('/profile', authMiddleware, userController.getUserProfile);
+router.get('/capabilities', authMiddleware, userController.getUserCapabilities);
 
 router.patch(
   '/profile',

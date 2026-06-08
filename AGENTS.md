@@ -220,6 +220,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | User API | `# User API` |
 | Workspaces, folders, projects, renders | `# Workspace API` |
 | **Editor / project integration (frontend)** | [`docs/PROJECT_EDITOR_INTEGRATION.md`](docs/PROJECT_EDITOR_INTEGRATION.md) |
+| **Superadmin portal (frontend)** | [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) |
 | Assets | `# Assets API` |
 | Credits | `# Credits API` |
 | HeyGen (user-scoped) | `# HeyGen API` |
@@ -304,6 +305,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 |---|---|
 | `README.md` | Canonical API documentation |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
+| `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |
 | `AGENTS.md` | This handbook |
 | `agent.md` | Pointer for `@agent.md` users |
 | `.cursor/rules/*.mdc` | Optional; local Cursor rules (gitignored) |

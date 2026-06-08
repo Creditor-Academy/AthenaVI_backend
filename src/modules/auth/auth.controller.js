@@ -65,6 +65,36 @@ const login = asyncHandler(async (req, res) => {
   );
 });
 
+const superadminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const {
+    accessToken,
+    rawRefreshToken,
+    user,
+    isPlatformSuperadmin,
+    portal,
+    accountRecovered,
+  } = await authService.loginSuperadminUser({
+    email,
+    password,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip,
+  });
+  setRefreshCookie(res, rawRefreshToken);
+  return successResponse(
+    req,
+    res,
+    {
+      accessToken,
+      user,
+      isPlatformSuperadmin,
+      portal,
+      accountRecovered: Boolean(accountRecovered),
+    },
+    200,
+  );
+});
+
 const refreshToken = asyncHandler(async (req, res) => {
   const { accessToken, newRawRefreshToken } = await authService.rotateRefreshToken(
     req.cookies.refreshToken
@@ -98,7 +128,13 @@ const resetPassword = asyncHandler(async (req, res) => {
 // ----- Google OAuth -----
 
 const googleRedirect = asyncHandler(async (req, res) => {
-  const state = await googleOAuth.createState();
+  const state = await googleOAuth.createState('main');
+  const url = googleOAuth.getAuthUrl(state);
+  res.redirect(302, url);
+});
+
+const superadminGoogleRedirect = asyncHandler(async (req, res) => {
+  const state = await googleOAuth.createState('superadmin');
   const url = googleOAuth.getAuthUrl(state);
   res.redirect(302, url);
 });
@@ -124,11 +160,14 @@ const googleCallback = asyncHandler(async (req, res) => {
     return res.redirect(302, `${errorRedirect}?error=${encodeURIComponent(error)}`);
   }
 
-  const { accessToken, rawRefreshToken, user } = result;
+  const { accessToken, rawRefreshToken, user, portal, isPlatformSuperadmin } = result;
   setRefreshCookie(res, rawRefreshToken);
 
   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
-  const successPath = process.env.OAUTH_SUCCESS_PATH || '/auth/callback';
+  const isSuperadminPortal = portal === 'superadmin';
+  const successPath = isSuperadminPortal
+    ? process.env.SUPERADMIN_OAUTH_SUCCESS_PATH || '/admin/auth/callback'
+    : process.env.OAUTH_SUCCESS_PATH || '/auth/callback';
   const redirectUrl = frontendUrl
     ? `${frontendUrl}${successPath}#access_token=${encodeURIComponent(accessToken)}`
     : null;
@@ -136,7 +175,12 @@ const googleCallback = asyncHandler(async (req, res) => {
   if (redirectUrl) {
     res.redirect(302, redirectUrl);
   } else {
-    return successResponse(req, res, { accessToken, user }, 200, messages.LOGIN_SUCCESS);
+    const data = { accessToken, user };
+    if (isSuperadminPortal) {
+      data.isPlatformSuperadmin = isPlatformSuperadmin;
+      data.portal = portal;
+    }
+    return successResponse(req, res, data, 200, messages.LOGIN_SUCCESS);
   }
 });
 
@@ -145,11 +189,13 @@ module.exports = {
   verifyAndRegister,
   resendOtp,
   login,
+  superadminLogin,
   refreshToken,
   logout,
   logoutAllDevices,
   forgetPassword,
   resetPassword,
   googleRedirect,
+  superadminGoogleRedirect,
   googleCallback,
 };

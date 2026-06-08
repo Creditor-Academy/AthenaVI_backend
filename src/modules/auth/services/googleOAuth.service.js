@@ -17,25 +17,27 @@ const jwks = jwksClient({
 
 /**
  * Store OAuth state in Redis (CSRF protection).
+ * @param {'main'|'superadmin'} [portal='main']
  * @returns {string} state
  */
-const createState = async () => {
+const createState = async (portal = 'main') => {
   const state = crypto.randomBytes(32).toString('hex');
-  await redisClient.set(OAUTH_STATE_PREFIX + state, '1', { EX: OAUTH_STATE_TTL });
+  const portalValue = portal === 'superadmin' ? 'superadmin' : 'main';
+  await redisClient.set(OAUTH_STATE_PREFIX + state, portalValue, { EX: OAUTH_STATE_TTL });
   return state;
 };
 
 /**
  * Consume state: verify it exists and delete (one-time use).
- * @returns {Promise<boolean>} true if valid
+ * @returns {Promise<'main'|'superadmin'|null>} portal if valid
  */
 const consumeState = async (state) => {
-  if (!state) return false;
+  if (!state) return null;
   const key = OAUTH_STATE_PREFIX + state;
   const value = await redisClient.get(key);
-  if (!value) return false;
+  if (!value) return null;
   await redisClient.del(key);
-  return true;
+  return value === 'superadmin' ? 'superadmin' : 'main';
 };
 
 /**

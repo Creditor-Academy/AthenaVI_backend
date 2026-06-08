@@ -15,6 +15,9 @@ const resetPasswordTemplate = require('../../../shared/templates/passwordReset.t
 const googleOAuth = require('../services/googleOAuth.service');
 const workspaceService = require('../../workspace/workspace.service');
 const inboxService = require('../../inbox/inbox.service');
+const {
+  hasPlatformSuperadminAccess,
+} = require('../../../shared/services/platformSuperadmin.service');
 
 async function _issueSessionAndTokens({ userId, userAgent, ip }) {
   const sessionId = await sessionService.createSession({ userId, userAgent, ip });
@@ -108,6 +111,48 @@ async function loginUser({ email, password, userAgent, ip }) {
     accessToken,
     rawRefreshToken,
     user: { name: user.name, email: user.email },
+    accountRecovered,
+  };
+}
+
+async function loginSuperadminUser({ email, password, userAgent, ip }) {
+  const user = await authDao.findUserByEmail(email);
+  if (!user) {
+    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+  }
+
+  if (!user.password) {
+    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+  }
+
+  if (!hasPlatformSuperadminAccess(user)) {
+    throw new AppError(messages.PLATFORM_SUPERADMIN_REQUIRED, 403);
+  }
+
+  const accountRecovered = Boolean(
+    user.deletionScheduledAt && user.deletionScheduledAt > new Date()
+  );
+
+  const securityService = require('../../settings/security.service');
+  await securityService.recoverAccountIfPending(user);
+
+  const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
+    userId: user.id,
+    userAgent,
+    ip,
+  });
+
+  return {
+    accessToken,
+    rawRefreshToken,
+    user: { name: user.name, email: user.email },
+    isPlatformSuperadmin: true,
+    portal: 'superadmin',
     accountRecovered,
   };
 }
@@ -229,8 +274,8 @@ async function resetPassword({ token, newPassword }) {
 }
 
 async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
-  const stateValid = await googleOAuth.consumeState(state);
-  if (!stateValid) {
+  const portal = await googleOAuth.consumeState(state);
+  if (!portal) {
     throw new AppError('invalid_state', 400);
   }
 
@@ -294,24 +339,36 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
   );
   await securityService.recoverAccountIfPending(user);
 
+  if (portal === 'superadmin' && !hasPlatformSuperadminAccess(user)) {
+    throw new AppError(messages.PLATFORM_SUPERADMIN_REQUIRED, 403);
+  }
+
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
     userId: user.id,
     userAgent,
     ip,
   });
 
-  return {
+  const result = {
     accessToken,
     rawRefreshToken,
     user: { name: user.name, email: user.email },
     accountRecovered,
+    portal,
   };
+
+  if (portal === 'superadmin') {
+    result.isPlatformSuperadmin = true;
+  }
+
+  return result;
 }
 
 module.exports = {
   sendOtp,
   registerUser,
   loginUser,
+  loginSuperadminUser,
   rotateRefreshToken,
   logoutUser,
   logoutAllDevices,
