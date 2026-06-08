@@ -1,6 +1,6 @@
 # Superadmin Portal — Frontend Integration Guide
 
-This guide is for frontend developers building the **platform superadmin portal** and the **main app ↔ superadmin toggle**. It covers portal auth, capabilities, and credit admin APIs.
+This guide is for frontend developers building the **superadmin credit admin UI** inside the same app as the main platform. There is **one shared login page** — superadmins use normal login, then switch to the admin section via a toggle. It covers capabilities, toggle behavior, and credit admin APIs.
 
 **Canonical HTTP contracts** (all backend routes): [`README.md`](../README.md)  
 **Related:** [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) (main editor app)
@@ -27,9 +27,9 @@ This guide is for frontend developers building the **platform superadmin portal*
 | Term | Meaning |
 |------|---------|
 | **Platform superadmin** | User with `User.isPlatformSuperadmin = true` **or** email listed in server env `PLATFORM_SUPERADMIN_EMAILS` |
-| **Superadmin portal** | Separate admin UI (e.g. `/admin/*`) for credit management |
+| **Superadmin section** | Admin UI routes (e.g. `/admin/*`) for credit management — **same app**, not a separate login |
 | **Main platform** | Regular Athena VI app (workspaces, projects, editor) |
-| **Portal toggle** | Client-side navigation between main app and superadmin shell — **same session**, no re-login |
+| **Portal toggle** | Client-side navigation between main app and admin section — **same session**, no re-login |
 
 **Important distinctions:**
 
@@ -47,7 +47,7 @@ This guide is for frontend developers building the **platform superadmin portal*
 | **Bearer access token** | `Authorization: Bearer <accessToken>` on all protected routes |
 | **Refresh cookie** | httpOnly `refreshToken`; send with `credentials: 'include'` on refresh/logout |
 | **CORS** | Frontend origin must be allowed (`FRONTEND_URL` or `CORS_ORIGINS` on server) |
-| **Superadmin account** | User must already be a platform superadmin before superadmin login succeeds |
+| **Superadmin account** | User must be a platform superadmin (DB flag or `PLATFORM_SUPERADMIN_EMAILS`) to access `/api/superadmin/*` |
 
 Default local API port: **9000**.
 
@@ -83,81 +83,49 @@ Validation errors may populate `errors` with field-level detail.
 
 ## 4. Auth & portal flows
 
-### 4.1 Superadmin portal login (email/password)
+### Single login page (recommended — our setup)
 
-Use on the **dedicated superadmin login page** only.
+Everyone uses the **same login page** and the **same auth endpoints**. Superadmins are not identified at login time.
+
+**Email/password**
 
 ```http
-POST /api/auth/superadmin/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@company.com",
+  "email": "user@example.com",
   "password": "yourPassword"
 }
 ```
 
-**200** — `data`:
+**200** — `data`: `{ "accessToken", "user": { "name", "email" }, "accountRecovered?" }`
 
-```json
-{
-  "accessToken": "eyJhbG...",
-  "user": { "name": "Admin", "email": "admin@company.com" },
-  "isPlatformSuperadmin": true,
-  "portal": "superadmin",
-  "accountRecovered": false
-}
-```
+**Google OAuth** — redirect to `GET /api/auth/google` (not `/api/auth/superadmin/google`). Callback: `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=...` (default `/auth/callback`).
 
-A **refresh token** httpOnly cookie is set (same as normal login).
-
-| Status | When |
-|--------|------|
-| **401** | Invalid email or password |
-| **403** | Valid credentials but user is **not** a platform superadmin (`Platform superadmin access required`) |
-
-### 4.2 Main platform login (unchanged)
+**Immediately after login** (and after token refresh), call capabilities:
 
 ```http
-POST /api/auth/login
+GET /api/user/capabilities
+Authorization: Bearer <accessToken>
 ```
 
-**200** — `data`: `{ "accessToken", "user": { "name", "email" }, "accountRecovered?" }`  
-Does **not** include superadmin flags. Call [`GET /api/user/capabilities`](#5-capabilities-portal-toggle) after login to show the portal toggle.
+If `canAccessSuperadminPortal === true`, show the **admin toggle** in the app shell. If `false`, hide it — regular users never see admin UI.
 
-### 4.3 Superadmin Google OAuth
+**Toggle to admin section** — navigate to `/admin/*` (or your admin routes). **No second login.** Use the same stored `accessToken` for `/api/superadmin/*`.
 
-**Start** — redirect the browser (no Bearer token):
+**Route guard on `/admin/*`** — before rendering admin pages, ensure capabilities were loaded and `canAccessSuperadminPortal` is true; otherwise redirect to main app. The API still returns **403** if someone deep-links without permission.
 
-```text
-GET /api/auth/superadmin/google
-```
+### Same token everywhere
 
-Uses the **same** Google callback URL as main OAuth (`/api/auth/google/callback`). No extra Google Console redirect URI needed.
+Login issues a JWT with `{ sub, sessionId }` only. One `accessToken` works for:
 
-**On success** — backend redirects to:
+- `/api/workspaces/*`, `/api/credits/*`, etc. (main app)
+- `/api/superadmin/*` (credit admin — server checks superadmin on **every** request)
 
-```text
-{FRONTEND_URL}{SUPERADMIN_OAUTH_SUCCESS_PATH}#access_token=<url-encoded-token>
-```
+### Optional: separate superadmin login routes
 
-Default `SUPERADMIN_OAUTH_SUCCESS_PATH`: `/admin/auth/callback`
-
-**Frontend steps:**
-
-1. Route `/admin/auth/callback` (or your configured path) in the superadmin app.
-2. Parse `access_token` from the URL **hash** (not query).
-3. Store token the same way as email login.
-4. Refresh cookie is set automatically by the backend.
-
-**On failure** — redirect to `{FRONTEND_URL}?error=<code>` (e.g. `Platform superadmin access required` for non-superadmin Google accounts).
-
-### 4.4 Same token for both portals
-
-Superadmin login and main login issue the **same JWT shape** (`sub` + `sessionId` only). One stored `accessToken` works for:
-
-- `/api/workspaces/*` (main app)
-- `/api/superadmin/*` (credit admin — server checks superadmin on each call)
+The backend also exposes `POST /api/auth/superadmin/login` and `GET /api/auth/superadmin/google` for products that want a **dedicated admin login page** (rejects non-superadmins at login with **403**). **Do not use these** if you have a single shared login page — they are not required for the toggle flow.
 
 ---
 
@@ -424,28 +392,18 @@ GET /api/superadmin/reports/credits/usage?from=2025-01-01&to=2025-01-31&workspac
 
 ## 8. Recommended UI flows
 
-### Superadmin portal entry
+### Single login + toggle (our setup)
 
 ```mermaid
 flowchart TD
-  AdminLogin["/admin/login"] --> EmailLogin["POST /api/auth/superadmin/login"]
-  AdminLogin --> GoogleLogin["GET /api/auth/superadmin/google"]
-  GoogleLogin --> OAuthCallback["/admin/auth/callback - parse hash token"]
-  EmailLogin --> StoreToken["Store accessToken"]
-  OAuthCallback --> StoreToken
-  StoreToken --> AdminShell["/admin/dashboard"]
-  AdminShell --> CreditAPIs["/api/superadmin/*"]
-```
-
-### Main app with toggle
-
-```mermaid
-flowchart TD
-  MainLogin["POST /api/auth/login"] --> StoreToken["Store accessToken"]
+  LoginPage["/login - shared for all users"] --> EmailOrGoogle["POST /api/auth/login or GET /api/auth/google"]
+  EmailOrGoogle --> StoreToken["Store accessToken"]
   StoreToken --> Capabilities["GET /api/user/capabilities"]
-  Capabilities -->|canAccessSuperadminPortal| ShowToggle["Show portal toggle"]
+  Capabilities -->|canAccessSuperadminPortal| ShowToggle["Show admin toggle in shell"]
   Capabilities -->|false| MainOnly["Main app only"]
-  ShowToggle -->|click| NavigateAdmin["Navigate to /admin - no API"]
+  ShowToggle -->|click toggle| AdminRoutes["Navigate to /admin/* - same token"]
+  AdminRoutes --> CreditAPIs["/api/superadmin/*"]
+  ShowToggle -->|back to platform| MainRoutes["Navigate to main routes - no API"]
 ```
 
 ### Suggested superadmin screens
@@ -472,7 +430,7 @@ flowchart TD
 | **402** | Insufficient credits on revoke | Show balance error; refresh user balance |
 | **404** | User or workspace not found | Show not-found state |
 
-**Superadmin login 403** means credentials were valid but the account is not a superadmin — show a clear “not authorized for admin portal” message, not “wrong password.”
+**403 on `/api/superadmin/*`** — user is logged in but not a platform superadmin. Redirect to main app or show access denied. With a single login page, regular users should never reach admin routes if the toggle is hidden and route guards are in place.
 
 **Example fetch wrapper:**
 
@@ -501,25 +459,21 @@ async function superadminFetch(path, options = {}) {
 
 ## 10. Checklist
 
-### Superadmin portal app
+### Single app (one login page)
 
-- [ ] Login page uses `POST /api/auth/superadmin/login` (not `/api/auth/login`)
-- [ ] Google button links to `GET /api/auth/superadmin/google`
-- [ ] OAuth callback route reads `#access_token` from hash
-- [ ] All credit calls use `Authorization: Bearer` + `credentials: 'include'` where cookies matter
-- [ ] Handle **403** on login and on every `/api/superadmin/*` call
+- [ ] Login uses `POST /api/auth/login` or `GET /api/auth/google` only — **not** `/api/auth/superadmin/*`
+- [ ] After login and after `POST /api/auth/refresh`, call `GET /api/user/capabilities`
+- [ ] Show admin toggle only when `canAccessSuperadminPortal === true`
+- [ ] Toggle navigates to `/admin/*` — **no second login**, same `accessToken`
+- [ ] Guard `/admin/*` routes (redirect if capabilities false)
+- [ ] All `/api/superadmin/*` calls use `Authorization: Bearer` + `credentials: 'include'` where cookies matter
+- [ ] Handle **403** on credit admin API calls
 - [ ] “Back to platform” is client-side navigation only
 
-### Main platform app
-
-- [ ] After login/refresh, call `GET /api/user/capabilities`
-- [ ] Show portal toggle only when `canAccessSuperadminPortal === true`
-- [ ] Toggle does not call login again — reuse stored token
-
-### Both
+### General
 
 - [ ] Token refresh via `POST /api/auth/refresh` with cookies
-- [ ] Do not decode JWT for superadmin role — use capabilities endpoint or API responses
+- [ ] Do not decode JWT for superadmin role — use `GET /api/user/capabilities`
 - [ ] Workspace ADMIN role does not imply superadmin access
 
 ---

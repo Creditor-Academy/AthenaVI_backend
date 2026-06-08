@@ -195,9 +195,11 @@ Refresh token is set in an HTTP-only cookie (`path: /`).
 
 ---
 
-### Superadmin portal login
+### Superadmin portal login (optional)
 
-For the **platform superadmin portal** only. Same credentials as normal login, but returns **403** if the user is not a platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`**).
+Only needed if you build a **separate admin login page**. If you use **one shared login page**, use normal [`POST /api/auth/login`](#login) plus [`GET /api/user/capabilities`](#get-capabilities) for the admin toggle instead.
+
+Same credentials as normal login, but returns **403** if the user is not a platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`**).
 
 | | |
 |---|---|
@@ -1965,7 +1967,7 @@ Transaction `type` values include: `usage`, `platform_grant`, `platform_revoke`,
 
 Base path: **`/api/superadmin`**
 
-**Portal auth** (separate login UI): `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. **Toggle** (main app): `GET /api/user/capabilities`. All use the same JWT; this section documents **credit admin** routes only.
+**Portal auth (single login page):** use normal `POST /api/auth/login` or `GET /api/auth/google`, then `GET /api/user/capabilities` to show the admin toggle. Optional dedicated admin login: `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. All use the same JWT; this section documents **credit admin** routes only.
 
 Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`** comma-separated). Not the same as workspace **ADMIN** role.
 
