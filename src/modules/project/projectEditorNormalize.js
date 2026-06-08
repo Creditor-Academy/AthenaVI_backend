@@ -3,6 +3,8 @@
  * for persistence and Remotion render (expects startFrame, placement, content.*).
  */
 
+const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
+
 /** Typography keys mirrored in both `style` and `content` for text round-trip. */
 const TEXT_TYPOGRAPHY_KEYS = [
   'fontFamily',
@@ -118,6 +120,14 @@ function syncTextTypography(element) {
   return { ...element, content, style };
 }
 
+function clampOpacity(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return 1;
+  }
+  return Math.min(Math.max(n, 0), 1);
+}
+
 function normalizePlacement(placement) {
   const p = placement && typeof placement === 'object' ? placement : {};
   return {
@@ -127,28 +137,59 @@ function normalizePlacement(placement) {
     height: Number(p.height) > 0 ? Number(p.height) : 100,
     rotation: Number(p.rotation) || 0,
     scale: Number(p.scale) > 0 ? Number(p.scale) : 1,
-    opacity: p.opacity != null ? Number(p.opacity) : 1,
+    opacity: p.opacity != null ? clampOpacity(p.opacity) : 1,
   };
 }
 
+function resolvePlacementWithOpacity(element) {
+  const rawPlacement = element.placement && typeof element.placement === 'object' ? element.placement : {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const content = element.content && typeof element.content === 'object' ? element.content : {};
+  const placement = normalizePlacement(rawPlacement);
+
+  if (rawPlacement.opacity != null) {
+    return placement;
+  }
+  if (style.opacity != null) {
+    return { ...placement, opacity: clampOpacity(style.opacity) };
+  }
+  if (content.opacity != null) {
+    return { ...placement, opacity: clampOpacity(content.opacity) };
+  }
+
+  return placement;
+}
+
+function normalizeLayer(layer) {
+  const n = Number(layer);
+  return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+function normalizeAnimations(animations) {
+  if (Array.isArray(animations)) return animations;
+  if (animations && typeof animations === 'object') return animations;
+  return [];
+}
+
 function normalizeTransition(transition) {
-  if (!transition || typeof transition !== 'object') {
-    return transition;
+  const coerced = normalizeTransitionPayload(transition);
+  if (coerced === undefined || coerced === null) {
+    return coerced === undefined ? undefined : transition;
   }
-  if (transition.in || transition.out) {
-    return transition;
+  if (coerced.in || coerced.out) {
+    return coerced;
   }
-  if (transition.type) {
+  if (coerced.type) {
     return {
       in: {
-        type: transition.type,
-        durationInFrames: Number(transition.durationInFrames) || 0,
-        ...(transition.easing && { easing: transition.easing }),
-        ...(transition.direction != null && { direction: transition.direction }),
+        type: coerced.type,
+        durationInFrames: coerced.durationInFrames,
+        ...(coerced.easing && { easing: coerced.easing }),
+        ...(coerced.direction != null && { direction: coerced.direction }),
       },
     };
   }
-  return transition;
+  return coerced;
 }
 
 function mergeContentForRender(element) {
@@ -167,6 +208,18 @@ function mergeContentForRender(element) {
     if (style.objectFit && content.fit == null) {
       content.fit = style.objectFit;
     }
+    if (style.shape && content.shape == null) {
+      content.shape = style.shape;
+    }
+    if (style.flipHorizontal != null && content.flipHorizontal == null) {
+      content.flipHorizontal = style.flipHorizontal;
+    }
+    if (style.flipVertical != null && content.flipVertical == null) {
+      content.flipVertical = style.flipVertical;
+    }
+    if (style.opacity != null && content.opacity == null) {
+      content.opacity = style.opacity;
+    }
     if (Object.keys(filters).length > 0) {
       content.filters = { ...(content.filters || {}), ...filters };
     }
@@ -178,6 +231,9 @@ function mergeContentForRender(element) {
   if (element.type === 'shape') {
     if (style.backgroundColor && content.fill == null) {
       content.fill = style.backgroundColor;
+    }
+    if (style.shape && content.shape == null) {
+      content.shape = style.shape;
     }
     if (style.borderRadius != null && content.borderRadius == null) {
       content.borderRadius = style.borderRadius;
@@ -208,12 +264,13 @@ function normalizeElement(element) {
 
   const withContent = {
     ...synced,
+    layer: normalizeLayer(synced.layer),
     startFrame: Number.isFinite(startFrame) ? startFrame : 0,
     durationInFrames:
       Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
-    placement: normalizePlacement(synced.placement),
+    placement: resolvePlacementWithOpacity(synced),
     content: mergeContentForRender(synced),
-    animations: Array.isArray(synced.animations) ? synced.animations : [],
+    animations: normalizeAnimations(synced.animations),
   };
 
   return syncTextTypography(withContent);
@@ -258,6 +315,16 @@ function normalizeEditorProjectData(projectState) {
   };
 }
 
+/** Avatar clip in V2 editor: `type: avatar` or `type: video` + `role: avatar` (+ optional provider). */
+function isHeygenAvatarElement(element) {
+  if (!element || typeof element !== 'object') return false;
+  if (element.role === 'avatar') return true;
+  if (element.type === 'avatar') return true;
+  const content = element.content && typeof element.content === 'object' ? element.content : {};
+  if (element.type === 'video' && content.provider === 'heygen') return true;
+  return false;
+}
+
 /**
  * HeyGen fields may live on scene.presenter / scene.generation or avatar content.
  */
@@ -272,12 +339,16 @@ function getEffectiveHeygenFields(scene, content) {
       ? String(heygenVideoIdRaw).trim()
       : null;
 
+  const avatarIdRaw =
+    c.avatarId ?? presenter.avatarId ?? presenter.avatarLookId ?? null;
+
   return {
-    avatarId: (c.avatarId ?? presenter.avatarId ?? '').toString().trim() || null,
+    avatarId: avatarIdRaw != null ? String(avatarIdRaw).trim() || null : null,
     voiceId: (c.voiceId ?? presenter.voiceId ?? '').toString().trim() || null,
     script: c.script ?? presenter.script ?? null,
     heygenVideoId,
     avatarType: c.avatarType ?? presenter.avatarType ?? null,
+    avatarEngine: c.avatarEngine ?? presenter.avatarEngine ?? null,
   };
 }
 
@@ -285,7 +356,10 @@ module.exports = {
   normalizeEditorProjectData,
   normalizeScene,
   normalizeElement,
+  normalizeLayer,
+  normalizeAnimations,
   syncTextTypography,
+  isHeygenAvatarElement,
   getEffectiveHeygenFields,
   TEXT_TYPOGRAPHY_KEYS,
 };

@@ -7,6 +7,7 @@ const {
   DEFAULT_VIDEO_SETTINGS,
   CANVAS_ASPECT_RATIOS,
 } = require('../../shared/constants/videoEditor');
+const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
 
 const uuidParam = Joi.string().uuid().required();
 
@@ -48,7 +49,30 @@ const transitionFlatSchema = Joi.object({
   easing: Joi.string().trim().optional(),
 }).unknown(true);
 
-const transitionSchema = Joi.alternatives().try(transitionInOutSchema, transitionFlatSchema);
+const transitionShapeSchema = Joi.alternatives().try(
+  transitionInOutSchema,
+  transitionFlatSchema
+);
+
+/** Accept null, aliases (fadeIn → fade), camelCase, and default missing durationInFrames. */
+const transitionSchema = Joi.custom((value, helpers) => {
+  const normalized = normalizeTransitionPayload(value);
+  if (normalized === undefined) return undefined;
+  if (normalized === null) {
+    return helpers.message(
+      `transition type must be one of: ${TRANSITION_TYPES.join(', ')} (or omit transition / use null)`
+    );
+  }
+  const { error, value: coerced } = transitionShapeSchema.validate(normalized, {
+    abortEarly: false,
+  });
+  if (error) {
+    return helpers.message(error.details.map((d) => d.message.replace(/"/g, '')).join('; '));
+  }
+  return coerced;
+})
+  .optional()
+  .allow(null);
 
 const animationSchema = Joi.object({
   type: Joi.string()
@@ -67,6 +91,8 @@ const timingSchema = Joi.object({
 
 const presenterSchema = Joi.object({
   avatarId: Joi.string().allow('', null).optional(),
+  avatarLookId: Joi.string().allow('', null).optional(),
+  avatarGroupId: Joi.string().allow('', null).optional(),
   avatarName: Joi.string().allow('', null).optional(),
   avatarPreviewSrc: Joi.string().allow('', null).optional(),
   avatarType: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar').optional(),
@@ -107,7 +133,9 @@ const baseElementSchema = Joi.object({
   content: Joi.object().unknown(true).optional(),
   style: Joi.object().unknown(true).optional(),
   filters: Joi.object().unknown(true).optional(),
-  animations: Joi.array().items(animationSchema).default([]),
+  animations: Joi.alternatives()
+    .try(Joi.array().items(animationSchema), Joi.object().unknown(true))
+    .default([]),
   role: Joi.string().trim().optional(),
   visible: Joi.boolean().optional(),
   editable: Joi.boolean().optional(),
@@ -139,13 +167,20 @@ const baseElementSchema = Joi.object({
       opacity: placement.opacity != null ? Number(placement.opacity) : 1,
     };
 
+    const animations = Array.isArray(value.animations)
+      ? value.animations
+      : value.animations && typeof value.animations === 'object'
+        ? value.animations
+        : [];
+
     return {
       ...value,
+      layer: Number.isFinite(Number(value.layer)) ? Math.trunc(Number(value.layer)) : value.layer,
       startFrame,
       durationInFrames,
       placement: normalizedPlacement,
       content: value.content && typeof value.content === 'object' ? value.content : {},
-      animations: Array.isArray(value.animations) ? value.animations : [],
+      animations,
     };
   });
 

@@ -77,6 +77,30 @@ async function deleteWorkspace(userId, workspaceId) {
   return workspace;
 }
 
+async function renameWorkspace(userId, workspaceId, name) {
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    throw new AppError(messages.WORKSPACE_NAME_REQUIRED, 400);
+  }
+  const trimmed = name.trim();
+  if (trimmed.length > MAX_WORKSPACE_NAME_LENGTH) {
+    throw new AppError(messages.WORKSPACE_NAME_TOO_LONG, 400);
+  }
+
+  const workspace = await workspaceDao.findWorkspaceById(workspaceId);
+  if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+
+  const membership = await workspaceDao.findWorkspaceMember(
+    workspaceId,
+    userId
+  );
+  if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  if (membership.role !== 'OWNER') {
+    throw new AppError(messages.WORKSPACE_ONLY_OWNER_RENAME, 403);
+  }
+
+  return await workspaceDao.updateWorkspaceName(workspaceId, trimmed);
+}
+
 // INVITATION & MEMBER MANAGEMENT
 
 async function inviteMember(workspaceId, inviterId, email, role) {
@@ -334,6 +358,7 @@ module.exports = {
   getUserWorkspaces,
   getWorkspaceById,
   deleteWorkspace,
+  renameWorkspace,
   inviteMember,
   acceptInvitation,
   cancelInvitation,

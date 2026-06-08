@@ -43,19 +43,60 @@ function buildHeygenVideoEnginePayload(avatarEngine) {
  * @returns {string[]|null}
  */
 function extractSupportedApiEnginesFromLook(lookBody) {
-  if (!lookBody || typeof lookBody !== 'object') return null;
-  const data = 'data' in lookBody && lookBody.data != null ? lookBody.data : lookBody;
-  if (!data || typeof data !== 'object') return null;
-  const item =
-    data.avatar_item ??
-    data.look ??
-    (data.id || data.avatar_id ? data : null);
-  const engines =
-    (item && item.supported_api_engines) ??
-    data.supported_api_engines ??
-    null;
-  if (!Array.isArray(engines)) return null;
-  return engines.map((e) => String(e).trim()).filter(Boolean);
+  /**
+   * HeyGen look responses are inconsistently wrapped:
+   * - `{ data: ... }` / `{ data: { data: ... } }`
+   * - `supported_api_engines` may be nested under `avatar_item`, `look`, or deeper.
+   *
+   * This function scans the payload (bounded) and returns a normalized list of:
+   * `['avatar_iv', 'avatar_v']` (subset), or `null` if we can't find any.
+   */
+  const MAX_DEPTH = 8;
+  const MAX_NODES = 2000;
+  const visited = new Set();
+  const found = new Set();
+  let nodesVisited = 0;
+
+  function tryCollectEngineValue(v) {
+    const normalized = normalizeHeygenAvatarEngine(v);
+    if (normalized === HEYGEN_AVATAR_ENGINES.IV || normalized === HEYGEN_AVATAR_ENGINES.V) {
+      found.add(normalized);
+    }
+  }
+
+  function scan(node, depth) {
+    if (nodesVisited++ > MAX_NODES || depth > MAX_DEPTH) return;
+    if (!node || typeof node !== 'object') return;
+
+    if (!Array.isArray(node)) {
+      if (visited.has(node)) return;
+      visited.add(node);
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) scan(item, depth + 1);
+      return;
+    }
+
+    const direct = node.supported_api_engines ?? node.supportedApiEngines;
+    if (Array.isArray(direct)) {
+      for (const e of direct) {
+        if (e == null) continue;
+        tryCollectEngineValue(e);
+      }
+      if (found.size >= 2) return;
+    }
+
+    // Generic scan with depth+node limits to find `supported_api_engines` anywhere.
+    for (const v of Object.values(node)) {
+      scan(v, depth + 1);
+      if (found.size >= 2) return;
+    }
+  }
+
+  scan(lookBody, 0);
+  if (found.size === 0) return null;
+  return [...found];
 }
 
 module.exports = {

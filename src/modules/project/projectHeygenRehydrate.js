@@ -1,5 +1,5 @@
 const { generateHeygenRequestHash } = require('../../shared/utils/requestHash');
-const { getEffectiveHeygenFields } = require('./projectEditorNormalize');
+const { getEffectiveHeygenFields, isHeygenAvatarElement } = require('./projectEditorNormalize');
 
 function scoreHeygenRow(row) {
   if (row.status === 'completed' && row.s3Key) return 4;
@@ -79,7 +79,7 @@ function resolveHeygenRowForAvatarElement({
 }
 
 function tryResolveByRequestHash({ workspaceId, projectId, sceneId, effective, byHash }) {
-  const { avatarId, voiceId, script } = effective;
+  const { avatarId, voiceId, script, avatarEngine } = effective;
 
   if (!avatarId || !voiceId || script == null || String(script).trim() === '') {
     return null;
@@ -93,6 +93,7 @@ function tryResolveByRequestHash({ workspaceId, projectId, sceneId, effective, b
       avatarId,
       voiceId,
       script,
+      avatarEngine,
     });
     return byHash.get(requestHash) || null;
   } catch {
@@ -150,7 +151,7 @@ function buildRestoredAvatarElement({ scene, heygenRow, effective }) {
 
   const base = {
     id: `avatar_restored_${heygenRow.id.replace(/-/g, '').slice(0, 12)}`,
-    type: 'avatar',
+    type: 'video',
     role: 'avatar',
     layer: 10,
     visible: true,
@@ -208,13 +209,13 @@ function rehydrateHeygenAvatarsInProjectData({ workspaceId, projectId, data, hey
       return scene;
     }
 
-    const hasAvatarElement = scene.elements.some((element) => element?.type === 'avatar');
+    const hasAvatarElement = scene.elements.some((element) => isHeygenAvatarElement(element));
     const sceneRows = bySceneId.get(sceneId) || [];
     const bestRow = pickBestHeygenRow(sceneRows);
 
     let nextScene = scene;
     let elements = scene.elements.map((element) => {
-      if (element?.type !== 'avatar') {
+      if (!isHeygenAvatarElement(element)) {
         return element;
       }
 

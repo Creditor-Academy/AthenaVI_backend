@@ -102,6 +102,8 @@ function TextLikeElement({ element, frame, fps }) {
 
 function ShapeElement({ element, frame, fps }) {
   const content = element.content || {};
+  const fill = content.fill ?? content.backgroundColor;
+  const shapeStyle = getMediaShapeStyle(content, element.placement);
   return (
     <div
       style={{
@@ -111,31 +113,134 @@ function ShapeElement({ element, frame, fps }) {
           placement: element.placement,
           animations: element.animations,
         }),
-        backgroundColor: content.fill || '#FFFFFF',
-        borderRadius: content.borderRadius || 0,
+        backgroundColor: fill == null || fill === '' ? 'transparent' : fill,
+        ...shapeStyle,
+        borderRadius: content.borderRadius ?? shapeStyle.borderRadius ?? 0,
         border: content.border || 'none',
       }}
     />
   );
 }
 
+function getMediaShapeStyle(content = {}, placement = {}) {
+  const explicitRadius = content.borderRadius;
+  const shape = typeof content.shape === 'string' ? content.shape.trim().toLowerCase() : '';
+  const width = Number(placement.width) || 0;
+  const height = Number(placement.height) || 0;
+  const minSide = Math.min(width, height);
+
+  if (explicitRadius != null && explicitRadius !== '') {
+    return { borderRadius: explicitRadius };
+  }
+
+  if (shape === 'circle') {
+    return { borderRadius: minSide > 0 ? minSide / 2 : 9999 };
+  }
+  if (shape === 'rounded') {
+    return { borderRadius: 24 };
+  }
+  if (shape === 'square') {
+    return { borderRadius: 0 };
+  }
+  if (shape === 'squircle') {
+    return { borderRadius: 36 };
+  }
+
+  return {};
+}
+
+function buildCssFilterString(filters) {
+  if (!filters || typeof filters !== 'object') {
+    return undefined;
+  }
+
+  const parts = [];
+  const {
+    brightness,
+    contrast,
+    saturate,
+    blur,
+    grayscale,
+    sepia,
+    hueRotate,
+    invert,
+    opacity: filterOpacity,
+  } = filters;
+
+  if (brightness != null && Number(brightness) !== 1) {
+    parts.push(`brightness(${brightness})`);
+  }
+  if (contrast != null && Number(contrast) !== 1) {
+    parts.push(`contrast(${contrast})`);
+  }
+  if (saturate != null && Number(saturate) !== 1) {
+    parts.push(`saturate(${saturate})`);
+  }
+  if (blur != null && Number(blur) > 0) {
+    parts.push(`blur(${blur}px)`);
+  }
+  if (grayscale != null && Number(grayscale) > 0) {
+    parts.push(`grayscale(${grayscale})`);
+  }
+  if (sepia != null && Number(sepia) > 0) {
+    parts.push(`sepia(${sepia})`);
+  }
+  if (hueRotate != null && Number(hueRotate) !== 0) {
+    parts.push(`hue-rotate(${hueRotate}deg)`);
+  }
+  if (invert != null && Number(invert) > 0) {
+    parts.push(`invert(${invert})`);
+  }
+  if (filterOpacity != null && Number(filterOpacity) !== 1) {
+    parts.push(`opacity(${filterOpacity})`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
+function buildFlipTransform(content = {}) {
+  const scaleX = content.flipHorizontal ? -1 : 1;
+  const scaleY = content.flipVertical ? -1 : 1;
+  if (scaleX === 1 && scaleY === 1) {
+    return undefined;
+  }
+  return `scale(${scaleX}, ${scaleY})`;
+}
+
 function MediaElement({ element, frame, fps }) {
-  const baseStyle = {
+  const content = element.content || {};
+  const containerStyle = {
     ...buildAnimatedStyle({
       frame,
       fps,
       placement: element.placement,
       animations: element.animations,
     }),
-    objectFit: element.content?.fit || 'contain',
+    overflow: 'hidden',
+    ...getMediaShapeStyle(content, element.placement),
+  };
+  const mediaStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: content.fit || 'contain',
+    filter: buildCssFilterString(content.filters),
+    transform: buildFlipTransform(content),
   };
 
   switch (element.type) {
     case 'avatar':
     case 'video':
-      return <OffthreadVideo src={element.content?.src} style={baseStyle} />;
+      return (
+        <div style={containerStyle}>
+          <OffthreadVideo src={element.content?.src} style={mediaStyle} />
+        </div>
+      );
     case 'image':
-      return <Img src={element.content?.src} style={baseStyle} />;
+      return (
+        <div style={containerStyle}>
+          <Img src={element.content?.src} style={mediaStyle} />
+        </div>
+      );
     case 'audio':
       return <Audio src={element.content?.src} />;
     default:
@@ -146,6 +251,10 @@ function MediaElement({ element, frame, fps }) {
 function SceneElement({ element }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+
+  if (element.visible === false) {
+    return null;
+  }
 
   if (element.type === 'text' || element.type === 'subtitle') {
     return <TextLikeElement element={element} frame={frame} fps={fps} />;

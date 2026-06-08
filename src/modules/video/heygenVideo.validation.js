@@ -63,7 +63,14 @@ const heygenVideoIdParams = Joi.object({
 
 const getHeygenVideoSchema = Joi.object({
   params: heygenVideoIdParams,
-  query: Joi.object({}).unknown(false),
+  query: Joi.object({
+    /**
+     * false — DB row only (fast poll).
+     * true (default) — refresh HeyGen status; when completed, expose HeyGen CDN URL immediately and queue S3 in background.
+     * full — wait for S3 copy (legacy / render-safe).
+     */
+    sync: Joi.string().valid('false', 'true', 'status', 'full').optional(),
+  }).unknown(false),
   body: emptyBody,
 });
 

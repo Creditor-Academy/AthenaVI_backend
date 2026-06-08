@@ -80,6 +80,8 @@ module.exports = {
   WORKSPACE_CANNOT_DELETE_PRIVATE: 'Private workspace cannot be deleted',
   WORKSPACE_CREATED: 'Workspace created successfully',
   WORKSPACE_DELETED: 'Workspace deleted successfully',
+  WORKSPACE_RENAMED: 'Workspace renamed successfully',
+  WORKSPACE_ONLY_OWNER_RENAME: 'Only the owner can rename this workspace',
   WORKSPACE_LAST_OWNER: 'Cannot remove the last owner. Transfer ownership first.',
   WORKSPACE_OWNER_CANNOT_REMOVE_SELF: 'Transfer ownership before leaving the workspace',
   WORKSPACE_MEMBER_NOT_FOUND: 'Member not found',
