@@ -1340,18 +1340,22 @@ Supported V1 element types:
 - `shape`
 - `subtitle`
 
-Supported V1 transition types:
+Supported scene transition types (API values — kebab-case):
 
-- `cut`
-- `fade`
-- `slide-left`
-- `slide-right`
-- `slide-up`
-- `slide-down`
-- `wipe-left`
-- `wipe-right`
-- `zoom-in`
-- `zoom-out`
+| Editor label | API `type` |
+|--------------|------------|
+| None | `cut` |
+| Dissolve | `dissolve` |
+| Slide left / right / up / down | `slide-left`, `slide-right`, `slide-up`, `slide-down` |
+| Circle Wipe In / Out | `circle-wipe-in`, `circle-wipe-out` |
+| Colour wipe left / right / up / down | `colour-wipe-left`, `colour-wipe-right`, `colour-wipe-up`, `colour-wipe-down` |
+| Line wipe left / right / up / down | `line-wipe-left`, `line-wipe-right`, `line-wipe-up`, `line-wipe-down` |
+| Match & Move | `match-move` |
+| Flow left / right / up / down | `flow-left`, `flow-right`, `flow-up`, `flow-down` |
+| Stack left / right / up / down | `stack-left`, `stack-right`, `stack-up`, `stack-down` |
+| Chop | `chop` |
+
+Legacy types still accepted: `fade`, `wipe-left`, `wipe-right`, `zoom-in`, `zoom-out`. Display names and `color-wipe-*` spellings are normalized via aliases. Optional on colour wipes: `color` or `wipeColor` (hex, default `#ffffff`).
 
 Supported V1 animation types:
 
