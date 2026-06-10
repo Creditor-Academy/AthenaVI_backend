@@ -3,7 +3,7 @@
 This guide is for frontend developers building the **superadmin credit admin UI** inside the same app as the main platform. There is **one shared login page** — superadmins use normal login, then switch to the admin section via a toggle. It covers capabilities, toggle behavior, and credit admin APIs.
 
 **Canonical HTTP contracts** (all backend routes): [`docs/api/README.md`](api/README.md) · [Auth](api/AUTH_API.md) · [Superadmin](api/SUPERADMIN_API.md) · [User](api/USER_API.md)  
-**Related:** [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) (main editor app)
+**Related:** [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) (main editor app) · [`CREDITS_FRONTEND_INTEGRATION.md`](./CREDITS_FRONTEND_INTEGRATION.md) (main app credits UX)
 
 ---
 

@@ -30,6 +30,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | Doc | Use when |
 |-----|----------|
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
+| [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |
 | [SUPERADMIN_FRONTEND_INTEGRATION.md](../SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal, capabilities toggle, credit admin UI |
 
 ## Agent / repo handbook

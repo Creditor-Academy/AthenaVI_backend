@@ -1,5 +1,7 @@
 # Credits API
 
+> **Frontend integration guide:** [`docs/CREDITS_FRONTEND_INTEGRATION.md`](../CREDITS_FRONTEND_INTEGRATION.md) — pools, pricing logic, charge timing, idempotency, editor flows, and UI checklist.
+
 Base path: **`/api/credits`**
 
 All routes require **`Authorization: Bearer <access_token>`**.

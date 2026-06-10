@@ -37,6 +37,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Guide | Purpose |
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
+| [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
 | [docs/SUPERADMIN_FRONTEND_INTEGRATION.md](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal login, capabilities, credit admin |
 
 ---
