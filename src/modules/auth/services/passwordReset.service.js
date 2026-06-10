@@ -5,6 +5,7 @@ const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const { getSaltRounds } = require('../../../shared/utils/bcryptConfig');
 
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
 
@@ -35,10 +36,7 @@ const resetPassword = async ({ token, newPassword }) => {
     throw new AppError(messages.PASSWORD_RESET_TOKEN_INVALID, 400);
   }
 
-  const hashedPassword = await bcrypt.hash(
-    newPassword,
-    Number(process.env.SALT_ROUNDS)
-  );
+  const hashedPassword = await bcrypt.hash(newPassword, getSaltRounds());
 
   await authdao.updatePasswordAndInvalidateResetTokens({userId: record.userId, hashedPassword})
   

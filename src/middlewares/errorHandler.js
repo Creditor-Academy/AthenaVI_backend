@@ -43,6 +43,11 @@ module.exports = (err, req, res, next) => {
       Array.isArray(err.errors) && err.errors.length > 0
         ? err.errors
         : [err.message || messages.INTERNAL_SERVER_ERROR];
+
+    if (statusCode === 429 && Number(err.retryAfterSec) > 0) {
+      res.set('Retry-After', String(Math.ceil(err.retryAfterSec)));
+    }
+
     return errorResponse(
       req,
       res,

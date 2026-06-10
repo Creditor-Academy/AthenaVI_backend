@@ -7,6 +7,14 @@ const { createCorsMiddleware, logCorsConfig } = require('./shared/config/cors');
 const cookieParser = require('cookie-parser')
 
 const app = express();
+
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS);
+if (Number.isFinite(trustProxyHops) && trustProxyHops >= 0) {
+  app.set('trust proxy', trustProxyHops);
+} else if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 logCorsConfig();
 
 (async () => {

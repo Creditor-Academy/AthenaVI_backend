@@ -10,6 +10,7 @@ module.exports = {
 
   // Auth
   INVALID_CREDENTIALS: 'Invalid email or password',
+  TOO_MANY_LOGIN_ATTEMPTS: 'Too many login attempts. Try again later.',
   TOKEN_EXPIRED: 'Token expired',
   TOKEN_GENERATED: 'Token generated successfully',
   REFRESH_TOKEN_MISSING:'Refresh Token missing',
@@ -61,11 +62,11 @@ module.exports = {
   EMAIL_SEND_FAILED: 'Failed to send email',
   ALL_FIELDS_REQUIRED: 'All fields are required',
   OTP_NOT_FOUND: 'OTP not found',
-  OTP_EXPIRED: 'OTP is expired',
   INVALID_OTP: 'OTP not valid',
   BODY_MISSING: 'Request body is missing',
   WAIT_BEFORE_REQUESTING_OTP: 'Please wait before requesting OTP again',
   TOO_MANY_OTP_REQUESTS: 'Too many OTP requests. Try again later',
+  TOO_MANY_OTP_VERIFY_ATTEMPTS: 'Too many OTP verification attempts. Try again later',
   OTP_EXPIRED: 'OTP expired or not found',
   OTP_INVALID: 'Invalid OTP',
 

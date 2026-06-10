@@ -6,6 +6,7 @@ const refreshTokenDao = require('../../sessions/refreshToken.dao');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const otpService = require('../services/otp.service');
+const authRateLimitService = require('../services/authRateLimit.service');
 const sessionService = require('../../sessions/session.service');
 const { signAccessToken } = require('../../../shared/utils/jwt');
 const passwordResetService = require('../services/passwordReset.service');
@@ -13,8 +14,10 @@ const logger = require('../../../shared/utils/logger');
 const otpTemplate = require('../../../shared/templates/otp.template');
 const resetPasswordTemplate = require('../../../shared/templates/passwordReset.template');
 const googleOAuth = require('../services/googleOAuth.service');
-const workspaceService = require('../../workspace/workspace.service');
 const inboxService = require('../../inbox/inbox.service');
+const { normalizeEmail } = require('../../../shared/utils/normalizeEmail');
+const { isPrismaUniqueConstraintError } = require('../../../shared/utils/prismaErrors');
+const { getSaltRounds } = require('../../../shared/utils/bcryptConfig');
 const {
   hasPlatformSuperadminAccess,
 } = require('../../../shared/services/platformSuperadmin.service');
@@ -26,10 +29,7 @@ async function _issueSessionAndTokens({ userId, userAgent, ip }) {
   const refreshTokenId = crypto.randomUUID();
   const refreshTokenSecret = crypto.randomBytes(40).toString('hex');
   const rawRefreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
-  const hashedRefreshToken = await bcrypt.hash(
-    refreshTokenSecret,
-    Number(process.env.SALT_ROUNDS)
-  );
+  const hashedRefreshToken = await bcrypt.hash(refreshTokenSecret, getSaltRounds());
 
   await refreshTokenDao.create({
     id: refreshTokenId,
@@ -41,34 +41,78 @@ async function _issueSessionAndTokens({ userId, userAgent, ip }) {
   return { accessToken, rawRefreshToken };
 }
 
-async function sendOtp(email) {
-  await otpService.acquireOtpLock(email);
-  await otpService.checkResendLimit(email);
+async function _failLogin({ email, ip }) {
+  await authRateLimitService.recordLoginFailure({ email, ip });
+  throw new AppError(messages.INVALID_CREDENTIALS, 401);
+}
 
-  const otp = crypto.randomInt(100000, 999999).toString();
-  await otpService.storeOtp(email, otp);
-  await sendEmail({
-    to: email,
-    subject: 'OTP Verification',
-    html: otpTemplate(otp),
-  });
+async function sendOtp(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new AppError(messages.EMAIL_REQUIRED, 400);
+  }
+
+  const existingUser = await authDao.findUserByEmail(normalizedEmail);
+  if (existingUser) {
+    return;
+  }
+
+  await otpService.acquireOtpLock(normalizedEmail);
+
+  try {
+    await otpService.checkResendLimit(normalizedEmail);
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    await otpService.storeOtp(normalizedEmail, otp);
+    await sendEmail({
+      to: normalizedEmail,
+      subject: 'OTP Verification',
+      html: otpTemplate(otp),
+    });
+  } finally {
+    await otpService.releaseOtpLock(normalizedEmail);
+  }
 }
 
 async function registerUser({ name, email, password, otp, userAgent, ip }) {
-  await otpService.verifyOtp({ email, otp });
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new AppError(messages.EMAIL_REQUIRED, 400);
+  }
 
-  const existingUser = await authDao.findUserByEmail(email);
+  const existingUser = await authDao.findUserByEmail(normalizedEmail);
   if (existingUser) {
     throw new AppError(messages.USER_EMAIL_EXISTS, 409);
   }
 
-  const hashedPassword = await bcrypt.hash(
-    password,
-    Number(process.env.SALT_ROUNDS)
-  );
-  const user = await authDao.createUser({ name, email, password: hashedPassword });
-  await workspaceService.createPrivateWorkspaceForUser(user.id);
-  await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
+  await otpService.verifyOtp({ email: normalizedEmail, otp });
+
+  const hashedPassword = await bcrypt.hash(password, getSaltRounds());
+
+  let user;
+  try {
+    user = await authDao.createUserWithPrivateWorkspace({
+      name,
+      email: normalizedEmail,
+      password: hashedPassword,
+      emailVerified: true,
+    });
+  } catch (err) {
+    if (isPrismaUniqueConstraintError(err)) {
+      throw new AppError(messages.USER_EMAIL_EXISTS, 409);
+    }
+    throw err;
+  }
+
+  try {
+    await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
+  } catch (err) {
+    logger.error('Failed to sync pending workspace invitations after register', {
+      userId: user.id,
+      email: user.email,
+      error: err.message,
+    });
+  }
 
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
     userId: user.id,
@@ -80,19 +124,28 @@ async function registerUser({ name, email, password, otp, userAgent, ip }) {
 }
 
 async function loginUser({ email, password, userAgent, ip }) {
-  const user = await authDao.findUserByEmail(email);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    await _failLogin({ email: email || '', ip });
+  }
+
+  await authRateLimitService.assertLoginAllowed({ email: normalizedEmail, ip });
+
+  const user = await authDao.findUserByEmail(normalizedEmail);
   if (!user) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
 
   if (!user.password) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
+
+  await authRateLimitService.clearLoginAttempts({ email: normalizedEmail, ip });
 
   const accountRecovered = Boolean(
     user.deletionScheduledAt && user.deletionScheduledAt > new Date()
@@ -116,23 +169,32 @@ async function loginUser({ email, password, userAgent, ip }) {
 }
 
 async function loginSuperadminUser({ email, password, userAgent, ip }) {
-  const user = await authDao.findUserByEmail(email);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    await _failLogin({ email: email || '', ip });
+  }
+
+  await authRateLimitService.assertLoginAllowed({ email: normalizedEmail, ip });
+
+  const user = await authDao.findUserByEmail(normalizedEmail);
   if (!user) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
 
   if (!user.password) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw new AppError(messages.INVALID_CREDENTIALS, 401);
+    await _failLogin({ email: normalizedEmail, ip });
   }
 
   if (!hasPlatformSuperadminAccess(user)) {
     throw new AppError(messages.PLATFORM_SUPERADMIN_REQUIRED, 403);
   }
+
+  await authRateLimitService.clearLoginAttempts({ email: normalizedEmail, ip });
 
   const accountRecovered = Boolean(
     user.deletionScheduledAt && user.deletionScheduledAt > new Date()
@@ -197,10 +259,7 @@ async function rotateRefreshToken(incomingRawToken) {
   const newTokenId = crypto.randomUUID();
   const newSecret = crypto.randomBytes(40).toString('hex');
   const newRawRefreshToken = `${newTokenId}.${newSecret}`;
-  const hashedRefreshToken = await bcrypt.hash(
-    newSecret,
-    Number(process.env.SALT_ROUNDS)
-  );
+  const hashedRefreshToken = await bcrypt.hash(newSecret, getSaltRounds());
 
   await refreshTokenDao.create({
     id: newTokenId,
@@ -244,9 +303,13 @@ async function logoutAllDevices(userId) {
 }
 
 async function sendPasswordResetEmail(email) {
-  const user = await authDao.findUserByEmail(email);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return;
+  }
 
-  // Always silently succeed to prevent email enumeration
+  const user = await authDao.findUserByEmail(normalizedEmail);
+
   if (!user) return;
 
   const resetToken = await passwordResetService.generateResetToken(user);
@@ -303,25 +366,50 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
     throw new AppError('no_email', 400);
   }
 
+  const normalizedEmail = normalizeEmail(email);
+
   let user;
   const existingAccount = await authDao.findAccountByProvider('google', providerAccountId);
 
   if (existingAccount) {
     user = existingAccount.user;
   } else {
-    const existingUser = await authDao.findUserByEmail(email);
+    const existingUser = await authDao.findUserByEmail(normalizedEmail);
     if (existingUser) {
       user = existingUser;
     } else {
-      user = await authDao.createUser({
-        name: name || null,
-        email,
-        password: null,
-        profileImage: picture || null,
-        emailVerified: Boolean(email_verified),
-      });
-      await workspaceService.createPrivateWorkspaceForUser(user.id);
-      await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
+      let isNewUser = true;
+      try {
+        user = await authDao.createUserWithPrivateWorkspace({
+          name: name || null,
+          email: normalizedEmail,
+          password: null,
+          profileImage: picture || null,
+          emailVerified: Boolean(email_verified),
+        });
+      } catch (err) {
+        if (isPrismaUniqueConstraintError(err)) {
+          isNewUser = false;
+          user = await authDao.findUserByEmail(normalizedEmail);
+          if (!user) {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      if (isNewUser) {
+        try {
+          await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
+        } catch (err) {
+          logger.error('Failed to sync pending workspace invitations after Google signup', {
+            userId: user.id,
+            email: user.email,
+            error: err.message,
+          });
+        }
+      }
     }
     await authDao.upsertGoogleAccount({
       userId: user.id,

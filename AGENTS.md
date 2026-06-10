@@ -1,7 +1,7 @@
 # AGENTS.md — Athena VI Backend
 
 > Context for AI coding assistants (Cursor, Copilot, Antigravity, etc.). **Read this before making changes.**  
-> Full HTTP contracts (paths, bodies, status codes) are in **`README.md`** — use the section index below instead of loading the whole file.
+> Full HTTP contracts (paths, bodies, status codes) are in **`docs/api/`** — use the index below instead of loading every file.
 
 **Keeping the knowledge graph in sync:** after agent sessions that change code, you can run **`graphify update .`** manually, or add a **local** Cursor hook in `.cursor/hooks.json` (that folder is **gitignored** — each machine keeps its own hooks/rules).
 
@@ -13,7 +13,7 @@
 |---|---|
 | **Product** | **Athena VI** (Virtual Instructor) — backend for workspaces, a video/editor project model, assets, credits, HeyGen (avatars, voices, project videos), and **Remotion** server-side renders. |
 | **Stack position** | Monolith **Express 5** API; **CommonJS** (`require` / `module.exports`). |
-| **API docs** | `README.md` (~1.8k lines) is the source of truth for clients. |
+| **API docs** | [`docs/api/README.md`](docs/api/README.md) — fragmented API reference (auth, user, workspace, HeyGen, …). |
 
 ---
 
@@ -29,7 +29,7 @@
 | **Cache** | **Redis** (`redis` npm package) | `src/shared/config/redis.js` — **required** at app startup (`app.js`). |
 | **Object storage** | AWS S3 | `@aws-sdk/client-s3`, `src/modules/s3/s3.service.js`. |
 | **Validation** | **Joi** | Schemas under `src/modules/validations/` + `validate.middleware.js`. |
-| **Auth** | JWT **Bearer** access token + **httpOnly** refresh cookie | See `README.md` → Authentication. |
+| **Auth** | JWT **Bearer** access token + **httpOnly** refresh cookie | See [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md) → Authentication. |
 | **Email** | Nodemailer | `src/shared/notification/email.service.js`, templates in `src/shared/templates/`. |
 | **Video / render** | Remotion **4** + React **19** | `src/modules/render/remotion/`. |
 | **External video AI** | HeyGen API v3-style client | `src/shared/services/heygenV3.client.js`. |
@@ -51,7 +51,8 @@ AthenaVI_backend/
 ├── prisma/
 │   └── schema.prisma              # DB schema (source of truth)
 ├── prisma.config.ts               # Prisma CLI / migrate config
-├── README.md                      # Full API documentation (frontend + agents: jump by heading)
+├── README.md                      # Project intro + links to docs/api/
+├── docs/api/                      # Canonical API documentation (by domain)
 ├── AGENTS.md                      # This file — agent handbook
 ├── agent.md                       # Short pointer → AGENTS.md
 ├── .cursor/                       # Local only (gitignored): rules, hooks, etc.
@@ -139,7 +140,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 
 ## Authentication & authorization
 
-1. **Access:** `Authorization: Bearer <accessToken>` on protected routes (see `README.md`).
+1. **Access:** `Authorization: Bearer <accessToken>` on protected routes (see [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md)).
 2. **Refresh:** httpOnly cookie `refreshToken`; `POST /api/auth/refresh` rotates tokens.
 3. **Workspace:** `requireWorkspaceRole([...])` enforces `OWNER` | `ADMIN` | `MEMBER` on nested workspace routes.
 4. **Implementation files:** `auth.middlware.js` (note filename spelling), `requireWorkspaceRole.js`, `workspaceAccess.js`, `session.service.js`, `jwt.js`.
@@ -195,7 +196,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 
 Do **not** duplicate the full list here (drift risk). Use:
 
-1. **`README.md` → `# Environment (for reference)`**
+1. **`docs/api/ENVIRONMENT.md`**
 2. Repo search: `process.env.` under `src/`
 
 Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, HeyGen keys, `PORT`, `NODE_ENV`.
@@ -211,21 +212,26 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 
 ---
 
-## `README.md` section index (token-efficient)
+## API documentation index (token-efficient)
 
-| Topic | Search / heading |
+| Topic | File |
 |---|---|
-| Base URL, envelopes, auth | `## Base URL`, `## Response format`, `## Authentication` |
-| Auth API | `# Auth API` |
-| User API | `# User API` |
-| Workspaces, folders, projects, renders | `# Workspace API` |
+| Index (start here) | [`docs/api/README.md`](docs/api/README.md) |
+| Base URL, envelopes, auth | [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md) |
+| Auth API | [`docs/api/AUTH_API.md`](docs/api/AUTH_API.md) |
+| User API | [`docs/api/USER_API.md`](docs/api/USER_API.md) |
+| User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
+| User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
+| Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
+| Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
+| Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
+| Platform superadmin | [`docs/api/SUPERADMIN_API.md`](docs/api/SUPERADMIN_API.md) |
+| HeyGen (user-scoped) | [`docs/api/HEYGEN_API.md`](docs/api/HEYGEN_API.md) |
+| HeyGen project videos | [`docs/api/HEYGEN_PROJECT_VIDEOS_API.md`](docs/api/HEYGEN_PROJECT_VIDEOS_API.md) |
+| Route table | [`docs/api/QUICK_REFERENCE.md`](docs/api/QUICK_REFERENCE.md) |
+| Environment | [`docs/api/ENVIRONMENT.md`](docs/api/ENVIRONMENT.md) |
 | **Editor / project integration (frontend)** | [`docs/PROJECT_EDITOR_INTEGRATION.md`](docs/PROJECT_EDITOR_INTEGRATION.md) |
 | **Superadmin portal (frontend)** | [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) |
-| Assets | `# Assets API` |
-| Credits | `# Credits API` |
-| HeyGen (user-scoped) | `# HeyGen API` |
-| HeyGen project videos | `# HeyGen avatar videos (workspace project)` |
-| Env quick ref | `# Environment (for reference)` |
 
 ---
 
@@ -285,7 +291,7 @@ There is **no** `npm test` script in `package.json` today. If you add tests, doc
 4. Add **service** methods (`*.service.js`) — throw `AppError` for domain failures.
 5. Add **controller** handlers using `asyncHandler` + `successResponse`.
 6. Wire **routes**; mount in `app.js` or under `workspace.routes.js` as appropriate.
-7. Document the contract in **`README.md`** (same PR).
+7. Document the contract in the relevant **`docs/api/*.md`** file (same PR).
 8. Run **`graphify update .`** (or rely on the **stop** hook below).
 
 ---
@@ -303,7 +309,8 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 
 | File | Role |
 |---|---|
-| `README.md` | Canonical API documentation |
+| `docs/api/README.md` | API documentation index |
+| `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |
 | `AGENTS.md` | This handbook |

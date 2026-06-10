@@ -1,5 +1,4 @@
 const Joi = require('joi');
-const { token } = require('morgan');
 
 const onlyEmailValidation = Joi.object({
   body: Joi.object({
@@ -11,7 +10,7 @@ const verifyAndRegisterSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().min(2).max(50).required(),
     email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
+    password: Joi.string().min(8).required(),
     otp: Joi.number().integer().min(100000).max(999999).required(),
   }),
 });
@@ -26,7 +25,7 @@ const loginSchema = Joi.object({
 const resetPasswordSchema = Joi.object({
   body: Joi.object({
     token: Joi.string().required(),
-    newPassword: Joi.string().min(6).required(),
+    newPassword: Joi.string().min(8).required(),
   }),
 });
 

@@ -1,6 +1,6 @@
 const prisma = require('../../shared/config/prismaClient');
+const { normalizeEmail } = require('../../shared/utils/normalizeEmail');
 
-// Create User
 const createUser = async (data) => {
   return await prisma.user.create({
     data,
@@ -12,66 +12,96 @@ const createUser = async (data) => {
   });
 };
 
-// Create OTP
-const createOtp = async (email, otp) => {
-  return await prisma.otp.create({
+const createUserWithPrivateWorkspace = async ({
+  name,
+  email,
+  password,
+  emailVerified = false,
+  profileImage = null,
+}) => {
+  return await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name,
+        email,
+        password,
+        emailVerified,
+        profileImage,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    const workspace = await tx.workspace.create({
+      data: {
+        name: 'Personal',
+        type: 'PRIVATE',
+        ownerId: user.id,
+      },
+    });
+
+    await tx.workspaceMember.create({
+      data: {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: 'OWNER',
+      },
+    });
+
+    return user;
+  });
+};
+
+const createPasswordResetToken = async ({ userId, tokenHash, expiresAt }) => {
+  await prisma.passwordResetToken.create({
     data: {
-      email,
-      code: otp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      userId,
+      tokenHash,
+      expiresAt,
     },
   });
 };
 
-const createPasswordResetToken = async({userId,tokenHash, expiresAt})=>{
-  await prisma.passwordResetToken.create({
-    data:{
-      userId,
-      tokenHash,
-      expiresAt
-    }
-  })
-}
-
-// Find user by email
 const findUserByEmail = async (email) => {
+  const normalized = normalizeEmail(email);
+  if (!normalized) {
+    return null;
+  }
+
   return await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalized },
   });
 };
 
-const findValidPasswordResetTokenByHash =async (tokenHash) => {
+const findValidPasswordResetTokenByHash = async (tokenHash) => {
   return await prisma.passwordResetToken.findFirst({
     where: {
       tokenHash,
-      expiresAt: { gt: new Date() }
+      expiresAt: { gt: new Date() },
     },
-    include: { user: true }
+    include: { user: true },
   });
 };
 
-// Delete old OTPs
-const deleteOldOtp = async (email) => {
-  return await prisma.otp.deleteMany({
-    where: { email },
-  });
-};
-
-// mix 
-const updatePasswordAndInvalidateResetTokens= async({userId ,hashedPassword})=>{ 
- await prisma.$transaction([
+const updatePasswordAndInvalidateResetTokens = async ({
+  userId,
+  hashedPassword,
+}) => {
+  await prisma.$transaction([
     prisma.user.update({
-      where: { id: userId  },
+      where: { id: userId },
       data: { password: hashedPassword },
     }),
 
     prisma.passwordResetToken.deleteMany({
-      where: { userId: userId },
+      where: { userId },
     }),
   ]);
-}
+};
 
-// OAuth / Account
 const findAccountByProvider = async (provider, providerAccountId) => {
   return prisma.account.findUnique({
     where: {
@@ -84,10 +114,6 @@ const findAccountByProvider = async (provider, providerAccountId) => {
   });
 };
 
-/**
- * Create or update Google Account and return the user.
- * @param {{ userId: string, providerAccountId: string, accessToken?: string, refreshToken?: string, expiresAt?: number, idToken?: string }}
- */
 const upsertGoogleAccount = async ({
   userId,
   providerAccountId,
@@ -123,13 +149,12 @@ const upsertGoogleAccount = async ({
 };
 
 module.exports = {
-  createOtp,
-  deleteOldOtp,
   createPasswordResetToken,
   findValidPasswordResetTokenByHash,
   updatePasswordAndInvalidateResetTokens,
   findUserByEmail,
   createUser,
+  createUserWithPrivateWorkspace,
   findAccountByProvider,
   upsertGoogleAccount,
 };

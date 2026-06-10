@@ -3,6 +3,7 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const messages = require('../../shared/utils/messages');
 const authService = require('./services/auth.service');
 const googleOAuth = require('./services/googleOAuth.service');
+const { getClientIp } = require('../../shared/utils/getClientIp');
 
 function setRefreshCookie(res, token) {
   res.cookie('refreshToken', token, {
@@ -41,7 +42,7 @@ const verifyAndRegister = asyncHandler(async (req, res) => {
     password,
     otp,
     userAgent: req.headers['user-agent'],
-    ip: req.ip,
+    ip: getClientIp(req),
   });
   setRefreshCookie(res, rawRefreshToken);
   return successResponse(req, res, { accessToken, user }, 201, messages.USER_CREATED);
@@ -54,7 +55,7 @@ const login = asyncHandler(async (req, res) => {
       email,
       password,
       userAgent: req.headers['user-agent'],
-      ip: req.ip,
+      ip: getClientIp(req),
     });
   setRefreshCookie(res, rawRefreshToken);
   return successResponse(
@@ -78,7 +79,7 @@ const superadminLogin = asyncHandler(async (req, res) => {
     email,
     password,
     userAgent: req.headers['user-agent'],
-    ip: req.ip,
+    ip: getClientIp(req),
   });
   setRefreshCookie(res, rawRefreshToken);
   return successResponse(
@@ -153,7 +154,7 @@ const googleCallback = asyncHandler(async (req, res) => {
       code,
       state,
       userAgent: req.headers['user-agent'],
-      ip: req.ip,
+      ip: getClientIp(req),
     });
   } catch (err) {
     const error = err.message || 'oauth_failed';
