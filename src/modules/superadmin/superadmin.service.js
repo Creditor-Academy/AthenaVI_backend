@@ -1,6 +1,7 @@
 const prisma = require('../../shared/config/prismaClient');
 const creditLedger = require('../credit/creditLedger.service');
 const creditDao = require('../credit/credit.dao');
+const { enrichCreditHistoryResult } = require('../credit/creditHistory.enrich');
 
 async function grantUserCredits({ targetUserId, amount, reason, grantedByUserId }) {
   return creditLedger.platformGrant({
@@ -31,7 +32,8 @@ async function getUserCreditsSummary(userId) {
 }
 
 async function getUserCreditHistory(userId, page, limit, type) {
-  return creditDao.getAllUserCreditHistory(userId, page, limit, type || undefined);
+  const result = await creditDao.getAllUserCreditHistory(userId, page, limit, type || undefined);
+  return enrichCreditHistoryResult(result);
 }
 
 async function listUsers({ page, limit, search }) {

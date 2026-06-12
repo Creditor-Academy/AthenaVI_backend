@@ -21,6 +21,7 @@ const { buildSceneTimings } = require('./remotion/transitions');
 const { collectAssetIds, extractAssetId } = require('../../shared/utils/projectAssetIds');
 const projectStorageService = require('../project/projectStorage.service');
 const creditLedger = require('../credit/creditLedger.service');
+const prisma = require('../../shared/config/prismaClient');
 const {
   FEATURE,
   SCOPE,
@@ -345,6 +346,15 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
     durationSeconds,
   });
 
+  let projectName = null;
+  if (render.projectId) {
+    const project = await prisma.project.findUnique({
+      where: { id: render.projectId },
+      select: { id: true, name: true },
+    });
+    projectName = project?.name || null;
+  }
+
   await creditLedger.chargeUsage({
     scope: SCOPE.WORKSPACE,
     workspaceId,
@@ -355,7 +365,11 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
     metadata: {
       feature: FEATURE.REMOTION_EXPORT,
       renderId,
+      projectId: render.projectId,
+      projectName,
       durationSeconds,
+      durationInFrames,
+      fps,
       heygenUsdCost: pricing.heygenUsdCost,
       scope: SCOPE.WORKSPACE,
     },

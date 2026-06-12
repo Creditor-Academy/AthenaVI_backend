@@ -129,6 +129,25 @@ Query: `feature` = `heygen_video` \| `remotion_export`; for video: `avatarEngine
 
 Transaction `type` values include: `usage`, `platform_grant`, `platform_revoke`, `allocation`, `deallocation`, `refund`.
 
+### History `usageDetail` (consumption context)
+
+All history endpoints attach **`usageDetail`** on each transaction (null for unknown types).
+
+**Usage (`type: usage`)** — examples:
+
+| `feature` | `usageDetail` fields (typical) |
+|-----------|--------------------------------|
+| `heygen_video` | `label`, `projectName`, `projectId`, `sceneId`, `videoTitle`, `scriptPreview`, `avatarEngine`, `durationSeconds`, `heygenVideoId`, `workspaceName` |
+| `remotion_export` | `label`, `projectName`, `projectId`, `renderId`, `durationSeconds`, `durationInFrames`, `fps`, `workspaceName` |
+| `voice_clone` | `label`, `voiceName`, `voiceId` |
+| `voice_design` | `label`, `promptPreview`, `voiceId` |
+| `avatar_create` | `label`, `avatarName`, `avatarType`, `avatarGroupId` |
+| `voice_preview` | `label`, `previewText`, `voiceId`, `durationSeconds` |
+
+**Non-usage** — `usageDetail` includes a human `label` (e.g. `Credits granted`, `Allocated to workspace`) and optional `reason` / `workspaceId`.
+
+Older ledger rows are enriched at read time from `reference` + linked `heygen_responses` / `project_renders` / `projects` when metadata is sparse.
+
 ---
 
 ---

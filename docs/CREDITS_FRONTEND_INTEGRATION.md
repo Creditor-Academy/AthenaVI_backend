@@ -386,7 +386,34 @@ Moves AC personal ↔ workspace. **OWNER only.** **TEAM workspaces only.**
 | `deallocation` | Owner moved credits back to personal |
 | `refund` | Reserved for future use |
 
-`metadata` on usage rows may include `feature`, `durationSeconds`, `heygenUsdCost`, `heygenVideoId`, `renderId`, etc.
+Each transaction includes **`usageDetail`** for UI display (server-enriched):
+
+```json
+{
+  "id": "uuid",
+  "amount": -28000,
+  "type": "usage",
+  "usageDetail": {
+    "label": "Scene avatar video",
+    "feature": "heygen_video",
+    "kind": "heygen_video",
+    "credits": 28000,
+    "projectName": "Q1 Training",
+    "sceneId": "scene-intro",
+    "videoTitle": "Welcome clip",
+    "scriptPreview": "Hello and welcome to…",
+    "avatarEngine": "avatar_iv",
+    "durationSeconds": 30,
+    "workspaceName": "Acme Team"
+  }
+}
+```
+
+**Remotion export example:** `label: "Final video export"`, `projectName`, `renderId`, `durationSeconds`.
+
+**Personal voice/avatar example:** `label: "Voice clone"`, `voiceName`, or `avatarName`.
+
+Use **`usageDetail.label`** as the row title; show `projectName` / `videoTitle` / `sceneId` / `voiceName` as subtitle. Raw `metadata` remains for debugging.
 
 ---
 

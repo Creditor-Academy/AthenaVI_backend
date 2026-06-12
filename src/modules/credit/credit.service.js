@@ -2,6 +2,7 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const creditDao = require('./credit.dao');
 const creditLedger = require('./creditLedger.service');
+const { enrichCreditHistoryResult } = require('./creditHistory.enrich');
 const {
   FEATURE,
   SCOPE,
@@ -22,17 +23,20 @@ const getPersonalCreditsView = async (userId) => {
 };
 
 const getWorkspaceCreditHistory = async ({ workspaceId, page, limit }) => {
-  return creditDao.getWorkspaceCreditHistory(workspaceId, page, limit, {
+  const result = await creditDao.getWorkspaceCreditHistory(workspaceId, page, limit, {
     scope: SCOPE.WORKSPACE,
   });
+  return enrichCreditHistoryResult(result);
 };
 
 const getUserCreditHistory = async ({ workspaceId, userId, page, limit }) => {
-  return creditDao.getUserCreditHistory(workspaceId, userId, page, limit);
+  const result = await creditDao.getUserCreditHistory(workspaceId, userId, page, limit);
+  return enrichCreditHistoryResult(result);
 };
 
 const getPersonalCreditHistory = async ({ userId, page, limit }) => {
-  return creditDao.getUserScopedCreditHistory(userId, page, limit);
+  const result = await creditDao.getUserScopedCreditHistory(userId, page, limit);
+  return enrichCreditHistoryResult(result);
 };
 
 const allocateToWorkspace = async ({ ownerUserId, workspaceId, amount }) => {

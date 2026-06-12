@@ -9,6 +9,7 @@ const {
 } = require('../../middlewares/heygenAvatarCreate.middleware');
 const { createAvatarBodySchema } = require('./heygen.validation');
 const userCreditBilling = require('../credit/userCreditBilling');
+const { truncateText } = require('../credit/creditHistory.enrich');
 const { FEATURE } = require('../../shared/config/creditPricing');
 
 function assertCreateAvatarPayload(body) {
@@ -122,6 +123,11 @@ const createAvatar = asyncHandler(async (req, res) => {
     feature: FEATURE.AVATAR_CREATE,
     idempotencyKey: groupId ? `heygen-avatar:${groupId}` : `heygen-avatar:${userId}:${Date.now()}`,
     reference: groupId,
+    extraMetadata: {
+      avatarGroupId: groupId || null,
+      avatarName: value.name,
+      avatarType: value.type,
+    },
   });
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_CREATED);
 });
@@ -150,6 +156,10 @@ const designVoice = asyncHandler(async (req, res) => {
     feature: FEATURE.VOICE_DESIGN,
     idempotencyKey: `heygen-voice-design:${userId}:${voiceId}`,
     reference: String(voiceId),
+    extraMetadata: {
+      voiceId: String(voiceId),
+      promptPreview: truncateText(req.body?.prompt),
+    },
   });
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DESIGNED);
 });
@@ -165,11 +175,16 @@ const cloneVoice = asyncHandler(async (req, res) => {
   await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.VOICE_CLONE);
   const data = await heygenV3Service.cloneVoice(userId, req.body);
   const voiceId = data?.voiceId ?? data?.voiceCloneId ?? `clone-${Date.now()}`;
+  const voiceName = req.body?.voice_name || req.body?.voiceName || null;
   await userCreditBilling.chargeUserFeature({
     userId,
     feature: FEATURE.VOICE_CLONE,
     idempotencyKey: `heygen-voice-clone:${voiceId}`,
     reference: String(voiceId),
+    extraMetadata: {
+      voiceId: String(voiceId),
+      voiceName: voiceName ? String(voiceName).trim() : null,
+    },
   });
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_CLONE_STARTED);
 });
@@ -204,6 +219,10 @@ const previewSpeech = asyncHandler(async (req, res) => {
     idempotencyKey: `heygen-voice-preview:${userId}:${payload.voice_id}:${Date.now()}`,
     durationSeconds,
     reference: payload.voice_id,
+    extraMetadata: {
+      voiceId: payload.voice_id,
+      previewText: truncateText(payload.text, 200),
+    },
   });
   return successResponse(req, res, data, 200, messages.HEYGEN_SPEECH_PREVIEW_OK);
 });

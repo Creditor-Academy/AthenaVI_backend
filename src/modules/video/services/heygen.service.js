@@ -13,6 +13,7 @@ const {
   buildHeygenVideoEnginePayload,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
+const { truncateText } = require('../../credit/creditHistory.enrich');
 const {
   FEATURE,
   SCOPE,
@@ -137,6 +138,19 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
     avatarEngine: avatarEngine || record.billingContext?.avatarEngine,
   });
 
+  const billingContext =
+    record.billingContext && typeof record.billingContext === 'object'
+      ? record.billingContext
+      : {};
+  let projectName = billingContext.projectName || null;
+  if (!projectName && record.projectId) {
+    const project = await prisma.project.findUnique({
+      where: { id: record.projectId },
+      select: { name: true },
+    });
+    projectName = project?.name || null;
+  }
+
   await creditLedger.chargeUsage({
     scope: SCOPE.WORKSPACE,
     workspaceId: record.workspaceId,
@@ -147,6 +161,12 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
       feature: FEATURE.HEYGEN_VIDEO,
       heygenVideoId: record.id,
       heygenJobId: record.videoId,
+      projectId: record.projectId,
+      projectName,
+      sceneId: record.sceneId || null,
+      videoTitle: billingContext.title || null,
+      scriptPreview: truncateText(billingContext.script || billingContext.scriptText),
+      avatarEngine: avatarEngine || billingContext.avatarEngine || null,
       durationSeconds,
       heygenUsdCost: pricing.heygenUsdCost,
       scope: SCOPE.WORKSPACE,
@@ -243,7 +263,13 @@ const generateAvatarVideo = async (input) => {
       status: created.status,
       rawResponse: created.raw,
     triggeredByUserId: userId,
-    billingContext: { avatarEngine: engine, script, estimatedCredits: estimate.athenaCredits },
+    billingContext: {
+      avatarEngine: engine,
+      script,
+      title: title || null,
+      projectName: project.name,
+      estimatedCredits: estimate.athenaCredits,
+    },
     });
   } catch (err) {
     // Defensive retry: if the look lied about Avatar IV support (or we couldn't
