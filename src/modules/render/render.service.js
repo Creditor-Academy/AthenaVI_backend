@@ -127,19 +127,37 @@ async function resolveElementContent({ workspaceId, projectId, scene, element, a
   }
 
   const assetId = extractAssetId(content);
-  if (!assetId) {
-    return content;
+  if (assetId) {
+    const asset = assetLookup.get(assetId);
+    if (!asset) {
+      throw new AppError(messages.ASSET_NOT_FOUND, 404);
+    }
+
+    return {
+      ...content,
+      ...(await resolveAssetSource(asset)),
+    };
   }
 
-  const asset = assetLookup.get(assetId);
-  if (!asset) {
-    throw new AppError(messages.ASSET_NOT_FOUND, 404);
+  if (content.fill && typeof content.fill === 'object') {
+    const fillAssetId = extractAssetId(content.fill);
+    if (fillAssetId) {
+      const asset = assetLookup.get(fillAssetId);
+      if (!asset) {
+        throw new AppError(messages.ASSET_NOT_FOUND, 404);
+      }
+
+      return {
+        ...content,
+        fill: {
+          ...content.fill,
+          ...(await resolveAssetSource(asset)),
+        },
+      };
+    }
   }
 
-  return {
-    ...content,
-    ...(await resolveAssetSource(asset)),
-  };
+  return content;
 }
 
 async function buildSceneManifest({ workspaceId, projectId, scene, assetLookup }) {

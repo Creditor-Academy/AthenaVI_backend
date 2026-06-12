@@ -29,9 +29,16 @@ function collectAssetIds(projectData) {
     }
 
     for (const element of scene.elements || []) {
-      const assetId = extractAssetId(element.content);
+      const content = element.content;
+      const assetId = extractAssetId(content);
       if (assetId) {
         assetIds.add(assetId);
+      }
+
+      const fill = content && typeof content === 'object' ? content.fill : null;
+      const fillAssetId = extractAssetId(fill);
+      if (fillAssetId) {
+        assetIds.add(fillAssetId);
       }
     }
   }

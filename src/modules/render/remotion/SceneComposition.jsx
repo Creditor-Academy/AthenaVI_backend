@@ -100,9 +100,93 @@ function TextLikeElement({ element, frame, fps }) {
   );
 }
 
-function ShapeElement({ element, frame, fps }) {
+function isFrameElement(element) {
   const content = element.content || {};
-  const fill = content.fill ?? content.backgroundColor;
+  return element.role === 'frame' || content.frame === true;
+}
+
+function IconElement({ element, frame, fps }) {
+  const content = element.content || {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const filters = element.filters && typeof element.filters === 'object' ? element.filters : {};
+
+  return (
+    <div
+      style={{
+        ...buildAnimatedStyle({
+          frame,
+          fps,
+          placement: element.placement,
+          animations: element.animations,
+        }),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        backgroundColor: style.backgroundColor || 'transparent',
+        borderRadius: style.borderRadius || '50%',
+        boxShadow: style.boxShadow,
+        padding: style.padding,
+        filter: buildCssFilterString(filters),
+      }}
+    >
+      <Img
+        src={content.src}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: style.objectFit || content.fit || 'contain',
+          filter: buildCssFilterString(content.filters),
+        }}
+      />
+    </div>
+  );
+}
+
+function FrameElement({ element, frame, fps }) {
+  const content = element.content || {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const fill = content.fill && typeof content.fill === 'object' ? content.fill : null;
+  const fillSrc = fill?.src;
+  const objectFit = fill?.objectFit || fill?.fit || 'cover';
+
+  const containerStyle = {
+    ...buildAnimatedStyle({
+      frame,
+      fps,
+      placement: element.placement,
+      animations: element.animations,
+    }),
+    overflow: 'hidden',
+    backgroundColor: style.backgroundColor || '#e2e8f0',
+    borderRadius: style.borderRadius || 0,
+    clipPath: style.clipPath,
+    border: style.border || 'none',
+    boxShadow: style.boxShadow,
+  };
+
+  if (fillSrc) {
+    return (
+      <div style={containerStyle}>
+        <Img src={fillSrc} style={{ width: '100%', height: '100%', objectFit }} />
+      </div>
+    );
+  }
+
+  return <div style={containerStyle} />;
+}
+
+function ShapeElement({ element, frame, fps }) {
+  if (isFrameElement(element)) {
+    return <FrameElement element={element} frame={frame} fps={fps} />;
+  }
+
+  const content = element.content || {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const fill =
+    typeof content.fill === 'string' || typeof content.fill === 'number'
+      ? content.fill
+      : (content.backgroundColor ?? style.backgroundColor);
   const shapeStyle = getMediaShapeStyle(content, element.placement);
   return (
     <div
@@ -114,9 +198,11 @@ function ShapeElement({ element, frame, fps }) {
           animations: element.animations,
         }),
         backgroundColor: fill == null || fill === '' ? 'transparent' : fill,
+        clipPath: style.clipPath,
         ...shapeStyle,
-        borderRadius: content.borderRadius ?? shapeStyle.borderRadius ?? 0,
-        border: content.border || 'none',
+        borderRadius: content.borderRadius ?? style.borderRadius ?? shapeStyle.borderRadius ?? 0,
+        border: content.border || style.border || 'none',
+        boxShadow: style.boxShadow,
       }}
     />
   );
@@ -258,6 +344,10 @@ function SceneElement({ element }) {
 
   if (element.type === 'text' || element.type === 'subtitle') {
     return <TextLikeElement element={element} frame={frame} fps={fps} />;
+  }
+
+  if (element.type === 'icon') {
+    return <IconElement element={element} frame={frame} fps={fps} />;
   }
 
   if (element.type === 'shape') {

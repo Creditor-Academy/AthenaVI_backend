@@ -2,6 +2,7 @@ const ELEMENT_TYPES = [
   'avatar',
   'text',
   'image',
+  'icon',
   'video',
   'audio',
   'shape',

@@ -204,7 +204,12 @@ function mergeContentForRender(element) {
     Object.assign(content, style);
   }
 
-  if (element.type === 'image' || element.type === 'video' || element.type === 'avatar') {
+  if (
+    element.type === 'image' ||
+    element.type === 'icon' ||
+    element.type === 'video' ||
+    element.type === 'avatar'
+  ) {
     if (style.objectFit && content.fit == null) {
       content.fit = style.objectFit;
     }
@@ -229,16 +234,22 @@ function mergeContentForRender(element) {
   }
 
   if (element.type === 'shape') {
-    if (style.backgroundColor && content.fill == null) {
-      content.fill = style.backgroundColor;
+    const isFrame = element.role === 'frame' || content.frame === true;
+    if (element.shapeKey && content.shapeKey == null) {
+      content.shapeKey = element.shapeKey;
     }
     if (style.shape && content.shape == null) {
       content.shape = style.shape;
     }
-    if (style.borderRadius != null && content.borderRadius == null) {
-      content.borderRadius = style.borderRadius;
+    if (!isFrame) {
+      if (style.backgroundColor && content.fill == null) {
+        content.fill = style.backgroundColor;
+      }
+      if (style.borderRadius != null && content.borderRadius == null) {
+        content.borderRadius = style.borderRadius;
+      }
+      Object.assign(content, style);
     }
-    Object.assign(content, style);
   }
 
   if (element.type === 'audio' && element.audio && typeof element.audio === 'object') {

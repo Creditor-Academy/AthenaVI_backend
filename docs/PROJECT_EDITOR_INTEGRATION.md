@@ -210,7 +210,8 @@ The backend stores the full editor JSON in `project.data`. **Send everything the
 
 | Field | Required | Notes |
 |-------|----------|--------|
-| `id`, `type`, `layer` | Yes | `type`: `text` \| `image` \| `video` \| `avatar` \| `shape` \| `audio` \| `subtitle` |
+| `id`, `type`, `layer` | Yes | `type`: `text` \| `image` \| `icon` \| `video` \| `avatar` \| `shape` \| `audio` \| `subtitle` |
+| `shapeKey` | No | Library preset id for shapes/frames (`frame-diamond`, `arrow-right`, …) |
 | `startFrame`, `durationInFrames` | Yes* | *Or nested `timing: { startFrame, durationInFrames }` |
 | `placement` | Yes | `x`, `y`, `width`, `height`; optional `rotation`, `scale`, `opacity` |
 | `content` | Yes | Type-specific (text string, asset ref, etc.) |
@@ -368,6 +369,84 @@ Prefer **`assetId`** (workspace upload) over raw URLs in saved JSON when possibl
 ```
 
 Map from UI: `scaleX === -1` → `flipHorizontal`, `scaleY === -1` → `flipVertical`.
+
+### Icon element
+
+Editor stores icons as `type: image`, `role: icon`. **Save** as `type: "icon"`, `role: "icon"`. Remotion renders a circular badge using `style` (background, border radius, shadow, padding) and the icon URL from `content.src` or resolved `content.assetId`.
+
+```json
+{
+  "id": "clip_icon_1",
+  "type": "icon",
+  "role": "icon",
+  "layer": 12,
+  "timing": { "startFrame": 0, "durationInFrames": 240 },
+  "placement": { "x": 73, "y": 200, "width": 72, "height": 72, "rotation": 0, "opacity": 1 },
+  "content": {
+    "assetId": "asset-uuid",
+    "src": "https://img.icons8.com/fluency/96/target.png",
+    "mediaType": "image"
+  },
+  "style": {
+    "objectFit": "contain",
+    "borderRadius": "50%",
+    "backgroundColor": "#ffffff",
+    "boxShadow": "0 2px 8px rgba(15,23,42,0.12)",
+    "padding": "12px"
+  },
+  "animations": []
+}
+```
+
+### Frame element (image mask)
+
+Frames are `type: "shape"`, `role: "frame"`. Image fill lives in **`content.fill`** (not top-level `content.assetId`). Mask from `style.clipPath` and/or `style.borderRadius`. Set `content.frame: true` and `shapeKey` for editor round-trip.
+
+```json
+{
+  "id": "clip_frame_1",
+  "type": "shape",
+  "role": "frame",
+  "shapeKey": "frame-diamond",
+  "layer": 8,
+  "timing": { "startFrame": 0, "durationInFrames": 240 },
+  "placement": { "x": 880, "y": 252, "width": 380, "height": 380, "rotation": 0, "opacity": 1 },
+  "content": {
+    "shape": "frame-diamond",
+    "shapeKey": "frame-diamond",
+    "frame": true,
+    "fill": {
+      "assetId": "asset-uuid",
+      "src": "https://cdn.example.com/photos/meeting.jpg",
+      "objectFit": "cover"
+    }
+  },
+  "style": {
+    "clipPath": "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+    "backgroundColor": "#e2e8f0"
+  },
+  "animations": []
+}
+```
+
+Placeholder (no image yet): omit `content.fill`; `style.backgroundColor` shows through the mask.
+
+### Decorative shape
+
+Plain shapes use `role: "decoration"` (or no `role: "frame"`). `content.fill` is a **color string**, not an image object.
+
+```json
+{
+  "type": "shape",
+  "role": "decoration",
+  "shapeKey": "arrow-right",
+  "content": { "shape": "arrow-right", "shapeKey": "arrow-right" },
+  "style": {
+    "clipPath": "polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%)",
+    "backgroundColor": "#3b82f6"
+  }
+}
+```
 
 ### Avatar element (layout + preview)
 
