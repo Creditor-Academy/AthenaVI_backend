@@ -26,6 +26,67 @@ function uniqueIds(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+/** Editor scene display name from `project.data.scenes` (falls back to null). */
+function resolveSceneNameFromProjectData(projectData, sceneId) {
+  if (!projectData || sceneId == null || String(sceneId).trim() === '') {
+    return null;
+  }
+  const scenes = Array.isArray(projectData?.scenes) ? projectData.scenes : [];
+  const normalizedId = String(sceneId).trim();
+  const scene = scenes.find((row) => {
+    const candidate = row?.sceneId ?? row?.id;
+    return candidate != null && String(candidate).trim() === normalizedId;
+  });
+  if (!scene) return null;
+  const name = scene.name != null ? String(scene.name).trim() : '';
+  return name || null;
+}
+
+const CONSUMPTION_TYPES = Object.freeze({
+  [FEATURE.HEYGEN_VIDEO]: 'Avatar video',
+  [FEATURE.REMOTION_EXPORT]: 'Video export',
+  [FEATURE.VOICE_CLONE]: 'Voice clone',
+  [FEATURE.VOICE_DESIGN]: 'Voice design',
+  [FEATURE.AVATAR_CREATE]: 'Avatar creation',
+  [FEATURE.VOICE_PREVIEW]: 'Speech preview',
+});
+
+/** Primary history line: what was consumed + where (scene / project). */
+function buildHeygenVideoDisplayName({ sceneName, sceneId, projectName, workspaceName }) {
+  const sceneLabel = sceneName || sceneId;
+  const parts = [CONSUMPTION_TYPES[FEATURE.HEYGEN_VIDEO]];
+  if (sceneLabel) {
+    parts.push(`scene “${sceneLabel}”`);
+  }
+  if (projectName) {
+    parts.push(`in “${projectName}”`);
+  } else if (workspaceName) {
+    parts.push(`in workspace “${workspaceName}”`);
+  }
+  if (parts.length === 1) return FEATURE_LABELS[FEATURE.HEYGEN_VIDEO];
+  return parts.join(' ');
+}
+
+function buildRemotionExportDisplayName(projectName, workspaceName) {
+  if (projectName) {
+    return `${CONSUMPTION_TYPES[FEATURE.REMOTION_EXPORT]} — “${projectName}”`;
+  }
+  if (workspaceName) {
+    return `${CONSUMPTION_TYPES[FEATURE.REMOTION_EXPORT]} in workspace “${workspaceName}”`;
+  }
+  return FEATURE_LABELS[FEATURE.REMOTION_EXPORT];
+}
+
+function buildWhereSummary({ sceneName, sceneId, projectName, workspaceName }) {
+  const items = [];
+  if (sceneName || sceneId) {
+    items.push(sceneName ? `Scene: ${sceneName}` : `Scene ID: ${sceneId}`);
+  }
+  if (projectName) items.push(`Project: ${projectName}`);
+  if (workspaceName) items.push(`Workspace: ${workspaceName}`);
+  return items.length ? items.join(' · ') : null;
+}
+
 function buildNonUsageDetail(tx) {
   const meta = asObject(tx.metadata);
   switch (tx.type) {
@@ -83,13 +144,33 @@ function buildUsageDetail(tx, ctx) {
       const heygen = heygenVideoId ? ctx.heygenById.get(heygenVideoId) : null;
       const billingContext = asObject(heygen?.billingContext);
       const projectId = meta.projectId || heygen?.projectId || null;
+      const project = projectId ? ctx.projectById.get(projectId) : null;
+      const sceneId = meta.sceneId || heygen?.sceneId || null;
+      const projectName = meta.projectName || project?.name || null;
+      const sceneName =
+        meta.sceneName ||
+        billingContext.sceneName ||
+        resolveSceneNameFromProjectData(project?.data, sceneId);
+      const videoTitle = meta.videoTitle || billingContext.title || null;
+      const workspaceName = base.workspaceName;
+      const displayName = buildHeygenVideoDisplayName({
+        sceneName,
+        sceneId,
+        projectName,
+        workspaceName,
+      });
       return {
         ...base,
+        consumptionType: CONSUMPTION_TYPES[FEATURE.HEYGEN_VIDEO],
+        label: displayName,
+        displayName,
+        where: buildWhereSummary({ sceneName, sceneId, projectName, workspaceName }),
         heygenVideoId,
         projectId,
-        projectName: meta.projectName || ctx.projectById.get(projectId)?.name || null,
-        sceneId: meta.sceneId || heygen?.sceneId || null,
-        videoTitle: meta.videoTitle || billingContext.title || null,
+        projectName,
+        sceneId,
+        sceneName,
+        videoTitle,
         scriptPreview:
           meta.scriptPreview || truncateText(billingContext.script || billingContext.scriptText),
         avatarEngine: meta.avatarEngine || billingContext.avatarEngine || null,
@@ -99,11 +180,19 @@ function buildUsageDetail(tx, ctx) {
       const renderId = meta.renderId || tx.reference;
       const render = renderId ? ctx.renderById.get(renderId) : null;
       const projectId = meta.projectId || render?.projectId || null;
+      const projectName = meta.projectName || ctx.projectById.get(projectId)?.name || null;
+      const workspaceName = base.workspaceName;
+      const displayName = buildRemotionExportDisplayName(projectName, workspaceName);
       return {
         ...base,
+        consumptionType: CONSUMPTION_TYPES[FEATURE.REMOTION_EXPORT],
+        label: displayName,
+        displayName,
+        videoName: projectName,
+        where: buildWhereSummary({ projectName, workspaceName }),
         renderId,
         projectId,
-        projectName: meta.projectName || ctx.projectById.get(projectId)?.name || null,
+        projectName,
         durationInFrames: meta.durationInFrames ?? null,
         fps: meta.fps ?? null,
       };
@@ -192,11 +281,17 @@ async function loadEnrichmentContext(transactions) {
     if (row.projectId) projectIds.push(row.projectId);
   }
 
+  const needsProjectData = heygenVideoIds.length > 0;
+
   const [projects, workspaces] = await Promise.all([
     projectIds.length
       ? prisma.project.findMany({
           where: { id: { in: uniqueIds(projectIds) } },
-          select: { id: true, name: true },
+          select: {
+            id: true,
+            name: true,
+            ...(needsProjectData ? { data: true } : {}),
+          },
         })
       : [],
     workspaceIds.length
@@ -238,5 +333,6 @@ module.exports = {
   enrichCreditHistoryResult,
   enrichTransaction,
   truncateText,
+  resolveSceneNameFromProjectData,
   FEATURE_LABELS,
 };

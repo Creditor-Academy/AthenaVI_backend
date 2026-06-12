@@ -394,11 +394,15 @@ Each transaction includes **`usageDetail`** for UI display (server-enriched):
   "amount": -28000,
   "type": "usage",
   "usageDetail": {
-    "label": "Scene avatar video",
+    "consumptionType": "Avatar video",
+    "label": "Avatar video scene “Intro” in “Q1 Training”",
+    "displayName": "Avatar video scene “Intro” in “Q1 Training”",
+    "where": "Scene: Intro · Project: Q1 Training · Workspace: Acme Team",
     "feature": "heygen_video",
     "kind": "heygen_video",
     "credits": 28000,
     "projectName": "Q1 Training",
+    "sceneName": "Intro",
     "sceneId": "scene-intro",
     "videoTitle": "Welcome clip",
     "scriptPreview": "Hello and welcome to…",
@@ -409,11 +413,13 @@ Each transaction includes **`usageDetail`** for UI display (server-enriched):
 }
 ```
 
-**Remotion export example:** `label: "Final video export"`, `projectName`, `renderId`, `durationSeconds`.
+**Remotion export example:** `displayName`: `Video export — “Q1 Training”` · `videoName` = project name · `where`: `Project: Q1 Training · Workspace: …`
+
+**Avatar scene example:** `displayName`: `Avatar video scene “Intro” in “Q1 Training”` — always says **Avatar video** plus **where** (scene + project). `sceneName` / `projectName` are also separate fields.
 
 **Personal voice/avatar example:** `label: "Voice clone"`, `voiceName`, or `avatarName`.
 
-Use **`usageDetail.label`** as the row title; show `projectName` / `videoTitle` / `sceneId` / `voiceName` as subtitle. Raw `metadata` remains for debugging.
+**UI:** Show **`usageDetail.displayName`** (or `label` — same value) as the main line. Optional subtitle: **`usageDetail.where`**. Do not show only `sceneName` without “Avatar video” context.
 
 ---
 

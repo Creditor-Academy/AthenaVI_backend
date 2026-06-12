@@ -367,6 +367,7 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
       renderId,
       projectId: render.projectId,
       projectName,
+      videoName: projectName,
       durationSeconds,
       durationInFrames,
       fps,

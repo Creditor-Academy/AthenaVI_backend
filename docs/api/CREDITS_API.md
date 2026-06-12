@@ -137,8 +137,8 @@ All history endpoints attach **`usageDetail`** on each transaction (null for unk
 
 | `feature` | `usageDetail` fields (typical) |
 |-----------|--------------------------------|
-| `heygen_video` | `label`, `projectName`, `projectId`, `sceneId`, `videoTitle`, `scriptPreview`, `avatarEngine`, `durationSeconds`, `heygenVideoId`, `workspaceName` |
-| `remotion_export` | `label`, `projectName`, `projectId`, `renderId`, `durationSeconds`, `durationInFrames`, `fps`, `workspaceName` |
+| `heygen_video` | `consumptionType`: `Avatar video`, **`displayName`** / `label` (e.g. `Avatar video scene “Intro” in “Q1 Training”`), `where` (e.g. `Scene: Intro · Project: Q1 Training`), `sceneName`, `projectName`, `sceneId`, `videoTitle`, … |
+| `remotion_export` | `consumptionType`: `Video export`, **`displayName`** / `label` (e.g. `Video export — “Q1 Training”`), `where`, `videoName` (= project name), `projectName`, `renderId`, … |
 | `voice_clone` | `label`, `voiceName`, `voiceId` |
 | `voice_design` | `label`, `promptPreview`, `voiceId` |
 | `avatar_create` | `label`, `avatarName`, `avatarType`, `avatarGroupId` |

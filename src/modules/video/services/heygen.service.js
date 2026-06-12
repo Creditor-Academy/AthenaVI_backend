@@ -13,7 +13,10 @@ const {
   buildHeygenVideoEnginePayload,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
-const { truncateText } = require('../../credit/creditHistory.enrich');
+const {
+  truncateText,
+  resolveSceneNameFromProjectData,
+} = require('../../credit/creditHistory.enrich');
 const {
   FEATURE,
   SCOPE,
@@ -143,12 +146,16 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
       ? record.billingContext
       : {};
   let projectName = billingContext.projectName || null;
-  if (!projectName && record.projectId) {
+  let sceneName = billingContext.sceneName || null;
+  if (record.projectId && (!projectName || !sceneName)) {
     const project = await prisma.project.findUnique({
       where: { id: record.projectId },
-      select: { name: true },
+      select: { name: true, data: true },
     });
-    projectName = project?.name || null;
+    if (!projectName) projectName = project?.name || null;
+    if (!sceneName) {
+      sceneName = resolveSceneNameFromProjectData(project?.data, record.sceneId);
+    }
   }
 
   await creditLedger.chargeUsage({
@@ -164,6 +171,7 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
       projectId: record.projectId,
       projectName,
       sceneId: record.sceneId || null,
+      sceneName,
       videoTitle: billingContext.title || null,
       scriptPreview: truncateText(billingContext.script || billingContext.scriptText),
       avatarEngine: avatarEngine || billingContext.avatarEngine || null,
@@ -203,6 +211,7 @@ const generateAvatarVideo = async (input) => {
   } = input;
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
+  const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
   const engine = normalizeHeygenAvatarEngine(avatarEngine);
 
   const requestHash = generateHeygenRequestHash({
@@ -268,6 +277,7 @@ const generateAvatarVideo = async (input) => {
       script,
       title: title || null,
       projectName: project.name,
+      sceneName,
       estimatedCredits: estimate.athenaCredits,
     },
     });
