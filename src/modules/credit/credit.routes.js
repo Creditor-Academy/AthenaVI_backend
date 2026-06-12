@@ -69,7 +69,7 @@ router.get(
   '/:id/usage-by-member',
   authMiddleware,
   ...wsOwnerOrAdmin,
-  validate(creditValidation.workspaceIdParamSchema),
+  validate(creditValidation.paginationQuerySchema),
   creditController.getUsageByMember
 );
 

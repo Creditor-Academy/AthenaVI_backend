@@ -243,7 +243,7 @@ const aggregateUsageReport = async ({ from, to, workspaceId, userId }) => {
   };
 };
 
-const usageByMemberInWorkspace = async (workspaceId) => {
+const usageByMemberInWorkspace = async (workspaceId, page, limit) => {
   const rows = await prisma.creditTransaction.groupBy({
     by: ['userId'],
     where: {
@@ -262,12 +262,28 @@ const usageByMemberInWorkspace = async (workspaceId) => {
   });
   const userMap = new Map(users.map((u) => [u.id, u]));
 
-  return rows.map((r) => ({
-    userId: r.userId,
-    user: userMap.get(r.userId) || null,
-    totalUsageAc: Math.abs(r._sum.amount || 0),
-    transactionCount: r._count.id,
-  }));
+  const allMembers = rows
+    .map((r) => ({
+      userId: r.userId,
+      user: userMap.get(r.userId) || null,
+      totalUsageAc: Math.abs(r._sum.amount || 0),
+      transactionCount: r._count.id,
+    }))
+    .sort((a, b) => b.totalUsageAc - a.totalUsageAc);
+
+  const total = allMembers.length;
+  const skip = (page - 1) * limit;
+  const members = allMembers.slice(skip, skip + limit);
+
+  return {
+    members,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    },
+  };
 };
 
 module.exports = {

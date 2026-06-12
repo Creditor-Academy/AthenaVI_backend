@@ -101,7 +101,9 @@ const deallocateCredits = asyncHandler(async (req, res) => {
 
 const getUsageByMember = asyncHandler(async (req, res) => {
   const workspaceId = req.params.id;
-  const data = await creditService.getUsageByMember(workspaceId);
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const data = await creditService.getUsageByMember(workspaceId, page, limit);
   return successResponse(req, res, data, 200, messages.CREDITS_USAGE_BY_MEMBER_FETCHED);
 });
 

@@ -373,7 +373,7 @@ Moves AC personal ↔ workspace. **OWNER only.** **TEAM workspaces only.**
 | `GET /api/credits/me/history?page=1&limit=20` | Any user | Personal-scope ledger |
 | `GET /api/credits/:workspaceId/history` | OWNER, ADMIN | All workspace-scoped transactions |
 | `GET /api/credits/:workspaceId/my-history` | Any member | Current user's usage in that workspace |
-| `GET /api/credits/:workspaceId/usage-by-member` | OWNER, ADMIN | TEAM aggregate per member |
+| `GET /api/credits/:workspaceId/usage-by-member?page=&limit=` | OWNER, ADMIN | TEAM only — aggregate per member + pagination |
 
 ### Transaction `type` values
 

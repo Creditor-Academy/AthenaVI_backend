@@ -43,13 +43,12 @@ const deallocateFromWorkspace = async ({ ownerUserId, workspaceId, amount }) => 
   return creditLedger.deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc: amount });
 };
 
-const getUsageByMember = async (workspaceId) => {
+const getUsageByMember = async (workspaceId, page, limit) => {
   const workspace = await creditLedger.getWorkspaceOrThrow(workspaceId);
   if (workspace.type !== 'TEAM') {
-    throw new AppError(messages.CREDITS_ALLOCATE_TEAM_ONLY, 400);
+    throw new AppError(messages.CREDITS_USAGE_BY_MEMBER_TEAM_ONLY, 400);
   }
-  const members = await creditDao.usageByMemberInWorkspace(workspaceId);
-  return { members };
+  return creditDao.usageByMemberInWorkspace(workspaceId, page, limit);
 };
 
 function buildWorkspaceEstimate(query) {

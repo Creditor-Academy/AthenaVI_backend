@@ -118,6 +118,7 @@ module.exports = {
   CREDITS_USAGE_BY_MEMBER_FETCHED: 'Workspace usage by member fetched successfully',
   PLATFORM_SUPERADMIN_REQUIRED: 'Platform superadmin access required',
   CREDITS_ALLOCATE_TEAM_ONLY: 'Credits can only be allocated to team workspaces',
+  CREDITS_USAGE_BY_MEMBER_TEAM_ONLY: 'Usage by member is only available for team workspaces',
 
   // Folder
   FOLDER_NAME_REQUIRED: 'Folder name is required',

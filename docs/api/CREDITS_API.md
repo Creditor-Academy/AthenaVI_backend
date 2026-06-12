@@ -108,6 +108,13 @@ Moves credits personal → workspace (allocate) or workspace → personal (deall
 | **Path** | `/api/credits/:id/usage-by-member` |
 | **Role** | OWNER or ADMIN |
 
+Query: `page`, `limit` (optional, same as history).
+
+**TEAM workspaces only** — **400** on `PRIVATE` (`Usage by member is only available for team workspaces`).
+
+**Response (200)** – `data`: `{ members: [...], pagination: { total, page, limit, totalPages } }`  
+Each member: `userId`, `user` (`id`, `email`, `name`), `totalUsageAc`, `transactionCount`.
+
 ---
 
 ## Workspace estimate
