@@ -135,16 +135,18 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
           record.billingContext?.script || record.billingContext?.scriptText
         );
 
-  const pricing = calculateUsageCredits({
-    feature: FEATURE.HEYGEN_VIDEO,
-    durationSeconds,
-    avatarEngine: avatarEngine || record.billingContext?.avatarEngine,
-  });
-
   const billingContext =
     record.billingContext && typeof record.billingContext === 'object'
       ? record.billingContext
       : {};
+
+  const pricing = calculateUsageCredits({
+    feature: FEATURE.HEYGEN_VIDEO,
+    durationSeconds,
+    avatarEngine: avatarEngine || billingContext.avatarEngine,
+    avatarType: billingContext.avatarType,
+    resolution: billingContext.resolution,
+  });
   let projectName = billingContext.projectName || null;
   let sceneName = billingContext.sceneName || null;
   if (record.projectId && (!projectName || !sceneName)) {
@@ -175,6 +177,8 @@ async function chargeHeygenVideoIfNeeded(record, remote, avatarEngine) {
       videoTitle: billingContext.title || null,
       scriptPreview: truncateText(billingContext.script || billingContext.scriptText),
       avatarEngine: avatarEngine || billingContext.avatarEngine || null,
+      avatarType: billingContext.avatarType || null,
+      resolution: billingContext.resolution || null,
       durationSeconds,
       heygenUsdCost: pricing.heygenUsdCost,
       scope: SCOPE.WORKSPACE,
@@ -234,6 +238,8 @@ const generateAvatarVideo = async (input) => {
     feature: FEATURE.HEYGEN_VIDEO,
     durationSeconds: estimatedDuration,
     avatarEngine: engine,
+    avatarType,
+    resolution,
   });
   await creditLedger.assertCanAfford({
     scope: SCOPE.WORKSPACE,
@@ -274,6 +280,8 @@ const generateAvatarVideo = async (input) => {
     triggeredByUserId: userId,
     billingContext: {
       avatarEngine: engine,
+      avatarType: avatarType || null,
+      resolution: resolution || null,
       script,
       title: title || null,
       projectName: project.name,
@@ -321,6 +329,14 @@ const generateAvatarVideo = async (input) => {
         outputFormat,
       });
 
+      const fallbackEstimate = calculateUsageCredits({
+        feature: FEATURE.HEYGEN_VIDEO,
+        durationSeconds: estimatedDuration,
+        avatarEngine: fallbackEngine,
+        avatarType,
+        resolution,
+      });
+
       const createdFallback = await heygenV3Service.createVideo(fallbackJsonBody);
       return heygenDao.saveHeygenResponse({
         workspaceId,
@@ -333,6 +349,17 @@ const generateAvatarVideo = async (input) => {
         requestHash: fallbackRequestHash,
         status: createdFallback.status,
         rawResponse: createdFallback.raw,
+        triggeredByUserId: userId,
+        billingContext: {
+          avatarEngine: fallbackEngine,
+          avatarType: avatarType || null,
+          resolution: resolution || null,
+          script,
+          title: title || null,
+          projectName: project.name,
+          sceneName,
+          estimatedCredits: fallbackEstimate.athenaCredits,
+        },
       });
     }
 

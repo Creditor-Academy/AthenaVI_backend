@@ -125,7 +125,13 @@ Each member: `userId`, `user` (`id`, `email`, `name`), `totalUsageAc`, `transact
 | **Path** | `/api/credits/:id/estimate` |
 | **Role** | Any member |
 
-Query: `feature` = `heygen_video` \| `remotion_export`; for video: `avatarEngine`, optional `script`; for render: optional `durationInFrames`, `fps`.
+Query: `feature` = `heygen_video` \| `remotion_export`.
+
+For **`heygen_video`**: optional `avatarEngine`, `avatarType` (`photo_avatar` \| `studio_avatar` \| `digital_twin`), `resolution` (`720p` \| `1080p`), `script`.
+
+For **`remotion_export`**: optional `durationInFrames`, `fps`.
+
+Estimate **`breakdown`** includes `heygenRatePerSec`, `avatarType`, `resolution`, `billingMode`.
 
 Transaction `type` values include: `usage`, `platform_grant`, `platform_revoke`, `allocation`, `deallocation`, `refund`.
 

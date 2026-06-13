@@ -180,4 +180,5 @@ module.exports = {
   HEYGEN_VIDEOS_FETCHED: 'HeyGen videos fetched',
   HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
   HEYGEN_VIDEO_S3_LOCATION: 'S3 object location for IAM access',
+  HEYGEN_ACCOUNT_FETCHED: 'HeyGen account billing fetched',
 };

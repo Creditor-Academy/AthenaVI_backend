@@ -1,6 +1,12 @@
 const Joi = require('joi');
-const { FEATURE } = require('../../shared/config/creditPricing');
+const { FEATURE, HEYGEN_AVATAR_TYPES } = require('../../shared/config/creditPricing');
 const { HEYGEN_AVATAR_ENGINE_VALUES } = require('../../shared/constants/heygen');
+
+const HEYGEN_AVATAR_TYPE_VALUES = Object.freeze([
+  HEYGEN_AVATAR_TYPES.PHOTO,
+  HEYGEN_AVATAR_TYPES.STUDIO,
+  HEYGEN_AVATAR_TYPES.DIGITAL_TWIN,
+]);
 
 const workspaceIdParamSchema = Joi.object({
   params: Joi.object({
@@ -41,6 +47,13 @@ const workspaceEstimateQuerySchema = Joi.object({
       .required(),
     avatarEngine: Joi.string()
       .valid(...HEYGEN_AVATAR_ENGINE_VALUES)
+      .when('feature', { is: FEATURE.HEYGEN_VIDEO, then: Joi.optional(), otherwise: Joi.forbidden() }),
+    avatarType: Joi.string()
+      .valid(...HEYGEN_AVATAR_TYPE_VALUES)
+      .when('feature', { is: FEATURE.HEYGEN_VIDEO, then: Joi.optional(), otherwise: Joi.forbidden() }),
+    resolution: Joi.string()
+      .trim()
+      .valid('720p', '1080p')
       .when('feature', { is: FEATURE.HEYGEN_VIDEO, then: Joi.optional(), otherwise: Joi.forbidden() }),
     script: Joi.string().trim().optional(),
     durationInFrames: Joi.number().integer().min(1).optional(),

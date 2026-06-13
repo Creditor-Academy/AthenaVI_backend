@@ -2,6 +2,7 @@ const prisma = require('../../shared/config/prismaClient');
 const creditLedger = require('../credit/creditLedger.service');
 const creditDao = require('../credit/credit.dao');
 const { enrichCreditHistoryResult } = require('../credit/creditHistory.enrich');
+const heygenV3Service = require('../heygen/heygenV3.service');
 
 async function grantUserCredits({ targetUserId, amount, reason, grantedByUserId }) {
   return creditLedger.platformGrant({
@@ -70,6 +71,10 @@ async function getUsageReport(filters) {
   return creditDao.aggregateUsageReport(filters);
 }
 
+async function getHeygenAccountBilling() {
+  return heygenV3Service.getAccountBillingInfo();
+}
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -79,4 +84,5 @@ module.exports = {
   getWorkspaceCreditsSummary,
   grantWorkspaceCredits,
   getUsageReport,
+  getHeygenAccountBilling,
 };

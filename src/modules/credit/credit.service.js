@@ -63,6 +63,8 @@ function buildWorkspaceEstimate(query) {
       feature,
       durationSeconds,
       avatarEngine: query.avatarEngine,
+      avatarType: query.avatarType,
+      resolution: query.resolution,
     });
   }
   if (feature === FEATURE.REMOTION_EXPORT) {

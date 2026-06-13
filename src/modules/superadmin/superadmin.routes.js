@@ -57,4 +57,6 @@ router.get(
   superadminController.getUsageReport
 );
 
+router.get('/heygen/account', superadminController.getHeygenAccount);
+
 module.exports = router;

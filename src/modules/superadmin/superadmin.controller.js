@@ -112,6 +112,11 @@ const getUsageReport = asyncHandler(async (req, res) => {
   return successResponse(req, res, { report }, 200, messages.CREDITS_FETCHED);
 });
 
+const getHeygenAccount = asyncHandler(async (req, res) => {
+  const account = await superadminService.getHeygenAccountBilling();
+  return successResponse(req, res, { account }, 200, messages.HEYGEN_ACCOUNT_FETCHED);
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -121,4 +126,5 @@ module.exports = {
   getWorkspaceCredits,
   grantWorkspaceCredits,
   getUsageReport,
+  getHeygenAccount,
 };

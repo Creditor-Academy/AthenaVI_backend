@@ -388,6 +388,36 @@ GET /api/superadmin/reports/credits/usage?from=2025-01-01&to=2025-01-31&workspac
 }
 ```
 
+### 7.9 HeyGen API wallet (platform balance)
+
+Shows **HeyGen-side** prepaid USD remaining (what Athena pays HeyGen), not Athena customer credits.
+
+Uses server env **`HEYGEN_API_KEY`** → HeyGen **`GET /v3/users/me`**.
+
+```http
+GET /api/superadmin/heygen/account
+Authorization: Bearer <accessToken>
+```
+
+**200** — `data.account`:
+
+```json
+{
+  "billingType": "wallet",
+  "wallet": {
+    "currency": "usd",
+    "remainingBalanceUsd": 42.5,
+    "autoReload": { "enabled": false }
+  },
+  "email": "team@example.com",
+  "fetchedAt": "2026-06-05T12:00:00.000Z"
+}
+```
+
+**UI:** Show **`wallet.remainingBalanceUsd`** as “HeyGen balance (USD)” on the admin dashboard. Refresh on load and optionally on a timer. If `billingType === 'subscription'`, show enterprise credit pools from `subscription.credits` instead.
+
+**500** — `HEYGEN_API_KEY` not configured on the server.
+
 ---
 
 ## 8. Recommended UI flows
@@ -417,6 +447,7 @@ flowchart TD
 | Workspace pool view | `GET /api/superadmin/workspaces/:workspaceId/credits` |
 | Workspace top-up | `POST /api/superadmin/workspaces/:workspaceId/credits/grant` |
 | Usage dashboard | `GET /api/superadmin/reports/credits/usage` |
+| HeyGen USD wallet | `GET /api/superadmin/heygen/account` |
 
 ---
 

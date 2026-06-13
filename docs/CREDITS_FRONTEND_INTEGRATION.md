@@ -134,26 +134,42 @@ athenaCredits = ceil(heygenUsdCost × (1 + marginPercent / 100) × acPerUsd)
 | `REMOTION_USD_PER_OUTPUT_SEC` | `0.01` | Final export per second of output |
 | `CREDIT_ESTIMATE_WORDS_PER_MINUTE` | `150` | Script → duration estimate |
 
-### PAYG reference rates (default mode)
+### PAYG reference rates (HeyGen self-serve, 720p/1080p)
+
+Rates follow [HeyGen self-serve pricing](https://developers.heygen.com/docs/pricing). Scene video cost depends on **`avatarType`**, not engine (IV vs V same table).
+
+| `avatarType` | USD/sec |
+|--------------|---------|
+| `photo_avatar` | $0.05 |
+| `studio_avatar`, `digital_twin` | $0.0667 |
+| (omitted — conservative default) | $0.0667 |
 
 | Feature | Basis |
 |---------|--------|
-| `heygen_video` + `avatar_iv` | ~$4/min of output (~$0.0667/sec) |
-| `heygen_video` + `avatar_v` | ~$1/min (~$0.0167/sec) |
+| `heygen_video` | `avatarType` × output seconds (720p/1080p) |
 | `remotion_export` | `REMOTION_USD_PER_OUTPUT_SEC` per second |
 | `avatar_create` | Flat $1 |
-| `voice_clone` | Flat $2 |
-| `voice_design` | Flat $1 |
-| `voice_preview` | Duration from text × enterprise preview rate |
+| `voice_clone` | Flat $2 (Athena estimate; not in HeyGen public table) |
+| `voice_design` | Flat $1 (Athena estimate) |
+| `voice_preview` | $0.000667/sec (TTS Starfish) |
+
+### Enterprise mode (`HEYGEN_BILLING_MODE=enterprise`)
+
+| Engine | HeyGen credits/sec |
+|--------|-------------------|
+| `avatar_iv`, `avatar_v` | 0.1 |
+| `avatar_iii` (legacy) | 0.0033 |
+
+Converted to USD via `HEYGEN_ENTERPRISE_USD_PER_CREDIT`, then Athena margin + AC scale.
 
 ### Example costs (PAYG, 40% margin, 10,000 AC/USD)
 
-These are **illustrative** — call estimate APIs for live numbers.
+These are **illustrative** — call estimate APIs with `avatarType` for live numbers.
 
 | Action | Approximate AC |
 |--------|----------------|
-| 30s scene video (`avatar_iv`) | ~28,000 |
-| 30s scene video (`avatar_v`) | ~7,000 |
+| 30s scene video (`photo_avatar`) | ~21,000 |
+| 30s scene video (`studio_avatar`) | ~28,000 |
 | 5 min Remotion export | ~42,000 |
 | Avatar create | ~14,000 |
 | Voice clone | ~28,000 |
@@ -334,14 +350,14 @@ GET /api/credits/me/estimate?feature=voice_preview&text=Hello%20world
 ### 7.4 Workspace estimate
 
 ```http
-GET /api/credits/:workspaceId/estimate?feature=heygen_video&avatarEngine=avatar_iv&script=Your%20script%20here
+GET /api/credits/:workspaceId/estimate?feature=heygen_video&avatarEngine=avatar_iv&avatarType=photo_avatar&resolution=1080p&script=Your%20script%20here
 
 GET /api/credits/:workspaceId/estimate?feature=remotion_export&durationInFrames=9000&fps=30
 ```
 
 | Query `feature` | Parameters |
 |-----------------|------------|
-| `heygen_video` | `avatarEngine` (`avatar_iv` \| `avatar_v`), optional `script` |
+| `heygen_video` | `avatarEngine` (`avatar_iv` \| `avatar_v`), optional `avatarType` (`photo_avatar` \| `studio_avatar` \| `digital_twin`), optional `resolution` (`720p` \| `1080p`), optional `script` |
 | `remotion_export` | optional `durationInFrames`, `fps` (default fps 30) |
 
 ### 7.5 Allocate / deallocate (TEAM owner only)
@@ -437,7 +453,7 @@ See also [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) and 
 **Before generate**
 
 ```http
-GET /api/credits/:workspaceId/estimate?feature=heygen_video&avatarEngine=avatar_iv&script=<scene script>
+GET /api/credits/:workspaceId/estimate?feature=heygen_video&avatarEngine=avatar_iv&avatarType=photo_avatar&resolution=1080p&script=<scene script>
 ```
 
 Show `estimatedCredits` in confirm UI or scene panel.

@@ -171,7 +171,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 | Editor | `Folder`, `Project` (large JSON `data`), `Asset` |
 | HeyGen | `HeygenResponse`, `HeygenAvatar`, `HeygenVoice` |
 | Renders | `ProjectRender`, `SceneRenderCache` |
-| Billing | `CreditTransaction`, `User.credits`, `Workspace.credits` (TEAM pool), `/api/superadmin`, `/api/credits` |
+| Billing | `CreditTransaction`, `User.credits`, `Workspace.credits` (TEAM pool), `/api/superadmin`, `/api/credits` — rates in `src/shared/config/creditPricing.js` aligned with HeyGen PAYG/Enterprise tables |
 
 **Prisma client:** import `src/shared/config/prismaClient.js` in DAOs/services (follow existing imports).
 

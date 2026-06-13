@@ -174,6 +174,8 @@ function buildUsageDetail(tx, ctx) {
         scriptPreview:
           meta.scriptPreview || truncateText(billingContext.script || billingContext.scriptText),
         avatarEngine: meta.avatarEngine || billingContext.avatarEngine || null,
+        avatarType: meta.avatarType || billingContext.avatarType || null,
+        resolution: meta.resolution || billingContext.resolution || null,
       };
     }
     case FEATURE.REMOTION_EXPORT: {

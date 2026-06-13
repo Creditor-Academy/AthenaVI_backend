@@ -521,6 +521,87 @@ function normalizeVideoStatusResponse(body) {
   };
 }
 
+function unwrapHeygenData(body) {
+  if (body && typeof body === 'object' && 'data' in body && body.data != null) {
+    return body.data;
+  }
+  return body;
+}
+
+function normalizeWalletBilling(wallet) {
+  if (!wallet || typeof wallet !== 'object') return null;
+  const remaining = wallet.remaining_balance ?? wallet.remainingBalance;
+  return {
+    currency: wallet.currency ?? 'usd',
+    remainingBalanceUsd: remaining != null ? Number(remaining) : null,
+    autoReload: wallet.auto_reload ?? wallet.autoReload ?? null,
+  };
+}
+
+function normalizeSubscriptionBilling(subscription) {
+  if (!subscription || typeof subscription !== 'object') return null;
+  const credits = subscription.credits && typeof subscription.credits === 'object'
+    ? subscription.credits
+    : {};
+  function mapCreditPool(pool) {
+    if (!pool || typeof pool !== 'object') return null;
+    return {
+      remaining: pool.remaining != null ? Number(pool.remaining) : null,
+      resetsAt: pool.resets_at ?? pool.resetsAt ?? null,
+    };
+  }
+  return {
+    plan: subscription.plan ?? null,
+    credits: {
+      premiumCredits: mapCreditPool(credits.premium_credits ?? credits.premiumCredits),
+      addOnCredits: mapCreditPool(credits.add_on_credits ?? credits.addOnCredits),
+    },
+  };
+}
+
+function normalizeUsageBasedBilling(usageBased) {
+  if (!usageBased || typeof usageBased !== 'object') return null;
+  return {
+    currentSpendUsd:
+      usageBased.current_spend != null
+        ? Number(usageBased.current_spend)
+        : usageBased.currentSpend != null
+          ? Number(usageBased.currentSpend)
+          : null,
+    spendingCapUsd:
+      usageBased.spending_cap != null
+        ? Number(usageBased.spending_cap)
+        : usageBased.spendingCap != null
+          ? Number(usageBased.spendingCap)
+          : null,
+  };
+}
+
+/**
+ * GET /v3/users/me — API key billing (wallet USD) or OAuth (subscription / usage_based).
+ */
+async function getAccountBillingInfo() {
+  const raw = await getJson('/v3/users/me');
+  const data = unwrapHeygenData(raw);
+  if (!data || typeof data !== 'object') {
+    throw new AppError(messages.HEYGEN_REQUEST_FAILED, 502);
+  }
+
+  const billingType = data.billing_type ?? data.billingType ?? null;
+
+  return {
+    username: data.username ?? null,
+    email: data.email ?? null,
+    firstName: data.first_name ?? data.firstName ?? null,
+    lastName: data.last_name ?? data.lastName ?? null,
+    billingType,
+    wallet: normalizeWalletBilling(data.wallet),
+    subscription: normalizeSubscriptionBilling(data.subscription),
+    usageBased: normalizeUsageBasedBilling(data.usage_based ?? data.usageBased),
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 async function createVideo(jsonBody) {
   const raw = await postJson('/v3/videos', jsonBody);
   return { ...normalizeCreateVideoResponse(raw), raw };
@@ -544,6 +625,7 @@ module.exports = {
   selectVoice,
   getVoice,
   generateSpeechPreview,
+  getAccountBillingInfo,
   createVideo,
   getVideoStatus,
 };
