@@ -10,6 +10,7 @@ const projectStorageService = require('../../project/projectStorage.service');
 const {
   HEYGEN_AVATAR_ENGINES,
   normalizeHeygenAvatarEngine,
+  usesHeygenLegacyV2VideoApi,
   buildHeygenVideoEnginePayload,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
@@ -117,6 +118,66 @@ function buildHeyGenVideoPayload(body) {
   return payload;
 }
 
+function buildHeyGenV2Dimension(resolution, aspectRatio) {
+  const isPortrait = aspectRatio === '9:16';
+  const is720 = resolution === '720p';
+  if (isPortrait) {
+    return is720 ? { width: 720, height: 1280 } : { width: 1080, height: 1920 };
+  }
+  return is720 ? { width: 1280, height: 720 } : { width: 1920, height: 1080 };
+}
+
+/** HeyGen legacy POST /v2/video/generate — required for expressive public studio looks. */
+function buildHeyGenV2VideoPayload(body) {
+  const {
+    avatarId,
+    title,
+    resolution,
+    aspectRatio,
+    backgroundColor,
+    voiceId,
+    script,
+    voiceSettings,
+  } = body;
+
+  const voice = {
+    type: 'text',
+    input_text: script,
+    voice_id: voiceId,
+  };
+  if (voiceSettings?.speed != null) voice.speed = voiceSettings.speed;
+  if (voiceSettings?.pitch != null) voice.pitch = voiceSettings.pitch;
+
+  return {
+    video_inputs: [
+      {
+        character: {
+          type: 'avatar',
+          avatar_id: avatarId,
+          avatar_style: 'normal',
+        },
+        voice,
+        background: {
+          type: 'color',
+          value: backgroundColor,
+        },
+      },
+    ],
+    dimension: buildHeyGenV2Dimension(resolution, aspectRatio),
+    ...(title ? { title } : {}),
+    caption: false,
+  };
+}
+
+async function createHeygenVideoJob(payloadBody, { useLegacyV2 }) {
+  if (useLegacyV2) {
+    const jsonBody = buildHeyGenV2VideoPayload(payloadBody);
+    return heygenV3Service.createVideoV2(jsonBody);
+  }
+  const jsonBody = buildHeyGenVideoPayload(payloadBody);
+  return heygenV3Service.createVideo(jsonBody);
+}
+
 /**
  * Start HeyGen avatar video generation; idempotent per request hash (includes sceneId).
  */
@@ -217,6 +278,7 @@ const generateAvatarVideo = async (input) => {
   const project = await getProjectInWorkspace(workspaceId, projectId);
   const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
   const engine = normalizeHeygenAvatarEngine(avatarEngine);
+  const useLegacyV2 = usesHeygenLegacyV2VideoApi(avatarId);
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -248,7 +310,7 @@ const generateAvatarVideo = async (input) => {
     estimatedAc: estimate.athenaCredits,
   });
 
-  const jsonBody = buildHeyGenVideoPayload({
+  const payloadBody = {
     avatarId,
     avatarEngine: engine,
     avatarType,
@@ -262,10 +324,10 @@ const generateAvatarVideo = async (input) => {
     voiceSettings,
     removeBackground,
     outputFormat,
-  });
+  };
 
   try {
-    const created = await heygenV3Service.createVideo(jsonBody);
+    const created = await createHeygenVideoJob(payloadBody, { useLegacyV2 });
     return heygenDao.saveHeygenResponse({
       workspaceId,
       folderId: project.folderId,
@@ -279,7 +341,8 @@ const generateAvatarVideo = async (input) => {
       rawResponse: created.raw,
     triggeredByUserId: userId,
     billingContext: {
-      avatarEngine: engine,
+      avatarEngine: useLegacyV2 ? 'legacy_v2' : engine,
+      heygenApiVersion: created.apiVersion || (useLegacyV2 ? 'v2' : 'v3'),
       avatarType: avatarType || null,
       resolution: resolution || null,
       script,
@@ -294,7 +357,9 @@ const generateAvatarVideo = async (input) => {
     // extract supported engines correctly), retry with Avatar V.
     const msg = String(err?.message || '');
     if (
+      !useLegacyV2 &&
       engine === HEYGEN_AVATAR_ENGINES.IV &&
+      !usesHeygenLegacyV2VideoApi(avatarId) &&
       err instanceof AppError &&
       err.statusCode === 400 &&
       /avatar iv/i.test(msg)
@@ -314,19 +379,8 @@ const generateAvatarVideo = async (input) => {
       if (existingFallback) return existingFallback;
 
       const fallbackJsonBody = buildHeyGenVideoPayload({
-        avatarId,
+        ...payloadBody,
         avatarEngine: fallbackEngine,
-        avatarType,
-        title,
-        resolution,
-        aspectRatio,
-        backgroundColor,
-        voiceId,
-        script,
-        expressiveness,
-        voiceSettings,
-        removeBackground,
-        outputFormat,
       });
 
       const fallbackEstimate = calculateUsageCredits({
@@ -352,6 +406,7 @@ const generateAvatarVideo = async (input) => {
         triggeredByUserId: userId,
         billingContext: {
           avatarEngine: fallbackEngine,
+          heygenApiVersion: 'v3',
           avatarType: avatarType || null,
           resolution: resolution || null,
           script,

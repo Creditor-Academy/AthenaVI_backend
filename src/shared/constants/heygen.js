@@ -29,6 +29,51 @@ function normalizeHeygenAvatarEngine(value) {
   return normalized;
 }
 
+function isExpressivePublicLookId(avatarId) {
+  if (avatarId == null || String(avatarId).trim() === '') return false;
+  return /_expressive\d*_public$/i.test(String(avatarId).trim());
+}
+
+/**
+ * HeyGen public "expressive" studio looks use the legacy v2 video API on HeyGen's
+ * side (same as the web app). POST /v3/videos rejects them for avatar_iv and avatar_v.
+ */
+function usesHeygenLegacyV2VideoApi(avatarId) {
+  return isExpressivePublicLookId(avatarId);
+}
+
+/** @deprecated use usesHeygenLegacyV2VideoApi */
+const isNonGeneratableExpressiveLookId = usesHeygenLegacyV2VideoApi;
+
+/**
+ * @param {unknown} lookBody
+ * @returns {string|null}
+ */
+function extractLookIdFromLookBody(lookBody) {
+  if (!lookBody || typeof lookBody !== 'object') return null;
+  if (typeof lookBody.id === 'string' && lookBody.id.trim()) return lookBody.id.trim();
+  const data = lookBody.data;
+  if (data && typeof data === 'object' && typeof data.id === 'string' && data.id.trim()) {
+    return data.id.trim();
+  }
+  return null;
+}
+
+/**
+ * Looks that must be rendered via HeyGen legacy POST /v2/video/generate.
+ * @param {unknown} lookBody
+ * @returns {boolean}
+ */
+function usesHeygenLegacyV2VideoLook(lookBody) {
+  const lookId = extractLookIdFromLookBody(lookBody);
+  if (!usesHeygenLegacyV2VideoApi(lookId)) return false;
+  const supported = extractSupportedApiEnginesFromLook(lookBody);
+  return !supported || supported.length === 0;
+}
+
+/** @deprecated use usesHeygenLegacyV2VideoLook */
+const isNonGeneratableLook = usesHeygenLegacyV2VideoLook;
+
 /**
  * @param {'avatar_iv'|'avatar_v'} avatarEngine
  * @returns {{ type: 'avatar_iv'|'avatar_v' }}
@@ -99,11 +144,36 @@ function extractSupportedApiEnginesFromLook(lookBody) {
   return [...found];
 }
 
+/**
+ * Engines to use for filtering / UI buckets when HeyGen omits or returns [].
+ * Matches video create default (`avatar_iv`) and service retry to `avatar_v`.
+ *
+ * @param {unknown} lookBody
+ * @returns {string[]}
+ */
+function getEffectiveSupportedApiEnginesFromLook(lookBody) {
+  if (usesHeygenLegacyV2VideoLook(lookBody)) {
+    return ['legacy_v2'];
+  }
+
+  const supported = extractSupportedApiEnginesFromLook(lookBody);
+  if (supported && supported.length > 0) {
+    return supported;
+  }
+  return [DEFAULT_HEYGEN_AVATAR_ENGINE];
+}
+
 module.exports = {
   HEYGEN_AVATAR_ENGINES,
   DEFAULT_HEYGEN_AVATAR_ENGINE,
   HEYGEN_AVATAR_ENGINE_VALUES,
   normalizeHeygenAvatarEngine,
+  usesHeygenLegacyV2VideoApi,
+  usesHeygenLegacyV2VideoLook,
+  isNonGeneratableExpressiveLookId,
+  isNonGeneratableLook,
+  extractLookIdFromLookBody,
   buildHeygenVideoEnginePayload,
   extractSupportedApiEnginesFromLook,
+  getEffectiveSupportedApiEnginesFromLook,
 };

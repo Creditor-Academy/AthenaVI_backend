@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { HEYGEN_AVATAR_ENGINE_VALUES } = require('../../shared/constants/heygen');
+const { avatarEngineField } = require('../../shared/validations/heygenFields');
 
 const workspaceProjectParams = Joi.object({
   workspaceId: Joi.string().uuid().required(),
@@ -28,12 +28,9 @@ const createHeygenVideoSchema = Joi.object({
     script: Joi.string().trim().min(1).required(),
     /**
      * HeyGen rendering engine: avatar_iv (default) or avatar_v.
-     * Must match a value in the look's supported_api_engines (see GET /api/heygen/avatars/looks).
+     * Omit or send "" when the look has supported_api_engines: [].
      */
-    avatarEngine: Joi.string()
-      .trim()
-      .valid(...HEYGEN_AVATAR_ENGINE_VALUES)
-      .default('avatar_iv'),
+    avatarEngine: avatarEngineField(),
     /** HeyGen: photo_avatar only (Avatar IV). Omit for studio_avatar / digital_twin or HeyGen returns 400. */
     avatarType: Joi.string()
       .trim()

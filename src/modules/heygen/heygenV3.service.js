@@ -2,7 +2,7 @@ const { getJson, postJson } = require('../../shared/services/heygenV3.client');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
-const { extractSupportedApiEnginesFromLook } = require('../../shared/constants/heygen');
+const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook } = require('../../shared/constants/heygen');
 
 function pickArray(data, keys) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -312,11 +312,17 @@ function appendLookEngineBuckets(body) {
   const engineBuckets = {
     avatar_iv: [],
     avatar_v: [],
+    legacy_v2: [],
     unknown: [],
   };
 
   for (const look of looks) {
-    const supported = extractSupportedApiEnginesFromLook(look) || [];
+    if (usesHeygenLegacyV2VideoLook(look)) {
+      engineBuckets.legacy_v2.push(look);
+      continue;
+    }
+
+    const supported = getEffectiveSupportedApiEnginesFromLook(look);
     const hasIv = supported.includes('avatar_iv');
     const hasV = supported.includes('avatar_v');
 
@@ -331,6 +337,7 @@ function appendLookEngineBuckets(body) {
     engineCounts: {
       avatar_iv: engineBuckets.avatar_iv.length,
       avatar_v: engineBuckets.avatar_v.length,
+      legacy_v2: engineBuckets.legacy_v2.length,
       unknown: engineBuckets.unknown.length,
       totalLooks: looks.length,
     },
@@ -604,7 +611,12 @@ async function getAccountBillingInfo() {
 
 async function createVideo(jsonBody) {
   const raw = await postJson('/v3/videos', jsonBody);
-  return { ...normalizeCreateVideoResponse(raw), raw };
+  return { ...normalizeCreateVideoResponse(raw), raw, apiVersion: 'v3' };
+}
+
+async function createVideoV2(jsonBody) {
+  const raw = await postJson('/v2/video/generate', jsonBody);
+  return { ...normalizeCreateVideoResponse(raw), raw, apiVersion: 'v2' };
 }
 
 async function getVideoStatus(videoId) {
@@ -627,5 +639,6 @@ module.exports = {
   generateSpeechPreview,
   getAccountBillingInfo,
   createVideo,
+  createVideoV2,
   getVideoStatus,
 };

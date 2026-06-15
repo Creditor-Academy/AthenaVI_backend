@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const { FEATURE, HEYGEN_AVATAR_TYPES } = require('../../shared/config/creditPricing');
-const { HEYGEN_AVATAR_ENGINE_VALUES } = require('../../shared/constants/heygen');
+const { avatarEngineField } = require('../../shared/validations/heygenFields');
 
 const HEYGEN_AVATAR_TYPE_VALUES = Object.freeze([
   HEYGEN_AVATAR_TYPES.PHOTO,
@@ -45,8 +45,7 @@ const workspaceEstimateQuerySchema = Joi.object({
     feature: Joi.string()
       .valid(FEATURE.HEYGEN_VIDEO, FEATURE.REMOTION_EXPORT)
       .required(),
-    avatarEngine: Joi.string()
-      .valid(...HEYGEN_AVATAR_ENGINE_VALUES)
+    avatarEngine: avatarEngineField()
       .when('feature', { is: FEATURE.HEYGEN_VIDEO, then: Joi.optional(), otherwise: Joi.forbidden() }),
     avatarType: Joi.string()
       .valid(...HEYGEN_AVATAR_TYPE_VALUES)

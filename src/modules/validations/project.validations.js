@@ -7,6 +7,7 @@ const {
   DEFAULT_VIDEO_SETTINGS,
   CANVAS_ASPECT_RATIOS,
 } = require('../../shared/constants/videoEditor');
+const { avatarEngineField } = require('../../shared/validations/heygenFields');
 const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
 
 const uuidParam = Joi.string().uuid().required();
@@ -96,7 +97,7 @@ const presenterSchema = Joi.object({
   avatarName: Joi.string().allow('', null).optional(),
   avatarPreviewSrc: Joi.string().allow('', null).optional(),
   avatarType: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar').optional(),
-  avatarEngine: Joi.string().valid('avatar_iv', 'avatar_v').optional(),
+  avatarEngine: avatarEngineField({ optional: true, withDefault: false }),
   voiceId: Joi.string().allow('', null).optional(),
   voiceName: Joi.string().allow('', null).optional(),
   voiceSettings: Joi.object().unknown(true).optional(),
