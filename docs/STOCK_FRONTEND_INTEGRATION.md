@@ -47,7 +47,11 @@ sequenceDiagram
   Editor->>API: PATCH .../projects/:id/data
 ```
 
-1. **Search** — debounce input (~300ms), support `type` toggle (photo / video), optional `provider` filter (`all` | `pexels` | `unsplash` | `pixabay`), paginate with `page`.
+1. **Search** — debounce input (~300ms). Toggle `type` (`photo` | `video`). Filter `provider`:
+   - **All** — `provider=all` (default): photos from all three; videos from Pexels + Pixabay
+   - **Pexels** — `provider=pexels`: photos + videos
+   - **Unsplash** — `provider=unsplash`: photos only (hide or disable for video tab)
+   - **Pixabay** — `provider=pixabay`: photos + videos
 2. **Preview grid** — photos: `previewUrl` on `<img>`. Videos: poster from `previewUrl`; on hover play `previewVideoUrl` (muted `<video>`). Show a small provider badge from `item.provider`.
 3. **Import on use** — when the user adds media, call import **before** inserting the clip. Show a loading state on the tile.
 4. **Insert clip** — use returned `asset.id` as `content.assetId`. Do not store `previewUrl` in saved project JSON.
@@ -64,7 +68,28 @@ GET /api/stock/search?q=office&type=photo&provider=all&page=1&perPage=20
 Authorization: Bearer <token>
 ```
 
-### Search Unsplash only
+### Search Pexels only (photos)
+
+```http
+GET /api/stock/search?q=office&type=photo&provider=pexels&page=1
+Authorization: Bearer <token>
+```
+
+### Search Pexels only (videos)
+
+```http
+GET /api/stock/search?q=nature&type=video&provider=pexels&page=1
+Authorization: Bearer <token>
+```
+
+### Search Pixabay only (photos)
+
+```http
+GET /api/stock/search?q=office&type=photo&provider=pixabay&page=1
+Authorization: Bearer <token>
+```
+
+### Search Unsplash only (photos)
 
 ```http
 GET /api/stock/search?q=office&type=photo&provider=unsplash&page=1

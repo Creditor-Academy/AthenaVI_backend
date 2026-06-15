@@ -884,6 +884,44 @@
       },
       "item": [
         {
+          "name": "Search stock (Pexels photos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=pexels&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "office" },
+                { "key": "type", "value": "photo" },
+                { "key": "provider", "value": "pexels" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search stock (Pexels videos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=pexels&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "nature" },
+                { "key": "type", "value": "video" },
+                { "key": "provider", "value": "pexels" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
           "name": "Search stock (photos, all providers)",
           "request": {
             "method": "GET",

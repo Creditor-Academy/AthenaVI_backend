@@ -34,10 +34,31 @@ Import also requires **workspace access** (`checkWorkspaceAccess` — same rules
 
 | `provider` | `type=photo` | `type=video` |
 |------------|--------------|--------------|
-| `all` | Interleaved Pexels + Unsplash + Pixabay (skips providers without keys) | Interleaved Pexels + Pixabay |
+| `all` | Interleaved Pexels + Unsplash + Pixabay (skips missing keys; failed providers omitted) | Interleaved Pexels + Pixabay |
 | `pexels` | Pexels only | Pexels only |
 | `unsplash` | Unsplash only | **400** — not supported |
 | `pixabay` | Pixabay only | Pixabay only |
+
+**Example requests**
+
+```http
+# Photos — all providers (default)
+GET /api/stock/search?q=office&type=photo&provider=all
+
+# Photos — one provider
+GET /api/stock/search?q=office&type=photo&provider=pexels
+GET /api/stock/search?q=office&type=photo&provider=unsplash
+GET /api/stock/search?q=office&type=photo&provider=pixabay
+
+# Videos — all video providers
+GET /api/stock/search?q=nature&type=video&provider=all
+
+# Videos — one provider
+GET /api/stock/search?q=nature&type=video&provider=pexels
+GET /api/stock/search?q=nature&type=video&provider=pixabay
+```
+
+Each result item includes `"provider": "pexels" | "unsplash" | "pixabay"` so the UI can badge and import with the correct `provider` + `externalId`.
 
 **Response (200)** – `data`:
 

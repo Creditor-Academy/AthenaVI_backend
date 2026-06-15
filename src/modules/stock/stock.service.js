@@ -39,22 +39,42 @@ function assertAtLeastOneProviderConfigured() {
   }
 }
 
+function assertVideoSearchAvailable() {
+  if (!pexelsClient.isConfigured() && !pixabayClient.isConfigured()) {
+    throw new AppError(messages.STOCK_NOT_CONFIGURED, 503);
+  }
+}
+
 async function runConfiguredSearches(searchFns) {
-  const tasks = [];
   const results = searchFns.map(() => ({ items: [], totalResults: 0 }));
 
-  searchFns.forEach((fn, index) => {
-    if (fn) {
-      tasks.push(
-        fn().then((result) => {
+  await Promise.all(
+    searchFns.map((fn, index) => {
+      if (!fn) return Promise.resolve();
+      return fn()
+        .then((result) => {
           results[index] = result;
         })
-      );
-    }
-  });
+        .catch(() => {
+          results[index] = { items: [], totalResults: 0 };
+        });
+    })
+  );
 
-  await Promise.all(tasks);
   return results;
+}
+
+function mergeSearchResults({ results, page, perPage }) {
+  return {
+    items: interleaveMany(
+      results.map((r) => r.items),
+      perPage
+    ),
+    page,
+    perPage,
+    totalResults: results.reduce((sum, r) => sum + (r.totalResults || 0), 0),
+    nextPage: null,
+  };
 }
 
 async function searchAllPhotos({ q, page, perPage }) {
@@ -66,40 +86,18 @@ async function searchAllPhotos({ q, page, perPage }) {
     pixabayClient.isConfigured() ? () => pixabayClient.searchPhotos({ q, page, perPage }) : null,
   ]);
 
-  return {
-    items: interleaveMany(
-      results.map((r) => r.items),
-      perPage
-    ),
-    page,
-    perPage,
-    totalResults: results.reduce((sum, r) => sum + (r.totalResults || 0), 0),
-    nextPage: null,
-  };
+  return mergeSearchResults({ results, page, perPage });
 }
 
 async function searchAllVideos({ q, page, perPage }) {
-  assertAtLeastOneProviderConfigured();
+  assertVideoSearchAvailable();
 
   const results = await runConfiguredSearches([
     pexelsClient.isConfigured() ? () => pexelsClient.searchVideos({ q, page, perPage }) : null,
     pixabayClient.isConfigured() ? () => pixabayClient.searchVideos({ q, page, perPage }) : null,
   ]);
 
-  if (!pexelsClient.isConfigured() && !pixabayClient.isConfigured()) {
-    throw new AppError(messages.STOCK_NOT_CONFIGURED, 503);
-  }
-
-  return {
-    items: interleaveMany(
-      results.map((r) => r.items),
-      perPage
-    ),
-    page,
-    perPage,
-    totalResults: results.reduce((sum, r) => sum + (r.totalResults || 0), 0),
-    nextPage: null,
-  };
+  return mergeSearchResults({ results, page, perPage });
 }
 
 async function searchStock({ q, type, page, perPage, provider = 'all' }) {
