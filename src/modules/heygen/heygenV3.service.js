@@ -1,4 +1,4 @@
-const { getJson, postJson } = require('../../shared/services/heygenV3.client');
+const { getJson, getJsonSafe, postJson } = require('../../shared/services/heygenV3.client');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
@@ -136,6 +136,9 @@ function enrichLooksListMetadata(body) {
   const looks = coerceLooksArray(normalized.data.looks);
   const lookCount = looks.length;
   const defaultLookId = lookCount > 0 ? String(looks[0].id ?? looks[0].look_id ?? '') : null;
+  const expectedLookCount = normalized.data.expectedLookCount;
+  const isSingleLookGroup =
+    lookCount === 1 || expectedLookCount === 1 || normalized.data.isSingleLookGroup === true;
   return {
     ...normalized,
     data: {
@@ -143,9 +146,50 @@ function enrichLooksListMetadata(body) {
       looks,
       lookCount,
       hasMultipleLooks: lookCount > 1,
+      isSingleLookGroup,
       ...(defaultLookId ? { defaultLookId } : {}),
     },
   };
+}
+
+const GROUP_LIST_ARRAY_KEYS = [
+  'avatar_groups',
+  'avatar_group_list',
+  'avatars',
+  'groups',
+  'list',
+  'items',
+  'results',
+  'data',
+];
+
+/** Flag avatar groups with exactly one look so the UI can auto-select instead of showing an empty picker. */
+function enrichAvatarGroupsListBody(body) {
+  if (!body || typeof body !== 'object') return body;
+  const hasEnvelope = 'data' in body && body.data != null;
+  const target = hasEnvelope ? body.data : body;
+
+  function enrichGroup(group) {
+    if (!group || typeof group !== 'object' || Array.isArray(group)) return group;
+    if (typeof group.looks_count === 'number' && group.looks_count === 1) {
+      return { ...group, isSingleLookGroup: true };
+    }
+    return group;
+  }
+
+  if (Array.isArray(target)) {
+    const next = target.map(enrichGroup);
+    return hasEnvelope ? { ...body, data: next } : next;
+  }
+
+  if (target && typeof target === 'object') {
+    const picked = pickArray(target, GROUP_LIST_ARRAY_KEYS);
+    if (!picked.key || !Array.isArray(picked.list)) return body;
+    const nextTarget = { ...target, [picked.key]: picked.list.map(enrichGroup) };
+    return hasEnvelope ? { ...body, data: nextTarget } : nextTarget;
+  }
+
+  return body;
 }
 
 async function resolveOwnedAvatarGroupId(userId, groupOrLookId) {
@@ -184,6 +228,135 @@ async function fetchLooksListFallbackByLookId(groupOrLookId) {
   } catch {
     return null;
   }
+}
+
+function slugifyAvatarGroupName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
+async function addResolvedLookToList(looks, seen, lookId, groupId) {
+  const id = String(lookId || '').trim();
+  if (!id || seen.has(id)) return;
+  try {
+    const single = await getAvatarLook(id);
+    const look = unwrapHeygenLookRecord(single);
+    if (!look) return;
+    const gid = itemAvatarGroupId(look);
+    if (groupId && gid && gid !== groupId) return;
+    seen.add(id);
+    looks.push(look);
+  } catch {
+    // look id not found — skip
+  }
+}
+
+async function collectV2AvatarLookCandidates(groupName, groupId, looks, seen) {
+  const slug = slugifyAvatarGroupName(groupName);
+  if (!slug) return;
+  const safe = await getJsonSafe('/v2/avatars');
+  if (!safe.ok) return;
+  const avatars = safe.body?.data?.avatars;
+  if (!Array.isArray(avatars)) return;
+  const prefix = `${slug}_`;
+  const candidates = avatars.filter((a) => {
+    const id = String(a.avatar_id || '');
+    return id === slug || id === `${slug}_public` || id.startsWith(prefix) || a.avatar_name === groupName;
+  });
+  for (const a of candidates) {
+    await addResolvedLookToList(looks, seen, a.avatar_id, groupId);
+  }
+}
+
+/**
+ * HeyGen sometimes returns 400 for GET /v3/avatars/looks?group_id=… (bad created_at on a row).
+ * Recover individual looks via GET /v3/avatars/looks/{id} and the legacy v2 avatar catalog.
+ */
+async function fetchLooksListFallbackForGroup(groupId, query) {
+  const safeGroup = await getJsonSafe(`/v3/avatars/${encodeURIComponent(groupId)}`);
+  if (!safeGroup.ok) return null;
+  const group = safeGroup.body?.data;
+  const groupName = group?.name != null ? String(group.name).trim() : '';
+  const looks = [];
+  const seen = new Set();
+
+  const slug = slugifyAvatarGroupName(groupName);
+  if (slug) {
+    await addResolvedLookToList(looks, seen, `${slug}_public`, groupId);
+    await addResolvedLookToList(looks, seen, slug, groupId);
+  }
+
+  if (looks.length === 0 && groupName) {
+    await collectV2AvatarLookCandidates(groupName, groupId, looks, seen);
+  }
+
+  let filtered = looks;
+  if (query?.avatar_type) {
+    const typed = looks.filter((look) => String(look.avatar_type || '') === query.avatar_type);
+    if (typed.length > 0) filtered = typed;
+  }
+  if (filtered.length === 0) return null;
+
+  const expected =
+    typeof group?.looks_count === 'number' && group.looks_count > 0 ? group.looks_count : null;
+  const listIncomplete = expected != null && filtered.length < expected;
+  const isSingleLookGroup = expected === 1 || filtered.length === 1;
+
+  return {
+    data: {
+      looks: filtered,
+      lookCount: filtered.length,
+      hasMultipleLooks: filtered.length > 1,
+      isSingleLookGroup,
+      defaultLookId: String(filtered[0].id ?? filtered[0].look_id ?? ''),
+      ...(expected != null ? { expectedLookCount: expected } : {}),
+      ...(listIncomplete
+        ? {
+            listDegraded: true,
+            heygenListUnavailable: true,
+          }
+        : {}),
+    },
+  };
+}
+
+/**
+ * Recover looks when HeyGen list is empty/400 — common for single-look avatars when:
+ * - the UI passes a look id as group_id
+ * - avatar_type filter hides the only row (e.g. digital_twin with studio_avatar filter)
+ * - HeyGen list endpoint is broken for the group
+ */
+async function recoverLooksListForGroup(groupOrLookId, heygenQuery) {
+  const byLookId = await fetchLooksListFallbackByLookId(groupOrLookId);
+  if (byLookId?.length) {
+    return { data: byLookId };
+  }
+
+  if (heygenQuery?.avatar_type) {
+    const relaxed = { ...heygenQuery };
+    delete relaxed.avatar_type;
+    try {
+      const raw = await getJson('/v3/avatars/looks', relaxed);
+      const looks = coerceLooksArray(enrichLooksListMetadata(raw)?.data?.looks);
+      if (looks.length > 0) {
+        return { data: looks };
+      }
+    } catch {
+      // continue to slug/v2 fallback
+    }
+  }
+
+  return fetchLooksListFallbackForGroup(groupOrLookId, heygenQuery);
+}
+
+async function finalizeLooksListResponse(userId, query, body) {
+  let next = body;
+  if (query?.ownership === 'private') {
+    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+    next = filterPrivateListBody(next, allowed, itemAvatarGroupId, LOOK_LIST_ARRAY_KEYS);
+  }
+  return appendLookEngineBuckets(enrichLooksListMetadata(next));
 }
 
 function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
@@ -460,18 +633,12 @@ function appendLookEngineBuckets(body) {
 
 async function listAvatarGroups(userId, query) {
   const raw = await getJson('/v3/avatars', query);
-  if (query?.ownership !== 'private') return raw;
-  const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
-  return filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
-    'avatar_groups',
-    'avatar_group_list',
-    'avatars',
-    'groups',
-    'list',
-    'items',
-    'results',
-    'data',
-  ]);
+  let body = raw;
+  if (query?.ownership === 'private') {
+    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+    body = filterPrivateListBody(raw, allowed, itemAvatarGroupId, GROUP_LIST_ARRAY_KEYS);
+  }
+  return enrichAvatarGroupsListBody(body);
 }
 
 async function getAvatarLook(lookId) {
@@ -494,34 +661,24 @@ async function listAvatarLooks(userId, query) {
     }
   }
 
-  const raw = await getJson('/v3/avatars/looks', heygenQuery);
-  let body = raw;
-  if (query?.ownership === 'private') {
-    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
-    body = filterPrivateListBody(raw, allowed, itemAvatarGroupId, LOOK_LIST_ARRAY_KEYS);
-  }
-
-  let enriched = enrichLooksListMetadata(body);
-  const looks = coerceLooksArray(enriched?.data?.looks);
-  if (looks.length === 0 && groupOrLookId) {
-    const fallbackLooks = await fetchLooksListFallbackByLookId(groupOrLookId);
-    if (fallbackLooks?.length) {
-      if (query?.ownership === 'private') {
-        const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
-        const owned = fallbackLooks.filter((look) => {
-          const gid = itemAvatarGroupId(look);
-          return gid != null && allowed.has(gid);
-        });
-        if (owned.length > 0) {
-          enriched = enrichLooksListMetadata({ data: owned });
-        }
-      } else {
-        enriched = enrichLooksListMetadata({ data: fallbackLooks });
-      }
+  let raw;
+  try {
+    raw = await getJson('/v3/avatars/looks', heygenQuery);
+  } catch (err) {
+    if (groupOrLookId && err.statusCode === 400) {
+      const recovered = await recoverLooksListForGroup(groupOrLookId, heygenQuery);
+      if (recovered) return finalizeLooksListResponse(userId, query, recovered);
     }
+    throw err;
   }
 
-  return appendLookEngineBuckets(enriched);
+  const looks = coerceLooksArray(enrichLooksListMetadata(raw)?.data?.looks);
+  if (looks.length === 0 && groupOrLookId) {
+    const recovered = await recoverLooksListForGroup(groupOrLookId, heygenQuery);
+    if (recovered) return finalizeLooksListResponse(userId, query, recovered);
+  }
+
+  return finalizeLooksListResponse(userId, query, raw);
 }
 
 async function createAvatar(userId, body) {

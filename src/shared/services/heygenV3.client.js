@@ -44,7 +44,7 @@ function mapHeyGenStatus(res, body) {
   }
 }
 
-async function heygenFetch(path, options = {}) {
+async function heygenFetchRaw(path, options = {}) {
   const { method = 'GET', searchParams, jsonBody } = options;
   const qs = searchParams ? buildQueryString(searchParams) : '';
   const url = `${HEYGEN_BASE}${path}${qs}`;
@@ -70,8 +70,30 @@ async function heygenFetch(path, options = {}) {
   } catch {
     body = { raw: text };
   }
+  return { res, body };
+}
+
+async function heygenFetch(path, options = {}) {
+  const { res, body } = await heygenFetchRaw(path, options);
   mapHeyGenStatus(res, body);
   return body;
+}
+
+/** Like getJson but returns `{ ok, status, body }` instead of throwing on HTTP errors. */
+async function getJsonSafe(path, searchParams) {
+  const { res, body } = await heygenFetchRaw(path, { method: 'GET', searchParams });
+  const logicalError =
+    res.ok && body && body.error && !body.data
+      ? body.error?.message || messages.HEYGEN_REQUEST_FAILED
+      : null;
+  if (logicalError) {
+    return { ok: false, status: body.error?.code === 'authentication_failed' ? 401 : 400, body };
+  }
+  if (!res.ok) {
+    const status = res.status >= 400 && res.status < 600 ? res.status : 502;
+    return { ok: false, status, body };
+  }
+  return { ok: true, status: res.status, body };
 }
 
 async function getJson(path, searchParams) {
@@ -86,6 +108,7 @@ module.exports = {
   HEYGEN_BASE,
   getApiKey,
   getJson,
+  getJsonSafe,
   postJson,
   buildQueryString,
 };
