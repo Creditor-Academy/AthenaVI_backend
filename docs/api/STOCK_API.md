@@ -44,6 +44,19 @@ Import also requires **workspace access** (`checkWorkspaceAccess` — same rules
       "photographer": "Jane Doe",
       "attribution": "Photo by Jane Doe on Pexels",
       "pageUrl": "https://www.pexels.com/photo/..."
+    },
+    {
+      "provider": "pexels",
+      "externalId": "67890",
+      "mediaType": "video",
+      "previewUrl": "https://images.pexels.com/videos/.../preview.jpg",
+      "previewVideoUrl": "https://videos.pexels.com/video-files/.../preview-sd.mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSec": 12,
+      "photographer": "Jane Doe",
+      "attribution": "Video by Jane Doe on Pexels",
+      "pageUrl": "https://www.pexels.com/video/..."
     }
   ],
   "page": 1,
@@ -56,7 +69,7 @@ Import also requires **workspace access** (`checkWorkspaceAccess` — same rules
 - **503** if `PEXELS_API_KEY` is missing.
 - **429** if Pexels rate-limits the request.
 
-`previewUrl` is for the library UI only. Do **not** persist provider CDN URLs in `project.data`.
+`previewUrl` is for the library UI only (poster/thumbnail). Video items also include **`previewVideoUrl`** — a small Pexels MP4 for hover preview. Do **not** persist provider CDN URLs in `project.data`.
 
 ---
 

@@ -8,7 +8,7 @@ Use this guide to add a **Stock** tab in the video editor (Pexels MVP). Canonica
 
 | Phase | User action | Backend |
 |-------|-------------|---------|
-| Browse | Search in Stock panel | `GET /api/stock/search` — show `previewUrl` thumbnails |
+| Browse | Search in Stock panel | `GET /api/stock/search` — photos: `previewUrl`; videos: `previewUrl` + `previewVideoUrl` for hover |
 | Use | Drop on canvas / Add to project | `POST /api/stock/workspaces/:workspaceId/import` |
 | Edit | Save project | `content.assetId` only (never provider CDN URL as primary ref) |
 | Playback / render | Existing asset resolution | `assetId` → presigned S3 |
@@ -48,7 +48,7 @@ sequenceDiagram
 ```
 
 1. **Search** — debounce input (~300ms), support `type` toggle (photo / video), paginate with `page`.
-2. **Preview grid** — bind `item.previewUrl` to `<img>` / video poster. These URLs may break later; that is acceptable for browse-only previews.
+2. **Preview grid** — photos: `previewUrl` on `<img>`. Videos: poster from `previewUrl`; on hover play `previewVideoUrl` (muted `<video>`). These URLs may break later; that is acceptable for browse-only previews.
 3. **Import on use** — when the user adds media, call import **before** inserting the clip. Show a loading state on the tile.
 4. **Insert clip** — use returned `asset.id` as `content.assetId`. Do not store `previewUrl` in saved project JSON.
 5. **Attribution** — display `asset.stockMetadata.attribution` (e.g. footer chip or export credits screen).

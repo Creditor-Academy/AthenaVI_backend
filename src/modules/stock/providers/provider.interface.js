@@ -10,6 +10,7 @@
  * @property {string} externalId
  * @property {StockMediaType} mediaType
  * @property {string} previewUrl
+ * @property {string} [previewVideoUrl]  video items only — small MP4 for hover preview
  * @property {number} [width]
  * @property {number} [height]
  * @property {number} [durationSec]
