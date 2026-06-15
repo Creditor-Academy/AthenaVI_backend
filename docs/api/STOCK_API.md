@@ -2,13 +2,13 @@
 
 Base path: **`/api/stock`**
 
-Proxied search against **Pexels** (phase 1). Import copies media into workspace **S3** and creates a normal workspace **`Asset`** row so projects reference `assetId` — same as uploads.
+Proxied search against **Pexels** (photos + videos), **Unsplash** (photos), and **Pixabay** (photos + videos). Import copies media into workspace **S3** and creates a normal workspace **`Asset`** row so projects reference `assetId` — same as uploads.
 
 All routes require **`Authorization: Bearer <access_token>`**.
 
 Import also requires **workspace access** (`checkWorkspaceAccess` — same rules as [Assets API](ASSETS_API.md)).
 
-**Server env:** `PEXELS_API_KEY` (required for stock routes). Optional size caps: `STOCK_PHOTO_MAX_BYTES` (default 15 MB), `STOCK_VIDEO_MAX_BYTES` (default 100 MB).
+**Server env:** at least one of `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY`. Optional size caps: `STOCK_PHOTO_MAX_BYTES` (default 15 MB), `STOCK_VIDEO_MAX_BYTES` (default 100 MB).
 
 ---
 
@@ -26,8 +26,18 @@ Import also requires **workspace access** (`checkWorkspaceAccess` — same rules
 |-------|------|---------|-------|
 | `q` | string | required | Search query, 1–200 chars |
 | `type` | `photo` \| `video` | `photo` | Media type |
+| `provider` | `pexels` \| `unsplash` \| `pixabay` \| `all` | `all` | Search source(s) |
 | `page` | integer | `1` | Page number, 1–100 |
 | `perPage` | integer | `20` | Results per page, 1–80 |
+
+**Provider behavior**
+
+| `provider` | `type=photo` | `type=video` |
+|------------|--------------|--------------|
+| `all` | Interleaved Pexels + Unsplash + Pixabay (skips providers without keys) | Interleaved Pexels + Pixabay |
+| `pexels` | Pexels only | Pexels only |
+| `unsplash` | Unsplash only | **400** — not supported |
+| `pixabay` | Pixabay only | Pixabay only |
 
 **Response (200)** – `data`:
 
@@ -46,36 +56,36 @@ Import also requires **workspace access** (`checkWorkspaceAccess` — same rules
       "pageUrl": "https://www.pexels.com/photo/..."
     },
     {
-      "provider": "pexels",
-      "externalId": "67890",
+      "provider": "pixabay",
+      "externalId": "98765",
       "mediaType": "video",
-      "previewUrl": "https://images.pexels.com/videos/.../preview.jpg",
-      "previewVideoUrl": "https://videos.pexels.com/video-files/.../preview-sd.mp4",
+      "previewUrl": "https://...thumbnail.jpg",
+      "previewVideoUrl": "https://...preview-small.mp4",
       "width": 1920,
       "height": 1080,
-      "durationSec": 12,
+      "durationSec": 15,
       "photographer": "Jane Doe",
-      "attribution": "Video by Jane Doe on Pexels",
-      "pageUrl": "https://www.pexels.com/video/..."
+      "attribution": "Video by Jane Doe on Pixabay",
+      "pageUrl": "https://pixabay.com/videos/..."
     }
   ],
   "page": 1,
   "perPage": 20,
   "totalResults": 500,
-  "nextPage": "https://api.pexels.com/v1/search?..."
+  "nextPage": null
 }
 ```
 
-- **503** if `PEXELS_API_KEY` is missing.
-- **429** if Pexels rate-limits the request.
+- **503** if no provider API keys are configured (or the requested provider's key is missing).
+- **429** if a provider rate-limits the request.
 
-`previewUrl` is for the library UI only (poster/thumbnail). Video items also include **`previewVideoUrl`** — a small Pexels MP4 for hover preview. Do **not** persist provider CDN URLs in `project.data`.
+`previewUrl` is for the library UI only (poster/thumbnail). Video items also include **`previewVideoUrl`** for hover preview. Do **not** persist provider CDN URLs in `project.data`.
 
 ---
 
 ## Import stock media into workspace
 
-Downloads the best-quality file from Pexels, uploads to S3, creates (or returns existing) workspace asset. Counts against the workspace owner's **storageUsed**.
+Downloads from the provider, uploads to S3, creates (or returns existing) workspace asset. Counts against the workspace owner's **storageUsed**.
 
 | | |
 |---|---|
@@ -87,37 +97,25 @@ Downloads the best-quality file from Pexels, uploads to S3, creates (or returns 
 
 ```json
 {
-  "provider": "pexels",
-  "externalId": "12345",
-  "mediaType": "photo",
+  "provider": "pixabay",
+  "externalId": "98765",
+  "mediaType": "video",
   "name": "optional display name"
 }
 ```
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `provider` | yes | Phase 1: `pexels` only |
+| `provider` | yes | `pexels`, `unsplash`, or `pixabay` |
 | `externalId` | yes | Provider item id (string) |
-| `mediaType` | yes | `photo` or `video` |
+| `mediaType` | yes | `photo` or `video` (`unsplash` → `photo` only) |
 | `name` | no | Asset display name; defaults to provider filename |
 
-**Response (200)** – `data`: `{ "asset": { ... } }` — same envelope shape as asset upload. Asset includes:
+**Unsplash import:** backend calls `GET /photos/:id/download` (download tracking) before fetching the file.
 
-- `source`: `"stock"`
-- `stockProvider`: `"pexels"`
-- `stockExternalId`: provider id
-- `stockMetadata`: `{ photographer, attribution, pageUrl, width, height, ... }`
+**Response (200)** – `data`: `{ "asset": { ... } }` — same envelope shape as asset upload.
 
-**Dedupe:** Re-importing the same `(workspace, pexels, externalId)` returns the existing asset without extra storage.
-
-**Errors**
-
-| Status | When |
-|--------|------|
-| **400** | Invalid body, unsupported provider, file too large, storage limit exceeded |
-| **404** | Item removed from Pexels before import |
-| **502** | Could not download from Pexels |
-| **503** | Missing `PEXELS_API_KEY` |
+**Dedupe:** Re-importing the same `(workspace, provider, externalId)` returns the existing asset without extra storage.
 
 ---
 
@@ -134,7 +132,7 @@ After import, reference the returned `asset.id` in project JSON:
 
 Render and playback resolve `assetId` → presigned S3 URL (no stock-specific render changes).
 
-Show `asset.stockMetadata.attribution` in the UI where Pexels requires credit.
+Show `asset.stockMetadata.attribution` in the UI where required.
 
 ---
 

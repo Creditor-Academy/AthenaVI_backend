@@ -52,9 +52,96 @@ function normalizePexelsVideo(video) {
   };
 }
 
+function buildUnsplashPhotoAttribution(photographer) {
+  const name = photographer && String(photographer).trim() ? String(photographer).trim() : 'Unknown';
+  return `Photo by ${name} on Unsplash`;
+}
+
+function normalizeUnsplashPhoto(photo) {
+  const photographer = photo.user?.name || 'Unknown';
+  return {
+    provider: 'unsplash',
+    externalId: String(photo.id),
+    mediaType: 'photo',
+    previewUrl: photo.urls?.regular || photo.urls?.small || photo.urls?.thumb || '',
+    width: photo.width,
+    height: photo.height,
+    photographer,
+    attribution: buildUnsplashPhotoAttribution(photographer),
+    pageUrl: photo.links?.html || `https://unsplash.com/photos/${photo.id}`,
+  };
+}
+
+function buildPixabayPhotoAttribution(photographer) {
+  const name = photographer && String(photographer).trim() ? String(photographer).trim() : 'Unknown';
+  return `Image by ${name} on Pixabay`;
+}
+
+function buildPixabayVideoAttribution(photographer) {
+  const name = photographer && String(photographer).trim() ? String(photographer).trim() : 'Unknown';
+  return `Video by ${name} on Pixabay`;
+}
+
+function pickPixabayPreviewVideo(videos) {
+  if (!videos || typeof videos !== 'object') return null;
+  return videos.small || videos.medium || videos.tiny || videos.large || null;
+}
+
+function pickPixabayImportVideo(videos) {
+  if (!videos || typeof videos !== 'object') return null;
+  return videos.large || videos.medium || videos.small || videos.tiny || null;
+}
+
+function normalizePixabayPhoto(hit) {
+  const photographer = hit.user || 'Unknown';
+  return {
+    provider: 'pixabay',
+    externalId: String(hit.id),
+    mediaType: 'photo',
+    previewUrl: hit.previewURL || hit.webformatURL || '',
+    width: hit.imageWidth,
+    height: hit.imageHeight,
+    photographer,
+    attribution: buildPixabayPhotoAttribution(photographer),
+    pageUrl: hit.pageURL || `https://pixabay.com/photos/${hit.id}/`,
+  };
+}
+
+function normalizePixabayVideo(hit) {
+  const photographer = hit.user || 'Unknown';
+  const previewVideo = pickPixabayPreviewVideo(hit.videos);
+  const thumbnail =
+    previewVideo?.thumbnail ||
+    hit.videos?.medium?.thumbnail ||
+    hit.videos?.small?.thumbnail ||
+    hit.picture_id ||
+    '';
+  return {
+    provider: 'pixabay',
+    externalId: String(hit.id),
+    mediaType: 'video',
+    previewUrl: thumbnail,
+    previewVideoUrl: previewVideo?.url || '',
+    width: hit.videos?.large?.width || hit.videos?.medium?.width,
+    height: hit.videos?.large?.height || hit.videos?.medium?.height,
+    durationSec: hit.duration,
+    photographer,
+    attribution: buildPixabayVideoAttribution(photographer),
+    pageUrl: hit.pageURL || `https://pixabay.com/videos/${hit.id}/`,
+  };
+}
+
 module.exports = {
   buildPexelsPhotoAttribution,
   buildPexelsVideoAttribution,
+  buildUnsplashPhotoAttribution,
+  buildPixabayPhotoAttribution,
+  buildPixabayVideoAttribution,
+  pickPixabayPreviewVideo,
+  pickPixabayImportVideo,
   normalizePexelsPhoto,
   normalizePexelsVideo,
+  normalizeUnsplashPhoto,
+  normalizePixabayPhoto,
+  normalizePixabayVideo,
 };

@@ -10,6 +10,11 @@ const {
 
 const PEXELS_BASE = 'https://api.pexels.com';
 
+function isConfigured() {
+  const key = process.env.PEXELS_API_KEY;
+  return Boolean(key && String(key).trim());
+}
+
 function getApiKey() {
   const key = process.env.PEXELS_API_KEY;
   if (!key || !String(key).trim()) {
@@ -195,6 +200,7 @@ async function resolveImportSource({ externalId, mediaType }) {
 }
 
 module.exports = {
+  isConfigured,
   searchPhotos,
   searchVideos,
   resolveImportSource,

@@ -1,6 +1,6 @@
 # Stock Media — Frontend Integration Guide
 
-Use this guide to add a **Stock** tab in the video editor (Pexels MVP). Canonical HTTP contracts: [`docs/api/STOCK_API.md`](api/STOCK_API.md).
+Use this guide to add a **Stock** tab in the video editor (Pexels, Unsplash, Pixabay). Canonical HTTP contracts: [`docs/api/STOCK_API.md`](api/STOCK_API.md).
 
 ---
 
@@ -8,7 +8,7 @@ Use this guide to add a **Stock** tab in the video editor (Pexels MVP). Canonica
 
 | Phase | User action | Backend |
 |-------|-------------|---------|
-| Browse | Search in Stock panel | `GET /api/stock/search` — photos: `previewUrl`; videos: `previewUrl` + `previewVideoUrl` for hover |
+| Browse | Search in Stock panel | `GET /api/stock/search` — default `provider=all` merges all photo providers; videos merge Pexels + Pixabay |
 | Use | Drop on canvas / Add to project | `POST /api/stock/workspaces/:workspaceId/import` |
 | Edit | Save project | `content.assetId` only (never provider CDN URL as primary ref) |
 | Playback / render | Existing asset resolution | `assetId` → presigned S3 |
@@ -35,7 +35,7 @@ sequenceDiagram
   participant API as Backend
   participant Editor as Canvas
 
-  Panel->>API: GET /api/stock/search?q=office&type=photo
+  Panel->>API: GET /api/stock/search?q=office&type=photo&provider=all
   API-->>Panel: items with previewUrl
 
   Note over Panel: User clicks Add or drops on canvas
@@ -47,27 +47,34 @@ sequenceDiagram
   Editor->>API: PATCH .../projects/:id/data
 ```
 
-1. **Search** — debounce input (~300ms), support `type` toggle (photo / video), paginate with `page`.
-2. **Preview grid** — photos: `previewUrl` on `<img>`. Videos: poster from `previewUrl`; on hover play `previewVideoUrl` (muted `<video>`). These URLs may break later; that is acceptable for browse-only previews.
+1. **Search** — debounce input (~300ms), support `type` toggle (photo / video), optional `provider` filter (`all` | `pexels` | `unsplash` | `pixabay`), paginate with `page`.
+2. **Preview grid** — photos: `previewUrl` on `<img>`. Videos: poster from `previewUrl`; on hover play `previewVideoUrl` (muted `<video>`). Show a small provider badge from `item.provider`.
 3. **Import on use** — when the user adds media, call import **before** inserting the clip. Show a loading state on the tile.
 4. **Insert clip** — use returned `asset.id` as `content.assetId`. Do not store `previewUrl` in saved project JSON.
-5. **Attribution** — display `asset.stockMetadata.attribution` (e.g. footer chip or export credits screen).
+5. **Attribution** — display `asset.stockMetadata.attribution`; for Unsplash, link `pageUrl` and optional `photographerProfileUrl` from metadata.
 
 ---
 
 ## API examples
 
-### Search photos
+### Search photos (merged providers)
 
 ```http
-GET /api/stock/search?q=office&type=photo&page=1&perPage=20
+GET /api/stock/search?q=office&type=photo&provider=all&page=1&perPage=20
 Authorization: Bearer <token>
 ```
 
-### Search videos
+### Search Unsplash only
 
 ```http
-GET /api/stock/search?q=nature&type=video&page=1
+GET /api/stock/search?q=office&type=photo&provider=unsplash&page=1
+Authorization: Bearer <token>
+```
+
+### Search videos (merged providers)
+
+```http
+GET /api/stock/search?q=nature&type=video&provider=all&page=1
 Authorization: Bearer <token>
 ```
 
@@ -112,6 +119,21 @@ Response `200`:
 ```
 
 Re-importing the same item returns the same `asset.id` without duplicating storage.
+
+### Import Unsplash photo
+
+```http
+POST /api/stock/workspaces/{workspaceId}/import
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "provider": "unsplash",
+  "externalId": "abc123",
+  "mediaType": "photo",
+  "name": "Office desk"
+}
+```
 
 ---
 
@@ -183,9 +205,9 @@ Imported stock counts against the workspace owner's storage quota (same as uploa
 
 ---
 
-## Phase 2 (not in MVP)
+## Phase 2 complete
 
-Unsplash (photos) and Pixabay (photos + videos) will use the same search/import contract with additional `provider` values. No editor JSON changes expected.
+All three providers are supported. Future work may add curated collections or caching — no editor JSON changes required.
 
 ---
 
@@ -194,7 +216,8 @@ Unsplash (photos) and Pixabay (photos + videos) will use the same search/import 
 - [ ] Stock tab calls search with Bearer token
 - [ ] Import runs on add-to-canvas, not on search result hover
 - [ ] Project save uses `assetId` only
-- [ ] Attribution shown for Pexels items
+- [ ] Attribution shown for Pexels, Unsplash, and Pixabay items
+- [ ] Provider badge from `item.provider` in search grid
 - [ ] My assets can filter `source=stock`
 - [ ] No blob or Pexels CDN URLs persisted in `project.data`
 

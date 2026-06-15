@@ -4,13 +4,14 @@ const messages = require('../../shared/utils/messages');
 const stockService = require('./stock.service');
 
 const searchStock = asyncHandler(async (req, res) => {
-  const { q, type, page, perPage } = req.query;
+  const { q, type, page, perPage, provider } = req.query;
 
   const result = await stockService.searchStock({
     q,
     type,
     page,
     perPage,
+    provider,
   });
 
   return successResponse(

@@ -56,7 +56,7 @@
 | GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|all`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |
 | DELETE | `/api/assets/:workspaceId/:assetId` | Bearer + workspace access | Delete asset |
-| GET | `/api/stock/search` | Bearer | Search Pexels stock (`q`, `type=photo\|video`, `page`, `perPage`) |
+| GET | `/api/stock/search` | Bearer | Search stock (`q`, `type=photo\|video`, `provider=pexels\|unsplash\|pixabay\|all`, `page`, `perPage`) |
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |

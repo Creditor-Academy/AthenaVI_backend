@@ -877,24 +877,25 @@
     },
     {
       "name": "Stock",
-      "description": "Pexels stock library (phase 1). Requires `PEXELS_API_KEY` on the server.\n\n**Flow:** (1) **Search stock** — browse photos/videos (provider preview URLs only); (2) **Import stock into workspace** — downloads from Pexels, copies to S3, creates workspace `Asset` (deduped per workspace + provider + external id); (3) reference returned `asset.id` in project JSON as `content.assetId`.\n\nImported stock counts against workspace owner storage. Re-importing the same item returns the existing asset.",
+      "description": "Stock library: Pexels (photos + videos), Unsplash (photos), Pixabay (photos + videos). Requires at least one of `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY` on the server.\n\n**Flow:** (1) **Search stock** — default `provider=all` merges all photo providers; videos merge Pexels + Pixabay; (2) **Import stock into workspace** — downloads from provider, copies to S3, creates workspace `Asset`; (3) reference `asset.id` in project JSON as `content.assetId`.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
       },
       "item": [
         {
-          "name": "Search stock (photos)",
+          "name": "Search stock (photos, all providers)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&page=1&perPage=20",
+              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=all&page=1&perPage=20",
               "host": ["{{baseUrl}}"],
               "path": ["api", "stock", "search"],
               "query": [
                 { "key": "q", "value": "office" },
                 { "key": "type", "value": "photo" },
+                { "key": "provider", "value": "all" },
                 { "key": "page", "value": "1" },
                 { "key": "perPage", "value": "20" }
               ]
@@ -902,17 +903,75 @@
           }
         },
         {
-          "name": "Search stock (videos)",
+          "name": "Search stock (Unsplash photos)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&page=1&perPage=20",
+              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=unsplash&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "office" },
+                { "key": "type", "value": "photo" },
+                { "key": "provider", "value": "unsplash" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search stock (Pixabay photos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=pixabay&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "office" },
+                { "key": "type", "value": "photo" },
+                { "key": "provider", "value": "pixabay" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search stock (videos, all providers)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=all&page=1&perPage=20",
               "host": ["{{baseUrl}}"],
               "path": ["api", "stock", "search"],
               "query": [
                 { "key": "q", "value": "nature" },
                 { "key": "type", "value": "video" },
+                { "key": "provider", "value": "all" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search stock (Pixabay videos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=pixabay&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "nature" },
+                { "key": "type", "value": "video" },
+                { "key": "provider", "value": "pixabay" },
                 { "key": "page", "value": "1" },
                 { "key": "perPage", "value": "20" }
               ]
@@ -950,6 +1009,64 @@
             },
             "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import",
             "description": "Set `stockExternalId` from a search result `externalId`, or replace manually. Saves `assetId` on success."
+          }
+        },
+        {
+          "name": "Import Unsplash photo into workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.asset && j.data.asset.id) {",
+                  "    pm.collectionVariables.set('assetId', j.data.asset.id);",
+                  "  }",
+                  "  if (j.data && j.data.asset && j.data.asset.stockExternalId) {",
+                  "    pm.collectionVariables.set('stockExternalId', j.data.asset.stockExternalId);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"unsplash\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Unsplash photo\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
+          }
+        },
+        {
+          "name": "Import Pixabay photo into workspace",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"pixabay\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Pixabay photo\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
+          }
+        },
+        {
+          "name": "Import Pixabay video into workspace",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"pixabay\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"video\",\n  \"name\": \"Pixabay video\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
           }
         }
       ]

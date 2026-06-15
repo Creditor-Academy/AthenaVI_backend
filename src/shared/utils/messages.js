@@ -158,8 +158,9 @@ module.exports = {
   ASSET_DELETED_SUCCESSFULLY: 'Asset deleted successfully',
 
   // Stock media
-  STOCK_NOT_CONFIGURED: 'Stock media is not configured (missing PEXELS_API_KEY)',
+  STOCK_NOT_CONFIGURED: 'Stock media is not configured (missing provider API keys)',
   STOCK_PROVIDER_NOT_SUPPORTED: 'Stock provider is not supported',
+  STOCK_VIDEO_NOT_SUPPORTED_FOR_PROVIDER: 'This stock provider does not support video',
   STOCK_PROVIDER_REQUEST_FAILED: 'Stock provider request failed',
   STOCK_REMOTE_FETCH_FAILED: 'Could not download stock media from provider',
   STOCK_FILE_TOO_LARGE: 'Stock media file exceeds the allowed size limit',

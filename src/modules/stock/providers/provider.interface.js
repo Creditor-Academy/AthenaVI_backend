@@ -1,6 +1,6 @@
 /**
  * Stock provider contract for search + import resolution.
- * Phase 1: Pexels only. Unsplash/Pixabay implement the same shape in phase 2.
+ * Phase 2: Unsplash photos, Pixabay photos + videos.
  *
  * @typedef {'pexels'|'unsplash'|'pixabay'} StockProviderId
  * @typedef {'photo'|'video'} StockMediaType
