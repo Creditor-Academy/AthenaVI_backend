@@ -11,7 +11,10 @@ const {
   HEYGEN_AVATAR_ENGINES,
   normalizeHeygenAvatarEngine,
   usesHeygenLegacyV2VideoApi,
+  usesHeygenLegacyV2VideoLook,
   buildHeygenVideoEnginePayload,
+  extractSupportedApiEnginesFromLook,
+  resolveVideoPlanForLook,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
 const {
@@ -169,6 +172,32 @@ function buildHeyGenV2VideoPayload(body) {
   };
 }
 
+async function resolveVideoEngineForAvatar(avatarId, avatarEngine) {
+  try {
+    const lookBody = await heygenV3Service.getAvatarLook(avatarId);
+    const plan = resolveVideoPlanForLook(lookBody, avatarEngine);
+    if (plan.videoApi === 'v2') {
+      return { engine: HEYGEN_AVATAR_ENGINES.IV, useLegacyV2: true, plan };
+    }
+    if (plan.engine == null) {
+      throw new AppError(messages.HEYGEN_AVATAR_ENGINE_UNSUPPORTED, 400);
+    }
+    return { engine: plan.engine, useLegacyV2: false, plan };
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    const requested = normalizeHeygenAvatarEngine(avatarEngine);
+    const useLegacyV2 = usesHeygenLegacyV2VideoApi(avatarId);
+    return {
+      engine:
+        !useLegacyV2 && requested === HEYGEN_AVATAR_ENGINES.V
+          ? HEYGEN_AVATAR_ENGINES.IV
+          : requested,
+      useLegacyV2,
+      plan: null,
+    };
+  }
+}
+
 async function createHeygenVideoJob(payloadBody, { useLegacyV2 }) {
   if (useLegacyV2) {
     const jsonBody = buildHeyGenV2VideoPayload(payloadBody);
@@ -277,8 +306,8 @@ const generateAvatarVideo = async (input) => {
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
   const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
-  const engine = normalizeHeygenAvatarEngine(avatarEngine);
-  const useLegacyV2 = usesHeygenLegacyV2VideoApi(avatarId);
+  const { engine, useLegacyV2, plan } = await resolveVideoEngineForAvatar(avatarId, avatarEngine);
+  const hashEngine = useLegacyV2 ? 'legacy_v2' : engine;
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -287,7 +316,7 @@ const generateAvatarVideo = async (input) => {
     avatarId,
     voiceId,
     script,
-    avatarEngine: engine,
+    avatarEngine: hashEngine,
   });
 
   const existingResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
@@ -353,72 +382,125 @@ const generateAvatarVideo = async (input) => {
     },
     });
   } catch (err) {
-    // Defensive retry: if the look lied about Avatar IV support (or we couldn't
-    // extract supported engines correctly), retry with Avatar V.
     const msg = String(err?.message || '');
-    if (
-      !useLegacyV2 &&
-      engine === HEYGEN_AVATAR_ENGINES.IV &&
-      !usesHeygenLegacyV2VideoApi(avatarId) &&
-      err instanceof AppError &&
-      err.statusCode === 400 &&
-      /avatar iv/i.test(msg)
-    ) {
-      const fallbackEngine = HEYGEN_AVATAR_ENGINES.V;
-      const fallbackRequestHash = generateHeygenRequestHash({
-        workspaceId,
-        projectId,
-        sceneId,
-        avatarId,
-        voiceId,
-        script,
-        avatarEngine: fallbackEngine,
-      });
-
-      const existingFallback = await heygenDao.findHeygenResponseByRequestHash(fallbackRequestHash);
-      if (existingFallback) return existingFallback;
-
-      const fallbackJsonBody = buildHeyGenVideoPayload({
-        ...payloadBody,
-        avatarEngine: fallbackEngine,
-      });
-
-      const fallbackEstimate = calculateUsageCredits({
-        feature: FEATURE.HEYGEN_VIDEO,
-        durationSeconds: estimatedDuration,
-        avatarEngine: fallbackEngine,
-        avatarType,
-        resolution,
-      });
-
-      const createdFallback = await heygenV3Service.createVideo(fallbackJsonBody);
-      return heygenDao.saveHeygenResponse({
-        workspaceId,
-        folderId: project.folderId,
-        projectId,
-        sceneId,
-        videoId: createdFallback.videoId,
-        videoUrl: '',
-        s3Key: null,
-        requestHash: fallbackRequestHash,
-        status: createdFallback.status,
-        rawResponse: createdFallback.raw,
-        triggeredByUserId: userId,
-        billingContext: {
-          avatarEngine: fallbackEngine,
-          heygenApiVersion: 'v3',
-          avatarType: avatarType || null,
-          resolution: resolution || null,
-          script,
-          title: title || null,
-          projectName: project.name,
-          sceneName,
-          estimatedCredits: fallbackEstimate.athenaCredits,
-        },
-      });
+    if (!(err instanceof AppError) || err.statusCode !== 400 || useLegacyV2) {
+      throw err;
     }
 
-    throw err;
+    const supported = plan?.supportedApiEngines || [];
+    const supportsIv = supported.includes(HEYGEN_AVATAR_ENGINES.IV);
+    const supportsV = supported.includes(HEYGEN_AVATAR_ENGINES.V);
+    let fallbackEngine = null;
+
+    if (engine === HEYGEN_AVATAR_ENGINES.V && /avatar v/i.test(msg) && supportsIv) {
+      fallbackEngine = HEYGEN_AVATAR_ENGINES.IV;
+    } else if (engine === HEYGEN_AVATAR_ENGINES.IV && /avatar iv/i.test(msg) && supportsV) {
+      fallbackEngine = HEYGEN_AVATAR_ENGINES.V;
+    } else if (
+      engine === HEYGEN_AVATAR_ENGINES.IV &&
+      /avatar iv/i.test(msg) &&
+      !usesHeygenLegacyV2VideoApi(avatarId)
+    ) {
+      try {
+        const lookBody = await heygenV3Service.getAvatarLook(avatarId);
+        if (usesHeygenLegacyV2VideoLook(lookBody)) {
+          const legacyHash = generateHeygenRequestHash({
+            workspaceId,
+            projectId,
+            sceneId,
+            avatarId,
+            voiceId,
+            script,
+            avatarEngine: 'legacy_v2',
+          });
+          const existingLegacy = await heygenDao.findHeygenResponseByRequestHash(legacyHash);
+          if (existingLegacy) return existingLegacy;
+
+          const createdLegacy = await createHeygenVideoJob(payloadBody, { useLegacyV2: true });
+          return heygenDao.saveHeygenResponse({
+            workspaceId,
+            folderId: project.folderId,
+            projectId,
+            sceneId,
+            videoId: createdLegacy.videoId,
+            videoUrl: '',
+            s3Key: null,
+            requestHash: legacyHash,
+            status: createdLegacy.status,
+            rawResponse: createdLegacy.raw,
+            triggeredByUserId: userId,
+            billingContext: {
+              avatarEngine: 'legacy_v2',
+              heygenApiVersion: createdLegacy.apiVersion || 'v2',
+              avatarType: avatarType || null,
+              resolution: resolution || null,
+              script,
+              title: title || null,
+              projectName: project.name,
+              sceneName,
+              estimatedCredits: estimate.athenaCredits,
+            },
+          });
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    if (!fallbackEngine || fallbackEngine === engine) {
+      throw err;
+    }
+
+    const fallbackRequestHash = generateHeygenRequestHash({
+      workspaceId,
+      projectId,
+      sceneId,
+      avatarId,
+      voiceId,
+      script,
+      avatarEngine: fallbackEngine,
+    });
+
+    const existingFallback = await heygenDao.findHeygenResponseByRequestHash(fallbackRequestHash);
+    if (existingFallback) return existingFallback;
+
+    const fallbackEstimate = calculateUsageCredits({
+      feature: FEATURE.HEYGEN_VIDEO,
+      durationSeconds: estimatedDuration,
+      avatarEngine: fallbackEngine,
+      avatarType,
+      resolution,
+    });
+
+    const createdFallback = await createHeygenVideoJob(
+      { ...payloadBody, avatarEngine: fallbackEngine },
+      { useLegacyV2: false }
+    );
+
+    return heygenDao.saveHeygenResponse({
+      workspaceId,
+      folderId: project.folderId,
+      projectId,
+      sceneId,
+      videoId: createdFallback.videoId,
+      videoUrl: '',
+      s3Key: null,
+      requestHash: fallbackRequestHash,
+      status: createdFallback.status,
+      rawResponse: createdFallback.raw,
+      triggeredByUserId: userId,
+      billingContext: {
+        avatarEngine: fallbackEngine,
+        heygenApiVersion: createdFallback.apiVersion || 'v3',
+        avatarType: avatarType || null,
+        resolution: resolution || null,
+        script,
+        title: title || null,
+        projectName: project.name,
+        sceneName,
+        estimatedCredits: fallbackEstimate.athenaCredits,
+      },
+    });
   }
 };
 

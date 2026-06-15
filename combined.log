@@ -2847,3 +2847,46 @@
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T10:32:55.607Z"}
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T10:33:27.516Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T10:33:27.519Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:52:51.404Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:52:51.410Z"}
+{"level":"error","message":"Error: This video avatar does not support Avatar V video generation.\n    at mapHeyGenStatus (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:43:11)\n    at heygenFetch (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:78:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.createVideo (D:\\code\\AthenaVI_backend\\src\\modules\\heygen\\heygenV3.service.js:905:15)\n    at async Object.generateAvatarVideo (D:\\code\\AthenaVI_backend\\src\\modules\\video\\services\\heygen.service.js:394:31)\n    at async D:\\code\\AthenaVI_backend\\src\\modules\\video\\heygenVideo.controller.js:9:15","timestamp":"2026-06-15T11:53:13.393Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:57:11.523Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:57:11.529Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:57:25.324Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:57:25.329Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:57:41.903Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:57:41.910Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:58:04.036Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:58:04.042Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:58:14.127Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:58:14.134Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:58:20.462Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:58:20.468Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T11:58:42.215Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T11:58:42.221Z"}
+{"level":"error","message":"Error: This video avatar does not support Avatar V video generation.\n    at mapHeyGenStatus (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:43:11)\n    at heygenFetch (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:78:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.createVideo (D:\\code\\AthenaVI_backend\\src\\modules\\heygen\\heygenV3.service.js:909:15)\n    at async Object.generateAvatarVideo (D:\\code\\AthenaVI_backend\\src\\modules\\video\\services\\heygen.service.js:427:29)\n    at async D:\\code\\AthenaVI_backend\\src\\modules\\video\\heygenVideo.controller.js:9:15","timestamp":"2026-06-15T11:59:53.962Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:00:18.954Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:00:18.961Z"}
+{"level":"error","message":"Error: This video avatar does not support Avatar V video generation.\n    at mapHeyGenStatus (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:43:11)\n    at heygenFetch (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:78:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.createVideo (D:\\code\\AthenaVI_backend\\src\\modules\\heygen\\heygenV3.service.js:909:15)\n    at async Object.generateAvatarVideo (D:\\code\\AthenaVI_backend\\src\\modules\\video\\services\\heygen.service.js:427:29)\n    at async D:\\code\\AthenaVI_backend\\src\\modules\\video\\heygenVideo.controller.js:9:15","timestamp":"2026-06-15T12:00:35.230Z"}
+{"level":"error","message":"Error: This video avatar does not support Avatar V video generation.\n    at mapHeyGenStatus (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:43:11)\n    at heygenFetch (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:78:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.createVideo (D:\\code\\AthenaVI_backend\\src\\modules\\heygen\\heygenV3.service.js:909:15)\n    at async Object.generateAvatarVideo (D:\\code\\AthenaVI_backend\\src\\modules\\video\\services\\heygen.service.js:427:29)\n    at async D:\\code\\AthenaVI_backend\\src\\modules\\video\\heygenVideo.controller.js:9:15","timestamp":"2026-06-15T12:01:06.402Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:03:12.837Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:03:12.843Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:03:48.419Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:03:48.426Z"}
+{"level":"error","message":"Error: This video avatar does not support Avatar IV video generation.\n    at mapHeyGenStatus (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:43:11)\n    at heygenFetch (D:\\code\\AthenaVI_backend\\src\\shared\\services\\heygenV3.client.js:78:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.createVideo (D:\\code\\AthenaVI_backend\\src\\modules\\heygen\\heygenV3.service.js:909:15)\n    at async Object.generateAvatarVideo (D:\\code\\AthenaVI_backend\\src\\modules\\video\\services\\heygen.service.js:360:21)\n    at async D:\\code\\AthenaVI_backend\\src\\modules\\video\\heygenVideo.controller.js:9:15","timestamp":"2026-06-15T12:04:18.180Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:06:54.319Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:06:54.327Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:07:01.888Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:07:01.899Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:11:03.995Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:11:04.002Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:11:12.754Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:11:12.763Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:11:24.317Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:11:24.325Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:11:51.598Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:11:51.607Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:12:16.227Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:12:16.232Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T12:14:08.680Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T12:14:08.685Z"}

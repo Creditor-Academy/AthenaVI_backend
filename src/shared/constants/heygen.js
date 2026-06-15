@@ -65,10 +65,13 @@ function extractLookIdFromLookBody(lookBody) {
  * @returns {boolean}
  */
 function usesHeygenLegacyV2VideoLook(lookBody) {
+  const supported = extractSupportedApiEnginesFromLook(lookBody);
+  if (Array.isArray(supported) && supported.length === 0) {
+    return true;
+  }
   const lookId = extractLookIdFromLookBody(lookBody);
   if (!usesHeygenLegacyV2VideoApi(lookId)) return false;
-  const supported = extractSupportedApiEnginesFromLook(lookBody);
-  return !supported || supported.length === 0;
+  return supported == null || supported.length === 0;
 }
 
 /** @deprecated use usesHeygenLegacyV2VideoLook */
@@ -101,6 +104,7 @@ function extractSupportedApiEnginesFromLook(lookBody) {
   const visited = new Set();
   const found = new Set();
   let nodesVisited = 0;
+  let sawExplicitEmpty = false;
 
   function tryCollectEngineValue(v) {
     const normalized = normalizeHeygenAvatarEngine(v);
@@ -125,6 +129,7 @@ function extractSupportedApiEnginesFromLook(lookBody) {
 
     const direct = node.supported_api_engines ?? node.supportedApiEngines;
     if (Array.isArray(direct)) {
+      if (direct.length === 0) sawExplicitEmpty = true;
       for (const e of direct) {
         if (e == null) continue;
         tryCollectEngineValue(e);
@@ -140,7 +145,9 @@ function extractSupportedApiEnginesFromLook(lookBody) {
   }
 
   scan(lookBody, 0);
-  if (found.size === 0) return null;
+  if (found.size === 0) {
+    return sawExplicitEmpty ? [] : null;
+  }
   return [...found];
 }
 
@@ -163,6 +170,103 @@ function getEffectiveSupportedApiEnginesFromLook(lookBody) {
   return [DEFAULT_HEYGEN_AVATAR_ENGINE];
 }
 
+function getLookSupportedVideoEngines(lookBody) {
+  const plan = resolveVideoPlanForLook(lookBody, null);
+  return plan.supportedApiEngines;
+}
+
+/**
+ * Single source of truth for how to render a look.
+ * @returns {{
+ *   videoApi: 'v2'|'v3',
+ *   engine: 'avatar_iv'|'avatar_v'|null,
+ *   supportedApiEngines: string[],
+ *   defaultAvatarEngine: string,
+ *   engineCoerced: boolean,
+ * }}
+ */
+function resolveVideoPlanForLook(lookBody, requestedEngine) {
+  if (usesHeygenLegacyV2VideoLook(lookBody)) {
+    return {
+      videoApi: 'v2',
+      engine: null,
+      supportedApiEngines: ['legacy_v2'],
+      defaultAvatarEngine: 'legacy_v2',
+      engineCoerced: false,
+    };
+  }
+
+  const raw = extractSupportedApiEnginesFromLook(lookBody);
+  const v3Engines = (raw && raw.length > 0 ? raw : [DEFAULT_HEYGEN_AVATAR_ENGINE]).filter(
+    (engine) => engine === HEYGEN_AVATAR_ENGINES.IV || engine === HEYGEN_AVATAR_ENGINES.V
+  );
+
+  const requested = normalizeHeygenAvatarEngine(requestedEngine);
+  let engine = requested;
+  let engineCoerced = false;
+
+  if (!v3Engines.includes(requested)) {
+    if (v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)) {
+      engine = HEYGEN_AVATAR_ENGINES.IV;
+      engineCoerced = true;
+    } else if (v3Engines.includes(HEYGEN_AVATAR_ENGINES.V)) {
+      engine = HEYGEN_AVATAR_ENGINES.V;
+      engineCoerced = true;
+    } else {
+      return {
+        videoApi: 'v3',
+        engine: null,
+        supportedApiEngines: v3Engines,
+        defaultAvatarEngine: DEFAULT_HEYGEN_AVATAR_ENGINE,
+        engineCoerced: false,
+      };
+    }
+  }
+
+  const defaultAvatarEngine = v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)
+    ? HEYGEN_AVATAR_ENGINES.IV
+    : v3Engines[0] || DEFAULT_HEYGEN_AVATAR_ENGINE;
+
+  return {
+    videoApi: 'v3',
+    engine,
+    supportedApiEngines: v3Engines,
+    defaultAvatarEngine,
+    engineCoerced,
+  };
+}
+
+/**
+ * Choose a HeyGen video engine compatible with the look.
+ * @deprecated prefer resolveVideoPlanForLook
+ */
+function resolveAvatarEngineForLook(lookBody, requestedEngine) {
+  const plan = resolveVideoPlanForLook(lookBody, requestedEngine);
+  if (plan.videoApi === 'v2') {
+    return { useLegacyV2: true, engine: DEFAULT_HEYGEN_AVATAR_ENGINE };
+  }
+  if (plan.engine == null) {
+    return { useLegacyV2: false, engine: null, supported: plan.supportedApiEngines };
+  }
+  return {
+    useLegacyV2: false,
+    engine: plan.engine,
+    ...(plan.engineCoerced ? { engineCoerced: true } : {}),
+  };
+}
+
+function enrichLookWithEngineHints(look) {
+  if (!look || typeof look !== 'object' || Array.isArray(look)) return look;
+  const plan = resolveVideoPlanForLook(look, null);
+  return {
+    ...look,
+    supportedApiEngines: plan.supportedApiEngines,
+    defaultAvatarEngine: plan.defaultAvatarEngine,
+    videoApi: plan.videoApi,
+    usesLegacyV2Video: plan.videoApi === 'v2',
+  };
+}
+
 module.exports = {
   HEYGEN_AVATAR_ENGINES,
   DEFAULT_HEYGEN_AVATAR_ENGINE,
@@ -176,4 +280,8 @@ module.exports = {
   buildHeygenVideoEnginePayload,
   extractSupportedApiEnginesFromLook,
   getEffectiveSupportedApiEnginesFromLook,
+  getLookSupportedVideoEngines,
+  resolveVideoPlanForLook,
+  resolveAvatarEngineForLook,
+  enrichLookWithEngineHints,
 };

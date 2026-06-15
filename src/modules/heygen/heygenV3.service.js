@@ -2,7 +2,7 @@ const { getJson, getJsonSafe, postJson } = require('../../shared/services/heygen
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
-const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook } = require('../../shared/constants/heygen');
+const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
 
 function pickArray(data, keys) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -592,6 +592,7 @@ function appendLookEngineBuckets(body) {
     : Array.isArray(picked.list)
       ? picked.list
       : [];
+  const enrichedLooks = looks.map(enrichLookWithEngineHints);
 
   const engineBuckets = {
     avatar_iv: [],
@@ -600,15 +601,17 @@ function appendLookEngineBuckets(body) {
     unknown: [],
   };
 
-  for (const look of looks) {
-    if (usesHeygenLegacyV2VideoLook(look)) {
+  for (const look of enrichedLooks) {
+    if (look.usesLegacyV2Video || look.videoApi === 'v2' || usesHeygenLegacyV2VideoLook(look)) {
       engineBuckets.legacy_v2.push(look);
       continue;
     }
 
-    const supported = getEffectiveSupportedApiEnginesFromLook(look);
-    const hasIv = supported.includes('avatar_iv');
-    const hasV = supported.includes('avatar_v');
+    const engines = Array.isArray(look.supportedApiEngines)
+      ? look.supportedApiEngines
+      : getLookSupportedVideoEngines(look);
+    const hasIv = engines.includes('avatar_iv');
+    const hasV = engines.includes('avatar_v');
 
     if (hasIv) engineBuckets.avatar_iv.push(look);
     if (hasV) engineBuckets.avatar_v.push(look);
@@ -617,13 +620,14 @@ function appendLookEngineBuckets(body) {
 
   const nextTarget = {
     ...target,
+    looks: enrichedLooks,
     engineBuckets,
     engineCounts: {
       avatar_iv: engineBuckets.avatar_iv.length,
       avatar_v: engineBuckets.avatar_v.length,
       legacy_v2: engineBuckets.legacy_v2.length,
       unknown: engineBuckets.unknown.length,
-      totalLooks: looks.length,
+      totalLooks: enrichedLooks.length,
     },
   };
 
