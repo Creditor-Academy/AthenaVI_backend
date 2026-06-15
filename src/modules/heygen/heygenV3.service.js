@@ -71,6 +71,48 @@ function buildHeyGenDataChain(body, maxDepth = 6) {
   return chain;
 }
 
+const LOOK_LIST_ARRAY_KEYS = [
+  'looks',
+  'avatar_looks',
+  'avatars',
+  'list',
+  'items',
+  'results',
+  'data',
+];
+
+/**
+ * HeyGen often returns looks as a bare array under `data`. Frontends expect `data.looks`.
+ */
+function normalizeLooksListBody(body) {
+  if (!body || typeof body !== 'object') return body;
+  const hasEnvelope = 'data' in body && body.data != null;
+  const envelopeExtras = hasEnvelope
+    ? Object.fromEntries(Object.entries(body).filter(([k]) => k !== 'data'))
+    : {};
+  const target = hasEnvelope ? body.data : body;
+
+  if (Array.isArray(target)) {
+    return { ...envelopeExtras, data: { looks: target } };
+  }
+
+  if (!target || typeof target !== 'object') return body;
+
+  const picked = pickArray(target, LOOK_LIST_ARRAY_KEYS);
+  const looks = Array.isArray(target.looks)
+    ? target.looks
+    : Array.isArray(picked.list)
+      ? picked.list
+      : [];
+
+  const nextTarget = { ...target, looks };
+  if (typeof nextTarget.total === 'number') nextTarget.total = looks.length;
+  if (typeof nextTarget.count === 'number') nextTarget.count = looks.length;
+  if (typeof nextTarget.total_count === 'number') nextTarget.total_count = looks.length;
+
+  return hasEnvelope ? { ...body, data: nextTarget } : { data: nextTarget };
+}
+
 function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
   if (!body || typeof body !== 'object') return body;
   const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
@@ -298,16 +340,12 @@ function appendLookEngineBuckets(body) {
   const target = hasEnvelope ? body.data : body;
   if (!target || typeof target !== 'object' || Array.isArray(target)) return body;
 
-  const picked = pickArray(target, [
-    'looks',
-    'avatar_looks',
-    'avatars',
-    'list',
-    'items',
-    'results',
-    'data',
-  ]);
-  const looks = Array.isArray(picked.list) ? picked.list : [];
+  const picked = pickArray(target, LOOK_LIST_ARRAY_KEYS);
+  const looks = Array.isArray(target.looks)
+    ? target.looks
+    : Array.isArray(picked.list)
+      ? picked.list
+      : [];
 
   const engineBuckets = {
     avatar_iv: [],
@@ -375,18 +413,12 @@ async function listAvatarLooks(userId, query) {
     }
   }
   const raw = await getJson('/v3/avatars/looks', query);
-  if (query?.ownership !== 'private') return appendLookEngineBuckets(raw);
-  const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
-  const filtered = filterPrivateListBody(raw, allowed, itemAvatarGroupId, [
-    'looks',
-    'avatar_looks',
-    'avatars',
-    'list',
-    'items',
-    'results',
-    'data',
-  ]);
-  return appendLookEngineBuckets(filtered);
+  let body = raw;
+  if (query?.ownership === 'private') {
+    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+    body = filterPrivateListBody(raw, allowed, itemAvatarGroupId, LOOK_LIST_ARRAY_KEYS);
+  }
+  return appendLookEngineBuckets(normalizeLooksListBody(body));
 }
 
 async function createAvatar(userId, body) {
