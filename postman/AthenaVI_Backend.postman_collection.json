@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "AthenaVI Backend",
-    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**User settings** under **User → Settings**: appearance, notification, and security preferences (`/api/user/settings/...`). Bearer required. Delete account requires body `{ \"confirmation\": \"delete\" }`.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos (recommended order):** (1) **HeyGen → List avatar groups (public)** → saves `groupId`; (2) **List avatar looks (public group)** → saves `avatarLookId` (this is the **look** id, not the group id); (3) **List voices (public)** or design/clone → `voiceId`; (4) **HeyGen videos → Create avatar video** → saves `heygenVideoId` (starts HeyGen job only — `s3Key` is null until sync); (5) **Get HeyGen video** or **Download** (polls HeyGen, uploads MP4 to S3); (6) **Save project data** with `content.heygenVideoId` on avatar elements. **Get project** and **Save project data** also **rehydrate** missing `heygenVideoId` from `heygen_responses` when clips exist in S3.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call. Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. For video create, pass **`avatarLookId`** as `avatarId` (HeyGen look id, e.g. `lk_…`), not `groupId` (`ag_…`).",
+    "description": "API collection for AthenaVI_backend. Default `baseUrl` is `http://localhost:9000` (see `PORT` in `.env`).\n\n**Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.\n\n**Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.\n\n**Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.\n\n**User settings** under **User → Settings**: appearance, notification, and security preferences (`/api/user/settings/...`). Bearer required. Delete account requires body `{ \"confirmation\": \"delete\" }`.\n\n**Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.\n\n**HeyGen avatar videos (recommended order):** (1) **HeyGen → List avatar groups (public)** → saves `groupId`; (2) **List avatar looks (public group)** → saves `avatarLookId` (this is the **look** id, not the group id); (3) **List voices (public)** or design/clone → `voiceId`; (4) **HeyGen videos → Create avatar video** → saves `heygenVideoId` (starts HeyGen job only — `s3Key` is null until sync); (5) **Get HeyGen video** or **Download** (polls HeyGen, uploads MP4 to S3); (6) **Save project data** with `content.heygenVideoId` on avatar elements. **Get project** and **Save project data** also **rehydrate** missing `heygenVideoId` from `heygen_responses` when clips exist in S3.\n\n**HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call. Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. For video create, pass **`avatarLookId`** as `avatarId` (HeyGen look id, e.g. `lk_…`), not `groupId` (`ag_…`).\n\n**Stock (Pexels)** under **Stock**: search then **Import stock into workspace** before using media in a project. Import returns a workspace `assetId` — use that in `project.data` elements (`content.assetId`), not Pexels CDN URLs. Requires server `PEXELS_API_KEY`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,7 +19,8 @@
     { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
     { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
     { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" },
-    { "key": "avatarEngine", "value": "avatar_iv" }
+    { "key": "avatarEngine", "value": "avatar_iv" },
+    { "key": "stockExternalId", "value": "replace-with-pexels-photo-id" }
   ],
   "item": [
     {
@@ -839,7 +840,16 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0"
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0&source=all",
+            "description": "Optional query `source`: `upload` | `stock` | `all` (default all)."
+          }
+        },
+        {
+          "name": "List stock assets only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0&source=stock"
           }
         },
         {
@@ -861,6 +871,85 @@
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stock",
+      "description": "Pexels stock library (phase 1). Requires `PEXELS_API_KEY` on the server.\n\n**Flow:** (1) **Search stock** — browse photos/videos (provider preview URLs only); (2) **Import stock into workspace** — downloads from Pexels, copies to S3, creates workspace `Asset` (deduped per workspace + provider + external id); (3) reference returned `asset.id` in project JSON as `content.assetId`.\n\nImported stock counts against workspace owner storage. Re-importing the same item returns the existing asset.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Search stock (photos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "office" },
+                { "key": "type", "value": "photo" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search stock (videos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&page=1&perPage=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stock", "search"],
+              "query": [
+                { "key": "q", "value": "nature" },
+                { "key": "type", "value": "video" },
+                { "key": "page", "value": "1" },
+                { "key": "perPage", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Import stock into workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.asset && j.data.asset.id) {",
+                  "    pm.collectionVariables.set('assetId', j.data.asset.id);",
+                  "  }",
+                  "  if (j.data && j.data.asset && j.data.asset.stockExternalId) {",
+                  "    pm.collectionVariables.set('stockExternalId', j.data.asset.stockExternalId);",
+                  "  }",
+                  "} catch (e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"pexels\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Stock photo\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import",
+            "description": "Set `stockExternalId` from a search result `externalId`, or replace manually. Saves `assetId` on success."
           }
         }
       ]

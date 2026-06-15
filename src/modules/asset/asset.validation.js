@@ -13,6 +13,7 @@ const getAssetsSchema = Joi.object({
   query: Joi.object({
     take: Joi.number().integer().min(1).max(100).optional(),
     skip: Joi.number().integer().min(0).optional(),
+    source: Joi.string().valid('upload', 'stock', 'all').optional(),
   }),
 });
 

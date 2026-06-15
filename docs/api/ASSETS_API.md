@@ -41,8 +41,11 @@ Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`vide
 
 - `take` – page size, **1–100** (default **20** when omitted).
 - `skip` – offset, default **0**.
+- `source` – `upload` \| `stock` \| `all` (default **all** when omitted).
 
 For **PRIVATE** workspaces, only assets **uploaded by the current user** are returned. For **TEAM** workspaces, assets for the whole workspace are listed.
+
+Stock imports (`source: "stock"`) appear alongside uploads. See [Stock API](STOCK_API.md) for search/import.
 
 **Response (200)** – `data`: `{ "assets": [ ... ] }`.
 

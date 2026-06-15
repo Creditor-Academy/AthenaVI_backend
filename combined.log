@@ -2735,3 +2735,10 @@
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-05-30T11:57:43.106Z"}
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-06-04T06:41:49.826Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-04T06:41:49.829Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T06:08:46.363Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T06:08:46.370Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T06:09:13.620Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T06:09:13.625Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-15T06:14:03.583Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-15T06:14:03.586Z"}
+{"level":"error","message":"Error: Unauthorized\n    at D:\\code\\AthenaVI_backend\\src\\middlewares\\auth.middlware.js:11:11\n    at D:\\code\\AthenaVI_backend\\src\\shared\\utils\\asyncHandler.js:2:19\n    at Layer.handleRequest (D:\\code\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (D:\\code\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:157:13)\n    at Route.dispatch (D:\\code\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:117:3)\n    at handle (D:\\code\\AthenaVI_backend\\node_modules\\router\\index.js:435:11)\n    at Layer.handleRequest (D:\\code\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at D:\\code\\AthenaVI_backend\\node_modules\\router\\index.js:295:15\n    at processParams (D:\\code\\AthenaVI_backend\\node_modules\\router\\index.js:582:12)\n    at next (D:\\code\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)","timestamp":"2026-06-15T06:19:27.020Z"}

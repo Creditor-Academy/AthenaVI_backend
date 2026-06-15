@@ -21,13 +21,21 @@ const incrementUserStorage = (db, userId, size) => {
   });
 };
 
-const findAssets = ({ workspaceId, userId, isPrivate, take, skip }) => {
+const findAssets = ({ workspaceId, userId, isPrivate, source, take, skip }) => {
   const limit = Math.min(Math.max(Number(take) || 20, 1), 100);
   const offset = Math.max(Number(skip) || 0, 0);
+
+  const sourceFilter =
+    source === 'upload'
+      ? { source: 'upload' }
+      : source === 'stock'
+        ? { source: 'stock' }
+        : {};
 
   return prisma.asset.findMany({
     where: {
       workspaceId,
+      ...sourceFilter,
       ...(isPrivate && { uploadedBy: userId }),
     },
     take: limit,
@@ -71,6 +79,17 @@ const deleteAssetById = (db, assetId) => {
   });
 };
 
+const findStockAssetByExternalId = (workspaceId, stockProvider, stockExternalId) => {
+  return prisma.asset.findFirst({
+    where: {
+      workspaceId,
+      stockProvider,
+      stockExternalId,
+      source: 'stock',
+    },
+  });
+};
+
 module.exports = {
   findUserById,
   createAsset,
@@ -80,4 +99,5 @@ module.exports = {
   updateAssetName,
   decrementUserStorage,
   deleteAssetById,
+  findStockAssetByExternalId,
 };
