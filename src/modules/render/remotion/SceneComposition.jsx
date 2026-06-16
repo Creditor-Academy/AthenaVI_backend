@@ -12,6 +12,7 @@ const {
   buildAnimatedStyle,
   resolveAnimatedText,
 } = require('./animations');
+const { DELAY_RENDER_TIMEOUT_MS } = require('./renderTimeouts');
 
 function BackgroundLayer({ background }) {
   if (!background || background.type === 'color') {
@@ -23,6 +24,7 @@ function BackgroundLayer({ background }) {
       <AbsoluteFill>
         <Img
           src={background.src}
+          delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
           style={{ width: '100%', height: '100%', objectFit: background.fit || 'cover' }}
         />
       </AbsoluteFill>
@@ -34,6 +36,7 @@ function BackgroundLayer({ background }) {
       <AbsoluteFill>
         <OffthreadVideo
           src={background.src}
+          delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
           style={{ width: '100%', height: '100%', objectFit: background.fit || 'cover' }}
         />
       </AbsoluteFill>
@@ -132,6 +135,7 @@ function IconElement({ element, frame, fps }) {
     >
       <Img
         src={content.src}
+        delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
         style={{
           width: '100%',
           height: '100%',
@@ -168,7 +172,7 @@ function FrameElement({ element, frame, fps }) {
   if (fillSrc) {
     return (
       <div style={containerStyle}>
-        <Img src={fillSrc} style={{ width: '100%', height: '100%', objectFit }} />
+        <Img src={fillSrc} delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS} style={{ width: '100%', height: '100%', objectFit }} />
       </div>
     );
   }
@@ -318,17 +322,25 @@ function MediaElement({ element, frame, fps }) {
     case 'video':
       return (
         <div style={containerStyle}>
-          <OffthreadVideo src={element.content?.src} style={mediaStyle} />
+          <OffthreadVideo
+            src={element.content?.src}
+            delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
+            style={mediaStyle}
+          />
         </div>
       );
     case 'image':
       return (
         <div style={containerStyle}>
-          <Img src={element.content?.src} style={mediaStyle} />
+          <Img
+            src={element.content?.src}
+            delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
+            style={mediaStyle}
+          />
         </div>
       );
     case 'audio':
-      return <Audio src={element.content?.src} />;
+      return <Audio src={element.content?.src} delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS} />;
     default:
       return null;
   }

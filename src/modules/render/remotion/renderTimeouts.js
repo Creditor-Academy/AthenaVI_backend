@@ -1,0 +1,5 @@
+const DELAY_RENDER_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
+
+module.exports = {
+  DELAY_RENDER_TIMEOUT_MS,
+};

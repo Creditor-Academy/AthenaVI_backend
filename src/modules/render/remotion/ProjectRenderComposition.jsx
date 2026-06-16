@@ -10,6 +10,7 @@ const {
   buildSceneTimings,
   getSceneTransitionStyle,
 } = require('./transitions');
+const { DELAY_RENDER_TIMEOUT_MS } = require('./renderTimeouts');
 
 function SceneClip({ scene }) {
   const frame = useCurrentFrame();
@@ -37,6 +38,7 @@ function SceneClip({ scene }) {
       >
         <OffthreadVideo
           src={scene.src}
+          delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </AbsoluteFill>

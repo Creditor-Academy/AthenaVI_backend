@@ -1,3 +1,5 @@
+const fs = require('fs/promises');
+const { createWriteStream } = require('fs');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 const {
@@ -100,6 +102,35 @@ async function getPresignedGetUrl(key, expiresInSeconds = 300) {
     Key: key,
   });
   return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
+async function downloadObjectToFile(key, destPath) {
+  if (!BUCKET) {
+    throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
+  }
+
+  const out = await s3.send(
+    new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    })
+  );
+
+  const body = out.Body;
+  if (!body) {
+    throw new AppError(messages.NOT_FOUND, 404);
+  }
+
+  await fs.mkdir(path.dirname(destPath), { recursive: true });
+
+  if (typeof body.pipe === 'function') {
+    await pipeline(body, createWriteStream(destPath));
+    return destPath;
+  }
+
+  const buf = Buffer.from(await body.transformToByteArray());
+  await fs.writeFile(destPath, buf);
+  return destPath;
 }
 
 /**
@@ -263,6 +294,7 @@ module.exports = {
   copyFile,
   moveFile,
   getPresignedGetUrl,
+  downloadObjectToFile,
   streamObjectToResponse,
   streamRemoteUrlToResponse,
   headRemoteUrlMeta,
