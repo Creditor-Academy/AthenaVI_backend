@@ -40,10 +40,21 @@ function buildHeygenSceneVideoKey({
   return `${buildProjectBasePrefix({ workspaceId, folderId, projectId })}/scenes/${sanitizePathSegment(sceneId)}/heygen/${sanitizePathSegment(heygenVideoId)}.mp4`;
 }
 
+function buildSpeechSceneAudioKey({
+  workspaceId,
+  folderId,
+  projectId,
+  sceneId,
+  speechId,
+}) {
+  return `${buildProjectBasePrefix({ workspaceId, folderId, projectId })}/scenes/${sanitizePathSegment(sceneId)}/speech/${sanitizePathSegment(speechId)}.mp3`;
+}
+
 module.exports = {
   sanitizePathSegment,
   buildProjectBasePrefix,
   buildProjectRenderFinalKey,
   buildProjectSceneCacheKey,
   buildHeygenSceneVideoKey,
+  buildSpeechSceneAudioKey,
 };

@@ -2,9 +2,11 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const projectDao = require('./project.dao');
 const heygenDao = require('../video/heygen.dao');
+const speechDao = require('../speech/speech.dao');
 const { enrichProject, enrichProjects } = require('./project.format');
 const projectStorageService = require('./projectStorage.service');
 const { rehydrateHeygenAvatarsInProjectData } = require('./projectHeygenRehydrate');
+const { rehydrateSpeechInProjectData } = require('./projectSpeechRehydrate');
 const { normalizeEditorProjectData } = require('./projectEditorNormalize');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
@@ -216,25 +218,47 @@ async function attachRehydratedProjectData(workspaceId, projectId, project) {
     return project;
   }
 
-  const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
-  if (!heygenRows.length) {
+  const [heygenRows, speechRows] = await Promise.all([
+    heygenDao.listHeygenResponsesByProject(workspaceId, projectId),
+    speechDao.listSpeechGenerationsByProject(workspaceId, projectId),
+  ]);
+
+  if (!heygenRows.length && !speechRows.length) {
     return project;
   }
 
-  const { data: rehydrated, changed } = rehydrateHeygenAvatarsInProjectData({
-    workspaceId,
-    projectId,
-    data: project.data,
-    heygenRows,
-  });
+  let data = project.data;
+  let changed = false;
+
+  if (heygenRows.length) {
+    const heygenResult = rehydrateHeygenAvatarsInProjectData({
+      workspaceId,
+      projectId,
+      data,
+      heygenRows,
+    });
+    data = heygenResult.data;
+    changed = changed || heygenResult.changed;
+  }
+
+  if (speechRows.length) {
+    const speechResult = rehydrateSpeechInProjectData({
+      workspaceId,
+      projectId,
+      data,
+      speechRows,
+    });
+    data = speechResult.data;
+    changed = changed || speechResult.changed;
+  }
 
   if (!changed) {
     return project;
   }
 
-  const data = normalizeEditorProjectData(rehydrated);
-  await projectDao.updateProject(projectId, { data });
-  return { ...project, data };
+  const normalized = normalizeEditorProjectData(data);
+  await projectDao.updateProject(projectId, { data: normalized });
+  return { ...project, data: normalized };
 }
 
 const getProjectById = async (workspaceId, projectId) => {
@@ -258,13 +282,30 @@ const updateProject = async (workspaceId, projectId, userId, payload) => {
 const saveProjectData = async (workspaceId, projectId, userId, data) => {
   await assertProjectInWorkspace(workspaceId, projectId);
   const normalizedState = normalizeProjectState(data);
-  const heygenRows = await heygenDao.listHeygenResponsesByProject(workspaceId, projectId);
-  const { data: mergedState } = rehydrateHeygenAvatarsInProjectData({
-    workspaceId,
-    projectId,
-    data: normalizedState,
-    heygenRows,
-  });
+  const [heygenRows, speechRows] = await Promise.all([
+    heygenDao.listHeygenResponsesByProject(workspaceId, projectId),
+    speechDao.listSpeechGenerationsByProject(workspaceId, projectId),
+  ]);
+
+  let mergedState = normalizedState;
+  if (heygenRows.length) {
+    const heygenResult = rehydrateHeygenAvatarsInProjectData({
+      workspaceId,
+      projectId,
+      data: mergedState,
+      heygenRows,
+    });
+    mergedState = heygenResult.data;
+  }
+  if (speechRows.length) {
+    const speechResult = rehydrateSpeechInProjectData({
+      workspaceId,
+      projectId,
+      data: mergedState,
+      speechRows,
+    });
+    mergedState = speechResult.data;
+  }
 
   const finalState = normalizeEditorProjectData(mergedState);
 

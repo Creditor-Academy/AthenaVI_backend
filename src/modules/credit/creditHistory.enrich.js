@@ -3,6 +3,7 @@ const { FEATURE } = require('../../shared/config/creditPricing');
 
 const FEATURE_LABELS = Object.freeze({
   [FEATURE.HEYGEN_VIDEO]: 'Scene avatar video',
+  [FEATURE.SPEECH_GENERATION]: 'Scene speech',
   [FEATURE.REMOTION_EXPORT]: 'Final video export',
   [FEATURE.VOICE_CLONE]: 'Voice clone',
   [FEATURE.VOICE_DESIGN]: 'Voice design',
@@ -44,6 +45,7 @@ function resolveSceneNameFromProjectData(projectData, sceneId) {
 
 const CONSUMPTION_TYPES = Object.freeze({
   [FEATURE.HEYGEN_VIDEO]: 'Avatar video',
+  [FEATURE.SPEECH_GENERATION]: 'Speech generation',
   [FEATURE.REMOTION_EXPORT]: 'Video export',
   [FEATURE.VOICE_CLONE]: 'Voice clone',
   [FEATURE.VOICE_DESIGN]: 'Voice design',
@@ -51,7 +53,6 @@ const CONSUMPTION_TYPES = Object.freeze({
   [FEATURE.VOICE_PREVIEW]: 'Speech preview',
 });
 
-/** Primary history line: what was consumed + where (scene / project). */
 function buildHeygenVideoDisplayName({ sceneName, sceneId, projectName, workspaceName }) {
   const sceneLabel = sceneName || sceneId;
   const parts = [CONSUMPTION_TYPES[FEATURE.HEYGEN_VIDEO]];
@@ -64,6 +65,21 @@ function buildHeygenVideoDisplayName({ sceneName, sceneId, projectName, workspac
     parts.push(`in workspace “${workspaceName}”`);
   }
   if (parts.length === 1) return FEATURE_LABELS[FEATURE.HEYGEN_VIDEO];
+  return parts.join(' ');
+}
+
+function buildSpeechGenerationDisplayName({ sceneName, sceneId, projectName, workspaceName }) {
+  const sceneLabel = sceneName || sceneId;
+  const parts = [CONSUMPTION_TYPES[FEATURE.SPEECH_GENERATION]];
+  if (sceneLabel) {
+    parts.push(`scene “${sceneLabel}”`);
+  }
+  if (projectName) {
+    parts.push(`in “${projectName}”`);
+  } else if (workspaceName) {
+    parts.push(`in workspace “${workspaceName}”`);
+  }
+  if (parts.length === 1) return FEATURE_LABELS[FEATURE.SPEECH_GENERATION];
   return parts.join(' ');
 }
 
@@ -178,6 +194,41 @@ function buildUsageDetail(tx, ctx) {
         resolution: meta.resolution || billingContext.resolution || null,
       };
     }
+    case FEATURE.SPEECH_GENERATION: {
+      const speechGenerationId = meta.speechGenerationId || tx.reference;
+      const speech = speechGenerationId ? ctx.speechById.get(speechGenerationId) : null;
+      const billingContext = asObject(speech?.billingContext);
+      const projectId = meta.projectId || speech?.projectId || null;
+      const project = projectId ? ctx.projectById.get(projectId) : null;
+      const sceneId = meta.sceneId || speech?.sceneId || null;
+      const projectName = meta.projectName || project?.name || null;
+      const sceneName =
+        meta.sceneName ||
+        billingContext.sceneName ||
+        resolveSceneNameFromProjectData(project?.data, sceneId);
+      const workspaceName = base.workspaceName;
+      const displayName = buildSpeechGenerationDisplayName({
+        sceneName,
+        sceneId,
+        projectName,
+        workspaceName,
+      });
+      return {
+        ...base,
+        consumptionType: CONSUMPTION_TYPES[FEATURE.SPEECH_GENERATION],
+        label: displayName,
+        displayName,
+        where: buildWhereSummary({ sceneName, sceneId, projectName, workspaceName }),
+        speechGenerationId,
+        projectId,
+        projectName,
+        sceneId,
+        sceneName,
+        voiceId: meta.voiceId || speech?.voiceId || null,
+        scriptPreview:
+          meta.scriptPreview || truncateText(speech?.script || billingContext.script),
+      };
+    }
     case FEATURE.REMOTION_EXPORT: {
       const renderId = meta.renderId || tx.reference;
       const render = renderId ? ctx.renderById.get(renderId) : null;
@@ -238,6 +289,7 @@ function buildDetail(tx, ctx) {
 
 async function loadEnrichmentContext(transactions) {
   const heygenVideoIds = [];
+  const speechGenerationIds = [];
   const renderIds = [];
   const projectIds = [];
   const workspaceIds = [];
@@ -250,13 +302,16 @@ async function loadEnrichmentContext(transactions) {
     if (meta.feature === FEATURE.HEYGEN_VIDEO) {
       heygenVideoIds.push(meta.heygenVideoId || tx.reference);
       if (meta.projectId) projectIds.push(meta.projectId);
+    } else if (meta.feature === FEATURE.SPEECH_GENERATION) {
+      speechGenerationIds.push(meta.speechGenerationId || tx.reference);
+      if (meta.projectId) projectIds.push(meta.projectId);
     } else if (meta.feature === FEATURE.REMOTION_EXPORT) {
       renderIds.push(meta.renderId || tx.reference);
       if (meta.projectId) projectIds.push(meta.projectId);
     }
   }
 
-  const [heygenRows, renderRows] = await Promise.all([
+  const [heygenRows, speechRows, renderRows] = await Promise.all([
     heygenVideoIds.length
       ? prisma.heygenResponse.findMany({
           where: { id: { in: uniqueIds(heygenVideoIds) } },
@@ -264,6 +319,19 @@ async function loadEnrichmentContext(transactions) {
             id: true,
             projectId: true,
             sceneId: true,
+            billingContext: true,
+          },
+        })
+      : [],
+    speechGenerationIds.length
+      ? prisma.speechGeneration.findMany({
+          where: { id: { in: uniqueIds(speechGenerationIds) } },
+          select: {
+            id: true,
+            projectId: true,
+            sceneId: true,
+            voiceId: true,
+            script: true,
             billingContext: true,
           },
         })
@@ -279,11 +347,14 @@ async function loadEnrichmentContext(transactions) {
   for (const row of heygenRows) {
     if (row.projectId) projectIds.push(row.projectId);
   }
+  for (const row of speechRows) {
+    if (row.projectId) projectIds.push(row.projectId);
+  }
   for (const row of renderRows) {
     if (row.projectId) projectIds.push(row.projectId);
   }
 
-  const needsProjectData = heygenVideoIds.length > 0;
+  const needsProjectData = heygenVideoIds.length > 0 || speechGenerationIds.length > 0;
 
   const [projects, workspaces] = await Promise.all([
     projectIds.length
@@ -306,6 +377,7 @@ async function loadEnrichmentContext(transactions) {
 
   return {
     heygenById: new Map(heygenRows.map((row) => [row.id, row])),
+    speechById: new Map(speechRows.map((row) => [row.id, row])),
     renderById: new Map(renderRows.map((row) => [row.id, row])),
     projectById: new Map(projects.map((row) => [row.id, row])),
     workspaceById: new Map(workspaces.map((row) => [row.id, row])),

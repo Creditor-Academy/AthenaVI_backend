@@ -116,9 +116,10 @@ model Workspace {
   folders           Folder[]
   projects          Project[]
   assets            Asset[]
-  heygenResponses   HeygenResponse[]
-  projectRenders    ProjectRender[]
-  sceneRenderCaches SceneRenderCache[]
+  heygenResponses    HeygenResponse[]
+  speechGenerations  SpeechGeneration[]
+  projectRenders     ProjectRender[]
+  sceneRenderCaches  SceneRenderCache[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -312,9 +313,10 @@ model Project {
 
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   folder            Folder             @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  heygenResponses   HeygenResponse[]
-  projectRenders    ProjectRender[]
-  sceneRenderCaches SceneRenderCache[]
+  heygenResponses    HeygenResponse[]
+  speechGenerations  SpeechGeneration[]
+  projectRenders     ProjectRender[]
+  sceneRenderCaches  SceneRenderCache[]
 
   @@index([updatedBy])
 }
@@ -363,6 +365,42 @@ model HeygenResponse {
   billedDurationSec Float?  @map("billed_duration_sec")
   billingStatus     String  @default("pending") @map("billing_status") // pending | charged | failed | skipped
   billingContext    Json?   @map("billing_context")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, workspaceId])
+}
+
+model SpeechGeneration {
+  id                String   @id @default(uuid())
+  workspaceId       String
+  folderId          String?
+  projectId         String
+  sceneId           String   @default("")
+  voiceId           String
+  script            String
+  inputType         String   @default("text")
+  speed             Float    @default(1)
+  locale            String?
+  language          String?
+  heygenAudioUrl    String?
+  audioUrl          String   @default("")
+  s3Key             String?
+  fileSizeBytes     Int?
+  durationSec       Float?
+  wordTimestamps    Json?
+  requestHash       String   @unique
+  status            String   @default("completed")
+  rawResponse       Json?
+  triggeredByUserId String?  @map("triggered_by_user_id")
+  creditsCharged    Int?     @map("credits_charged")
+  billedDurationSec Float?   @map("billed_duration_sec")
+  billingStatus     String   @default("pending") @map("billing_status")
+  billingContext    Json?    @map("billing_context")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -25,6 +25,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [SUPERADMIN_API.md](SUPERADMIN_API.md) | `/api/superadmin` | Platform credit admin (superadmin only) |
 | [HEYGEN_API.md](HEYGEN_API.md) | `/api/heygen` | User-scoped avatars, voices, previews |
 | [HEYGEN_PROJECT_VIDEOS_API.md](HEYGEN_PROJECT_VIDEOS_API.md) | `.../projects/:projectId/heygen` | Project avatar videos, stream/download |
+| [PROJECT_SPEECH_API.md](PROJECT_SPEECH_API.md) | `.../projects/:projectId/speech` | Project speech (TTS audio), stream/download |
 
 ## Frontend integration guides
 

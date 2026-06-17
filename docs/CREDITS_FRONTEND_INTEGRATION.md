@@ -97,6 +97,7 @@ flowchart TB
 | Feature | `feature` key (estimates) | API that triggers billing | Pool |
 |---------|---------------------------|---------------------------|------|
 | Scene avatar video | `heygen_video` | `POST /api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Workspace-scoped* |
+| Scene speech (TTS) | `speech_generation` | `POST /api/workspaces/:workspaceId/projects/:projectId/speech` | Workspace-scoped* |
 | Final Remotion export | `remotion_export` | `POST /api/workspaces/:workspaceId/projects/:projectId/renders` | Workspace-scoped* |
 | Custom avatar create | `avatar_create` | `POST /api/heygen/avatars` | Personal |
 | Voice clone | `voice_clone` | `POST /api/heygen/voices/clone` | Personal |
@@ -152,6 +153,7 @@ Rates follow [HeyGen self-serve pricing](https://developers.heygen.com/docs/pric
 | `voice_clone` | Flat $2 (Athena estimate; not in HeyGen public table) |
 | `voice_design` | Flat $1 (Athena estimate) |
 | `voice_preview` | $0.000667/sec (TTS Starfish) |
+| `speech_generation` | Same TTS Starfish rate as `voice_preview`; workspace-scoped |
 
 ### Enterprise mode (`HEYGEN_BILLING_MODE=enterprise`)
 
@@ -358,6 +360,7 @@ GET /api/credits/:workspaceId/estimate?feature=remotion_export&durationInFrames=
 | Query `feature` | Parameters |
 |-----------------|------------|
 | `heygen_video` | `avatarEngine` (`avatar_iv` \| `avatar_v`), optional `avatarType` (`photo_avatar` \| `studio_avatar` \| `digital_twin`), optional `resolution` (`720p` \| `1080p`), optional `script` |
+| `speech_generation` | optional `script` (better estimate) |
 | `remotion_export` | optional `durationInFrames`, `fps` (default fps 30) |
 
 ### 7.5 Allocate / deallocate (TEAM owner only)

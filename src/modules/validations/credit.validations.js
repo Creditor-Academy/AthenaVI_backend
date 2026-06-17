@@ -43,7 +43,7 @@ const workspaceEstimateQuerySchema = Joi.object({
   }),
   query: Joi.object({
     feature: Joi.string()
-      .valid(FEATURE.HEYGEN_VIDEO, FEATURE.REMOTION_EXPORT)
+      .valid(FEATURE.HEYGEN_VIDEO, FEATURE.SPEECH_GENERATION, FEATURE.REMOTION_EXPORT)
       .required(),
     avatarEngine: avatarEngineField()
       .when('feature', { is: FEATURE.HEYGEN_VIDEO, then: Joi.optional(), otherwise: Joi.forbidden() }),

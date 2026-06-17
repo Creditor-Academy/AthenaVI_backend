@@ -78,6 +78,12 @@
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/stream` | Bearer + member | Stream MP4 through API (stable path; use fetch+blob or cookies for `<video>`) |
 | HEAD | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/stream` | Bearer + member | Video metadata before streaming |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId/s3-location` | Bearer + member | S3 bucket/key metadata (optional; not needed for editor preview) |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/speech` | Bearer + member | Generate scene speech (TTS audio) |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/speech` | Bearer + member | List speech generations for project |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/speech/:speechId` | Bearer + member | Get speech generation |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/speech/:speechId/download` | Bearer + member | Presigned MP3 URL (`expiresIn` optional) |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/speech/:speechId/stream` | Bearer + member | Stream MP3 through API (stable path) |
+| HEAD | `/api/workspaces/:workspaceId/projects/:projectId/speech/:speechId/stream` | Bearer + member | Audio metadata before streaming |
 
 ---
 

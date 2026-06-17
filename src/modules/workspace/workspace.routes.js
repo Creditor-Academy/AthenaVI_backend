@@ -24,6 +24,7 @@ const folderRoutes = require('../folder/folder.routes');
 const projectRoutes = require('../project/project.routes');
 const heygenVideoRoutes = require('../video/heygenVideo.routes');
 const renderRoutes = require('../render/render.routes');
+const speechRoutes = require('../speech/speech.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
@@ -47,6 +48,12 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   renderRoutes
+);
+router.use(
+  '/:workspaceId/projects/:projectId/speech',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  speechRoutes
 );
 router.use(
   '/:workspaceId/projects',

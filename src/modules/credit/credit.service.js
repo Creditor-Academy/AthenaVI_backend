@@ -67,6 +67,10 @@ function buildWorkspaceEstimate(query) {
       resolution: query.resolution,
     });
   }
+  if (feature === FEATURE.SPEECH_GENERATION) {
+    const durationSeconds = estimateDurationFromScript(query.script);
+    return calculateUsageCredits({ feature, durationSeconds });
+  }
   if (feature === FEATURE.REMOTION_EXPORT) {
     const durationSeconds = query.durationInFrames
       ? estimateDurationFromFrames(query.durationInFrames, query.fps)

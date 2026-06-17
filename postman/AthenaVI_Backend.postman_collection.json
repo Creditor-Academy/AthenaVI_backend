@@ -780,6 +780,77 @@
               }
             }
           ]
+        },
+        {
+          "name": "Speech (project)",
+          "description": "Audio-only TTS per scene via HeyGen Starfish. MP3 stored at `workspaces/…/scenes/{sceneId}/speech/{speechId}.mp3`. Workspace-scoped credits (`speech_generation`).",
+          "item": [
+            {
+              "name": "Generate speech",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "try {",
+                      "  const j = pm.response.json();",
+                      "  const id = j.data && j.data.speechGeneration && j.data.speechGeneration.id;",
+                      "  if (id) { pm.collectionVariables.set('speechId', id); }",
+                      "} catch (e) {}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sceneId\": \"scene_001\",\n  \"voiceId\": \"{{voiceId}}\",\n  \"script\": \"Welcome to our audio lesson.\",\n  \"inputType\": \"text\",\n  \"speed\": 1,\n  \"locale\": \"en-US\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech",
+                "description": "201 — Synchronous TTS; returns completed row with `s3Key`. Idempotent on scene + voice + script."
+              }
+            },
+            {
+              "name": "List speech generations",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech"
+              }
+            },
+            {
+              "name": "Get speech generation",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}"
+              }
+            },
+            {
+              "name": "Download speech (presigned URL)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}/download?expiresIn=300"
+              }
+            },
+            {
+              "name": "Stream speech",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}/stream"
+              }
+            }
+          ]
         }
       ]
     },

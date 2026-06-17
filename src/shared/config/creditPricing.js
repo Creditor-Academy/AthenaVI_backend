@@ -2,6 +2,7 @@ const { HEYGEN_AVATAR_ENGINES } = require('../constants/heygen');
 
 const FEATURE = Object.freeze({
   HEYGEN_VIDEO: 'heygen_video',
+  SPEECH_GENERATION: 'speech_generation',
   VOICE_CLONE: 'voice_clone',
   VOICE_DESIGN: 'voice_design',
   VOICE_PREVIEW: 'voice_preview',
@@ -188,6 +189,7 @@ function calculateUsageCredits(input) {
       break;
     }
     case FEATURE.VOICE_PREVIEW:
+    case FEATURE.SPEECH_GENERATION:
       heygenRatePerSec = voicePreviewUsdPerSec();
       rateSource = getBillingMode() === 'enterprise' ? 'enterprise_credits' : 'payg_usd';
       heygenUsdCost = durationSeconds * heygenRatePerSec;

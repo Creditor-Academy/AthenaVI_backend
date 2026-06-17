@@ -125,9 +125,11 @@ Each member: `userId`, `user` (`id`, `email`, `name`), `totalUsageAc`, `transact
 | **Path** | `/api/credits/:id/estimate` |
 | **Role** | Any member |
 
-Query: `feature` = `heygen_video` \| `remotion_export`.
+Query: `feature` = `heygen_video` \| `speech_generation` \| `remotion_export`.
 
 For **`heygen_video`**: optional `avatarEngine`, `avatarType` (`photo_avatar` \| `studio_avatar` \| `digital_twin`), `resolution` (`720p` \| `1080p`), `script`.
+
+For **`speech_generation`**: optional `script`.
 
 For **`remotion_export`**: optional `durationInFrames`, `fps`.
 
@@ -144,6 +146,7 @@ All history endpoints attach **`usageDetail`** on each transaction (null for unk
 | `feature` | `usageDetail` fields (typical) |
 |-----------|--------------------------------|
 | `heygen_video` | `consumptionType`: `Avatar video`, **`displayName`** / `label` (e.g. `Avatar video scene “Intro” in “Q1 Training”`), `where` (e.g. `Scene: Intro · Project: Q1 Training`), `sceneName`, `projectName`, `sceneId`, `videoTitle`, … |
+| `speech_generation` | `consumptionType`: `Speech generation`, `displayName`, `where`, `sceneName`, `projectName`, `voiceId`, `scriptPreview`, … |
 | `remotion_export` | `consumptionType`: `Video export`, **`displayName`** / `label` (e.g. `Video export — “Q1 Training”`), `where`, `videoName` (= project name), `projectName`, `renderId`, … |
 | `voice_clone` | `label`, `voiceName`, `voiceId` |
 | `voice_design` | `label`, `promptPreview`, `voiceId` |

@@ -206,6 +206,25 @@ The backend stores the full editor JSON in `project.data`. **Send everything the
 - **`heygenVideoId`** = `data.heygenVideo.id` from `POST .../heygen/videos` (backend UUID, **not** HeyGen’s `videoId`).
 - Do **not** rely on **`generatedVideoUrl`** after reload — refetch via `/download` or `/stream`.
 
+### Audio-only scene speech (no avatar)
+
+For narration without a talking-head video, use **`POST .../speech`** ([PROJECT_SPEECH_API.md](api/PROJECT_SPEECH_API.md)).
+
+```json
+"presenter": {
+  "voiceId": "voice_xxxxx",
+  "script": "Welcome to our audio lesson..."
+},
+"generation": {
+  "status": "completed",
+  "speechGenerationId": "00000000-0000-4000-8000-000000000013"
+}
+```
+
+- **`speechGenerationId`** = `data.speechGeneration.id` from `POST .../speech`.
+- Playback: `GET .../speech/:speechId/stream` or `/download` (same patterns as HeyGen video).
+- Optional: add an `audio` element with `content.speechGenerationId` for timeline placement.
+
 ### Element (clip)
 
 | Field | Required | Notes |
@@ -656,13 +675,14 @@ Poll `GET .../renders/:renderId` → `GET .../renders/:renderId/download` for fi
 
 On **`GET .../projects/:projectId`** and **`PATCH .../data`**, the backend:
 
-1. Loads `heygen_responses` for the project.
-2. Matches by `content.heygenVideoId`, or hash (`sceneId` + `avatarId` + `voiceId` + `script`), or best clip per `sceneId`.
-3. Reads **`scene.presenter`** and **`scene.generation`** as well as avatar **`content`**.
-4. Writes back `heygenVideoId` to **`generation`**, **`presenter`**, and avatar **`content`**.
-5. On GET, persists repairs to DB when something changed.
+1. Loads `heygen_responses` and `speech_generations` for the project.
+2. **Avatar videos:** matches by `content.heygenVideoId`, or hash (`sceneId` + `avatarId` + `voiceId` + `script`), or best clip per `sceneId`.
+3. **Speech:** matches by `speechGenerationId`, or hash (`sceneId` + `voiceId` + `script` + speed/locale), or best row per `sceneId`.
+4. Reads **`scene.presenter`** and **`scene.generation`** as well as element **`content`**.
+5. Writes back `heygenVideoId` / `speechGenerationId` to **`generation`**, **`presenter`**, and matching element **`content`**.
+6. On GET, persists repairs to DB when something changed.
 
-Rehydration **does not** restore video playback URLs — frontend must still call `/download` or `/stream`.
+Rehydration **does not** restore playback URLs — frontend must still call `/download` or `/stream`.
 
 ---
 
