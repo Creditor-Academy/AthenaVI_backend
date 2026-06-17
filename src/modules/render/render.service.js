@@ -29,13 +29,6 @@ const {
   estimateDurationFromFrames,
 } = require('../../shared/config/creditPricing');
 const { getEffectiveHeygenFields, isHeygenAvatarElement } = require('../project/projectEditorNormalize');
-const {
-  clearDownloadCache,
-  materializeSceneCompositionInput,
-  materializeProjectCompositionInput,
-  ensureTempAssetsDirectory,
-} = require('./materializeRenderAssets');
-
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
 let remotionBundlePromise = null;
@@ -288,19 +281,15 @@ async function renderSceneCaches({
       continue;
     }
 
+    // Remotion only fetches assets over http(s). Scene manifests already carry presigned S3 URLs.
     const outputLocation = path.join(tempDirectory, `${scene.sceneId}-${scene.sceneHash}.mp4`);
-    const assetsDirectory = await ensureTempAssetsDirectory(renderId, `scene-${scene.sceneId}-assets`);
-    const materializedInput = await materializeSceneCompositionInput(
-      {
-        scene,
-        videoSettings: manifest.videoSettings,
-      },
-      assetsDirectory
-    );
     await renderCompositionToFile({
       serveUrl,
       id: 'SceneComposition',
-      inputProps: materializedInput,
+      inputProps: {
+        scene,
+        videoSettings: manifest.videoSettings,
+      },
       outputLocation,
     });
 
@@ -399,7 +388,6 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
 
 async function processProjectRender({ renderId, workspaceId, projectId, userId, forceRebuild }) {
   const tempDirectory = await ensureTempDirectory(renderId);
-  clearDownloadCache();
 
   try {
     const project = await getProjectOrThrow(workspaceId, projectId);
@@ -430,18 +418,13 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
     });
 
     const outputLocation = path.join(tempDirectory, 'final.mp4');
-    const assetsDirectory = await ensureTempAssetsDirectory(renderId, 'final-assets');
-    const materializedInput = await materializeProjectCompositionInput(
-      {
-        videoSettings: manifest.videoSettings,
-        scenes: cachedScenes,
-      },
-      assetsDirectory
-    );
     await renderCompositionToFile({
       serveUrl,
       id: 'ProjectRenderComposition',
-      inputProps: materializedInput,
+      inputProps: {
+        videoSettings: manifest.videoSettings,
+        scenes: cachedScenes,
+      },
       outputLocation,
     });
 
@@ -494,7 +477,6 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
       void projectUpdateError;
     }
   } finally {
-    clearDownloadCache();
     await fs.rm(tempDirectory, { recursive: true, force: true });
   }
 }
