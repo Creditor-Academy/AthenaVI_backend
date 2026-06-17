@@ -887,7 +887,7 @@ Scene caches use:
 | **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` |
 | **Auth** | Bearer + member |
 
-Returns a fresh presigned URL for the completed final MP4.
+Returns a fresh presigned URL for the completed final MP4. The URL includes `Content-Disposition: attachment` so browsers save the file instead of playing it inline.
 
 **Response (200)** – `data`:
 
@@ -895,6 +895,7 @@ Returns a fresh presigned URL for the completed final MP4.
 {
   "presignedUrl": "https://...",
   "expiresInSeconds": 3600,
+  "filename": "My Project Title.mp4",
   "render": {
     "id": "render-uuid",
     "status": "completed",
@@ -902,6 +903,20 @@ Returns a fresh presigned URL for the completed final MP4.
   }
 }
 ```
+
+**409** if the render is not completed yet.
+
+---
+
+### Stream / download final render (authenticated)
+
+| | |
+|---|---|
+| **Method** | `GET` or `HEAD` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/stream` |
+| **Auth** | Bearer + member |
+
+Pipes the MP4 through the API with `Content-Disposition: attachment`. Use this when you want a stable same-origin download URL (Bearer required) instead of opening a presigned S3 link.
 
 **409** if the render is not completed yet.
 

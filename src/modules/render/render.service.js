@@ -554,15 +554,43 @@ const getProjectRender = async (workspaceId, projectId, renderId) => {
   return render;
 };
 
-const getRenderDownloadUrl = async (workspaceId, projectId, renderId) => {
+function sanitizeDownloadFilename(name) {
+  const base = String(name || 'untitled')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+    .trim();
+  return base || 'untitled';
+}
+
+function buildRenderDownloadFilename(projectName) {
+  return `${sanitizeDownloadFilename(projectName)}.mp4`;
+}
+
+async function resolveRenderDownloadFilename(workspaceId, projectId) {
+  const project = await getProjectOrThrow(workspaceId, projectId);
+  return buildRenderDownloadFilename(project.name);
+}
+
+const assertRenderDownloadable = async (workspaceId, projectId, renderId) => {
   const render = await getProjectRender(workspaceId, projectId, renderId);
   if (render.status !== 'completed' || !render.s3Key) {
     throw new AppError(messages.PROJECT_RENDER_NOT_READY, 409);
   }
+  return render;
+};
+
+const getRenderDownloadUrl = async (workspaceId, projectId, renderId) => {
+  const render = await assertRenderDownloadable(workspaceId, projectId, renderId);
+  const filename = await resolveRenderDownloadFilename(workspaceId, projectId);
 
   return {
-    presignedUrl: await getPresignedGetUrl(render.s3Key, PRESIGN_TTL_SECONDS),
+    presignedUrl: await getPresignedGetUrl(render.s3Key, PRESIGN_TTL_SECONDS, {
+      responseContentDisposition: `attachment; filename="${filename}"`,
+    }),
     expiresInSeconds: PRESIGN_TTL_SECONDS,
+    filename,
     render,
   };
 };
@@ -571,6 +599,9 @@ module.exports = {
   startProjectRender,
   listProjectRenders,
   getProjectRender,
+  assertRenderDownloadable,
   getRenderDownloadUrl,
+  resolveRenderDownloadFilename,
+  buildRenderDownloadFilename,
   resolveProjectManifest,
 };

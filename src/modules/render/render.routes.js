@@ -13,5 +13,15 @@ router.get(
   validate(renderValidations.renderByIdSchema),
   renderController.getRenderDownloadUrl
 );
+router.head(
+  '/:renderId/stream',
+  validate(renderValidations.renderByIdSchema),
+  renderController.headRenderStream
+);
+router.get(
+  '/:renderId/stream',
+  validate(renderValidations.renderByIdSchema),
+  renderController.streamRender
+);
 
 module.exports = router;

@@ -51,7 +51,8 @@
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | Start Remotion render |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | List project renders |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` | Bearer + member | Get render status/details |
-| GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` | Bearer + member | Get final render presigned URL |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` | Bearer + member | Presigned MP4 URL (`filename` + attachment disposition) |
+| GET/HEAD | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/stream` | Bearer + member | Pipe final MP4 through API (download) |
 | POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
 | GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|all`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |

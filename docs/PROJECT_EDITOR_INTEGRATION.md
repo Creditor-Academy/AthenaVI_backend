@@ -667,7 +667,80 @@ POST /api/workspaces/:workspaceId/projects/:projectId/renders
 
 Requires avatar elements to have valid **`heygenVideoId`** and clips synced to S3 (`409` if not ready).
 
-Poll `GET .../renders/:renderId` → `GET .../renders/:renderId/download` for final MP4.
+Poll `GET .../renders/:renderId` until `status === "completed"`, then download via one of:
+
+| Method | Path | Use case |
+|--------|------|----------|
+| Presigned download | `GET .../renders/:renderId/download` | Returns `presignedUrl` + `filename`; open or assign to `<a href>` — browser saves file (not inline play) |
+| Stream download | `GET .../renders/:renderId/stream` | Same-origin API URL; `fetch` with Bearer + blob save (see below) |
+
+**Do not** use `render.outputUrl` for download — it is the raw S3 object URL (private bucket) and may not force a file save.
+
+### Render-complete modal (download button)
+
+**Wrong (opens S3 in a new tab — do not do this):**
+
+```javascript
+// ❌ window.open / target="_blank" / <a href={presignedUrl}>
+window.open(presignedUrl, '_blank');
+<a href={presignedUrl} target="_blank">Download</a>
+// ❌ download attribute on cross-origin S3 URL (ignored by browsers)
+<a href={presignedUrl} download="video.mp4">Download</a>
+```
+
+**Right — call `/stream`, fetch bytes, save locally (no new tab, no visible S3 URL):**
+
+```javascript
+async function downloadFinalRender({ apiBase, token, workspaceId, projectId, renderId, filename }) {
+  const url = `${apiBase}/api/workspaces/${workspaceId}/projects/${projectId}/renders/${renderId}/stream`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename || 'video.mp4'; // use project.name + '.mp4', or data.filename from GET .../download
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+```
+
+React modal button example:
+
+```tsx
+<button
+  type="button"
+  disabled={downloading}
+  onClick={async () => {
+    setDownloading(true);
+    try {
+      await downloadFinalRender({ apiBase, token, workspaceId, projectId, renderId });
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setDownloading(false);
+    }
+  }}
+>
+  {downloading ? 'Downloading…' : 'Download MP4'}
+</button>
+```
+
+Poll `GET .../renders/:renderId` until `status === "completed"` before enabling the button. **409** means render not ready yet.
+
+Alternative (two-step via presigned URL — still **fetch blob**, never `window.open`):
+
+```javascript
+const { data } = await api.get(`.../renders/${renderId}/download`);
+const fileRes = await fetch(data.presignedUrl);
+const blob = await fileRes.blob();
+// same createObjectURL + <a download> pattern as above
+```
 
 ---
 

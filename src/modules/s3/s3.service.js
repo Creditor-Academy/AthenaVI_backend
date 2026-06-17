@@ -96,11 +96,15 @@ async function moveFile(sourceKey, destinationKey) {
   return copied;
 }
 
-async function getPresignedGetUrl(key, expiresInSeconds = 300) {
-  const command = new GetObjectCommand({
+async function getPresignedGetUrl(key, expiresInSeconds = 300, options = {}) {
+  const input = {
     Bucket: BUCKET,
     Key: key,
-  });
+  };
+  if (options.responseContentDisposition) {
+    input.ResponseContentDisposition = options.responseContentDisposition;
+  }
+  const command = new GetObjectCommand(input);
   return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
 }
 
@@ -136,7 +140,7 @@ async function downloadObjectToFile(key, destPath) {
 /**
  * Pipe S3 object to Express response. Supports Range for video seeking (206 Partial Content).
  */
-async function streamObjectToResponse(req, res, key) {
+async function streamObjectToResponse(req, res, key, options = {}) {
   if (!BUCKET) {
     throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
   }
@@ -167,6 +171,9 @@ async function streamObjectToResponse(req, res, key) {
       res.setHeader('ETag', out.ETag);
     }
     res.setHeader('Cache-Control', 'private, no-cache');
+    if (options.contentDisposition) {
+      res.setHeader('Content-Disposition', options.contentDisposition);
+    }
 
     const body = out.Body;
     if (!body) {

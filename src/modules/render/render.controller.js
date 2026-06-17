@@ -2,6 +2,7 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const renderService = require('./render.service');
+const s3Service = require('../s3/s3.service');
 
 const createRender = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
@@ -36,9 +37,39 @@ const getRenderDownloadUrl = asyncHandler(async (req, res) => {
   return successResponse(req, res, download, 200, messages.PROJECT_RENDER_DOWNLOAD_READY);
 });
 
+/** Authenticated pipe-through download (Bearer). Sets Content-Disposition so browsers save the file. */
+const streamRender = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId, renderId } = req.params;
+  const render = await renderService.assertRenderDownloadable(workspaceId, projectId, renderId);
+  const filename = await renderService.resolveRenderDownloadFilename(workspaceId, projectId);
+  await s3Service.streamObjectToResponse(req, res, render.s3Key, {
+    contentDisposition: `attachment; filename="${filename}"`,
+  });
+});
+
+const headRenderStream = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId, renderId } = req.params;
+  const render = await renderService.assertRenderDownloadable(workspaceId, projectId, renderId);
+  const meta = await s3Service.headObjectMeta(render.s3Key);
+  const filename = await renderService.resolveRenderDownloadFilename(workspaceId, projectId);
+  res.setHeader('Content-Type', meta.contentType || 'video/mp4');
+  if (meta.contentLength != null) {
+    res.setHeader('Content-Length', String(meta.contentLength));
+  }
+  if (meta.etag) {
+    res.setHeader('ETag', meta.etag);
+  }
+  res.setHeader('Accept-Ranges', meta.acceptRanges);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'private, no-cache');
+  return res.status(200).end();
+});
+
 module.exports = {
   createRender,
   listRenders,
   getRender,
   getRenderDownloadUrl,
+  streamRender,
+  headRenderStream,
 };
