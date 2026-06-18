@@ -40,7 +40,7 @@ const createHeygenVideoSchema = Joi.object({
     expressiveness: Joi.string().trim().valid('low', 'medium', 'high').optional(),
     voiceSettings: voiceSettingsSchema,
     removeBackground: Joi.boolean().optional(),
-    outputFormat: Joi.string().trim().valid('mp4').optional(),
+    outputFormat: Joi.string().trim().valid('mp4', 'webm').optional(),
   }).required(),
 });
 

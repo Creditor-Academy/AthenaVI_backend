@@ -27,6 +27,24 @@ router.get(
   superadminController.getUserCreditHistory
 );
 
+router.get(
+  '/users/:userId/storage',
+  validate(superadminValidation.userIdParamsSchema),
+  superadminController.getUserStorage
+);
+
+router.post(
+  '/users/:userId/storage/grant',
+  validate(superadminValidation.grantStorageBodySchema),
+  superadminController.grantUserStorage
+);
+
+router.post(
+  '/users/:userId/storage/revoke',
+  validate(superadminValidation.revokeStorageBodySchema),
+  superadminController.revokeUserStorage
+);
+
 router.post(
   '/users/:userId/credits/grant',
   validate(superadminValidation.grantRevokeBodySchema),

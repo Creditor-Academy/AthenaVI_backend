@@ -922,6 +922,43 @@ Pipes the MP4 through the API with `Content-Disposition: attachment`. Use this w
 
 ---
 
+## Workspace storage summary
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/storage` |
+| **Auth** | Bearer + member |
+
+Returns the workspace owner storage quota and workspace footprint buckets:
+
+- `assetBytes`
+- `heygenBytes`
+- `renderBytes`
+- `totalBytes`
+
+---
+
+## Workspace video library
+
+Cross-project final video listing for the workspace.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/videos` |
+| **Auth** | Bearer + member |
+
+**Query (optional)**
+
+- `take` – page size, **1–100** (default **20**)
+- `skip` – offset (default **0**)
+- `status` – `queued` \| `processing` \| `completed` \| `failed` (default **`completed`**)
+
+Each item includes `projectId`, `projectTitle`, `triggeredBy` user info, and `downloadPath` for the existing project-render download endpoint.
+
+---
+
 ---
 
 **[← API index](README.md)** · [Project root README](../../README.md)

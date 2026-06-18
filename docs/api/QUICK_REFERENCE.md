@@ -18,6 +18,9 @@
 | GET | `/api/user/getall` | Bearer | List all users |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
+| GET | `/api/user/storage` | Bearer | My storage quota summary |
+| GET | `/api/user/storage/history` | Bearer | My storage ledger history |
+| GET | `/api/user/videos` | Bearer | Owner cross-workspace video library |
 | PATCH | `/api/user/profile` | Bearer | Update profile |
 | POST | `/api/user/upload/profile-image` | Bearer | Upload profile image (multipart) |
 | DELETE | `/api/user/profile-image` | Bearer | Remove profile image |
@@ -53,6 +56,8 @@
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` | Bearer + member | Get render status/details |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/download` | Bearer + member | Presigned MP4 URL (`filename` + attachment disposition) |
 | GET/HEAD | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId/stream` | Bearer + member | Pipe final MP4 through API (download) |
+| GET | `/api/workspaces/:workspaceId/storage` | Bearer + member | Workspace footprint + owner quota |
+| GET | `/api/workspaces/:workspaceId/videos` | Bearer + member | Workspace video library across projects |
 | POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
 | GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|all`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |
@@ -62,6 +67,9 @@
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
+| GET | `/api/superadmin/users/:userId/storage` | Bearer + platform superadmin | User storage summary |
+| POST | `/api/superadmin/users/:userId/storage/grant` | Bearer + platform superadmin | Grant storage bytes/tier |
+| POST | `/api/superadmin/users/:userId/storage/revoke` | Bearer + platform superadmin | Revoke storage bytes |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered per user) |
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |

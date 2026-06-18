@@ -16,6 +16,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 |-----|-----------|--------|
 | [AUTH_API.md](AUTH_API.md) | `/api/auth` | OTP, register, login, refresh, logout, password reset, Google OAuth |
 | [USER_API.md](USER_API.md) | `/api/user` | Profile, capabilities, profile image |
+| [STORAGE_API.md](STORAGE_API.md) | `/api/user/storage` | Storage quota, history, workspace footprint |
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |
 | [USER_SETTINGS_API.md](USER_SETTINGS_API.md) | `/api/user/settings` | Appearance, notifications, security, account deletion |
 | [WORKSPACE_API.md](WORKSPACE_API.md) | `/api/workspaces` | Workspaces, members, invitations, folders, projects, Remotion renders |

@@ -13,6 +13,7 @@ function generateHeygenRequestHash({
   voiceId,
   script,
   avatarEngine,
+  outputFormat = 'mp4',
 }) {
   if (!workspaceId || !projectId || !sceneId || !avatarId || !voiceId || !script) {
     throw new Error('Missing required fields for HeyGen request hash');
@@ -20,6 +21,7 @@ function generateHeygenRequestHash({
 
   const normalizedScript = String(script).trim().toLowerCase();
   const engine = normalizeHeygenAvatarEngine(avatarEngine ?? DEFAULT_HEYGEN_AVATAR_ENGINE);
+  const format = String(outputFormat || 'mp4').trim().toLowerCase() === 'webm' ? 'webm' : 'mp4';
 
   const payload = JSON.stringify({
     workspaceId,
@@ -29,6 +31,7 @@ function generateHeygenRequestHash({
     voiceId,
     script: normalizedScript,
     avatarEngine: engine,
+    outputFormat: format,
   });
 
   return crypto.createHash('sha256').update(payload).digest('hex');

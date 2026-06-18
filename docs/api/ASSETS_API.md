@@ -45,6 +45,19 @@ Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`vide
 
 For **PRIVATE** workspaces, only assets **uploaded by the current user** are returned. For **TEAM** workspaces, assets for the whole workspace are listed.
 
+Each list item also includes uploader metadata:
+
+```json
+{
+  "uploadedBy": "user-uuid",
+  "uploader": {
+    "id": "user-uuid",
+    "name": "Jane Doe",
+    "email": "jane@example.com"
+  }
+}
+```
+
 Stock imports (`source: "stock"`) appear alongside uploads. See [Stock API](STOCK_API.md) for search/import.
 
 **Response (200)** – `data`: `{ "assets": [ ... ] }`.
@@ -71,6 +84,11 @@ Stock imports (`source: "stock"`) appear alongside uploads. See [Stock API](STOC
 
 **Response (200)** – `data`: `{ "asset": { ... } }`.
 
+**Permission rules**
+
+- **PRIVATE**: owner can rename.
+- **TEAM**: uploader, workspace **OWNER**, or workspace **ADMIN** can rename.
+
 ---
 
 ## Delete asset
@@ -84,6 +102,15 @@ Stock imports (`source: "stock"`) appear alongside uploads. See [Stock API](STOC
 Removes the object from storage (when applicable) and decrements the owner’s **storageUsed**.
 
 **Response (200)** – `data`: `{ "asset": { ... } }`.
+
+**Permission rules**
+
+- **PRIVATE**: owner can delete.
+- **TEAM**: uploader, workspace **OWNER**, or workspace **ADMIN** can delete.
+
+**In-use protection**
+
+- **409** if the asset is referenced in one or more project JSON payloads in the same workspace.
 
 ---
 

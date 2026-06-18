@@ -18,6 +18,7 @@ const {
   buildProjectRenderFinalKey,
   buildProjectSceneCacheKey,
 } = require('../../shared/utils/videoStorageKeys');
+const storageAccounting = require('../storage/storageAccounting.service');
 
 function buildDefaultProjectData() {
   return {
@@ -345,6 +346,7 @@ async function migrateProjectS3Assets(project, nextFolderId, userId) {
         projectId: project.id,
         sceneId: row.sceneId || 'scene',
         heygenVideoId: row.id,
+        outputFormat: row.s3Key?.endsWith('.webm') ? 'webm' : 'mp4',
       });
 
       const migrated = await queueCopy(row.s3Key, destinationKey);
@@ -500,6 +502,8 @@ const deleteProject = async (workspaceId, projectId) => {
   }
 
   await projectDao.deleteProject(project.id);
+  const owner = await storageAccounting.getWorkspaceOwnerOrThrow(workspaceId);
+  await storageAccounting.recalculateUserStorageUsed(owner.id);
 };
 
 module.exports = {

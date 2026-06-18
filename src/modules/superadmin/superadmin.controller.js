@@ -117,6 +117,62 @@ const getHeygenAccount = asyncHandler(async (req, res) => {
   return successResponse(req, res, { account }, 200, messages.HEYGEN_ACCOUNT_FETCHED);
 });
 
+const getUserStorage = asyncHandler(async (req, res) => {
+  const summary = await superadminService.getUserStorageSummary(req.params.userId);
+  return successResponse(req, res, summary, 200, messages.STORAGE_FETCHED);
+});
+
+const grantUserStorage = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { tierId, additionalBytes, reason } = req.body;
+  const result = await superadminService.grantUserStorage({
+    targetUserId: userId,
+    tierId,
+    additionalBytes,
+    reason,
+    grantedByUserId: req.user.id,
+  });
+  return successResponse(
+    req,
+    res,
+    {
+      user: {
+        id: result.user.id,
+        storageLimit: result.user.storageLimit,
+        storageUsed: result.user.storageUsed,
+      },
+      transaction: result.transaction,
+    },
+    200,
+    messages.STORAGE_GRANTED
+  );
+});
+
+const revokeUserStorage = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { amountBytes, reason } = req.body;
+  const result = await superadminService.revokeUserStorage({
+    targetUserId: userId,
+    amountBytes,
+    reason,
+    revokedByUserId: req.user.id,
+  });
+  return successResponse(
+    req,
+    res,
+    {
+      user: {
+        id: result.user.id,
+        storageLimit: result.user.storageLimit,
+        storageUsed: result.user.storageUsed,
+      },
+      transaction: result.transaction,
+    },
+    200,
+    messages.STORAGE_REVOKED
+  );
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -127,4 +183,7 @@ module.exports = {
   grantWorkspaceCredits,
   getUsageReport,
   getHeygenAccount,
+  getUserStorage,
+  grantUserStorage,
+  revokeUserStorage,
 };

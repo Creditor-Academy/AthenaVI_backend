@@ -15,6 +15,9 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/users/:userId/credits/history` | Full user ledger |
 | `POST` | `/api/superadmin/users/:userId/credits/grant` | Body: `{ amount, reason? }` |
 | `POST` | `/api/superadmin/users/:userId/credits/revoke` | Body: `{ amount, reason? }` |
+| `GET` | `/api/superadmin/users/:userId/storage` | User storage quota summary |
+| `POST` | `/api/superadmin/users/:userId/storage/grant` | Body: `{ additionalBytes, reason? }` or `{ tierId, reason? }` |
+| `POST` | `/api/superadmin/users/:userId/storage/revoke` | Body: `{ amountBytes, reason? }` |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits` | TEAM workspace pool summary |
 | `POST` | `/api/superadmin/workspaces/:workspaceId/credits/grant` | Direct workspace top-up |
 | `GET` | `/api/superadmin/reports/credits/usage` | Usage report (`from`, `to`, optional filters) |
@@ -58,6 +61,12 @@ Authorization: Bearer <accessToken>
 **500** if `HEYGEN_API_KEY` is missing. **401/502** if HeyGen rejects the key.
 
 ---
+
+### Storage grant / revoke notes
+
+- Storage grant and revoke update `User.storageLimit`.
+- Every change writes a `storage_transactions` ledger row.
+- Revoke is blocked if the new limit would be below current `storageUsed`.
 
 ---
 

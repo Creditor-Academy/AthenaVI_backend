@@ -6,6 +6,11 @@ const { uploadFileToKey, getPresignedGetUrl } = require('../../s3/s3.service');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 const { buildHeygenSceneVideoKey } = require('../../../shared/utils/videoStorageKeys');
+const {
+  normalizeHeygenOutputFormat,
+  heygenOutputContentType,
+  resolveHeygenOutputFormatFromRecord,
+} = require('../../../shared/utils/heygenVideoFormat');
 const projectStorageService = require('../../project/projectStorage.service');
 const {
   HEYGEN_AVATAR_ENGINES,
@@ -27,6 +32,7 @@ const {
   calculateUsageCredits,
   estimateDurationFromScript,
 } = require('../../../shared/config/creditPricing');
+const storageAccounting = require('../../storage/storageAccounting.service');
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 24;
@@ -95,6 +101,7 @@ function buildHeyGenVideoPayload(body) {
   };
 
   const engine = normalizeHeygenAvatarEngine(avatarEngine);
+  const format = normalizeHeygenOutputFormat(outputFormat);
 
   const payload = {
     type: 'avatar',
@@ -103,16 +110,20 @@ function buildHeyGenVideoPayload(body) {
     title,
     resolution,
     aspect_ratio: aspectRatio,
-    background: {
-      type: 'color',
-      value: backgroundColor,
-    },
-    remove_background: removeBackground ?? false,
-    output_format: outputFormat || 'mp4',
+    output_format: format,
     script,
     voice_id: voiceId,
     voice_settings,
   };
+
+  // HeyGen rejects `background` for webm and applies matting automatically.
+  if (format === 'mp4') {
+    payload.background = {
+      type: 'color',
+      value: backgroundColor,
+    };
+    payload.remove_background = removeBackground ?? false;
+  }
 
   if (shouldIncludeExpressiveness(engine, avatarType, expressiveness)) {
     payload.expressiveness = expressiveness;
@@ -306,8 +317,13 @@ const generateAvatarVideo = async (input) => {
 
   const project = await getProjectInWorkspace(workspaceId, projectId);
   const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
+  const normalizedOutputFormat = normalizeHeygenOutputFormat(outputFormat);
   const { engine, useLegacyV2, plan } = await resolveVideoEngineForAvatar(avatarId, avatarEngine);
   const hashEngine = useLegacyV2 ? 'legacy_v2' : engine;
+
+  if (normalizedOutputFormat === 'webm' && useLegacyV2) {
+    throw new AppError(messages.HEYGEN_WEBM_NOT_SUPPORTED_FOR_LOOK, 400);
+  }
 
   const requestHash = generateHeygenRequestHash({
     workspaceId,
@@ -317,6 +333,7 @@ const generateAvatarVideo = async (input) => {
     voiceId,
     script,
     avatarEngine: hashEngine,
+    outputFormat: normalizedOutputFormat,
   });
 
   const existingResponse = await heygenDao.findHeygenResponseByRequestHash(requestHash);
@@ -352,7 +369,7 @@ const generateAvatarVideo = async (input) => {
     expressiveness,
     voiceSettings,
     removeBackground,
-    outputFormat,
+    outputFormat: normalizedOutputFormat,
   };
 
   try {
@@ -379,6 +396,7 @@ const generateAvatarVideo = async (input) => {
       projectName: project.name,
       sceneName,
       estimatedCredits: estimate.athenaCredits,
+      outputFormat: normalizedOutputFormat,
     },
     });
   } catch (err) {
@@ -412,6 +430,7 @@ const generateAvatarVideo = async (input) => {
             voiceId,
             script,
             avatarEngine: 'legacy_v2',
+            outputFormat: normalizedOutputFormat,
           });
           const existingLegacy = await heygenDao.findHeygenResponseByRequestHash(legacyHash);
           if (existingLegacy) return existingLegacy;
@@ -459,6 +478,7 @@ const generateAvatarVideo = async (input) => {
       voiceId,
       script,
       avatarEngine: fallbackEngine,
+      outputFormat: normalizedOutputFormat,
     });
 
     const existingFallback = await heygenDao.findHeygenResponseByRequestHash(fallbackRequestHash);
@@ -583,20 +603,25 @@ async function copyHeygenVideoToS3(record, remote = null) {
   if (!sourceUrl) return record;
 
   const buffer = await downloadVideoBuffer(sourceUrl);
+  const owner = await storageAccounting.getWorkspaceOwnerOrThrow(record.workspaceId);
+  await storageAccounting.recalculateUserStorageUsed(owner.id);
+  await storageAccounting.assertOwnerCanFitAdditionalBytes(record.workspaceId, buffer.length);
   let folderId = record.folderId;
   if (!folderId) {
     const project = await getProjectInWorkspace(record.workspaceId, record.projectId);
     folderId = project.folderId;
   }
 
+  const outputFormat = resolveHeygenOutputFormatFromRecord(record);
   const key = buildHeygenSceneVideoKey({
     workspaceId: record.workspaceId,
     folderId,
     projectId: record.projectId,
     sceneId: record.sceneId || 'scene',
     heygenVideoId: record.id,
+    outputFormat,
   });
-  const { url } = await uploadFileToKey(buffer, key, 'video/mp4');
+  const { url } = await uploadFileToKey(buffer, key, heygenOutputContentType(outputFormat));
 
   let updated = await heygenDao.updateHeygenResponse(record.id, {
     folderId,
@@ -608,6 +633,7 @@ async function copyHeygenVideoToS3(record, remote = null) {
   });
   updated = await chargeHeygenVideoIfNeeded(updated, remote);
   await projectStorageService.recalculateProjectStorage(record.projectId);
+  await storageAccounting.recalculateUserStorageUsed(owner.id);
   return updated;
 }
 

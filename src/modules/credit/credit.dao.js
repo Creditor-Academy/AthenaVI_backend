@@ -184,6 +184,8 @@ const listUsersWithCredits = async ({ page, limit, search }) => {
         email: true,
         name: true,
         credits: true,
+        storageLimit: true,
+        storageUsed: true,
         isPlatformSuperadmin: true,
         createdAt: true,
       },

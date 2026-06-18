@@ -90,12 +90,10 @@ module.exports = {
   WORKSPACE_INVITATION_EXPIRED: 'Invitation has expired or is invalid',
   WORKSPACE_INVITATION_EMAIL_MISMATCH: 'Invitation was sent to a different email address',
   WORKSPACE_INVITATION_ACCEPTED: 'Invitation accepted successfully',
-  WORKSPACE_INVITE_SENT: 'Invitation sent successfully',
   WORKSPACE_MEMBER_REMOVED: 'Member removed successfully',
   WORKSPACE_ROLE_UPDATED: 'Role updated successfully',
   WORKSPACE_ONLY_OWNER_CHANGE_ROLES: 'Only the owner can change member roles',
   WORKSPACE_INVITE_ROLE_INVALID: 'Invitation role must be ADMIN or MEMBER',
-  WORKSPACE_NOT_FOUND: 'Workspace not found',
   WORKSPACE_NAME_TOO_LONG: 'Workspace name is too long',
   WORKSPACE_INVITE_SENT: 'Workspace invitation sent successfully',
   WORKSPACE_INVITE_ALREADY_SENT: 'An invitation has already been sent to this email',
@@ -119,6 +117,12 @@ module.exports = {
   PLATFORM_SUPERADMIN_REQUIRED: 'Platform superadmin access required',
   CREDITS_ALLOCATE_TEAM_ONLY: 'Credits can only be allocated to team workspaces',
   CREDITS_USAGE_BY_MEMBER_TEAM_ONLY: 'Usage by member is only available for team workspaces',
+  STORAGE_FETCHED: 'Storage details fetched successfully',
+  STORAGE_HISTORY_FETCHED: 'Storage history fetched successfully',
+  STORAGE_GRANTED: 'Storage granted successfully',
+  STORAGE_REVOKED: 'Storage revoked successfully',
+  INVALID_STORAGE_AMOUNT: 'Storage amount must be a positive integer',
+  STORAGE_REVOKE_BELOW_USED: 'Cannot reduce storage limit below current usage',
 
   // Folder
   FOLDER_NAME_REQUIRED: 'Folder name is required',
@@ -152,6 +156,8 @@ module.exports = {
   WORKSPACE_OWNER_NOT_FOUND: 'Workspace owner not found',
   STORAGE_LIMIT_EXCEEDED: 'Storage limit exceeded for the owner',
   ASSET_NOT_FOUND: 'Asset not found',
+  ASSET_FORBIDDEN: 'You do not have permission to modify this asset',
+  ASSET_IN_USE: 'Asset is used in one or more projects',
   ASSET_UPLOADED_SUCCESSFULLY: 'Asset uploaded successfully',
   ASSETS_FETCHED_SUCCESSFULLY: 'Assets fetched successfully',
   ASSET_RENAMED_SUCCESSFULLY: 'Asset renamed successfully',
@@ -177,6 +183,8 @@ module.exports = {
   HEYGEN_REQUEST_FAILED: 'HeyGen API request failed',
   HEYGEN_AVATAR_ENGINE_UNSUPPORTED:
     'This avatar look does not support the requested rendering engine',
+  HEYGEN_WEBM_NOT_SUPPORTED_FOR_LOOK:
+    'Transparent WebM output is not supported for this avatar look; use a v3 avatar (not legacy expressive studio looks)',
   HEYGEN_AVATAR_GROUPS_OK: 'Avatar groups fetched',
   HEYGEN_AVATAR_LOOKS_OK: 'Avatar looks fetched',
   HEYGEN_AVATAR_CREATED: 'Avatar creation submitted',

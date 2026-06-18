@@ -3,6 +3,54 @@ const assetDao = require('./asset.dao');
 const { uploadFile, deleteFile } = require('../s3/s3.service');
 const prisma = require('../../shared/config/prismaClient');
 const AppError = require('../../shared/utils/AppError');
+const { collectAssetIds } = require('../../shared/utils/projectAssetIds');
+const storageAccounting = require('../storage/storageAccounting.service');
+
+function getWorkspaceMemberRole(workspace, userId) {
+  if (!workspace || !Array.isArray(workspace.members)) {
+    return null;
+  }
+  const member = workspace.members.find((item) => item.userId === userId);
+  return member ? member.role : null;
+}
+
+function assertCanManageAsset({ workspace, userId, asset }) {
+  if (workspace.type === 'PRIVATE') {
+    return;
+  }
+
+  if (asset.uploadedBy === userId) {
+    return;
+  }
+
+  const role = getWorkspaceMemberRole(workspace, userId);
+  if (role === 'OWNER' || role === 'ADMIN') {
+    return;
+  }
+
+  throw new AppError(messages.ASSET_FORBIDDEN, 403);
+}
+
+async function assertAssetNotReferenced(workspaceId, assetId) {
+  const projects = await assetDao.listProjectDataByWorkspace(workspaceId);
+  let usedInProjectCount = 0;
+
+  for (const project of projects) {
+    const ids = collectAssetIds(project.data);
+    if (ids.includes(assetId)) {
+      usedInProjectCount += 1;
+    }
+  }
+
+  if (usedInProjectCount > 0) {
+    throw new AppError(messages.ASSET_IN_USE, 409, [
+      {
+        field: 'assetId',
+        message: `Asset is used in ${usedInProjectCount} project(s)`,
+      },
+    ]);
+  }
+}
 
 const persistWorkspaceAsset = async ({
   userId,
@@ -25,9 +73,8 @@ const persistWorkspaceAsset = async ({
     }
 
     const size = buffer.length;
-    if (owner.storageUsed + size > owner.storageLimit) {
-      throw new AppError(messages.STORAGE_LIMIT_EXCEEDED, 400);
-    }
+    await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
+    await storageAccounting.assertOwnerCanFitAdditionalBytes(workspace.id, size);
 
     const { key, url } = await uploadFile(
       buffer,
@@ -56,10 +103,9 @@ const persistWorkspaceAsset = async ({
         stockMetadata,
       });
 
-      await assetDao.incrementUserStorage(tx, owner.id, size);
-
       return asset;
     });
+    await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
     return result;
   } catch (error) {
     if (uploadedKey) {
@@ -100,31 +146,37 @@ const getAssets = async (userId, workspace, query) => {
   });
 };
 
-const renameAsset = async ({ assetId, workspaceId, name }) => {
+const renameAsset = async ({ assetId, workspace, userId, name }) => {
+  const workspaceId = workspace.id;
   const asset = await assetDao.findAssetById(assetId, workspaceId);
 
   if (!asset) {
     throw new AppError(messages.ASSET_NOT_FOUND, 404);
   }
 
+  assertCanManageAsset({ workspace, userId, asset });
   return assetDao.updateAssetName(assetId, name.trim());
 };
 
-const deleteAsset = async ({ assetId, workspace }) => {
+const deleteAsset = async ({ assetId, workspace, userId }) => {
   const asset = await assetDao.findAssetById(assetId, workspace.id);
 
   if (!asset) {
     throw new AppError(messages.ASSET_NOT_FOUND, 404);
   }
 
+  assertCanManageAsset({ workspace, userId, asset });
+  await assertAssetNotReferenced(workspace.id, assetId);
+
   if (asset.key) {
     await deleteFile(asset.key);
   }
 
-  return prisma.$transaction(async (tx) => {
-    await assetDao.decrementUserStorage(tx, workspace.ownerId, asset.size);
+  const deleted = await prisma.$transaction(async (tx) => {
     return assetDao.deleteAssetById(tx, assetId);
   });
+  await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
+  return deleted;
 };
 
 module.exports = {

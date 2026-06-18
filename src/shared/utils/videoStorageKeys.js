@@ -36,8 +36,10 @@ function buildHeygenSceneVideoKey({
   projectId,
   sceneId,
   heygenVideoId,
+  outputFormat = 'mp4',
 }) {
-  return `${buildProjectBasePrefix({ workspaceId, folderId, projectId })}/scenes/${sanitizePathSegment(sceneId)}/heygen/${sanitizePathSegment(heygenVideoId)}.mp4`;
+  const extension = String(outputFormat).toLowerCase() === 'webm' ? 'webm' : 'mp4';
+  return `${buildProjectBasePrefix({ workspaceId, folderId, projectId })}/scenes/${sanitizePathSegment(sceneId)}/heygen/${sanitizePathSegment(heygenVideoId)}.${extension}`;
 }
 
 function buildSpeechSceneAudioKey({

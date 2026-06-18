@@ -29,6 +29,7 @@ const {
   estimateDurationFromFrames,
 } = require('../../shared/config/creditPricing');
 const { getEffectiveHeygenFields, isHeygenAvatarElement } = require('../project/projectEditorNormalize');
+const storageAccounting = require('../storage/storageAccounting.service');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
 let remotionBundlePromise = null;
@@ -429,6 +430,9 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
     });
 
     const finalBuffer = await fs.readFile(outputLocation);
+    const owner = await storageAccounting.getWorkspaceOwnerOrThrow(workspaceId);
+    await storageAccounting.recalculateUserStorageUsed(owner.id);
+    await storageAccounting.assertOwnerCanFitAdditionalBytes(workspaceId, finalBuffer.length);
     const s3Key = buildProjectRenderFinalKey({
       workspaceId,
       folderId: project.folderId,
@@ -460,6 +464,7 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
       duration: totalDuration,
     });
     await projectStorageService.recalculateProjectStorage(projectId);
+    await storageAccounting.recalculateUserStorageUsed(owner.id);
   } catch (error) {
     await renderDao.updateProjectRender(renderId, {
       status: 'failed',
@@ -595,6 +600,71 @@ const getRenderDownloadUrl = async (workspaceId, projectId, renderId) => {
   };
 };
 
+async function enrichTriggeredBy(renders) {
+  const userIds = [...new Set(renders.map((item) => item.triggeredBy).filter(Boolean))];
+  if (!userIds.length) {
+    return renders.map((item) => ({
+      ...item,
+      triggeredByUser: null,
+    }));
+  }
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  });
+  const userMap = new Map(users.map((item) => [item.id, item]));
+  return renders.map((item) => ({
+    ...item,
+    triggeredByUser: item.triggeredBy ? userMap.get(item.triggeredBy) || null : null,
+  }));
+}
+
+function toVideoListItem(row) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    projectId: row.projectId,
+    projectTitle: row.project?.name || null,
+    folderId: row.folderId,
+    status: row.status,
+    progress: row.progress,
+    fileSizeBytes: row.fileSizeBytes,
+    outputUrl: row.outputUrl,
+    completedAt: row.completedAt,
+    createdAt: row.createdAt,
+    triggeredBy: row.triggeredByUser,
+    downloadPath: `/api/workspaces/${row.workspaceId}/projects/${row.projectId}/renders/${row.id}/download`,
+    workspace: row.workspace || null,
+  };
+}
+
+const listWorkspaceVideos = async (workspaceId, query) => {
+  const status = query.status || 'completed';
+  const rows = await renderDao.listWorkspaceRenders(workspaceId, {
+    take: query.take,
+    skip: query.skip,
+    status,
+  });
+  const enriched = await enrichTriggeredBy(rows);
+  return enriched.map(toVideoListItem);
+};
+
+const listOwnerVideos = async (ownerId, query) => {
+  const status = query.status || 'completed';
+  const rows = await renderDao.listOwnerWorkspaceRenders(ownerId, {
+    take: query.take,
+    skip: query.skip,
+    status,
+  });
+  const enriched = await enrichTriggeredBy(rows);
+  return enriched.map(toVideoListItem);
+};
+
 module.exports = {
   startProjectRender,
   listProjectRenders,
@@ -604,4 +674,6 @@ module.exports = {
   resolveRenderDownloadFilename,
   buildRenderDownloadFilename,
   resolveProjectManifest,
+  listWorkspaceVideos,
+  listOwnerVideos,
 };

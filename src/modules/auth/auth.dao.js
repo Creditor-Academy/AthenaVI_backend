@@ -1,5 +1,6 @@
 const prisma = require('../../shared/config/prismaClient');
 const { normalizeEmail } = require('../../shared/utils/normalizeEmail');
+const { getDefaultStorageTier } = require('../../shared/config/storagePricing');
 
 const createUser = async (data) => {
   return await prisma.user.create({
@@ -19,6 +20,7 @@ const createUserWithPrivateWorkspace = async ({
   emailVerified = false,
   profileImage = null,
 }) => {
+  const defaultTier = getDefaultStorageTier();
   return await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
@@ -27,6 +29,7 @@ const createUserWithPrivateWorkspace = async ({
         password,
         emailVerified,
         profileImage,
+        storageLimit: defaultTier.limitBytes,
       },
       select: {
         id: true,
@@ -48,6 +51,18 @@ const createUserWithPrivateWorkspace = async ({
         workspaceId: workspace.id,
         userId: user.id,
         role: 'OWNER',
+      },
+    });
+
+    await tx.storageTransaction.create({
+      data: {
+        userId: user.id,
+        amountBytes: defaultTier.limitBytes,
+        type: 'initial',
+        tierId: defaultTier.id,
+        metadata: {
+          source: 'registration',
+        },
       },
     });
 

@@ -43,6 +43,15 @@ const findAssets = ({ workspaceId, userId, isPrivate, source, take, skip }) => {
     orderBy: {
       createdAt: 'desc',
     },
+    include: {
+      uploader: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
   });
 };
 
@@ -51,6 +60,19 @@ const findAssetById = (assetId, workspaceId) => {
     where: {
       id: assetId,
       workspaceId,
+    },
+  });
+};
+
+const listProjectDataByWorkspace = (workspaceId) => {
+  return prisma.project.findMany({
+    where: {
+      workspaceId,
+    },
+    select: {
+      id: true,
+      name: true,
+      data: true,
     },
   });
 };
@@ -96,6 +118,7 @@ module.exports = {
   incrementUserStorage,
   findAssets,
   findAssetById,
+  listProjectDataByWorkspace,
   updateAssetName,
   decrementUserStorage,
   deleteAssetById,

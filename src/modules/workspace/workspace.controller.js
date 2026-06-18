@@ -3,6 +3,7 @@ const AppError = require('../../shared/utils/AppError');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const workspaceService = require('./workspace.service');
+const storageService = require('../storage/storage.service');
 
 const createTeamWorkspace = asyncHandler(async (req, res) => {
   const { name } = req.body;
@@ -38,6 +39,11 @@ const getWorkspaceById = asyncHandler(async (req, res) => {
     workspaceId
   );
   return successResponse(req, res, { workspace }, 200, null);
+});
+
+const getWorkspaceStorage = asyncHandler(async (req, res) => {
+  const summary = await storageService.getWorkspaceStorageSummary(req.params.workspaceId);
+  return successResponse(req, res, summary, 200, messages.STORAGE_FETCHED);
 });
 
 const deleteWorkspace = asyncHandler(async (req, res) => {
@@ -161,6 +167,7 @@ module.exports = {
   createTeamWorkspace,
   getUserWorkspaces,
   getWorkspaceById,
+  getWorkspaceStorage,
   deleteWorkspace,
   renameWorkspace,
   getWorkspaceMembers,

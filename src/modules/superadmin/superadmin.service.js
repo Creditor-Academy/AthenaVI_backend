@@ -3,6 +3,7 @@ const creditLedger = require('../credit/creditLedger.service');
 const creditDao = require('../credit/credit.dao');
 const { enrichCreditHistoryResult } = require('../credit/creditHistory.enrich');
 const heygenV3Service = require('../heygen/heygenV3.service');
+const storageService = require('../storage/storage.service');
 
 async function grantUserCredits({ targetUserId, amount, reason, grantedByUserId }) {
   return creditLedger.platformGrant({
@@ -75,6 +76,29 @@ async function getHeygenAccountBilling() {
   return heygenV3Service.getAccountBillingInfo();
 }
 
+async function getUserStorageSummary(userId) {
+  return storageService.getUserStorageSummary(userId);
+}
+
+async function grantUserStorage({ targetUserId, tierId, additionalBytes, reason, grantedByUserId }) {
+  return storageService.grantUserStorage({
+    targetUserId,
+    tierId,
+    additionalBytes,
+    reason,
+    grantedByUserId,
+  });
+}
+
+async function revokeUserStorage({ targetUserId, amountBytes, reason, revokedByUserId }) {
+  return storageService.revokeUserStorage({
+    targetUserId,
+    amountBytes,
+    reason,
+    revokedByUserId,
+  });
+}
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -85,4 +109,7 @@ module.exports = {
   grantWorkspaceCredits,
   getUsageReport,
   getHeygenAccountBilling,
+  getUserStorageSummary,
+  grantUserStorage,
+  revokeUserStorage,
 };

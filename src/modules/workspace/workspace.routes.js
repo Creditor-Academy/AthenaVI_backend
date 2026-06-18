@@ -8,6 +8,7 @@ const {
   createTeamWorkspace,
   getUserWorkspaces,
   getWorkspaceById,
+  getWorkspaceStorage,
   deleteWorkspace,
   renameWorkspace,
   getWorkspaceMembers,
@@ -24,6 +25,8 @@ const folderRoutes = require('../folder/folder.routes');
 const projectRoutes = require('../project/project.routes');
 const heygenVideoRoutes = require('../video/heygenVideo.routes');
 const renderRoutes = require('../render/render.routes');
+const renderController = require('../render/render.controller');
+const renderValidations = require('../render/render.validation');
 const speechRoutes = require('../speech/speech.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
@@ -48,6 +51,13 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   renderRoutes
+);
+router.get(
+  '/:workspaceId/videos',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(renderValidations.workspaceVideosSchema),
+  renderController.listWorkspaceVideos
 );
 router.use(
   '/:workspaceId/projects/:projectId/speech',
@@ -77,6 +87,13 @@ router.get(
   validate(workspaceValidations.workspaceByIdSchema),
   requireWorkspaceRole(anyMember),
   getWorkspaceById
+);
+router.get(
+  '/:workspaceId/storage',
+  authMiddleware,
+  validate(workspaceValidations.workspaceByIdSchema),
+  requireWorkspaceRole(anyMember),
+  getWorkspaceStorage
 );
 router.patch(
   '/:workspaceId',

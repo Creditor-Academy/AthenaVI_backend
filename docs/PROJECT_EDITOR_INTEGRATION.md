@@ -537,6 +537,15 @@ POST /api/workspaces/:workspaceId/projects/:projectId/heygen/videos
 }
 ```
 
+For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`** instead. HeyGen applies matting automatically; `backgroundColor` and `removeBackground` are ignored. The avatar must support matting (see HeyGen docs). Legacy expressive studio looks (`usesLegacyV2Video: true`) cannot use WebM.
+
+```json
+{
+  "outputFormat": "webm",
+  "backgroundColor": "#000000"
+}
+```
+
 | Field | Notes |
 |-------|--------|
 | `avatarId` | **Look id** from step 6.1, not group id |

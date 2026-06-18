@@ -20,7 +20,9 @@
     { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
     { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" },
     { "key": "avatarEngine", "value": "avatar_iv" },
-    { "key": "stockExternalId", "value": "replace-with-pexels-photo-id" }
+    { "key": "stockExternalId", "value": "replace-with-pexels-photo-id" },
+    { "key": "storageUserId", "value": "00000000-0000-4000-8000-000000000099" },
+    { "key": "storageTierId", "value": "plus_10gb" }
   ],
   "item": [
     {
@@ -1578,6 +1580,85 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/heygen/voices/preview-speech"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Storage",
+      "item": [
+        {
+          "name": "Get my storage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/storage"
+          }
+        },
+        {
+          "name": "Get my storage history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/storage/history?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Get workspace storage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/storage"
+          }
+        },
+        {
+          "name": "Get workspace videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos?status=completed&take=20&skip=0"
+          }
+        },
+        {
+          "name": "Get my owner videos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/videos?status=completed&take=20&skip=0"
+          }
+        },
+        {
+          "name": "Superadmin - user storage summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage"
+          }
+        },
+        {
+          "name": "Superadmin - grant storage tier",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tierId\": \"{{storageTierId}}\",\n  \"reason\": \"Manual upgrade\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/grant"
+          }
+        },
+        {
+          "name": "Superadmin - revoke storage bytes",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountBytes\": 104857600,\n  \"reason\": \"Plan downgrade\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/revoke"
           }
         }
       ]

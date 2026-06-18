@@ -66,6 +66,8 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   creditTransactions  CreditTransaction[]
+  storageTransactions StorageTransaction[]
+  uploadedAssets      Asset[]              @relation("AssetUploader")
 
   ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
@@ -279,6 +281,23 @@ model CreditTransaction {
   @@map("credit_transactions")
 }
 
+model StorageTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  amountBytes Int      @map("amount_bytes")
+  type        String // initial | platform_grant | platform_revoke | purchase
+  tierId      String?  @map("tier_id")
+  reference   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("storage_transactions")
+}
+
 model Folder {
   id          String    @id @default(uuid())
   name        String
@@ -343,8 +362,10 @@ model Asset {
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader  User      @relation("AssetUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, stockProvider, stockExternalId])
+  @@index([workspaceId, uploadedBy])
 }
 
 model HeygenResponse {
@@ -438,6 +459,7 @@ model ProjectRender {
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, projectId])
+  @@index([workspaceId, status, completedAt])
   @@map("project_renders")
 }
 

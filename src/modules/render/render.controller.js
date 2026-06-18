@@ -65,6 +65,17 @@ const headRenderStream = asyncHandler(async (req, res) => {
   return res.status(200).end();
 });
 
+const listWorkspaceVideos = asyncHandler(async (req, res) => {
+  const { workspaceId } = req.params;
+  const videos = await renderService.listWorkspaceVideos(workspaceId, req.query);
+  return successResponse(req, res, { videos }, 200, messages.PROJECT_RENDERS_FETCHED);
+});
+
+const listOwnerVideos = asyncHandler(async (req, res) => {
+  const videos = await renderService.listOwnerVideos(req.user.id, req.query);
+  return successResponse(req, res, { videos }, 200, messages.PROJECT_RENDERS_FETCHED);
+});
+
 module.exports = {
   createRender,
   listRenders,
@@ -72,4 +83,6 @@ module.exports = {
   getRenderDownloadUrl,
   streamRender,
   headRenderStream,
+  listWorkspaceVideos,
+  listOwnerVideos,
 };

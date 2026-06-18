@@ -41,10 +41,12 @@ const renameAsset = asyncHandler(async (req, res) => {
   const { assetId } = req.params;
   const { name } = req.body;
   const workspace = req.workspace;
+  const userId = req.user.id;
 
   const asset = await assetService.renameAsset({
     assetId,
-    workspaceId: workspace.id,
+    workspace,
+    userId,
     name,
   });
 
@@ -60,10 +62,12 @@ const renameAsset = asyncHandler(async (req, res) => {
 const deleteAsset = asyncHandler(async (req, res) => {
   const { assetId } = req.params;
   const workspace = req.workspace;
+  const userId = req.user.id;
 
   const asset = await assetService.deleteAsset({
     assetId,
     workspace,
+    userId,
   });
 
   return successResponse(

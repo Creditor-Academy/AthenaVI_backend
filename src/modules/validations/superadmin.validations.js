@@ -27,6 +27,31 @@ const grantRevokeBodySchema = Joi.object({
   }).required(),
 });
 
+const grantStorageBodySchema = Joi.object({
+  params: Joi.object({
+    userId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    additionalBytes: Joi.number().integer().min(1).optional(),
+    tierId: Joi.string().trim().max(64).optional(),
+    reason: Joi.string().trim().max(500).optional(),
+  })
+    .or('additionalBytes', 'tierId')
+    .required(),
+});
+
+const revokeStorageBodySchema = Joi.object({
+  params: Joi.object({
+    userId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    amountBytes: Joi.number().integer().min(1).required(),
+    reason: Joi.string().trim().max(500).optional(),
+  }).required(),
+});
+
 const grantRevokeWorkspaceBodySchema = Joi.object({
   params: Joi.object({
     workspaceId: Joi.string().uuid().required(),
@@ -75,6 +100,8 @@ module.exports = {
   userIdParamsSchema,
   workspaceIdParamsSchema,
   grantRevokeBodySchema,
+  grantStorageBodySchema,
+  revokeStorageBodySchema,
   grantRevokeWorkspaceBodySchema,
   listUsersQuerySchema,
   historyQuerySchema,
