@@ -210,6 +210,9 @@ function mergeContentForRender(element) {
     element.type === 'video' ||
     element.type === 'avatar'
   ) {
+    if (content.objectFit && content.fit == null) {
+      content.fit = content.objectFit;
+    }
     if (style.objectFit && content.fit == null) {
       content.fit = style.objectFit;
     }

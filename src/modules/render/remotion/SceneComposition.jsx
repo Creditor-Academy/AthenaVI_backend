@@ -297,6 +297,18 @@ function buildFlipTransform(content = {}) {
   return `scale(${scaleX}, ${scaleY})`;
 }
 
+function resolveMediaObjectFit(element, content = {}) {
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  const resolved = style.objectFit || content.fit || content.objectFit;
+  if (resolved) {
+    return resolved;
+  }
+  if (element.type === 'video') {
+    return 'cover';
+  }
+  return 'contain';
+}
+
 function MediaElement({ element, frame, fps }) {
   const content = element.content || {};
   const containerStyle = {
@@ -312,7 +324,7 @@ function MediaElement({ element, frame, fps }) {
   const mediaStyle = {
     width: '100%',
     height: '100%',
-    objectFit: content.fit || 'contain',
+    objectFit: resolveMediaObjectFit(element, content),
     filter: buildCssFilterString(content.filters),
     transform: buildFlipTransform(content),
   };

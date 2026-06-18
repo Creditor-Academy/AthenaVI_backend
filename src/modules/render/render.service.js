@@ -28,7 +28,11 @@ const {
   calculateUsageCredits,
   estimateDurationFromFrames,
 } = require('../../shared/config/creditPricing');
-const { getEffectiveHeygenFields, isHeygenAvatarElement } = require('../project/projectEditorNormalize');
+const {
+  getEffectiveHeygenFields,
+  isHeygenAvatarElement,
+  normalizeEditorProjectData,
+} = require('../project/projectEditorNormalize');
 const storageAccounting = require('../storage/storageAccounting.service');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
@@ -44,14 +48,14 @@ async function getProjectOrThrow(workspaceId, projectId) {
 
 function getProjectData(project) {
   const data = project.data || {};
-  return {
+  return normalizeEditorProjectData({
     ...data,
     videoSettings: {
       ...DEFAULT_VIDEO_SETTINGS,
       ...(data.videoSettings || {}),
     },
     scenes: Array.isArray(data.scenes) ? data.scenes : [],
-  };
+  });
 }
 
 async function buildAssetLookup(workspaceId, projectData) {
