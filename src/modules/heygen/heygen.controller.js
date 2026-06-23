@@ -3,12 +3,13 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenV3Service = require('./heygenV3.service');
-const { uploadLocalFile, deleteFile } = require('../s3/s3.service');
+const { uploadFile, uploadLocalFile, deleteFile } = require('../s3/s3.service');
 const {
   HEYGEN_AVATAR_PHOTO_MIMES,
   HEYGEN_AVATAR_TWIN_MIMES,
 } = require('../../middlewares/heygenAvatarCreate.middleware');
 const { cleanupHeygenAvatarUploadFile } = require('../../middlewares/heygenAvatarUpload.middleware');
+const { cleanupHeygenVoiceUploadFile } = require('../../middlewares/heygenVoiceUpload.middleware');
 const { createAvatarBodySchema } = require('./heygen.validation');
 const userCreditBilling = require('../credit/userCreditBilling');
 const { truncateText } = require('../credit/creditHistory.enrich');
@@ -27,7 +28,7 @@ function assertCreateAvatarPayload(body) {
   }
 }
 
-function payloadFromMultipart(req) {
+async function payloadFromMultipart(req, userId) {
   if (!req.file?.buffer) return null;
 
   const type = req.body.type != null ? String(req.body.type).trim() : '';
@@ -68,25 +69,42 @@ function payloadFromMultipart(req) {
     }
   }
 
-  const payload = {
-    type,
-    name,
-    file: {
-      type: 'base64',
-      media_type: mime,
-      data: req.file.buffer.toString('base64'),
-    },
-  };
+  let uploadedKey = null;
+  try {
+    const { key, url } = await uploadFile(
+      req.file.buffer,
+      'users',
+      userId,
+      'heygen-avatar-uploads',
+      req.file.originalname || (type === 'digital_twin' ? 'training.mp4' : 'avatar.jpg'),
+      mime
+    );
+    uploadedKey = key;
 
-  const avatar_group_id = req.body.avatar_group_id;
-  if (avatar_group_id !== undefined && avatar_group_id !== null && avatar_group_id !== '') {
-    payload.avatar_group_id = avatar_group_id;
-  }
-  if (reference_images !== undefined) {
-    payload.reference_images = reference_images;
-  }
+    const payload = {
+      type,
+      name,
+      file: {
+        type: 'url',
+        url,
+      },
+    };
 
-  return payload;
+    const avatar_group_id = req.body.avatar_group_id;
+    if (avatar_group_id !== undefined && avatar_group_id !== null && avatar_group_id !== '') {
+      payload.avatar_group_id = avatar_group_id;
+    }
+    if (reference_images !== undefined) {
+      payload.reference_images = reference_images;
+    }
+
+    return payload;
+  } catch (err) {
+    if (uploadedKey) {
+      await deleteFile(uploadedKey).catch(() => {});
+    }
+    throw err;
+  }
 }
 
 const listAvatarGroups = asyncHandler(async (req, res) => {
@@ -127,8 +145,35 @@ const uploadAvatarFile = asyncHandler(async (req, res) => {
   }
 });
 
+const uploadVoiceFile = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const file = req.file;
+  let uploadedKey = null;
+
+  try {
+    const { key, url } = await uploadLocalFile(
+      file.path,
+      'users',
+      userId,
+      'heygen-voice-uploads',
+      file.originalname || 'voice-sample.mp3',
+      file.mimetype
+    );
+    uploadedKey = key;
+    return successResponse(req, res, { url }, 200, messages.HEYGEN_VOICE_FILE_UPLOADED);
+  } catch (err) {
+    if (uploadedKey) {
+      await deleteFile(uploadedKey).catch(() => {});
+    }
+    throw err;
+  } finally {
+    cleanupHeygenVoiceUploadFile(file);
+  }
+});
+
 const createAvatar = asyncHandler(async (req, res) => {
-  const fromMultipart = payloadFromMultipart(req);
+  const userId = req.user.id;
+  const fromMultipart = await payloadFromMultipart(req, userId);
   const source = fromMultipart ?? req.body;
 
   const { error, value } = createAvatarBodySchema.validate(source, {
@@ -142,7 +187,6 @@ const createAvatar = asyncHandler(async (req, res) => {
     );
   }
   assertCreateAvatarPayload(value);
-  const userId = req.user.id;
   await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.AVATAR_CREATE);
   const data = await heygenV3Service.createAvatar(userId, value);
   const groupId = heygenV3Service.extractAvatarGroupIdFromCreateResponse(data);
@@ -259,6 +303,7 @@ module.exports = {
   listAvatarGroups,
   listAvatarLooks,
   uploadAvatarFile,
+  uploadVoiceFile,
   createAvatar,
   createAvatarConsent,
   listVoices,

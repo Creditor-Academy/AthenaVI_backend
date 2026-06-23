@@ -79,6 +79,7 @@
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered per user) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |
+| POST | `/api/heygen/voices/upload` | Bearer | Upload voice clone audio to S3; returns public `url` (max ~100 MB) |
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |
 | POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent (own group only; else **403**) |
 | GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered per user) |

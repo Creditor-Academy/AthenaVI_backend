@@ -24,12 +24,16 @@ module.exports = (err, req, res, next) => {
   }
 
   if (err instanceof multer.MulterError) {
-    const isLargeAvatarUpload = String(req.originalUrl || '').includes('/avatars/upload');
+    const url = String(req.originalUrl || '');
+    const isLargeAvatarUpload = url.includes('/avatars/upload');
+    const isVoiceUpload = url.includes('/voices/upload');
     const msg =
       err.code === 'LIMIT_FILE_SIZE'
         ? isLargeAvatarUpload
           ? 'File too large (max 900 MB for HeyGen avatar file upload)'
-          : 'File too large (max 32 MB for HeyGen avatar upload)'
+          : isVoiceUpload
+            ? 'File too large (max 100 MB for HeyGen voice clone upload)'
+            : 'File too large (max 32 MB for HeyGen avatar upload)'
         : err.message || 'Upload error';
     return errorResponse(req, res, 400, msg, [msg]);
   }

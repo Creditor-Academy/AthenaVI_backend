@@ -197,6 +197,7 @@ module.exports = {
   HEYGEN_AVATAR_LOOKS_OK: 'Avatar looks fetched',
   HEYGEN_AVATAR_CREATED: 'Avatar creation submitted',
   HEYGEN_AVATAR_FILE_UPLOADED: 'Avatar training file uploaded',
+  HEYGEN_VOICE_FILE_UPLOADED: 'Voice clone audio uploaded',
   HEYGEN_CONSENT_OK: 'Consent flow initiated',
   HEYGEN_VOICES_OK: 'Voices fetched',
   HEYGEN_VOICE_DESIGNED: 'Voice design suggestions returned',

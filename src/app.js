@@ -31,7 +31,7 @@ app.use(createCorsMiddleware());
 app.use(helmet());
 /** Base64 voice clone payloads exceed Express's default (~100kb). Override with JSON_BODY_LIMIT (e.g. 32mb). */
 const jsonBodyLimit =
-  (process.env.JSON_BODY_LIMIT && String(process.env.JSON_BODY_LIMIT).trim()) || '15mb';
+  (process.env.JSON_BODY_LIMIT && String(process.env.JSON_BODY_LIMIT).trim()) || '32mb';
 app.use(express.json({ limit: jsonBodyLimit }));
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }));
