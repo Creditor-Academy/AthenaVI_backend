@@ -20,8 +20,14 @@ const getWorkspaceStorage = asyncHandler(async (req, res) => {
   return successResponse(req, res, summary, 200, messages.STORAGE_FETCHED);
 });
 
+const requestStorageUpgrade = asyncHandler(async (req, res) => {
+  const result = await storageService.submitStorageUpgradeRequest(req.user.id, req.body);
+  return successResponse(req, res, result, 201, messages.STORAGE_UPGRADE_REQUEST_SUBMITTED);
+});
+
 module.exports = {
   getMyStorage,
   getMyStorageHistory,
   getWorkspaceStorage,
+  requestStorageUpgrade,
 };

@@ -1,11 +1,30 @@
+const AppError = require('../utils/AppError');
+const messages = require('../utils/messages');
 const prisma = require('../config/prismaClient');
 
-function parseSuperadminEmails() {
-  const raw = process.env.PLATFORM_SUPERADMIN_EMAILS || '';
-  return raw
+function parseEmailList(raw) {
+  return String(raw || '')
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e) => e.trim())
     .filter(Boolean);
+}
+
+function parseSuperadminEmails() {
+  return parseEmailList(process.env.PLATFORM_SUPERADMIN_EMAILS).map((e) => e.toLowerCase());
+}
+
+function getPlatformSuperadminNotificationEmails() {
+  const fromNotification = parseEmailList(process.env.PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL);
+  if (fromNotification.length > 0) {
+    return fromNotification;
+  }
+
+  const fromAllowlist = parseEmailList(process.env.PLATFORM_SUPERADMIN_EMAILS);
+  if (fromAllowlist.length > 0) {
+    return fromAllowlist;
+  }
+
+  throw new AppError(messages.STORAGE_UPGRADE_NOTIFICATION_NOT_CONFIGURED, 500);
 }
 
 function hasPlatformSuperadminAccess(user) {
@@ -34,6 +53,7 @@ async function resolvePlatformSuperadminByUserId(userId) {
 
 module.exports = {
   parseSuperadminEmails,
+  getPlatformSuperadminNotificationEmails,
   hasPlatformSuperadminAccess,
   resolvePlatformSuperadminByUserId,
 };

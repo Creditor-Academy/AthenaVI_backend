@@ -123,6 +123,12 @@ module.exports = {
   STORAGE_REVOKED: 'Storage revoked successfully',
   INVALID_STORAGE_AMOUNT: 'Storage amount must be a positive integer',
   STORAGE_REVOKE_BELOW_USED: 'Cannot reduce storage limit below current usage',
+  STORAGE_UPGRADE_REQUEST_SUBMITTED: 'Storage upgrade request submitted',
+  STORAGE_UPGRADE_REQUEST_RATE_LIMITED: 'You can submit one storage upgrade request per day',
+  STORAGE_UPGRADE_NOTIFICATION_NOT_CONFIGURED:
+    'Storage upgrade notification email is not configured',
+  STORAGE_UPGRADE_BYTES_MISMATCH:
+    'requestedAdditionalBytes must equal requestedAdditionalGb × 1024³',
 
   // Folder
   FOLDER_NAME_REQUIRED: 'Folder name is required',
@@ -196,7 +202,7 @@ module.exports = {
   HEYGEN_SPEECH_PREVIEW_OK: 'Speech preview generated',
   SPEECH_GENERATION_SUCCESS: 'Speech generated successfully',
   SPEECH_GENERATIONS_FETCHED: 'Speech generations fetched',
-  SPEECH_GENERATION_FETCHED: 'Speech generation fetched',
+  SPEECH_GENERATION_FETCHED: 'Speech generation fetched', 
   SPEECH_GENERATION_NOT_READY: 'Speech audio is not ready for playback yet',
   HEYGEN_PROXY_FETCH_FAILED: 'Could not fetch audio from HeyGen',
   HEYGEN_VIDEO_NOT_READY: 'Video is not ready for download yet',

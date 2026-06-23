@@ -20,6 +20,7 @@
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | GET | `/api/user/storage` | Bearer | My storage quota summary |
 | GET | `/api/user/storage/history` | Bearer | My storage ledger history |
+| POST | `/api/user/storage/request` | Bearer | Submit storage upgrade request (emails superadmin) |
 | GET | `/api/user/videos` | Bearer | Owner cross-workspace video library |
 | PATCH | `/api/user/profile` | Bearer | Update profile |
 | POST | `/api/user/upload/profile-image` | Bearer | Upload profile image (multipart) |

@@ -18,5 +18,11 @@ router.get(
   validate(storageValidations.storageHistoryQuerySchema),
   storageController.getMyStorageHistory
 );
+router.post(
+  '/request',
+  authMiddleware,
+  validate(storageValidations.storageUpgradeRequestBodySchema),
+  storageController.requestStorageUpgrade
+);
 
 module.exports = router;

@@ -1,7 +1,12 @@
+const crypto = require('crypto');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const storageDao = require('./storage.dao');
 const storageLedger = require('./storageLedger.service');
+const storageUpgradeRateLimit = require('./storageUpgradeRateLimit.service');
+const { sendEmail } = require('../../shared/notification/email.service');
+const { buildStorageUpgradeRequestEmail } = require('../../shared/templates/storageUpgradeRequest.template');
+const { getPlatformSuperadminNotificationEmails } = require('../../shared/services/platformSuperadmin.service');
 const { STORAGE_TIERS, getStorageTierById } = require('../../shared/config/storagePricing');
 
 function serializeStorageSummary(user) {
@@ -94,10 +99,75 @@ async function revokeUserStorage({ targetUserId, amountBytes, reason, revokedByU
   });
 }
 
+function assertRequestedBytesMatchGb(requestedAdditionalGb, requestedAdditionalBytes) {
+  const expected = Math.round(requestedAdditionalGb * 1024 ** 3);
+  if (Math.abs(requestedAdditionalBytes - expected) > 1) {
+    throw new AppError(messages.STORAGE_UPGRADE_BYTES_MISMATCH, 400);
+  }
+}
+
+async function submitStorageUpgradeRequest(userId, payload) {
+  await storageUpgradeRateLimit.assertAllowed(userId);
+
+  const user = await storageDao.getUserStorage(userId);
+  if (!user) {
+    throw new AppError(messages.USER_NOT_FOUND, 404);
+  }
+
+  const {
+    requestedAdditionalGb,
+    requestedAdditionalBytes,
+    reason,
+    urgency,
+    currentUsedBytes,
+    currentLimitBytes,
+    tierId,
+    tierLabel,
+    workspaceId,
+    workspaceName,
+    workspaceFootprintBytes,
+  } = payload;
+
+  assertRequestedBytesMatchGb(requestedAdditionalGb, requestedAdditionalBytes);
+
+  const requestId = crypto.randomUUID();
+  const submittedAt = new Date().toISOString();
+  const notificationEmails = getPlatformSuperadminNotificationEmails();
+  const { subject, text } = buildStorageUpgradeRequestEmail({
+    userName: user.name,
+    userEmail: user.email,
+    userId: user.id,
+    requestedAdditionalGb,
+    requestedAdditionalBytes,
+    urgency,
+    reason,
+    currentUsedBytes,
+    currentLimitBytes,
+    tierId,
+    tierLabel,
+    workspaceId,
+    workspaceName,
+    workspaceFootprintBytes,
+    submittedAt,
+    requestId,
+  });
+
+  await sendEmail({
+    to: notificationEmails.join(', '),
+    subject,
+    text,
+  });
+
+  await storageUpgradeRateLimit.recordSuccess(userId);
+
+  return { requestId, submittedAt };
+}
+
 module.exports = {
   getUserStorageSummary,
   getUserStorageHistory,
   getWorkspaceStorageSummary,
   grantUserStorage,
   revokeUserStorage,
+  submitStorageUpgradeRequest,
 };

@@ -24,8 +24,29 @@ const workspaceStorageParamsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const storageUpgradeRequestBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    requestedAdditionalGb: Joi.number().positive().required(),
+    requestedAdditionalBytes: Joi.number().integer().positive().required(),
+    reason: Joi.string().trim().min(10).max(2000).required(),
+    urgency: Joi.string().valid('flexible', 'week', 'urgent').required(),
+    currentUsedBytes: Joi.number().integer().min(0).required(),
+    currentLimitBytes: Joi.number().integer().min(0).required(),
+    tierId: Joi.string().trim().max(64).allow(null),
+    tierLabel: Joi.string().trim().max(128).allow(null),
+    workspaceId: Joi.string().uuid().allow(null),
+    workspaceName: Joi.string().trim().max(256).allow(null),
+    workspaceFootprintBytes: Joi.number().integer().min(0).allow(null),
+  })
+    .unknown(false)
+    .required(),
+});
+
 module.exports = {
   storageSummarySchema,
   storageHistoryQuerySchema,
   workspaceStorageParamsSchema,
+  storageUpgradeRequestBodySchema,
 };

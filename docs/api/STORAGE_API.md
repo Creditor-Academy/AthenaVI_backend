@@ -71,6 +71,71 @@ All routes require **`Authorization: Bearer <access_token>`**.
 
 ---
 
+## Request storage upgrade
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/user/storage/request` |
+| **Auth** | Bearer |
+| **Content-Type** | `application/json` |
+
+Submits a storage upgrade request and emails the platform superadmin inbox. Does **not** change the user's quota automatically.
+
+**Request body**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `requestedAdditionalGb` | number | Required. Positive. |
+| `requestedAdditionalBytes` | number | Required. Must equal `requestedAdditionalGb × 1024³` (±1 byte). |
+| `reason` | string | Required. Min 10 characters. |
+| `urgency` | string | Required. `flexible` \| `week` \| `urgent`. |
+| `currentUsedBytes` | number | Snapshot from `GET /api/user/storage`. |
+| `currentLimitBytes` | number | Snapshot from `GET /api/user/storage`. |
+| `tierId` | string \| null | Current tier id, if available. |
+| `tierLabel` | string \| null | e.g. Starter, Pro. |
+| `workspaceId` | string \| null | UUID of workspace context, if any. |
+| `workspaceName` | string \| null | Display name for workspace context. |
+| `workspaceFootprintBytes` | number \| null | Workspace storage footprint if loaded. |
+
+**Example request**
+
+```json
+{
+  "requestedAdditionalGb": 25,
+  "requestedAdditionalBytes": 26843545600,
+  "reason": "Upcoming campaign with large 4K assets and multiple exports per week.",
+  "urgency": "flexible",
+  "currentUsedBytes": 5368709120,
+  "currentLimitBytes": 10737418240,
+  "tierId": "starter",
+  "tierLabel": "Starter",
+  "workspaceId": "workspace-uuid-or-null",
+  "workspaceName": "Acme Team",
+  "workspaceFootprintBytes": 2147483648
+}
+```
+
+**Response (201)** – `data`:
+
+```json
+{
+  "requestId": "req-uuid",
+  "submittedAt": "2026-06-22T10:30:00.000Z"
+}
+```
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| `400` | Validation failure (e.g. reason too short, invalid urgency, bytes mismatch) |
+| `401` | Missing or invalid Bearer token |
+| `429` | One successful request per user per cooldown window (default 24h); includes `Retry-After` header |
+| `500` | Notification email not configured (`PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL` / `PLATFORM_SUPERADMIN_EMAILS`) or SMTP failure |
+
+---
+
 ## Get workspace storage summary
 
 | | |
