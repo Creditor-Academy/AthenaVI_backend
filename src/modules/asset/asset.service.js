@@ -5,6 +5,7 @@ const prisma = require('../../shared/config/prismaClient');
 const AppError = require('../../shared/utils/AppError');
 const { collectAssetIds } = require('../../shared/utils/projectAssetIds');
 const storageAccounting = require('../storage/storageAccounting.service');
+const inboxService = require('../inbox/inbox.service');
 
 function getWorkspaceMemberRole(workspace, userId) {
   if (!workspace || !Array.isArray(workspace.members)) {
@@ -74,7 +75,21 @@ const persistWorkspaceAsset = async ({
 
     const size = buffer.length;
     await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
-    await storageAccounting.assertOwnerCanFitAdditionalBytes(workspace.id, size);
+    try {
+      await storageAccounting.assertOwnerCanFitAdditionalBytes(workspace.id, size);
+    } catch (storageError) {
+      if (storageError.message === messages.STORAGE_LIMIT_EXCEEDED) {
+        inboxService
+          .notifyStorageUploadBlocked({
+            ownerId: workspace.ownerId,
+            uploaderId: userId,
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+          })
+          .catch((error) => console.error('Storage upload blocked notification failed:', error));
+      }
+      throw storageError;
+    }
 
     const { key, url } = await uploadFile(
       buffer,

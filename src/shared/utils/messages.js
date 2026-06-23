@@ -51,6 +51,7 @@ module.exports = {
   INBOX_UNREAD_COUNT_FETCHED: 'Unread notification count fetched successfully',
   INBOX_NOTIFICATION_MARKED_READ: 'Notification marked as read',
   INBOX_NOTIFICATION_NOT_FOUND: 'Notification not found',
+  INBOX_NOTIFICATION_DISMISSED: 'Notification dismissed',
   INBOX_ALL_MARKED_READ: 'All notifications marked as read',
 
   // Database
@@ -210,4 +211,5 @@ module.exports = {
   HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
   HEYGEN_VIDEO_S3_LOCATION: 'S3 object location for IAM access',
   HEYGEN_ACCOUNT_FETCHED: 'HeyGen account billing fetched',
+  SUPERADMIN_ALERTS_FETCHED: 'Superadmin alerts summary fetched',
 };

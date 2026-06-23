@@ -34,6 +34,7 @@ const {
   normalizeEditorProjectData,
 } = require('../project/projectEditorNormalize');
 const storageAccounting = require('../storage/storageAccounting.service');
+const inboxService = require('../inbox/inbox.service');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
 let remotionBundlePromise = null;
@@ -391,6 +392,51 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
   });
 }
 
+async function dispatchVideoExportNotification({
+  renderId,
+  workspaceId,
+  projectId,
+  userId,
+  status,
+  error,
+}) {
+  try {
+    const [project, workspace, triggeredByUser, render] = await Promise.all([
+      prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true, name: true },
+      }),
+      prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, name: true, type: true },
+      }),
+      userId
+        ? prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true },
+          })
+        : null,
+      renderDao.findProjectRenderByIdOnly(renderId),
+    ]);
+
+    await inboxService.notifyVideoExportFinished({
+      renderId,
+      workspaceId,
+      projectId,
+      userId,
+      status,
+      projectName: project?.name || null,
+      workspaceName: workspace?.name || null,
+      workspaceType: workspace?.type || null,
+      triggeredByName: triggeredByUser?.name || null,
+      creditsCharged: render?.creditsCharged ?? null,
+      error: error || render?.error || null,
+    });
+  } catch (notifyError) {
+    console.error('Failed to dispatch video export notification:', notifyError);
+  }
+}
+
 async function processProjectRender({ renderId, workspaceId, projectId, userId, forceRebuild }) {
   const tempDirectory = await ensureTempDirectory(renderId);
 
@@ -469,6 +515,14 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
     });
     await projectStorageService.recalculateProjectStorage(projectId);
     await storageAccounting.recalculateUserStorageUsed(owner.id);
+
+    await dispatchVideoExportNotification({
+      renderId,
+      workspaceId,
+      projectId,
+      userId,
+      status: 'completed',
+    });
   } catch (error) {
     await renderDao.updateProjectRender(renderId, {
       status: 'failed',
@@ -485,6 +539,15 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
     } catch (projectUpdateError) {
       void projectUpdateError;
     }
+
+    await dispatchVideoExportNotification({
+      renderId,
+      workspaceId,
+      projectId,
+      userId,
+      status: 'failed',
+      error: error.message,
+    });
   } finally {
     await fs.rm(tempDirectory, { recursive: true, force: true });
   }

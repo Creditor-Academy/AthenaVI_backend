@@ -80,17 +80,29 @@ Returns the user’s **Notifications** preferences (email and in-app toggles). I
     "pushNotifications": true,
     "commentsAndMentions": true,
     "weeklyDigestEmail": false,
-    "productEmails": false
+    "productEmails": false,
+    "videoExportAlerts": true,
+    "workspaceVideoExportAlerts": true,
+    "creditsAlerts": true,
+    "storageAlerts": true,
+    "workspaceTeamAlerts": true,
+    "platformAdminAlerts": true
   }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `pushNotifications` | boolean | Instant alerts for render completion and important workspace activity |
+| `pushNotifications` | boolean | Master switch for in-app notifications |
 | `commentsAndMentions` | boolean | Teammate comments and @mentions |
 | `weeklyDigestEmail` | boolean | Weekly usage and activity summary email |
 | `productEmails` | boolean | Feature announcements and product updates |
+| `videoExportAlerts` | boolean | Final Remotion export complete/fail (exporter) |
+| `workspaceVideoExportAlerts` | boolean | Teammate final exports (OWNER/ADMIN) |
+| `creditsAlerts` | boolean | Credit grants, revokes, low balance |
+| `storageAlerts` | boolean | Storage quota warnings and upload blocked |
+| `workspaceTeamAlerts` | boolean | Invitations, member joined/removed, role changes |
+| `platformAdminAlerts` | boolean | Platform alerts (superadmin portal only) |
 
 ---
 
@@ -111,7 +123,13 @@ Partial update; send at least one boolean field. Persists for the current user (
   "pushNotifications": true,
   "commentsAndMentions": true,
   "weeklyDigestEmail": false,
-  "productEmails": false
+  "productEmails": false,
+  "videoExportAlerts": true,
+  "workspaceVideoExportAlerts": true,
+  "creditsAlerts": true,
+  "storageAlerts": true,
+  "workspaceTeamAlerts": true,
+  "platformAdminAlerts": true
 }
 ```
 

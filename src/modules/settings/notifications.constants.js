@@ -3,6 +3,12 @@ const DEFAULT_NOTIFICATIONS = {
   commentsAndMentions: true,
   weeklyDigestEmail: false,
   productEmails: false,
+  videoExportAlerts: true,
+  workspaceVideoExportAlerts: true,
+  creditsAlerts: true,
+  storageAlerts: true,
+  workspaceTeamAlerts: true,
+  platformAdminAlerts: true,
 };
 
 module.exports = {

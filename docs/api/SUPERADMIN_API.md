@@ -22,6 +22,31 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `POST` | `/api/superadmin/workspaces/:workspaceId/credits/grant` | Direct workspace top-up |
 | `GET` | `/api/superadmin/reports/credits/usage` | Usage report (`from`, `to`, optional filters) |
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing (prepaid USD wallet via `HEYGEN_API_KEY`) |
+| `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
+
+### Platform alerts summary
+
+```http
+GET /api/superadmin/alerts/summary
+Authorization: Bearer <accessToken>
+```
+
+**200** – `data`:
+
+```json
+{
+  "unreadPlatformCount": 1,
+  "heygenWallet": {
+    "remainingBalanceUsd": 42.5,
+    "currency": "usd",
+    "thresholdUsd": 50,
+    "isLow": false
+  },
+  "fetchedAt": "ISO8601"
+}
+```
+
+Platform HeyGen wallet low alerts are also written to the superadmin user's **`/api/user/inbox`** (`type: PLATFORM_HEYGEN_WALLET_LOW`). A background job re-checks the wallet on `PLATFORM_ALERTS_JOB_INTERVAL_MS` (default 1h).
 
 ### HeyGen API wallet (platform COGS)
 

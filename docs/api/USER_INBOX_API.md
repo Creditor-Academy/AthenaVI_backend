@@ -2,7 +2,23 @@
 
 Base path: **`/api/user/inbox`**
 
-All routes require **`Authorization: Bearer <access_token>`**. Workspace invitations are delivered by **email** and, when the invitee already has an account (or registers later with the same email), also appear here.
+All routes require **`Authorization: Bearer <access_token>`**. Notifications respect [`/api/user/settings/notifications`](USER_SETTINGS_API.md) (master `pushNotifications` plus per-domain toggles).
+
+Workspace invitations are delivered by **email** and, when the invitee already has an account (or registers later with the same email), also appear here.
+
+---
+
+## Notification categories
+
+| `category` | Types (examples) |
+|------------|------------------|
+| `videos` | `VIDEO_EXPORT_COMPLETED`, `VIDEO_EXPORT_FAILED` (final Remotion export only) |
+| `credits` | `CREDITS_PLATFORM_GRANT`, `CREDITS_LOW_PERSONAL`, `CREDITS_ALLOCATED`, … |
+| `storage` | `STORAGE_THRESHOLD_WARNING`, `STORAGE_UPLOAD_BLOCKED`, … |
+| `workspace` | `WORKSPACE_INVITATION`, `WORKSPACE_MEMBER_JOINED`, … |
+| `platform` | `PLATFORM_HEYGEN_WALLET_LOW` (superadmin only) |
+
+**TEAM workspace video exports:** when a member exports a final video, the **exporter**, all **OWNER**s, and all **ADMIN**s receive a notification (deduplicated per user).
 
 ---
 
@@ -20,6 +36,9 @@ All routes require **`Authorization: Bearer <access_token>`**. Workspace invitat
 |---|---|---|
 | `unreadOnly` | `true` \| `false` | When `true`, only unread items |
 | `limit` | number | Max items (1–100, default 50) |
+| `type` | string | Filter by `InboxNotificationType` enum value |
+| `category` | `videos` \| `credits` \| `storage` \| `workspace` \| `platform` | Filter by category |
+| `workspaceId` | UUID | Filter by workspace |
 
 **Response (200)** – `data`:
 
@@ -28,29 +47,32 @@ All routes require **`Authorization: Bearer <access_token>`**. Workspace invitat
   "notifications": [
     {
       "id": "uuid",
-      "type": "WORKSPACE_INVITATION",
-      "title": "Invitation to Acme Team",
-      "message": "You have been invited to join Acme Team as MEMBER.",
+      "type": "VIDEO_EXPORT_COMPLETED",
+      "category": "videos",
+      "title": "\"Q1 Training\" export is ready",
+      "message": "Your final video finished rendering and is ready to download.",
       "readAt": null,
       "metadata": {
-        "invitationId": "uuid",
         "workspaceId": "uuid",
         "workspaceName": "Acme Team",
-        "role": "MEMBER",
-        "token": "invitation-token",
-        "actionUrl": "{FRONTEND_URL}/invitations/accept/<token>",
-        "inviterName": "Jane Doe",
-        "expiresAt": "ISO8601"
+        "workspaceType": "TEAM",
+        "projectId": "uuid",
+        "projectName": "Q1 Training",
+        "renderId": "uuid",
+        "triggeredByUserId": "uuid",
+        "triggeredByName": "Jane Doe",
+        "audience": "self",
+        "actionUrl": "{FRONTEND_URL}/workspaces/.../projects/.../renders/..."
       },
-      "invitationId": "uuid",
+      "workspaceId": "uuid",
+      "invitationId": null,
+      "referenceId": "render-uuid",
       "createdAt": "ISO8601"
     }
   ],
   "unreadCount": 1
 }
 ```
-
-Use `metadata.token` with **`POST /api/workspaces/invitations/accept`** after login, or open `metadata.actionUrl` in the app.
 
 ---
 
@@ -62,7 +84,32 @@ Use `metadata.token` with **`POST /api/workspaces/invitations/accept`** after lo
 | **Path** | `/api/user/inbox/unread-count` |
 | **Auth** | Bearer |
 
-**Response (200)** – `data`: `{ "unreadCount": 3 }`
+**Response (200)** – `data`:
+
+```json
+{
+  "unreadCount": 5,
+  "byCategory": {
+    "videos": 1,
+    "credits": 2,
+    "storage": 1,
+    "workspace": 1,
+    "platform": 0
+  }
+}
+```
+
+---
+
+## Get one notification
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/inbox/:notificationId` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "notification": { ... } }` — **404** if not found.
 
 ---
 
@@ -76,7 +123,19 @@ Use `metadata.token` with **`POST /api/workspaces/invitations/accept`** after lo
 
 **Response (200)** – `data`: `{ "notification": { ... } }`
 
-- **404** if the notification does not belong to the user.
+---
+
+## Bulk mark read
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/user/inbox/read` |
+| **Auth** | Bearer |
+
+**Body:** `{ "notificationIds": ["uuid", "..."] }` (1–100 ids)
+
+**Response (200)** – `data`: `{ "unreadCount": 2 }`
 
 ---
 
@@ -92,7 +151,16 @@ Use `metadata.token` with **`POST /api/workspaces/invitations/accept`** after lo
 
 ---
 
+## Dismiss notification
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/user/inbox/:notificationId` |
+| **Auth** | Bearer |
+
+**Response (200)** – `data`: `{ "deleted": true }`
+
 ---
 
 **[← API index](README.md)** · [Project root README](../../README.md)
-

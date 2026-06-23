@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const storageDao = require('./storage.dao');
+const inboxService = require('../inbox/inbox.service');
 
 function toWholeBytes(value) {
   return Math.floor(Number(value) || 0);
@@ -55,6 +56,22 @@ async function platformGrantStorage({
       },
     });
     return { user, transaction };
+  }).then(async (result) => {
+    inboxService
+      .notifyStoragePlatformGrant({
+        userId: targetUserId,
+        amountBytes: delta,
+        reason,
+      })
+      .catch((error) => console.error('Storage grant notification failed:', error));
+    inboxService
+      .maybeNotifyStorageThreshold({
+        userId: targetUserId,
+        usedBytes: result.user.storageUsed,
+        limitBytes: result.user.storageLimit,
+      })
+      .catch((error) => console.error('Storage threshold notification failed:', error));
+    return result;
   });
 }
 
@@ -94,6 +111,22 @@ async function platformGrantStorageTier({
       },
     });
     return { user: updated, transaction };
+  }).then(async (result) => {
+    inboxService
+      .notifyStoragePlatformGrant({
+        userId: targetUserId,
+        amountBytes: Math.max(delta, 0),
+        reason,
+      })
+      .catch((error) => console.error('Storage grant notification failed:', error));
+    inboxService
+      .maybeNotifyStorageThreshold({
+        userId: targetUserId,
+        usedBytes: result.user.storageUsed,
+        limitBytes: result.user.storageLimit,
+      })
+      .catch((error) => console.error('Storage threshold notification failed:', error));
+    return result;
   });
 }
 
@@ -127,6 +160,22 @@ async function platformRevokeStorage({
       },
     });
     return { user: updated, transaction };
+  }).then(async (result) => {
+    inboxService
+      .notifyStoragePlatformRevoke({
+        userId: targetUserId,
+        amountBytes: delta,
+        reason,
+      })
+      .catch((error) => console.error('Storage revoke notification failed:', error));
+    inboxService
+      .maybeNotifyStorageThreshold({
+        userId: targetUserId,
+        usedBytes: result.user.storageUsed,
+        limitBytes: result.user.storageLimit,
+      })
+      .catch((error) => console.error('Storage threshold notification failed:', error));
+    return result;
   });
 }
 

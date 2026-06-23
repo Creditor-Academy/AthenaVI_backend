@@ -3,6 +3,41 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const creditDao = require('./credit.dao');
 const { SCOPE } = require('../../shared/config/creditPricing');
+const inboxService = require('../inbox/inbox.service');
+
+async function notifyCreditsLowAfterCharge({ scope, workspaceId, userId }) {
+  try {
+    if (scope === SCOPE.USER) {
+      const user = await getUserOrThrow(userId);
+      await inboxService.maybeNotifyCreditsLow({
+        userId,
+        pool: 'user',
+        balance: user.credits,
+      });
+      return;
+    }
+
+    const target = await resolveBillingTarget(workspaceId);
+    if (target.pool === 'user') {
+      const user = await getUserOrThrow(target.ownerId);
+      await inboxService.maybeNotifyCreditsLow({
+        userId: target.ownerId,
+        pool: 'user',
+        balance: user.credits,
+      });
+      return;
+    }
+
+    const workspace = await getWorkspaceOrThrow(workspaceId);
+    await inboxService.maybeNotifyCreditsLow({
+      workspaceId,
+      pool: 'workspace',
+      balance: workspace.credits,
+    });
+  } catch (error) {
+    console.error('Failed to evaluate low-credit notification:', error);
+  }
+}
 
 async function getWorkspaceOrThrow(workspaceId) {
   const workspace = await creditDao.getWorkspaceCredits(workspaceId);
@@ -125,7 +160,7 @@ async function chargeUsage({
     }
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await applyDeltaInTx(tx, {
       pool,
       userId: billUserId,
@@ -146,6 +181,9 @@ async function chargeUsage({
 
     return { skipped: false, transaction, charged: charge };
   });
+
+  await notifyCreditsLowAfterCharge({ scope, workspaceId, userId });
+  return result;
 }
 
 async function platformGrant({ targetUserId, amountAc, grantedByUserId, reason }) {
@@ -155,7 +193,7 @@ async function platformGrant({ targetUserId, amountAc, grantedByUserId, reason }
   }
   await getUserOrThrow(targetUserId);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const user = await applyDeltaInTx(tx, {
       pool: 'user',
       userId: targetUserId,
@@ -172,6 +210,19 @@ async function platformGrant({ targetUserId, amountAc, grantedByUserId, reason }
     });
     return { user, transaction };
   });
+
+  inboxService
+    .notifyCreditsPlatformGrant({ userId: targetUserId, amount, reason })
+    .catch((error) => console.error('Credits grant notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      userId: targetUserId,
+      pool: 'user',
+      balance: result.user.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
 }
 
 async function platformRevoke({ targetUserId, amountAc, revokedByUserId, reason }) {
@@ -184,7 +235,7 @@ async function platformRevoke({ targetUserId, amountAc, revokedByUserId, reason 
     throw new AppError(messages.INSUFFICIENT_CREDITS, 402);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const updated = await applyDeltaInTx(tx, {
       pool: 'user',
       userId: targetUserId,
@@ -201,6 +252,19 @@ async function platformRevoke({ targetUserId, amountAc, revokedByUserId, reason 
     });
     return { user: updated, transaction };
   });
+
+  inboxService
+    .notifyCreditsPlatformRevoke({ userId: targetUserId, amount, reason })
+    .catch((error) => console.error('Credits revoke notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      userId: targetUserId,
+      pool: 'user',
+      balance: result.user.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
 }
 
 async function platformGrantWorkspace({ workspaceId, amountAc, grantedByUserId, reason }) {
@@ -208,9 +272,9 @@ async function platformGrantWorkspace({ workspaceId, amountAc, grantedByUserId, 
   if (amount <= 0) {
     throw new AppError(messages.INVALID_CREDIT_AMOUNT, 400);
   }
-  await getWorkspaceOrThrow(workspaceId);
+  const workspaceMeta = await getWorkspaceOrThrow(workspaceId);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const workspace = await applyDeltaInTx(tx, {
       pool: 'workspace',
       workspaceId,
@@ -228,6 +292,25 @@ async function platformGrantWorkspace({ workspaceId, amountAc, grantedByUserId, 
     });
     return { workspace, transaction };
   });
+
+  inboxService
+    .notifyCreditsWorkspaceGrant({
+      workspaceId,
+      workspaceName: workspaceMeta.name,
+      ownerId: workspaceMeta.ownerId,
+      amount,
+      reason,
+    })
+    .catch((error) => console.error('Workspace credits grant notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      workspaceId,
+      pool: 'workspace',
+      balance: result.workspace.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
 }
 
 async function allocateToWorkspace({ ownerUserId, workspaceId, amountAc }) {
@@ -249,7 +332,7 @@ async function allocateToWorkspace({ ownerUserId, workspaceId, amountAc }) {
     throw new AppError(messages.INSUFFICIENT_CREDITS, 402);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await applyDeltaInTx(tx, { pool: 'user', userId: ownerUserId, delta: -amount });
     await applyDeltaInTx(tx, { pool: 'workspace', workspaceId, userId: ownerUserId, delta: amount });
 
@@ -274,6 +357,33 @@ async function allocateToWorkspace({ ownerUserId, workspaceId, amountAc }) {
 
     return { outTx, inTx };
   });
+
+  const updatedWorkspace = await getWorkspaceOrThrow(workspaceId);
+  inboxService
+    .notifyCreditsAllocated({
+      ownerId: ownerUserId,
+      workspaceId,
+      workspaceName: workspace.name,
+      amount,
+      direction: 'in',
+    })
+    .catch((error) => console.error('Credits allocation notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      userId: ownerUserId,
+      pool: 'user',
+      balance: (await getUserOrThrow(ownerUserId)).credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      workspaceId,
+      pool: 'workspace',
+      balance: updatedWorkspace.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
 }
 
 async function deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc }) {
@@ -293,7 +403,7 @@ async function deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc }) {
     throw new AppError(messages.INSUFFICIENT_CREDITS, 402);
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     await applyDeltaInTx(tx, { pool: 'workspace', workspaceId, userId: ownerUserId, delta: -amount });
     await applyDeltaInTx(tx, { pool: 'user', userId: ownerUserId, delta: amount });
 
@@ -318,6 +428,26 @@ async function deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc }) {
 
     return { outTx, inTx };
   });
+
+  const updatedWorkspace = await getWorkspaceOrThrow(workspaceId);
+  inboxService
+    .notifyCreditsAllocated({
+      ownerId: ownerUserId,
+      workspaceId,
+      workspaceName: workspace.name,
+      amount,
+      direction: 'out',
+    })
+    .catch((error) => console.error('Credits deallocation notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      workspaceId,
+      pool: 'workspace',
+      balance: updatedWorkspace.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
 }
 
 module.exports = {

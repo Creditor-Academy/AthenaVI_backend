@@ -10,6 +10,12 @@ const defaultCreateData = {
   commentsAndMentions: DEFAULT_NOTIFICATIONS.commentsAndMentions,
   weeklyDigestEmail: DEFAULT_NOTIFICATIONS.weeklyDigestEmail,
   productEmails: DEFAULT_NOTIFICATIONS.productEmails,
+  videoExportAlerts: DEFAULT_NOTIFICATIONS.videoExportAlerts,
+  workspaceVideoExportAlerts: DEFAULT_NOTIFICATIONS.workspaceVideoExportAlerts,
+  creditsAlerts: DEFAULT_NOTIFICATIONS.creditsAlerts,
+  storageAlerts: DEFAULT_NOTIFICATIONS.storageAlerts,
+  workspaceTeamAlerts: DEFAULT_NOTIFICATIONS.workspaceTeamAlerts,
+  platformAdminAlerts: DEFAULT_NOTIFICATIONS.platformAdminAlerts,
 };
 
 const findByUserId = async (userId) => {

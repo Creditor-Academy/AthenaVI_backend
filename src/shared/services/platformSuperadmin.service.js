@@ -51,9 +51,29 @@ async function resolvePlatformSuperadminByUserId(userId) {
   };
 }
 
+async function listPlatformSuperadminUserIds() {
+  const allowlist = parseSuperadminEmails();
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { isPlatformSuperadmin: true },
+        ...(allowlist.length
+          ? [{ email: { in: allowlist, mode: 'insensitive' } }]
+          : []),
+      ],
+    },
+    select: { id: true, email: true, isPlatformSuperadmin: true },
+  });
+
+  return users
+    .filter((user) => hasPlatformSuperadminAccess(user))
+    .map((user) => user.id);
+}
+
 module.exports = {
   parseSuperadminEmails,
   getPlatformSuperadminNotificationEmails,
   hasPlatformSuperadminAccess,
   resolvePlatformSuperadminByUserId,
+  listPlatformSuperadminUserIds,
 };

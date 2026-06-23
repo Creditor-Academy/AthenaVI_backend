@@ -265,7 +265,17 @@ async function acceptInvitation(token, userId) {
   await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
   await inboxService.markInvitationNotificationRead(userId, invitation.id);
 
-  return await workspaceDao.findWorkspaceById(invitation.workspaceId);
+  const workspace = await workspaceDao.findWorkspaceById(invitation.workspaceId);
+  inboxService
+    .notifyWorkspaceMemberJoined({
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      memberName: user.name,
+      memberUserId: userId,
+    })
+    .catch((error) => console.error('Workspace member joined notification failed:', error));
+
+  return workspace;
 }
 
 async function removeMember(workspaceId, requesterId, memberId) {
@@ -299,6 +309,17 @@ async function removeMember(workspaceId, requesterId, memberId) {
   }
 
   await workspaceDao.deleteMember(memberId);
+
+  const workspace = await workspaceDao.findWorkspaceById(workspaceId);
+  inboxService
+    .notifyWorkspaceMemberRemoved({
+      removedUserId: targetMember.userId,
+      workspaceId,
+      workspaceName: workspace?.name || null,
+      removedByAdmin: !isSelf,
+    })
+    .catch((error) => console.error('Workspace member removed notification failed:', error));
+
   return targetMember;
 }
 
@@ -339,7 +360,19 @@ async function changeMemberRole(workspaceId, requesterId, memberId, newRole) {
     await workspaceDao.updateMemberRole(memberId, newRole);
   }
 
-  return await workspaceDao.findWorkspaceMemberById(memberId);
+  const updatedMember = await workspaceDao.findWorkspaceMemberById(memberId);
+  const workspace = await workspaceDao.findWorkspaceById(workspaceId);
+  inboxService
+    .notifyWorkspaceRoleChanged({
+      userId: updatedMember.userId,
+      workspaceId,
+      workspaceName: workspace?.name || null,
+      newRole,
+      ownerId: workspace?.ownerId || null,
+    })
+    .catch((error) => console.error('Workspace role changed notification failed:', error));
+
+  return updatedMember;
 }
 
 async function getWorkspaceMembers(workspaceId, userId) {

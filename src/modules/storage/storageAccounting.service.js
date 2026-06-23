@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const storageDao = require('./storage.dao');
+const inboxService = require('../inbox/inbox.service');
 
 async function getWorkspaceOwnerOrThrow(workspaceId) {
   const workspace = await storageDao.getWorkspaceOwnerStorage(workspaceId);
@@ -30,12 +31,22 @@ async function recalculateUserStorageUsed(ownerId) {
   }
 
   const usedBytes = await storageDao.sumOwnerBillableStorageUsed(ownerId);
+  const limitBytes = user.storageLimit || 0;
+
   await storageDao.prisma.user.update({
     where: { id: ownerId },
     data: {
       storageUsed: usedBytes,
     },
   });
+
+  inboxService
+    .maybeNotifyStorageThreshold({
+      userId: ownerId,
+      usedBytes,
+      limitBytes,
+    })
+    .catch((error) => console.error('Storage threshold notification failed:', error));
 
   return usedBytes;
 }

@@ -2,6 +2,7 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const superadminService = require('./superadmin.service');
+const superadminAlertsService = require('./superadminAlerts.service');
 
 const grantUserCredits = asyncHandler(async (req, res) => {
   const { userId } = req.params;
@@ -173,6 +174,11 @@ const revokeUserStorage = asyncHandler(async (req, res) => {
   );
 });
 
+const getAlertsSummary = asyncHandler(async (req, res) => {
+  const summary = await superadminAlertsService.getAlertsSummary(req.user.id);
+  return successResponse(req, res, summary, 200, messages.SUPERADMIN_ALERTS_FETCHED);
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -186,4 +192,5 @@ module.exports = {
   getUserStorage,
   grantUserStorage,
   revokeUserStorage,
+  getAlertsSummary,
 };

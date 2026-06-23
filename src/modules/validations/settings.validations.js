@@ -30,6 +30,12 @@ const updateNotificationsValidation = Joi.object({
     commentsAndMentions: Joi.boolean(),
     weeklyDigestEmail: Joi.boolean(),
     productEmails: Joi.boolean(),
+    videoExportAlerts: Joi.boolean(),
+    workspaceVideoExportAlerts: Joi.boolean(),
+    creditsAlerts: Joi.boolean(),
+    storageAlerts: Joi.boolean(),
+    workspaceTeamAlerts: Joi.boolean(),
+    platformAdminAlerts: Joi.boolean(),
   })
     .min(1)
     .unknown(false)

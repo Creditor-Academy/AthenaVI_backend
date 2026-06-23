@@ -25,10 +25,13 @@
 | PATCH | `/api/user/profile` | Bearer | Update profile |
 | POST | `/api/user/upload/profile-image` | Bearer | Upload profile image (multipart) |
 | DELETE | `/api/user/profile-image` | Bearer | Remove profile image |
-| GET | `/api/user/inbox` | Bearer | List inbox notifications |
-| GET | `/api/user/inbox/unread-count` | Bearer | Unread inbox count |
+| GET | `/api/user/inbox` | Bearer | List inbox notifications (`type`, `category`, `workspaceId` filters) |
+| GET | `/api/user/inbox/unread-count` | Bearer | Unread inbox count + `byCategory` |
+| GET | `/api/user/inbox/:notificationId` | Bearer | Get one inbox notification |
+| PATCH | `/api/user/inbox/read` | Bearer | Bulk mark inbox items read |
 | PATCH | `/api/user/inbox/read-all` | Bearer | Mark all inbox items read |
 | PATCH | `/api/user/inbox/:notificationId/read` | Bearer | Mark one inbox item read |
+| DELETE | `/api/user/inbox/:notificationId` | Bearer | Dismiss inbox notification |
 | POST | `/api/workspaces` | Bearer | Create team workspace |
 | GET | `/api/workspaces` | Bearer | List my workspaces |
 | POST | `/api/workspaces/invitations/accept` | Bearer | Accept invite |
@@ -71,6 +74,7 @@
 | GET | `/api/superadmin/users/:userId/storage` | Bearer + platform superadmin | User storage summary |
 | POST | `/api/superadmin/users/:userId/storage/grant` | Bearer + platform superadmin | Grant storage bytes/tier |
 | POST | `/api/superadmin/users/:userId/storage/revoke` | Bearer + platform superadmin | Revoke storage bytes |
+| GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary (inbox + HeyGen wallet) |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered per user) |
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |

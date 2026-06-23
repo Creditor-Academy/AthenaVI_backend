@@ -62,6 +62,12 @@ const toNotificationsResponse = (record) => ({
   commentsAndMentions: record.commentsAndMentions,
   weeklyDigestEmail: record.weeklyDigestEmail,
   productEmails: record.productEmails,
+  videoExportAlerts: record.videoExportAlerts,
+  workspaceVideoExportAlerts: record.workspaceVideoExportAlerts,
+  creditsAlerts: record.creditsAlerts,
+  storageAlerts: record.storageAlerts,
+  workspaceTeamAlerts: record.workspaceTeamAlerts,
+  platformAdminAlerts: record.platformAdminAlerts,
 });
 
 const getNotifications = async (userId) => {
@@ -81,6 +87,12 @@ const updateNotifications = async (userId, payload) => {
     'commentsAndMentions',
     'weeklyDigestEmail',
     'productEmails',
+    'videoExportAlerts',
+    'workspaceVideoExportAlerts',
+    'creditsAlerts',
+    'storageAlerts',
+    'workspaceTeamAlerts',
+    'platformAdminAlerts',
   ];
 
   booleanFields.forEach((field) => {

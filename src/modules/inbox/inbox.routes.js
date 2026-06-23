@@ -15,9 +15,23 @@ router.get(
 router.get('/unread-count', authMiddleware, inboxController.getUnreadCount);
 
 router.patch(
+  '/read',
+  authMiddleware,
+  validate(inboxValidation.bulkReadSchema),
+  inboxController.markNotificationsRead
+);
+
+router.patch(
   '/read-all',
   authMiddleware,
   inboxController.markAllNotificationsRead
+);
+
+router.get(
+  '/:notificationId',
+  authMiddleware,
+  validate(inboxValidation.notificationIdSchema),
+  inboxController.getNotification
 );
 
 router.patch(
@@ -25,6 +39,13 @@ router.patch(
   authMiddleware,
   validate(inboxValidation.notificationIdSchema),
   inboxController.markNotificationRead
+);
+
+router.delete(
+  '/:notificationId',
+  authMiddleware,
+  validate(inboxValidation.notificationIdSchema),
+  inboxController.dismissNotification
 );
 
 module.exports = router;

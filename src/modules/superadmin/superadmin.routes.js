@@ -77,4 +77,6 @@ router.get(
 
 router.get('/heygen/account', superadminController.getHeygenAccount);
 
+router.get('/alerts/summary', superadminController.getAlertsSummary);
+
 module.exports = router;

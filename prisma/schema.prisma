@@ -39,6 +39,23 @@ enum ThemePalette {
 
 enum InboxNotificationType {
   WORKSPACE_INVITATION
+  WORKSPACE_MEMBER_JOINED
+  WORKSPACE_MEMBER_REMOVED
+  WORKSPACE_ROLE_CHANGED
+  VIDEO_EXPORT_COMPLETED
+  VIDEO_EXPORT_FAILED
+  CREDITS_PLATFORM_GRANT
+  CREDITS_PLATFORM_REVOKE
+  CREDITS_WORKSPACE_GRANT
+  CREDITS_ALLOCATED
+  CREDITS_DEALLOCATED
+  CREDITS_LOW_PERSONAL
+  CREDITS_LOW_WORKSPACE
+  STORAGE_PLATFORM_GRANT
+  STORAGE_PLATFORM_REVOKE
+  STORAGE_THRESHOLD_WARNING
+  STORAGE_UPLOAD_BLOCKED
+  PLATFORM_HEYGEN_WALLET_LOW
 }
 
 model User {
@@ -88,10 +105,16 @@ model UserSettings {
   interfaceMode         InterfaceMode @default(LIGHT) @map("interface_mode")
   themePalette          ThemePalette  @default(SAPPHIRE) @map("theme_palette")
   customAccentColor     String        @default("#2563EB") @map("custom_accent_color")
-  pushNotifications     Boolean       @default(true) @map("push_notifications")
-  commentsAndMentions   Boolean       @default(true) @map("comments_and_mentions")
-  weeklyDigestEmail     Boolean       @default(false) @map("weekly_digest_email")
-  productEmails         Boolean       @default(false) @map("product_emails")
+  pushNotifications            Boolean @default(true) @map("push_notifications")
+  commentsAndMentions          Boolean @default(true) @map("comments_and_mentions")
+  weeklyDigestEmail            Boolean @default(false) @map("weekly_digest_email")
+  productEmails                Boolean @default(false) @map("product_emails")
+  videoExportAlerts            Boolean @default(true) @map("video_export_alerts")
+  workspaceVideoExportAlerts   Boolean @default(true) @map("workspace_video_export_alerts")
+  creditsAlerts                Boolean @default(true) @map("credits_alerts")
+  storageAlerts                Boolean @default(true) @map("storage_alerts")
+  workspaceTeamAlerts          Boolean @default(true) @map("workspace_team_alerts")
+  platformAdminAlerts          Boolean @default(true) @map("platform_admin_alerts")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -171,13 +194,17 @@ model UserInboxNotification {
   readAt       DateTime?             @map("read_at")
   metadata     Json?
   invitationId String?               @map("invitation_id")
+  workspaceId  String?               @map("workspace_id")
+  referenceId  String?               @map("reference_id")
   createdAt    DateTime              @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, invitationId])
+  @@unique([userId, type, referenceId])
   @@index([userId, readAt])
   @@index([userId, createdAt])
+  @@index([userId, workspaceId])
   @@map("user_inbox_notifications")
 }
 
