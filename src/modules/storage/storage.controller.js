@@ -15,6 +15,18 @@ const getMyStorageHistory = asyncHandler(async (req, res) => {
   return successResponse(req, res, { history }, 200, messages.STORAGE_HISTORY_FETCHED);
 });
 
+const getMyStorageUpgradeRequests = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const result = await storageService.getUserStorageUpgradeRequests(
+    req.user.id,
+    page,
+    limit,
+    req.query.status
+  );
+  return successResponse(req, res, result, 200, messages.STORAGE_UPGRADE_REQUESTS_FETCHED);
+});
+
 const getWorkspaceStorage = asyncHandler(async (req, res) => {
   const summary = await storageService.getWorkspaceStorageSummary(req.params.workspaceId);
   return successResponse(req, res, summary, 200, messages.STORAGE_FETCHED);
@@ -28,6 +40,7 @@ const requestStorageUpgrade = asyncHandler(async (req, res) => {
 module.exports = {
   getMyStorage,
   getMyStorageHistory,
+  getMyStorageUpgradeRequests,
   getWorkspaceStorage,
   requestStorageUpgrade,
 };

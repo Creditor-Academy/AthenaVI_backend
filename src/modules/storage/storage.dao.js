@@ -182,6 +182,65 @@ const sumOwnerBillableStorageUsed = async (ownerId) => {
   return (asset._sum.size || 0) + (heygen._sum.fileSizeBytes || 0) + (renders._sum.fileSizeBytes || 0);
 };
 
+const createStorageUpgradeRequest = (data) => {
+  return prisma.storageUpgradeRequest.create({ data });
+};
+
+const listStorageUpgradeRequestsByUser = async (userId, page, limit, status) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    userId,
+    ...(status ? { status } : {}),
+  };
+
+  const [requests, total] = await Promise.all([
+    prisma.storageUpgradeRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.storageUpgradeRequest.count({ where }),
+  ]);
+
+  return {
+    requests,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    },
+  };
+};
+
+const findLatestPendingStorageUpgradeRequest = (userId) => {
+  return prisma.storageUpgradeRequest.findFirst({
+    where: {
+      userId,
+      status: 'PENDING',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+};
+
+const approveLatestPendingStorageUpgradeRequest = async (userId, reviewedByUserId, reviewNote) => {
+  const pending = await findLatestPendingStorageUpgradeRequest(userId);
+  if (!pending) {
+    return null;
+  }
+
+  return prisma.storageUpgradeRequest.update({
+    where: { id: pending.id },
+    data: {
+      status: 'APPROVED',
+      reviewedAt: new Date(),
+      reviewedByUserId,
+      reviewNote: reviewNote || null,
+    },
+  });
+};
+
 module.exports = {
   getUserStorage,
   updateUserStorageLimit,
@@ -192,5 +251,9 @@ module.exports = {
   getWorkspaceOwnerStorage,
   sumWorkspaceStorageFootprint,
   sumOwnerBillableStorageUsed,
+  createStorageUpgradeRequest,
+  listStorageUpgradeRequestsByUser,
+  findLatestPendingStorageUpgradeRequest,
+  approveLatestPendingStorageUpgradeRequest,
   prisma,
 };

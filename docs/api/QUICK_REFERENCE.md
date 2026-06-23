@@ -18,8 +18,9 @@
 | GET | `/api/user/getall` | Bearer | List all users |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
-| GET | `/api/user/storage` | Bearer | My storage quota summary |
+| GET | `/api/user/storage` | Bearer | My storage quota summary (+ active pending upgrade request) |
 | GET | `/api/user/storage/history` | Bearer | My storage ledger history |
+| GET | `/api/user/storage/requests` | Bearer | My storage upgrade requests (status history) |
 | POST | `/api/user/storage/request` | Bearer | Submit storage upgrade request (emails superadmin) |
 | GET | `/api/user/videos` | Bearer | Owner cross-workspace video library |
 | PATCH | `/api/user/profile` | Bearer | Update profile |

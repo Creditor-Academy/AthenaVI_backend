@@ -58,6 +58,12 @@ enum InboxNotificationType {
   PLATFORM_HEYGEN_WALLET_LOW
 }
 
+enum StorageUpgradeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String  @id @default(uuid())
   email         String  @unique
@@ -94,6 +100,7 @@ model User {
 
   settings UserSettings?
   inboxNotifications UserInboxNotification[]
+  storageUpgradeRequests StorageUpgradeRequest[]
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -323,6 +330,34 @@ model StorageTransaction {
   @@index([userId, createdAt])
   @@index([type])
   @@map("storage_transactions")
+}
+
+model StorageUpgradeRequest {
+  id                        String                      @id @default(uuid())
+  userId                    String                      @map("user_id")
+  requestedAdditionalGb     Int                         @map("requested_additional_gb")
+  requestedAdditionalBytes    Int                         @map("requested_additional_bytes")
+  reason                    String
+  urgency                   String
+  currentUsedBytes          Int                         @map("current_used_bytes")
+  currentLimitBytes         Int                         @map("current_limit_bytes")
+  tierId                    String?                     @map("tier_id")
+  tierLabel                 String?                     @map("tier_label")
+  workspaceId               String?                     @map("workspace_id")
+  workspaceName             String?                     @map("workspace_name")
+  workspaceFootprintBytes   Int?                        @map("workspace_footprint_bytes")
+  status                    StorageUpgradeRequestStatus @default(PENDING)
+  reviewedAt                DateTime?                   @map("reviewed_at")
+  reviewedByUserId          String?                     @map("reviewed_by_user_id")
+  reviewNote                String?                     @map("review_note")
+  createdAt                 DateTime                    @default(now()) @map("created_at")
+  updatedAt                 DateTime                    @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@map("storage_upgrade_requests")
 }
 
 model Folder {

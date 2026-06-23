@@ -44,9 +44,20 @@ const storageUpgradeRequestBodySchema = Joi.object({
     .required(),
 });
 
+const storageUpgradeRequestsQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    status: Joi.string().valid('pending', 'approved', 'rejected').optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
 module.exports = {
   storageSummarySchema,
   storageHistoryQuerySchema,
   workspaceStorageParamsSchema,
   storageUpgradeRequestBodySchema,
+  storageUpgradeRequestsQuerySchema,
 };

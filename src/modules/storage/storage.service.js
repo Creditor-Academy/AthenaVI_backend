@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const storageDao = require('./storage.dao');
@@ -8,6 +7,31 @@ const { sendEmail } = require('../../shared/notification/email.service');
 const { buildStorageUpgradeRequestEmail } = require('../../shared/templates/storageUpgradeRequest.template');
 const { getPlatformSuperadminNotificationEmails } = require('../../shared/services/platformSuperadmin.service');
 const { STORAGE_TIERS, getStorageTierById } = require('../../shared/config/storagePricing');
+
+function serializeStorageUpgradeRequest(record) {
+  if (!record) {
+    return null;
+  }
+
+  return {
+    requestId: record.id,
+    status: record.status.toLowerCase(),
+    requestedAdditionalGb: record.requestedAdditionalGb,
+    requestedAdditionalBytes: record.requestedAdditionalBytes,
+    reason: record.reason,
+    urgency: record.urgency,
+    currentUsedBytes: record.currentUsedBytes,
+    currentLimitBytes: record.currentLimitBytes,
+    tierId: record.tierId,
+    tierLabel: record.tierLabel,
+    workspaceId: record.workspaceId,
+    workspaceName: record.workspaceName,
+    workspaceFootprintBytes: record.workspaceFootprintBytes,
+    submittedAt: record.createdAt.toISOString(),
+    reviewedAt: record.reviewedAt ? record.reviewedAt.toISOString() : null,
+    reviewNote: record.reviewNote,
+  };
+}
 
 function serializeStorageSummary(user) {
   const usedBytes = user.storageUsed || 0;
@@ -28,7 +52,32 @@ function serializeStorageSummary(user) {
 
 async function getUserStorageSummary(userId) {
   const user = await storageLedger.getUserStorageOrThrow(userId);
-  return serializeStorageSummary(user);
+  const activeUpgradeRequest = await storageDao.findLatestPendingStorageUpgradeRequest(userId);
+
+  return {
+    ...serializeStorageSummary(user),
+    activeUpgradeRequest: serializeStorageUpgradeRequest(activeUpgradeRequest),
+  };
+}
+
+async function getUserStorageUpgradeRequests(userId, page, limit, status) {
+  const normalizedStatus = status ? String(status).trim().toUpperCase() : undefined;
+  const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+  if (normalizedStatus && !allowedStatuses.includes(normalizedStatus)) {
+    throw new AppError(messages.INVALID_REQUEST, 400);
+  }
+
+  const result = await storageDao.listStorageUpgradeRequestsByUser(
+    userId,
+    page,
+    limit,
+    normalizedStatus
+  );
+
+  return {
+    requests: result.requests.map(serializeStorageUpgradeRequest),
+    pagination: result.pagination,
+  };
 }
 
 async function getUserStorageHistory(userId, page, limit, type) {
@@ -67,27 +116,37 @@ async function grantUserStorage({ targetUserId, tierId, additionalBytes, reason,
     throw new AppError(messages.INVALID_STORAGE_AMOUNT, 400);
   }
 
+  let result;
+
   if (tierId) {
     const tier = getStorageTierById(tierId);
     if (!tier) {
       throw new AppError(messages.INVALID_REQUEST, 400);
     }
-    return storageLedger.platformGrantStorageTier({
+    result = await storageLedger.platformGrantStorageTier({
       targetUserId,
       limitBytes: tier.limitBytes,
       tierId,
       reason,
       grantedByUserId,
     });
+  } else {
+    result = await storageLedger.platformGrantStorage({
+      targetUserId,
+      additionalBytes,
+      tierId: null,
+      reason,
+      grantedByUserId,
+    });
   }
 
-  return storageLedger.platformGrantStorage({
+  await storageDao.approveLatestPendingStorageUpgradeRequest(
     targetUserId,
-    additionalBytes,
-    tierId: null,
-    reason,
     grantedByUserId,
-  });
+    reason
+  );
+
+  return result;
 }
 
 async function revokeUserStorage({ targetUserId, amountBytes, reason, revokedByUserId }) {
@@ -130,8 +189,24 @@ async function submitStorageUpgradeRequest(userId, payload) {
 
   assertRequestedBytesMatchGb(requestedAdditionalGb, requestedAdditionalBytes);
 
-  const requestId = crypto.randomUUID();
-  const submittedAt = new Date().toISOString();
+  const requestRecord = await storageDao.createStorageUpgradeRequest({
+    userId: user.id,
+    requestedAdditionalGb,
+    requestedAdditionalBytes,
+    reason,
+    urgency,
+    currentUsedBytes,
+    currentLimitBytes,
+    tierId,
+    tierLabel,
+    workspaceId,
+    workspaceName,
+    workspaceFootprintBytes,
+    status: 'PENDING',
+  });
+
+  const requestId = requestRecord.id;
+  const submittedAt = requestRecord.createdAt.toISOString();
   const notificationEmails = getPlatformSuperadminNotificationEmails();
   const { subject, text } = buildStorageUpgradeRequestEmail({
     userName: user.name,
@@ -160,12 +235,17 @@ async function submitStorageUpgradeRequest(userId, payload) {
 
   await storageUpgradeRateLimit.recordSuccess(userId);
 
-  return { requestId, submittedAt };
+  return {
+    requestId,
+    submittedAt,
+    status: 'pending',
+  };
 }
 
 module.exports = {
   getUserStorageSummary,
   getUserStorageHistory,
+  getUserStorageUpgradeRequests,
   getWorkspaceStorageSummary,
   grantUserStorage,
   revokeUserStorage,

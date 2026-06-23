@@ -18,6 +18,12 @@ router.get(
   validate(storageValidations.storageHistoryQuerySchema),
   storageController.getMyStorageHistory
 );
+router.get(
+  '/requests',
+  authMiddleware,
+  validate(storageValidations.storageUpgradeRequestsQuerySchema),
+  storageController.getMyStorageUpgradeRequests
+);
 router.post(
   '/request',
   authMiddleware,

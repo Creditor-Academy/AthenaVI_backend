@@ -26,9 +26,29 @@ All routes require **`Authorization: Bearer <access_token>`**.
   "usedBytes": 123456789,
   "availableBytes": 950285035,
   "percentUsed": 11.5,
-  "tier": { "id": "free", "label": "Free" }
+  "tier": { "id": "free", "label": "Free" },
+  "activeUpgradeRequest": {
+    "requestId": "req-uuid",
+    "status": "pending",
+    "requestedAdditionalGb": 25,
+    "requestedAdditionalBytes": 26843545600,
+    "reason": "Upcoming campaign with large 4K assets.",
+    "urgency": "flexible",
+    "currentUsedBytes": 5368709120,
+    "currentLimitBytes": 10737418240,
+    "tierId": "starter",
+    "tierLabel": "Starter",
+    "workspaceId": "workspace-uuid",
+    "workspaceName": "Acme Team",
+    "workspaceFootprintBytes": 2147483648,
+    "submittedAt": "2026-06-22T10:30:00.000Z",
+    "reviewedAt": null,
+    "reviewNote": null
+  }
 }
 ```
+
+`activeUpgradeRequest` is the user's latest **pending** request, or `null` if none.
 
 ---
 
@@ -121,7 +141,8 @@ Submits a storage upgrade request and emails the platform superadmin inbox. Does
 ```json
 {
   "requestId": "req-uuid",
-  "submittedAt": "2026-06-22T10:30:00.000Z"
+  "submittedAt": "2026-06-22T10:30:00.000Z",
+  "status": "pending"
 }
 ```
 
@@ -133,6 +154,57 @@ Submits a storage upgrade request and emails the platform superadmin inbox. Does
 | `401` | Missing or invalid Bearer token |
 | `429` | One successful request per user per cooldown window (default 24h); includes `Retry-After` header |
 | `500` | Notification email not configured (`PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL` / `PLATFORM_SUPERADMIN_EMAILS`) or SMTP failure |
+
+Requests are persisted with status `pending`. When a platform superadmin grants storage to the user, the latest pending request is automatically marked `approved`.
+
+---
+
+## List my storage upgrade requests
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/user/storage/requests` |
+| **Auth** | Bearer |
+
+**Query (optional)**
+
+- `page` (default `1`)
+- `limit` (`1..100`, default `20`)
+- `status` (`pending` \| `approved` \| `rejected`)
+
+**Response (200)** – `data`:
+
+```json
+{
+  "requests": [
+    {
+      "requestId": "req-uuid",
+      "status": "pending",
+      "requestedAdditionalGb": 25,
+      "requestedAdditionalBytes": 26843545600,
+      "reason": "Upcoming campaign with large 4K assets.",
+      "urgency": "flexible",
+      "currentUsedBytes": 5368709120,
+      "currentLimitBytes": 10737418240,
+      "tierId": "starter",
+      "tierLabel": "Starter",
+      "workspaceId": "workspace-uuid",
+      "workspaceName": "Acme Team",
+      "workspaceFootprintBytes": 2147483648,
+      "submittedAt": "2026-06-22T10:30:00.000Z",
+      "reviewedAt": null,
+      "reviewNote": null
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 1
+  }
+}
+```
 
 ---
 

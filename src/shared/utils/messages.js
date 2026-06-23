@@ -125,6 +125,7 @@ module.exports = {
   INVALID_STORAGE_AMOUNT: 'Storage amount must be a positive integer',
   STORAGE_REVOKE_BELOW_USED: 'Cannot reduce storage limit below current usage',
   STORAGE_UPGRADE_REQUEST_SUBMITTED: 'Storage upgrade request submitted',
+  STORAGE_UPGRADE_REQUESTS_FETCHED: 'Storage upgrade requests fetched successfully',
   STORAGE_UPGRADE_REQUEST_RATE_LIMITED: 'You can submit one storage upgrade request per day',
   STORAGE_UPGRADE_NOTIFICATION_NOT_CONFIGURED:
     'Storage upgrade notification email is not configured',
