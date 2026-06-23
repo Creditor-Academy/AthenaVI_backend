@@ -24,9 +24,12 @@ module.exports = (err, req, res, next) => {
   }
 
   if (err instanceof multer.MulterError) {
+    const isLargeAvatarUpload = String(req.originalUrl || '').includes('/avatars/upload');
     const msg =
       err.code === 'LIMIT_FILE_SIZE'
-        ? 'File too large (max 32 MB for HeyGen avatar upload)'
+        ? isLargeAvatarUpload
+          ? 'File too large (max 900 MB for HeyGen avatar file upload)'
+          : 'File too large (max 32 MB for HeyGen avatar upload)'
         : err.message || 'Upload error';
     return errorResponse(req, res, 400, msg, [msg]);
   }

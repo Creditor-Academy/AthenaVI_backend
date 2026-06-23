@@ -102,6 +102,39 @@ The server converts the upload into HeyGen’s **`file`: `{ type: base64, media_
 
 ---
 
+## Upload avatar training file (large)
+
+Stage a photo or training video on S3 and return a **public HTTPS URL** for use in **`POST /api/heygen/avatars`** with `{ "file": { "type": "url", "url": "..." } }`. Use this for Digital Twin training videos **over 50 MB** (workspace asset upload is capped at 50 MB).
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/heygen/avatars/upload` |
+| **Auth** | Bearer |
+| **Content-Type** | `multipart/form-data` |
+
+**Form fields**
+
+- **`file`** (required): `image/jpeg`, `image/png`, `image/webp`, `video/mp4`, or `video/webm`.
+- Max **900 MB** per file. The file is streamed to a temporary path, then uploaded to S3 (`users/{userId}/heygen-avatar-uploads/…`).
+
+**Response (200)** – `data`:
+
+```json
+{
+  "url": "https://your-bucket.s3.region.amazonaws.com/users/.../heygen-avatar-uploads/....mp4"
+}
+```
+
+**Frontend flow**
+
+1. `POST /api/heygen/avatars/upload` with the training video (`file`).
+2. `POST /api/heygen/avatars` (JSON) with `type: "digital_twin"`, `name`, and `file: { "type": "url", "url": "<url from step 1>" }`.
+
+Requires **AWS S3** env (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). The bucket (or object prefix) must allow **public read** so HeyGen can fetch the URL.
+
+---
+
 ## Avatar consent URL
 
 Returns a consent / onboarding URL for a pending avatar group.

@@ -3,10 +3,12 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenV3Service = require('./heygenV3.service');
+const { uploadLocalFile, deleteFile } = require('../s3/s3.service');
 const {
   HEYGEN_AVATAR_PHOTO_MIMES,
   HEYGEN_AVATAR_TWIN_MIMES,
 } = require('../../middlewares/heygenAvatarCreate.middleware');
+const { cleanupHeygenAvatarUploadFile } = require('../../middlewares/heygenAvatarUpload.middleware');
 const { createAvatarBodySchema } = require('./heygen.validation');
 const userCreditBilling = require('../credit/userCreditBilling');
 const { truncateText } = require('../credit/creditHistory.enrich');
@@ -97,6 +99,32 @@ const listAvatarLooks = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const data = await heygenV3Service.listAvatarLooks(userId, req.query);
   return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_LOOKS_OK);
+});
+
+const uploadAvatarFile = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const file = req.file;
+  let uploadedKey = null;
+
+  try {
+    const { key, url } = await uploadLocalFile(
+      file.path,
+      'users',
+      userId,
+      'heygen-avatar-uploads',
+      file.originalname || 'training.mp4',
+      file.mimetype
+    );
+    uploadedKey = key;
+    return successResponse(req, res, { url }, 200, messages.HEYGEN_AVATAR_FILE_UPLOADED);
+  } catch (err) {
+    if (uploadedKey) {
+      await deleteFile(uploadedKey).catch(() => {});
+    }
+    throw err;
+  } finally {
+    cleanupHeygenAvatarUploadFile(file);
+  }
 });
 
 const createAvatar = asyncHandler(async (req, res) => {
@@ -230,6 +258,7 @@ const previewSpeech = asyncHandler(async (req, res) => {
 module.exports = {
   listAvatarGroups,
   listAvatarLooks,
+  uploadAvatarFile,
   createAvatar,
   createAvatarConsent,
   listVoices,

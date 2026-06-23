@@ -208,10 +208,9 @@ async function submitStorageUpgradeRequest(userId, payload) {
   const requestId = requestRecord.id;
   const submittedAt = requestRecord.createdAt.toISOString();
   const notificationEmails = getPlatformSuperadminNotificationEmails();
-  const { subject, text } = buildStorageUpgradeRequestEmail({
+  const { subject, text, html } = buildStorageUpgradeRequestEmail({
     userName: user.name,
     userEmail: user.email,
-    userId: user.id,
     requestedAdditionalGb,
     requestedAdditionalBytes,
     urgency,
@@ -231,6 +230,7 @@ async function submitStorageUpgradeRequest(userId, payload) {
     to: notificationEmails.join(', '),
     subject,
     text,
+    html,
   });
 
   await storageUpgradeRateLimit.recordSuccess(userId);

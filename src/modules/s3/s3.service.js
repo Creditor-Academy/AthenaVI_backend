@@ -1,5 +1,5 @@
 const fs = require('fs/promises');
-const { createWriteStream } = require('fs');
+const { createReadStream, createWriteStream } = require('fs');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 const {
@@ -57,6 +57,35 @@ async function uploadFile(
 
 async function uploadFileToKey(fileBuffer, key, contentType) {
   return uploadBodyToKey(fileBuffer, key, contentType);
+}
+
+async function uploadLocalFileToKey(localPath, key, contentType) {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: createReadStream(localPath),
+    ContentType: contentType,
+  });
+
+  await s3.send(command);
+
+  return {
+    key,
+    url: buildPublicUrl(key),
+  };
+}
+
+async function uploadLocalFile(
+  localPath,
+  entityType,
+  entityId,
+  folder = '',
+  originalName,
+  contentType
+) {
+  const extension = path.extname(originalName);
+  const key = `${entityType}/${entityId}/${folder}/${uuidv4()}${extension}`;
+  return uploadLocalFileToKey(localPath, key, contentType);
 }
 
 async function deleteFile(key) {
@@ -297,6 +326,8 @@ async function headObjectMeta(key) {
 module.exports = {
   uploadFile,
   uploadFileToKey,
+  uploadLocalFile,
+  uploadLocalFileToKey,
   deleteFile,
   copyFile,
   moveFile,
