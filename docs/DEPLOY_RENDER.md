@@ -6,7 +6,9 @@ Staging deployment on [Render](https://render.com) using:
 - **Redis** — existing **Render Key Value** instance (same account, Oregon)
 - **Web service** — this repo (`render.yaml` creates only the web service)
 
-Migrations run on every deploy: `npx prisma migrate deploy` (pre-deploy command).
+Migrations run on every deploy at **startup** (free tier does not support pre-deploy commands):
+
+`npx prisma migrate deploy && npm start`
 
 ---
 
@@ -50,9 +52,8 @@ Commit and push `render.yaml` (and the rest of the repo) to GitHub/GitLab/Bitbuc
 4. Branch: your deploy branch (e.g. `main`)
 5. Runtime: **Node**
 6. Build command: `npm install --production=false && npx prisma generate`
-7. **Advanced** → Pre-deploy command: `npx prisma migrate deploy`
-8. Start command: `npm start`
-9. Instance type: **Free** (no card required for the web service; spins down after ~15 min idle)
+7. Start command: `npx prisma migrate deploy && npm start`
+8. Instance type: **Free** (no card required for the web service; spins down after ~15 min idle)
 
 ### 3. Set environment variables
 
@@ -143,7 +144,7 @@ Update `BACKEND_URL` to match that host.
 ### 7. Verify deploy
 
 1. **Logs** tab — look for:
-   - `prisma migrate deploy` success (pre-deploy)
+   - `prisma migrate deploy` success (at startup, before server listens)
    - `Database connected and verified`
    - `Redis connected`
    - `Server running on port ...`
@@ -177,7 +178,7 @@ flowchart LR
 
 | Symptom | Fix |
 |---------|-----|
-| Pre-deploy: `Can't reach database` | Aiven IP allowlist; check `DATABASE_URL` and `sslmode=require` |
+| Pre-deploy / startup: `Can't reach database` | Aiven IP allowlist; check `DATABASE_URL` and `sslmode=require` |
 | `Redis error` / connection refused | Use **Internal** Redis URL; web service region = Oregon |
 | CORS errors from browser | Set `FRONTEND_URL` or `CORS_ORIGINS` to exact frontend origin (no trailing slash) |
 | Google login redirect fails | `BACKEND_URL` + Google redirect URI must match Render URL |

@@ -11,8 +11,7 @@ services:
     plan: free
     region: oregon
     buildCommand: npm install --production=false && npx prisma generate
-    preDeployCommand: npx prisma migrate deploy
-    startCommand: npm start
+    startCommand: npx prisma migrate deploy && npm start
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
