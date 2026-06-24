@@ -90,7 +90,8 @@ Authorization: Bearer <accessToken>
 ### Storage grant / revoke notes
 
 - Storage grant and revoke update `User.storageLimit` (stored as `BIGINT` bytes).
-- Byte amounts in API bodies and responses use JSON numbers (e.g. `10737418240` for 10 GiB).
+- Byte amounts in API bodies and responses use JSON numbers (e.g. `10737418240` for 10 GiB). No fixed upper cap on grant/revoke amounts beyond positive integers.
+- Optional `tierId` (`free`, `plus_10gb`, `pro_50gb`) sets a preset limit; `additionalBytes` adds any positive amount on top of the current limit.
 - Every change writes a `storage_transactions` ledger row.
 - Revoke is blocked if the new limit would be below current `storageUsed`.
 

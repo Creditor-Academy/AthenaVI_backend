@@ -1,7 +1,4 @@
 const Joi = require('joi');
-const { getMaxStorageLimitBytes } = require('../../shared/config/storagePricing');
-
-const maxStorageBytes = getMaxStorageLimitBytes();
 
 const userIdParamsSchema = Joi.object({
   params: Joi.object({
@@ -36,7 +33,7 @@ const grantStorageBodySchema = Joi.object({
   }),
   query: Joi.object({}).unknown(false),
   body: Joi.object({
-    additionalBytes: Joi.number().integer().min(1).max(maxStorageBytes).optional(),
+    additionalBytes: Joi.number().integer().min(1).optional(),
     tierId: Joi.string().trim().max(64).optional(),
     reason: Joi.string().trim().max(500).optional(),
   })
@@ -50,7 +47,7 @@ const revokeStorageBodySchema = Joi.object({
   }),
   query: Joi.object({}).unknown(false),
   body: Joi.object({
-    amountBytes: Joi.number().integer().min(1).max(maxStorageBytes).required(),
+    amountBytes: Joi.number().integer().min(1).required(),
     reason: Joi.string().trim().max(500).optional(),
   }).required(),
 });
