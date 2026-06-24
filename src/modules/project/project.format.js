@@ -1,4 +1,5 @@
 const { attachUsers } = require('../../shared/utils/attachUsers');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 
 const USER_FIELD_MAP = [
   { sourceField: 'createdBy', targetField: 'owner' },
@@ -16,7 +17,7 @@ function baseProjectFields(project) {
     thumbnail: project.thumbnail,
     duration: project.duration,
     status: project.status,
-    storageBytes: project.storageBytes ?? 0,
+    storageBytes: toJsonNumber(project.storageBytes),
     createdAt: project.createdAt,
     lastModifiedAt: project.updatedAt,
     folder: project.folder,

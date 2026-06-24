@@ -1,4 +1,7 @@
 const Joi = require('joi');
+const { getMaxStorageLimitBytes } = require('../../shared/config/storagePricing');
+
+const maxStorageBytes = getMaxStorageLimitBytes();
 
 const storageSummarySchema = Joi.object({
   params: Joi.object({}).unknown(false),
@@ -29,16 +32,16 @@ const storageUpgradeRequestBodySchema = Joi.object({
   query: Joi.object({}).unknown(false),
   body: Joi.object({
     requestedAdditionalGb: Joi.number().positive().required(),
-    requestedAdditionalBytes: Joi.number().integer().positive().required(),
+    requestedAdditionalBytes: Joi.number().integer().positive().max(maxStorageBytes).required(),
     reason: Joi.string().trim().min(10).max(2000).required(),
     urgency: Joi.string().valid('flexible', 'week', 'urgent').required(),
-    currentUsedBytes: Joi.number().integer().min(0).required(),
-    currentLimitBytes: Joi.number().integer().min(0).required(),
+    currentUsedBytes: Joi.number().integer().min(0).max(maxStorageBytes).required(),
+    currentLimitBytes: Joi.number().integer().min(0).max(maxStorageBytes).required(),
     tierId: Joi.string().trim().max(64).allow(null),
     tierLabel: Joi.string().trim().max(128).allow(null),
     workspaceId: Joi.string().uuid().allow(null),
     workspaceName: Joi.string().trim().max(256).allow(null),
-    workspaceFootprintBytes: Joi.number().integer().min(0).allow(null),
+    workspaceFootprintBytes: Joi.number().integer().min(0).max(maxStorageBytes).allow(null),
   })
     .unknown(false)
     .required(),

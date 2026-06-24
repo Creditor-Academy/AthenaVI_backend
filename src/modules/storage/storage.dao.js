@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { toBigInt, sumPrismaAggregate } = require('../../shared/utils/byteSize');
 
 const getUserStorage = (userId) => {
   return prisma.user.findUnique({
@@ -17,7 +18,7 @@ const updateUserStorageLimit = (db, userId, limitBytes) => {
   return db.user.update({
     where: { id: userId },
     data: {
-      storageLimit: limitBytes,
+      storageLimit: toBigInt(limitBytes),
     },
     select: {
       id: true,
@@ -34,7 +35,7 @@ const incrementUserStorageLimit = (db, userId, deltaBytes) => {
     where: { id: userId },
     data: {
       storageLimit: {
-        increment: deltaBytes,
+        increment: toBigInt(deltaBytes),
       },
     },
     select: {
@@ -52,7 +53,7 @@ const incrementUserStorageUsed = (db, userId, deltaBytes) => {
     where: { id: userId },
     data: {
       storageUsed: {
-        increment: deltaBytes,
+        increment: toBigInt(deltaBytes),
       },
     },
     select: {
@@ -143,9 +144,9 @@ const sumWorkspaceStorageFootprint = async (workspaceId) => {
   ]);
 
   return {
-    assetBytes: asset._sum.size || 0,
-    heygenBytes: heygen._sum.fileSizeBytes || 0,
-    renderBytes: renders._sum.fileSizeBytes || 0,
+    assetBytes: sumPrismaAggregate(asset._sum.size),
+    heygenBytes: sumPrismaAggregate(heygen._sum.fileSizeBytes),
+    renderBytes: sumPrismaAggregate(renders._sum.fileSizeBytes),
   };
 };
 
@@ -179,7 +180,11 @@ const sumOwnerBillableStorageUsed = async (ownerId) => {
     }),
   ]);
 
-  return (asset._sum.size || 0) + (heygen._sum.fileSizeBytes || 0) + (renders._sum.fileSizeBytes || 0);
+  return (
+    sumPrismaAggregate(asset._sum.size) +
+    sumPrismaAggregate(heygen._sum.fileSizeBytes) +
+    sumPrismaAggregate(renders._sum.fileSizeBytes)
+  );
 };
 
 const createStorageUpgradeRequest = (data) => {

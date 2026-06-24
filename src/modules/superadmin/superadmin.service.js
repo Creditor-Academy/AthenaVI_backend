@@ -4,6 +4,7 @@ const creditDao = require('../credit/credit.dao');
 const { enrichCreditHistoryResult } = require('../credit/creditHistory.enrich');
 const heygenV3Service = require('../heygen/heygenV3.service');
 const storageService = require('../storage/storage.service');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 
 async function grantUserCredits({ targetUserId, amount, reason, grantedByUserId }) {
   return creditLedger.platformGrant({
@@ -39,7 +40,15 @@ async function getUserCreditHistory(userId, page, limit, type) {
 }
 
 async function listUsers({ page, limit, search }) {
-  return creditDao.listUsersWithCredits({ page, limit, search });
+  const result = await creditDao.listUsersWithCredits({ page, limit, search });
+  return {
+    ...result,
+    users: result.users.map((user) => ({
+      ...user,
+      storageLimit: toJsonNumber(user.storageLimit),
+      storageUsed: toJsonNumber(user.storageUsed),
+    })),
+  };
 }
 
 async function getWorkspaceCreditsSummary(workspaceId) {

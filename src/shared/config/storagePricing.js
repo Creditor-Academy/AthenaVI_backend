@@ -37,9 +37,14 @@ function getStorageTierById(tierId) {
   return STORAGE_TIERS.find((tier) => tier.id === tierId) || null;
 }
 
+function getMaxStorageLimitBytes() {
+  return STORAGE_TIERS.reduce((max, tier) => Math.max(max, tier.limitBytes), 0);
+}
+
 module.exports = {
   STORAGE_TIERS,
   STORAGE_TIER_IDS,
   getDefaultStorageTier,
   getStorageTierById,
+  getMaxStorageLimitBytes,
 };

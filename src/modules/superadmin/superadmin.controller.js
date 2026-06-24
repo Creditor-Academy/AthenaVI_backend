@@ -1,6 +1,7 @@
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 const superadminService = require('./superadmin.service');
 const superadminAlertsService = require('./superadminAlerts.service');
 
@@ -139,10 +140,13 @@ const grantUserStorage = asyncHandler(async (req, res) => {
     {
       user: {
         id: result.user.id,
-        storageLimit: result.user.storageLimit,
-        storageUsed: result.user.storageUsed,
+        storageLimit: toJsonNumber(result.user.storageLimit),
+        storageUsed: toJsonNumber(result.user.storageUsed),
       },
-      transaction: result.transaction,
+      transaction: {
+        ...result.transaction,
+        amountBytes: toJsonNumber(result.transaction.amountBytes),
+      },
     },
     200,
     messages.STORAGE_GRANTED
@@ -164,10 +168,13 @@ const revokeUserStorage = asyncHandler(async (req, res) => {
     {
       user: {
         id: result.user.id,
-        storageLimit: result.user.storageLimit,
-        storageUsed: result.user.storageUsed,
+        storageLimit: toJsonNumber(result.user.storageLimit),
+        storageUsed: toJsonNumber(result.user.storageUsed),
       },
-      transaction: result.transaction,
+      transaction: {
+        ...result.transaction,
+        amountBytes: toJsonNumber(result.transaction.amountBytes),
+      },
     },
     200,
     messages.STORAGE_REVOKED

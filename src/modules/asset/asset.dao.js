@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { toBigInt } = require('../../shared/utils/byteSize');
 
 const findUserById = (userId) => {
   return prisma.user.findUnique({
@@ -15,7 +16,7 @@ const incrementUserStorage = (db, userId, size) => {
     where: { id: userId },
     data: {
       storageUsed: {
-        increment: size,
+        increment: toBigInt(size),
       },
     },
   });
@@ -89,7 +90,7 @@ const decrementUserStorage = (db, userId, size) => {
     where: { id: userId },
     data: {
       storageUsed: {
-        decrement: size,
+        decrement: toBigInt(size),
       },
     },
   });

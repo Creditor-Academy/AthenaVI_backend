@@ -7,6 +7,7 @@ const { renderMedia, selectComposition } = require('@remotion/renderer');
 
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 const projectDao = require('../project/project.dao');
 const renderDao = require('./render.dao');
 const heygenService = require('../video/services/heygen.service');
@@ -700,7 +701,7 @@ function toVideoListItem(row) {
     folderId: row.folderId,
     status: row.status,
     progress: row.progress,
-    fileSizeBytes: row.fileSizeBytes,
+    fileSizeBytes: toJsonNumber(row.fileSizeBytes),
     outputUrl: row.outputUrl,
     completedAt: row.completedAt,
     createdAt: row.createdAt,

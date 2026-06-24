@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { attachUsers } = require('../../shared/utils/attachUsers');
+const { sumPrismaAggregate } = require('../../shared/utils/byteSize');
 const folderDao = require('./folder.dao');
 
 const FOLDER_USER_FIELD_MAP = [
@@ -46,7 +47,7 @@ function buildStatsMap(statsRows) {
   for (const row of statsRows) {
     map.set(row.folderId, {
       projectCount: row._count.id,
-      sizeBytes: row._sum.storageBytes ?? 0,
+      sizeBytes: sumPrismaAggregate(row._sum.storageBytes),
       lastActivityAt: row._max.updatedAt ?? null,
     });
   }

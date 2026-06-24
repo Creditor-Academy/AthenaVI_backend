@@ -1,5 +1,10 @@
 const prisma = require('../../shared/config/prismaClient');
 const { collectAssetIds } = require('../../shared/utils/projectAssetIds');
+const {
+  sumNullableByteFields,
+  toJsonNumber,
+  toBigInt,
+} = require('../../shared/utils/byteSize');
 const projectDao = require('./project.dao');
 
 function computeJsonSizeBytes(data) {
@@ -14,7 +19,7 @@ function computeJsonSizeBytes(data) {
 }
 
 function sumFileSizeBytes(rows) {
-  return (rows || []).reduce((sum, row) => sum + (row.fileSizeBytes || 0), 0);
+  return toJsonNumber(sumNullableByteFields(rows, 'fileSizeBytes'));
 }
 
 async function sumReferencedAssetBytes(workspaceId, projectData) {
@@ -24,7 +29,7 @@ async function sumReferencedAssetBytes(workspaceId, projectData) {
   }
 
   const assets = await projectDao.findAssetsByIds(workspaceId, assetIds);
-  return assets.reduce((sum, asset) => sum + (asset.size || 0), 0);
+  return toJsonNumber(assets.reduce((sum, asset) => sum + toBigInt(asset.size), 0n));
 }
 
 async function computeProjectStorageBytes(project) {
@@ -61,7 +66,7 @@ async function recalculateProjectStorage(projectId) {
 
   await prisma.project.update({
     where: { id: projectId },
-    data: { storageBytes },
+    data: { storageBytes: toBigInt(storageBytes) },
   });
 
   return storageBytes;

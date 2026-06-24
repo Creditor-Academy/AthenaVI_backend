@@ -72,8 +72,8 @@ model User {
   profileImage  String? @map("profile_image")
   phoneNumber   String? @map("phone_number")
   emailVerified Boolean @default(false) @map("email_verified")
-  storageLimit  Int     @default(1073741824) // 1 GB default limit
-  storageUsed   Int     @default(0)
+  storageLimit  BigInt  @default(1073741824) // 1 GB default limit
+  storageUsed   BigInt  @default(0)
   credits             Int     @default(0)
   isPlatformSuperadmin Boolean @default(false) @map("is_platform_superadmin")
 
@@ -318,7 +318,7 @@ model CreditTransaction {
 model StorageTransaction {
   id          String   @id @default(uuid())
   userId      String
-  amountBytes Int      @map("amount_bytes")
+  amountBytes BigInt   @map("amount_bytes")
   type        String // initial | platform_grant | platform_revoke | purchase
   tierId      String?  @map("tier_id")
   reference   String?
@@ -336,16 +336,16 @@ model StorageUpgradeRequest {
   id                        String                      @id @default(uuid())
   userId                    String                      @map("user_id")
   requestedAdditionalGb     Int                         @map("requested_additional_gb")
-  requestedAdditionalBytes    Int                         @map("requested_additional_bytes")
+  requestedAdditionalBytes    BigInt                      @map("requested_additional_bytes")
   reason                    String
   urgency                   String
-  currentUsedBytes          Int                         @map("current_used_bytes")
-  currentLimitBytes         Int                         @map("current_limit_bytes")
+  currentUsedBytes          BigInt                      @map("current_used_bytes")
+  currentLimitBytes         BigInt                      @map("current_limit_bytes")
   tierId                    String?                     @map("tier_id")
   tierLabel                 String?                     @map("tier_label")
   workspaceId               String?                     @map("workspace_id")
   workspaceName             String?                     @map("workspace_name")
-  workspaceFootprintBytes   Int?                        @map("workspace_footprint_bytes")
+  workspaceFootprintBytes   BigInt?                     @map("workspace_footprint_bytes")
   status                    StorageUpgradeRequestStatus @default(PENDING)
   reviewedAt                DateTime?                   @map("reviewed_at")
   reviewedByUserId          String?                     @map("reviewed_by_user_id")
@@ -387,7 +387,7 @@ model Project {
   thumbnail     String? // preview image
   duration      Int? // optional
   status        String  @default("draft") // draft | rendering | completed
-  storageBytes  Int     @default(0)
+  storageBytes  BigInt  @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -409,7 +409,7 @@ model Asset {
 
   name String @default("untitled")
 
-  size Int
+  size BigInt
   type String
 
   url String
@@ -439,7 +439,7 @@ model HeygenResponse {
   videoId     String
   videoUrl    String
   s3Key         String? // S3 object key after upload; used for presigned GET
-  fileSizeBytes Int?
+  fileSizeBytes BigInt?
   requestHash   String  @unique
   status        String  @default("processing") // processing | completed | failed
   rawResponse   Json?
@@ -473,7 +473,7 @@ model SpeechGeneration {
   heygenAudioUrl    String?
   audioUrl          String   @default("")
   s3Key             String?
-  fileSizeBytes     Int?
+  fileSizeBytes     BigInt?
   durationSec       Float?
   wordTimestamps    Json?
   requestHash       String   @unique
@@ -503,7 +503,7 @@ model ProjectRender {
   status        String    @default("queued")
   progress      Int       @default(0)
   s3Key         String?
-  fileSizeBytes Int?
+  fileSizeBytes BigInt?
   outputUrl     String?
   inputSnapshot Json?
   sceneHashes   Json?
@@ -533,7 +533,7 @@ model SceneRenderCache {
   sceneId     String
   sceneHash   String
   s3Key         String
-  fileSizeBytes Int?
+  fileSizeBytes BigInt?
   outputUrl     String
   metadata      Json?
   createdAt     DateTime @default(now())

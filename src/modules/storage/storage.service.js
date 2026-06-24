@@ -7,6 +7,7 @@ const { sendEmail } = require('../../shared/notification/email.service');
 const { buildStorageUpgradeRequestEmail } = require('../../shared/templates/storageUpgradeRequest.template');
 const { getPlatformSuperadminNotificationEmails } = require('../../shared/services/platformSuperadmin.service');
 const { STORAGE_TIERS, getStorageTierById } = require('../../shared/config/storagePricing');
+const { toBigInt, toJsonNumber } = require('../../shared/utils/byteSize');
 
 function serializeStorageUpgradeRequest(record) {
   if (!record) {
@@ -17,16 +18,19 @@ function serializeStorageUpgradeRequest(record) {
     requestId: record.id,
     status: record.status.toLowerCase(),
     requestedAdditionalGb: record.requestedAdditionalGb,
-    requestedAdditionalBytes: record.requestedAdditionalBytes,
+    requestedAdditionalBytes: toJsonNumber(record.requestedAdditionalBytes),
     reason: record.reason,
     urgency: record.urgency,
-    currentUsedBytes: record.currentUsedBytes,
-    currentLimitBytes: record.currentLimitBytes,
+    currentUsedBytes: toJsonNumber(record.currentUsedBytes),
+    currentLimitBytes: toJsonNumber(record.currentLimitBytes),
     tierId: record.tierId,
     tierLabel: record.tierLabel,
     workspaceId: record.workspaceId,
     workspaceName: record.workspaceName,
-    workspaceFootprintBytes: record.workspaceFootprintBytes,
+    workspaceFootprintBytes:
+      record.workspaceFootprintBytes == null
+        ? null
+        : toJsonNumber(record.workspaceFootprintBytes),
     submittedAt: record.createdAt.toISOString(),
     reviewedAt: record.reviewedAt ? record.reviewedAt.toISOString() : null,
     reviewNote: record.reviewNote,
@@ -34,11 +38,14 @@ function serializeStorageUpgradeRequest(record) {
 }
 
 function serializeStorageSummary(user) {
-  const usedBytes = user.storageUsed || 0;
-  const limitBytes = user.storageLimit || 0;
+  const usedBytes = toJsonNumber(user.storageUsed);
+  const limitBytes = toJsonNumber(user.storageLimit);
   const availableBytes = Math.max(0, limitBytes - usedBytes);
   const percentUsed = limitBytes > 0 ? Number(((usedBytes / limitBytes) * 100).toFixed(2)) : 0;
-  const tier = STORAGE_TIERS.find((item) => item.limitBytes === limitBytes) || null;
+  const tier =
+    STORAGE_TIERS.find((item) => item.limitBytes === limitBytes) ||
+    STORAGE_TIERS.find((item) => toBigInt(item.limitBytes) === toBigInt(user.storageLimit)) ||
+    null;
 
   return {
     userId: user.id,
@@ -81,7 +88,20 @@ async function getUserStorageUpgradeRequests(userId, page, limit, status) {
 }
 
 async function getUserStorageHistory(userId, page, limit, type) {
-  return storageDao.listStorageTransactionsByUser(userId, page, limit, type || undefined);
+  const result = await storageDao.listStorageTransactionsByUser(
+    userId,
+    page,
+    limit,
+    type || undefined
+  );
+
+  return {
+    transactions: result.transactions.map((transaction) => ({
+      ...transaction,
+      amountBytes: toJsonNumber(transaction.amountBytes),
+    })),
+    pagination: result.pagination,
+  };
 }
 
 async function getWorkspaceStorageSummary(workspaceId) {
@@ -192,16 +212,17 @@ async function submitStorageUpgradeRequest(userId, payload) {
   const requestRecord = await storageDao.createStorageUpgradeRequest({
     userId: user.id,
     requestedAdditionalGb,
-    requestedAdditionalBytes,
+    requestedAdditionalBytes: toBigInt(requestedAdditionalBytes),
     reason,
     urgency,
-    currentUsedBytes,
-    currentLimitBytes,
+    currentUsedBytes: toBigInt(currentUsedBytes),
+    currentLimitBytes: toBigInt(currentLimitBytes),
     tierId,
     tierLabel,
     workspaceId,
     workspaceName,
-    workspaceFootprintBytes,
+    workspaceFootprintBytes:
+      workspaceFootprintBytes == null ? null : toBigInt(workspaceFootprintBytes),
     status: 'PENDING',
   });
 

@@ -2,6 +2,7 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const storageDao = require('./storage.dao');
 const inboxService = require('../inbox/inbox.service');
+const { toBigInt, toJsonNumber, byteGt, byteAdd } = require('../../shared/utils/byteSize');
 
 async function getWorkspaceOwnerOrThrow(workspaceId) {
   const workspace = await storageDao.getWorkspaceOwnerStorage(workspaceId);
@@ -15,11 +16,11 @@ async function getWorkspaceOwnerOrThrow(workspaceId) {
 }
 
 async function assertOwnerCanFitAdditionalBytes(workspaceId, additionalBytes) {
-  const delta = Math.max(0, Math.floor(Number(additionalBytes) || 0));
-  if (delta === 0) return;
+  const delta = toBigInt(additionalBytes);
+  if (delta <= 0n) return;
 
   const owner = await getWorkspaceOwnerOrThrow(workspaceId);
-  if (owner.storageUsed + delta > owner.storageLimit) {
+  if (byteGt(byteAdd(owner.storageUsed, delta), owner.storageLimit)) {
     throw new AppError(messages.STORAGE_LIMIT_EXCEEDED, 400);
   }
 }
@@ -31,12 +32,12 @@ async function recalculateUserStorageUsed(ownerId) {
   }
 
   const usedBytes = await storageDao.sumOwnerBillableStorageUsed(ownerId);
-  const limitBytes = user.storageLimit || 0;
+  const limitBytes = toJsonNumber(user.storageLimit);
 
   await storageDao.prisma.user.update({
     where: { id: ownerId },
     data: {
-      storageUsed: usedBytes,
+      storageUsed: toBigInt(usedBytes),
     },
   });
 

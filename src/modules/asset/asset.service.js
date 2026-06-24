@@ -6,6 +6,17 @@ const AppError = require('../../shared/utils/AppError');
 const { collectAssetIds } = require('../../shared/utils/projectAssetIds');
 const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
+
+function serializeAsset(asset) {
+  if (!asset) {
+    return asset;
+  }
+  return {
+    ...asset,
+    size: toJsonNumber(asset.size),
+  };
+}
 
 function getWorkspaceMemberRole(workspace, userId) {
   if (!workspace || !Array.isArray(workspace.members)) {
@@ -121,7 +132,7 @@ const persistWorkspaceAsset = async ({
       return asset;
     });
     await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
-    return result;
+    return serializeAsset(result);
   } catch (error) {
     if (uploadedKey) {
       await deleteFile(uploadedKey);
@@ -151,7 +162,7 @@ const getAssets = async (userId, workspace, query) => {
   const isPrivate = workspace.type === 'PRIVATE';
   const source = query.source === 'upload' || query.source === 'stock' ? query.source : undefined;
 
-  return assetDao.findAssets({
+  const assets = await assetDao.findAssets({
     workspaceId: workspace.id,
     userId,
     isPrivate,
@@ -159,6 +170,8 @@ const getAssets = async (userId, workspace, query) => {
     take: query.take,
     skip: query.skip,
   });
+
+  return assets.map(serializeAsset);
 };
 
 const renameAsset = async ({ assetId, workspace, userId, name }) => {
@@ -191,7 +204,7 @@ const deleteAsset = async ({ assetId, workspace, userId }) => {
     return assetDao.deleteAssetById(tx, assetId);
   });
   await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
-  return deleted;
+  return serializeAsset(deleted);
 };
 
 module.exports = {
