@@ -2953,3 +2953,25 @@
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T04:47:10.133Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T04:47:10.139Z"}
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T04:47:10.252Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:48:53.595Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:48:53.600Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:48:53.660Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:50:00.552Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:50:00.555Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:50:00.605Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:50:43.236Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:50:43.240Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:50:43.268Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:51:24.551Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:51:24.553Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:51:24.593Z"}
+{"level":"error","message":"Error: Only JPG, PNG, WEBP images and MP4 videos are allowed\n    at fileFilter (D:\\code\\AthenaVI_backend\\src\\middlewares\\upload.middleware.js:35:17)\n    at wrappedFileFilter (D:\\code\\AthenaVI_backend\\node_modules\\multer\\index.js:45:7)\n    at Multipart.<anonymous> (D:\\code\\AthenaVI_backend\\node_modules\\multer\\lib\\make-middleware.js:183:7)\n    at Multipart.emit (node:events:509:28)\n    at HeaderParser.cb (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:358:14)\n    at HeaderParser.push (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:162:20)\n    at SBMH.ssCb [as _cb] (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:394:37)\n    at feed (D:\\code\\AthenaVI_backend\\node_modules\\streamsearch\\lib\\sbmh.js:200:10)\n    at SBMH.push (D:\\code\\AthenaVI_backend\\node_modules\\streamsearch\\lib\\sbmh.js:104:16)\n    at Multipart._write (D:\\code\\AthenaVI_backend\\node_modules\\busboy\\lib\\types\\multipart.js:567:19)","timestamp":"2026-06-24T10:52:57.980Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:56:01.143Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:56:01.148Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:56:01.188Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:56:11.601Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:56:11.605Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:56:11.638Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-06-24T10:56:34.613Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-06-24T10:56:34.620Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-06-24T10:56:34.663Z"}

@@ -15,7 +15,7 @@ All routes require **`Authorization: Bearer <access_token>`** and **`checkWorksp
 
 `multipart/form-data` with a single file field **`file`**.
 
-Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`video/mp4`**, **`audio/mp3`**. Maximum size **50 MB**.
+Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`video/mp4`**, **`audio/mp3`**, **`audio/mpeg`** (both MP3). Maximum size **50 MB**.
 
 | | |
 |---|---|
