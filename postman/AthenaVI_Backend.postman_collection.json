@@ -1185,7 +1185,7 @@
     },
     {
       "name": "HeyGen",
-      "description": "HeyGen v3 proxy (`/api/heygen`). One shared HeyGen API key: **`ownership=private`** (avatars) and **`type=private`** (voices) trigger **server-side filtering** of the HeyGen JSON (supports nested list envelopes such as `data.data`, `avatar_group_list`, `looks`, `voices`, `suggestions`, etc.) so each JWT user only sees rows recorded for them in **`heygen_avatars`** / **`heygen_voices`**. Public lists are unchanged passthrough.\n\n**403** (`You do not have access to this HeyGen resource`) — avatar consent for another user's group, GET voice by id for another user's **stored** private voice, or **private** looks with another user's `group_id`.",
+      "description": "HeyGen v3 proxy (`/api/heygen`). One shared HeyGen API key: **`ownership=private`** (avatars) and **`type=private`** (voices) trigger **server-side filtering** of the HeyGen JSON so each JWT user only sees rows recorded for them in **`heygen_avatars`** / **`heygen_voices`**, plus optional **`workspace_id`** to merge assets **shared to a workspace** (`heygen_workspace_shares`). Public lists are unchanged passthrough.\n\n**403** (`You do not have access to this HeyGen resource`) — avatar consent for another user's group, GET voice by id for another user's **stored** private clone, private looks with another user's `group_id`, or scene video create with unshared private avatar/voice.",
       "auth": {
         "type": "bearer",
         "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
@@ -1235,6 +1235,15 @@
             "header": [],
             "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&limit=20",
             "description": "Only avatar groups recorded when **you** called POST `/avatars` (same Bearer user). The backend filters HeyGen's payload locally (including nested `data` / `avatar_group_list`-style lists). Assets created before ownership tracking or outside this API are omitted."
+          }
+        },
+        {
+          "name": "List avatar groups (private + workspace shared)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&workspace_id={{workspaceId}}&limit=20",
+            "description": "Your private groups plus avatar groups shared to `workspaceId`. Shared rows include `shared: true`. Use in TEAM editor picker."
           }
         },
         {
@@ -1569,6 +1578,60 @@
             "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
             "description": "Proxies HeyGen `GET /v3/voices/{voice_id}`. **403** if this voice id is stored as another user's private voice; ids not stored are treated as public catalog reads."
           }
+        },
+        {
+          "name": "Workspace sharing",
+          "description": "Share your avatar group or private voice with a TEAM workspace (`/api/workspaces/:workspaceId/heygen/...`). Requires avatar/voice owner for POST share.",
+          "item": [
+            {
+              "name": "Share avatar with workspace",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/avatars/{{groupId}}/share"
+              }
+            },
+            {
+              "name": "Unshare avatar from workspace",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/avatars/{{groupId}}/share"
+              }
+            },
+            {
+              "name": "List workspace shared avatars",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/shared-avatars"
+              }
+            },
+            {
+              "name": "Share voice with workspace",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/voices/{{voiceId}}/share"
+              }
+            },
+            {
+              "name": "Unshare voice from workspace",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/voices/{{voiceId}}/share"
+              }
+            },
+            {
+              "name": "List workspace shared voices",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/shared-voices"
+              }
+            }
+          ]
         },
         {
           "name": "Preview speech",

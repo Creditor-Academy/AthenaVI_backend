@@ -5,6 +5,7 @@ const listAvatarGroupsQuery = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({
     ownership: Joi.string().valid('public', 'private'),
+    workspace_id: Joi.string().uuid().optional(),
     limit: Joi.number().integer().min(1).max(50),
     token: Joi.string().allow('', null),
   }).unknown(true),
@@ -17,6 +18,7 @@ const listAvatarLooksQuery = Joi.object({
     group_id: Joi.string().allow('', null),
     avatar_type: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar'),
     ownership: Joi.string().valid('public', 'private'),
+    workspace_id: Joi.string().uuid().optional(),
     limit: Joi.number().integer().min(1).max(50),
     token: Joi.string().allow('', null),
   }).unknown(true),
@@ -27,6 +29,7 @@ const listVoicesQuery = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({
     type: Joi.string().valid('public', 'private'),
+    workspace_id: Joi.string().uuid().optional(),
     engine: Joi.string().allow('', null),
     language: Joi.string().allow('', null),
     gender: Joi.string().valid('male', 'female'),

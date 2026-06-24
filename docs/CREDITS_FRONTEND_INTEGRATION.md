@@ -534,7 +534,7 @@ Identical scene regen (unchanged hash) skips new HeyGen job and new charge.
 
 Base path: **`/api/heygen`** — see [`HEYGEN_API.md`](api/HEYGEN_API.md).
 
-All billable routes use **personal** pool only.
+All billable routes use **personal** pool only. **Workspace sharing** does not change billing — it only lets teammates use your shared avatar/voice in TEAM scene videos (workspace pool).
 
 | Flow | Steps |
 |------|--------|

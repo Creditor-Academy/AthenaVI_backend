@@ -110,6 +110,15 @@ async function listHeygenVoicesForUser(userId, voiceIdsFilter = null) {
   });
 }
 
+async function listHeygenVoicesByVoiceIds(voiceIds) {
+  if (!Array.isArray(voiceIds) || voiceIds.length === 0) return [];
+  return prisma.heygenVoice.findMany({
+    where: { voiceId: { in: voiceIds } },
+    select: { voiceId: true, name: true, source: true, language: true, raw: true, userId: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+}
+
 async function userOwnsAvatarGroup(userId, groupId) {
   if (!groupId) return false;
   const row = await prisma.heygenAvatar.findUnique({
@@ -146,6 +155,7 @@ module.exports = {
   listAvatarGroupIdsForUser,
   listVoiceIdsForUser,
   listHeygenVoicesForUser,
+  listHeygenVoicesByVoiceIds,
   userOwnsAvatarGroup,
   userOwnsVoice,
   cloneVoiceOwnedByOtherUser,

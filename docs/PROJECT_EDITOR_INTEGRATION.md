@@ -500,11 +500,33 @@ HeyGen catalog and project videos use **different path prefixes**.
 
 ### 6.1 Pick avatar & voice (catalog)
 
+**Public catalog** (any user):
+
 | Step | Request | Save |
 |------|---------|------|
 | 1 | `GET /api/heygen/avatars/groups?ownership=public&limit=20` | `groupId` (`ag_…`) — **not** video `avatarId` |
 | 2 | `GET /api/heygen/avatars/looks?group_id={groupId}&limit=20` | **`avatarLookId`** = look row **`id`** (`lk_…`) |
 | 3 | `GET /api/heygen/voices?type=public&limit=50` | `voiceId` |
+
+**My avatars / private voices** (always available to the logged-in user in PRIVATE and TEAM):
+
+| Step | Request | Notes |
+|------|---------|--------|
+| 1 | `GET /api/heygen/avatars/groups?ownership=private&limit=20` | Your created avatar groups |
+| 2 | `GET /api/heygen/avatars/looks?ownership=private&group_id={groupId}&limit=20` | Looks for your group |
+| 3 | `GET /api/heygen/voices?type=private&limit=50` | Your selected/cloned voices |
+
+**TEAM workspace — include teammates’ shared assets:** add `&workspace_id={workspaceId}` to the three private list calls above. Shared rows include `shared: true` and `sharedByUserId`.
+
+**Share your avatar with the team** (owner only):
+
+```http
+POST /api/workspaces/:workspaceId/heygen/avatars/:groupId/share
+```
+
+Share paired private voices with `POST .../heygen/voices/:voiceId/share` when teammates should use your clone in scene videos.
+
+Do **not** use only `ownership=public` in TEAM editor — users need **private + workspace_id** to see their own and shared custom avatars.
 
 **Before offering a look in the UI**, read **`supported_api_engines`** on each look row:
 

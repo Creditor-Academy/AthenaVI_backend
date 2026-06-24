@@ -97,6 +97,7 @@ model User {
 
   heygenAvatars HeygenAvatar[]
   heygenVoices  HeygenVoice[]
+  heygenWorkspaceShares HeygenWorkspaceShare[] @relation("HeygenWorkspaceShareSharedBy")
 
   settings UserSettings?
   inboxNotifications UserInboxNotification[]
@@ -152,6 +153,7 @@ model Workspace {
   speechGenerations  SpeechGeneration[]
   projectRenders     ProjectRender[]
   sceneRenderCaches  SceneRenderCache[]
+  heygenWorkspaceShares HeygenWorkspaceShare[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -586,4 +588,24 @@ model HeygenVoice {
   @@index([userId])
   @@index([voiceId])
   @@map("heygen_voices")
+}
+
+model HeygenWorkspaceShare {
+  id             String   @id @default(uuid())
+  workspaceId    String   @map("workspace_id")
+  sharedByUserId String   @map("shared_by_user_id")
+  resourceType   String   @map("resource_type")
+  avatarGroupId  String?  @map("avatar_group_id")
+  voiceId        String?  @map("voice_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sharedBy  User      @relation("HeygenWorkspaceShareSharedBy", fields: [sharedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, resourceType, avatarGroupId])
+  @@unique([workspaceId, resourceType, voiceId])
+  @@index([workspaceId])
+  @@index([avatarGroupId])
+  @@index([voiceId])
+  @@map("heygen_workspace_shares")
 }

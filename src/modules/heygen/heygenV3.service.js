@@ -3,6 +3,7 @@ const { ensureHeygenAssetRef } = require('./heygenAssets.service');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
+const heygenAccess = require('./heygenAccess.service');
 const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
 
 function pickArray(data, keys) {
@@ -213,6 +214,20 @@ async function resolveOwnedAvatarGroupId(userId, groupOrLookId) {
 
 async function assertCanAccessLooksQuery(userId, query) {
   if (query?.ownership !== 'private' || !query.group_id) return;
+
+  const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
+  if (workspaceId) {
+    const accessible = await heygenAccess.resolveAccessibleAvatarGroupId(
+      userId,
+      workspaceId,
+      query.group_id
+    );
+    if (!accessible) {
+      throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+    }
+    return;
+  }
+
   const ownedGroupId = await resolveOwnedAvatarGroupId(userId, query.group_id);
   if (!ownedGroupId) {
     throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
@@ -354,8 +369,18 @@ async function recoverLooksListForGroup(groupOrLookId, heygenQuery) {
 async function finalizeLooksListResponse(userId, query, body) {
   let next = body;
   if (query?.ownership === 'private') {
-    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+    const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
+    const { allowed, sharedMetaByGroupId } = await heygenAccess.buildAllowedAvatarGroupContext(
+      userId,
+      workspaceId
+    );
     next = filterPrivateListBody(next, allowed, itemAvatarGroupId, LOOK_LIST_ARRAY_KEYS);
+    next = annotateSharedResourceItems(
+      next,
+      itemAvatarGroupId,
+      sharedMetaByGroupId,
+      LOOK_LIST_ARRAY_KEYS
+    );
   }
   return appendLookEngineBuckets(enrichLooksListMetadata(next));
 }
@@ -396,6 +421,38 @@ function filterPrivateListBody(body, allowedSet, getIdFromItem, arrayKeys) {
   if (typeof nextTarget.total_count === 'number') nextTarget.total_count = filtered.length;
   if (hasEnvelope) return { ...body, data: nextTarget };
   return nextTarget;
+}
+
+function annotateSharedResourceItems(body, getResourceId, sharedMetaMap, arrayKeys) {
+  if (!body || typeof body !== 'object' || !sharedMetaMap || sharedMetaMap.size === 0) {
+    return body;
+  }
+
+  const hasEnvelope = 'data' in body && body.data != null && typeof body.data === 'object';
+  const target = hasEnvelope ? body.data : body;
+
+  function annotateItem(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+    const resourceId = getResourceId(item);
+    if (!resourceId) return item;
+    const meta = sharedMetaMap.get(String(resourceId));
+    if (!meta) return item;
+    return {
+      ...item,
+      shared: true,
+      sharedByUserId: meta.sharedByUserId,
+    };
+  }
+
+  if (Array.isArray(target)) {
+    const next = target.map(annotateItem);
+    return hasEnvelope ? { ...body, data: next } : next;
+  }
+
+  const picked = pickArray(target, arrayKeys);
+  if (!picked.key || !Array.isArray(picked.list)) return body;
+  const nextTarget = { ...target, [picked.key]: picked.list.map(annotateItem) };
+  return hasEnvelope ? { ...body, data: nextTarget } : nextTarget;
 }
 
 /** Voice ids currently present in list payload (same shape as filterPrivateListBody). */
@@ -471,15 +528,40 @@ function dbRowToVoiceListItem(row) {
   };
 }
 
-async function augmentPrivateVoiceListFromDb(body, userId, allowedSet) {
+async function augmentPrivateVoiceListFromDb(body, userId, allowedSet, sharedMetaByVoiceId = null) {
   if (!allowedSet || allowedSet.size === 0) return body;
   const present = extractVoiceIdsFromListBody(body);
   const missing = [...allowedSet].filter((id) => !present.has(id));
-  if (missing.length === 0) return body;
-  const rows = await heygenDao.listHeygenVoicesForUser(userId, missing);
-  const missingSet = new Set(missing);
-  const items = rows.filter((r) => missingSet.has(r.voiceId)).map(dbRowToVoiceListItem);
-  return appendItemsToVoiceListBody(body, items);
+  if (missing.length === 0) {
+    return annotateSharedResourceItems(body, itemVoiceId, sharedMetaByVoiceId, VOICE_LIST_ARRAY_KEYS);
+  }
+
+  const ownMissing = [];
+  const sharedMissing = [];
+  for (const voiceId of missing) {
+    if (sharedMetaByVoiceId && sharedMetaByVoiceId.has(voiceId)) {
+      sharedMissing.push(voiceId);
+    } else {
+      ownMissing.push(voiceId);
+    }
+  }
+
+  const ownRows = ownMissing.length
+    ? await heygenDao.listHeygenVoicesForUser(userId, ownMissing)
+    : [];
+  const sharedRows = sharedMissing.length
+    ? await heygenDao.listHeygenVoicesByVoiceIds(sharedMissing)
+    : [];
+
+  const ownSet = new Set(ownMissing);
+  const sharedSet = new Set(sharedMissing);
+  const items = [
+    ...ownRows.filter((row) => ownSet.has(row.voiceId)),
+    ...sharedRows.filter((row) => sharedSet.has(row.voiceId)),
+  ].map(dbRowToVoiceListItem);
+
+  const merged = appendItemsToVoiceListBody(body, items);
+  return annotateSharedResourceItems(merged, itemVoiceId, sharedMetaByVoiceId, VOICE_LIST_ARRAY_KEYS);
 }
 
 /**
@@ -640,8 +722,18 @@ async function listAvatarGroups(userId, query) {
   const raw = await getJson('/v3/avatars', query);
   let body = raw;
   if (query?.ownership === 'private') {
-    const allowed = new Set(await heygenDao.listAvatarGroupIdsForUser(userId));
+    const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
+    const { allowed, sharedMetaByGroupId } = await heygenAccess.buildAllowedAvatarGroupContext(
+      userId,
+      workspaceId
+    );
     body = filterPrivateListBody(raw, allowed, itemAvatarGroupId, GROUP_LIST_ARRAY_KEYS);
+    body = annotateSharedResourceItems(
+      body,
+      itemAvatarGroupId,
+      sharedMetaByGroupId,
+      GROUP_LIST_ARRAY_KEYS
+    );
   }
   return enrichAvatarGroupsListBody(body);
 }
@@ -660,9 +752,12 @@ async function listAvatarLooks(userId, query) {
 
   let heygenQuery = query;
   if (query?.ownership === 'private' && groupOrLookId) {
-    const ownedGroupId = await resolveOwnedAvatarGroupId(userId, groupOrLookId);
-    if (ownedGroupId && ownedGroupId !== groupOrLookId) {
-      heygenQuery = { ...query, group_id: ownedGroupId };
+    const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
+    const accessibleGroupId = workspaceId
+      ? await heygenAccess.resolveAccessibleAvatarGroupId(userId, workspaceId, groupOrLookId)
+      : await resolveOwnedAvatarGroupId(userId, groupOrLookId);
+    if (accessibleGroupId && accessibleGroupId !== groupOrLookId) {
+      heygenQuery = { ...query, group_id: accessibleGroupId };
     }
   }
 
@@ -721,9 +816,13 @@ async function createAvatarConsent(userId, groupId, body) {
 async function listVoices(userId, query) {
   const raw = await getJson('/v3/voices', query);
   if (query?.type !== 'private') return raw;
-  const allowed = new Set(await heygenDao.listVoiceIdsForUser(userId));
+  const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
+  const { allowed, sharedMetaByVoiceId } = await heygenAccess.buildAllowedVoiceContext(
+    userId,
+    workspaceId
+  );
   const filtered = filterPrivateListBody(raw, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
-  return augmentPrivateVoiceListFromDb(filtered, userId, allowed);
+  return augmentPrivateVoiceListFromDb(filtered, userId, allowed, sharedMetaByVoiceId);
 }
 
 async function designVoice(_userId, body) {

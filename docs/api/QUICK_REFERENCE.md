@@ -76,18 +76,24 @@
 | POST | `/api/superadmin/users/:userId/storage/grant` | Bearer + platform superadmin | Grant storage bytes/tier |
 | POST | `/api/superadmin/users/:userId/storage/revoke` | Bearer + platform superadmin | Revoke storage bytes |
 | GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary (inbox + HeyGen wallet) |
-| GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user) |
-| GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered per user) |
+| GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
+| GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |
 | POST | `/api/heygen/voices/upload` | Bearer | Upload voice clone audio to S3; returns public `url` (max ~100 MB) |
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |
 | POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent (own group only; else **403**) |
-| GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered per user) |
+| GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered; optional `workspace_id` merges shared) |
 | POST | `/api/heygen/voices` | Bearer | Design voice (suggestions only; does not add to My voices) |
 | POST | `/api/heygen/voices/select` | Bearer | Persist user’s chosen voiceId to My voices |
 | POST | `/api/heygen/voices/clone` | Bearer | Clone voice (records id for private list) |
 | GET | `/api/heygen/voices/:voiceId` | Bearer | Voice detail / clone status (another user’s **clone** → **403**) |
 | POST | `/api/heygen/voices/preview-speech` | Bearer | Speech preview |
+| POST | `/api/workspaces/:workspaceId/heygen/avatars/:groupId/share` | Bearer + member | Share avatar group with workspace |
+| DELETE | `/api/workspaces/:workspaceId/heygen/avatars/:groupId/share` | Bearer + member | Unshare avatar from workspace |
+| GET | `/api/workspaces/:workspaceId/heygen/shared-avatars` | Bearer + member | List workspace-shared avatars |
+| POST | `/api/workspaces/:workspaceId/heygen/voices/:voiceId/share` | Bearer + member | Share private voice with workspace |
+| DELETE | `/api/workspaces/:workspaceId/heygen/voices/:voiceId/share` | Bearer + member | Unshare voice from workspace |
+| GET | `/api/workspaces/:workspaceId/heygen/shared-voices` | Bearer + member | List workspace-shared voices |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | Create HeyGen avatar video (scene, script, lip sync) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos` | Bearer + member | List HeyGen video records for project |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` | Bearer + member | Get / poll / sync to S3 |

@@ -22,6 +22,7 @@ const {
   resolveVideoPlanForLook,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
+const heygenAccess = require('../../heygen/heygenAccess.service');
 const {
   truncateText,
   resolveSceneNameFromProjectData,
@@ -355,6 +356,9 @@ const generateAvatarVideo = async (input) => {
     userId,
     estimatedAc: estimate.athenaCredits,
   });
+
+  await heygenAccess.assertCanUseAvatarLook({ userId, workspaceId, avatarId });
+  await heygenAccess.assertCanUseVoice({ userId, workspaceId, voiceId });
 
   const payloadBody = {
     avatarId,

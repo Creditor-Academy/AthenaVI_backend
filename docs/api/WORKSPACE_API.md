@@ -922,6 +922,29 @@ Pipes the MP4 through the API with `Content-Disposition: attachment`. Use this w
 
 ---
 
+## HeyGen avatar & voice sharing (workspace)
+
+Base path: **`/api/workspaces/:workspaceId/heygen`**
+
+Requires **Bearer** + workspace **member** (OWNER, ADMIN, or MEMBER).
+
+Personal avatars/voices are user-owned. Share them with a TEAM workspace so teammates can pick them in the editor and generate scene videos.
+
+| Method | Path | Who | Purpose |
+|--------|------|-----|---------|
+| `POST` | `/avatars/:groupId/share` | Avatar **owner** + member | Share avatar group with workspace |
+| `DELETE` | `/avatars/:groupId/share` | Owner, or workspace OWNER/ADMIN | Unshare avatar |
+| `GET` | `/shared-avatars` | Member | List shared avatar groups (metadata) |
+| `POST` | `/voices/:voiceId/share` | Voice **owner** + member | Share private voice with workspace |
+| `DELETE` | `/voices/:voiceId/share` | Owner, or workspace OWNER/ADMIN | Unshare voice |
+| `GET` | `/shared-voices` | Member | List shared voices (metadata) |
+
+**Editor picker:** teammates merge shared assets via `GET /api/heygen/avatars/*?ownership=private&workspace_id={workspaceId}` (and voices with `type=private&workspace_id=...`). See [HEYGEN_API.md](HEYGEN_API.md).
+
+**Scene video create** returns **403** `HEYGEN_FORBIDDEN` if a teammate uses a private avatar/voice that is not shared to the workspace.
+
+---
+
 ## Workspace storage summary
 
 | | |

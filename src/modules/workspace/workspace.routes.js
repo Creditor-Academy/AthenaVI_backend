@@ -28,12 +28,19 @@ const renderRoutes = require('../render/render.routes');
 const renderController = require('../render/render.controller');
 const renderValidations = require('../render/render.validation');
 const speechRoutes = require('../speech/speech.routes');
+const heygenShareRoutes = require('../heygen/heygenShare.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
+router.use(
+  '/:workspaceId/heygen',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  heygenShareRoutes
+);
 router.use(
   '/:workspaceId/folders',
   authMiddleware,

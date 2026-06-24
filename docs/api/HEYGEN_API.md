@@ -21,6 +21,28 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 | **`GET /api/heygen/voices/:voiceId`** | **403** only for **another user’s cloned** voice (`source: clone` in `heygen_voices`). Public / selected catalog voices are readable by anyone; **select** can add the same `voiceId` to each user’s My voices separately. |
 | **`ownership=public`**, **`type=public`**, or omitted filters | Unchanged passthrough to HeyGen (no user filtering). |
 
+### Workspace sharing (TEAM collaboration)
+
+Personal avatars and private voices are **owned by the user** who created them. To let **teammates** use them in a TEAM workspace project:
+
+1. Owner calls **`POST /api/workspaces/:workspaceId/heygen/avatars/:groupId/share`** (or voice equivalent).
+2. Teammates pass **`workspace_id`** on private list APIs to merge shared assets into the picker.
+3. **`POST .../projects/:projectId/heygen/videos`** enforces access: caller must **own** the avatar/voice, have it **shared to the workspace**, or use a **public** HeyGen catalog id.
+
+| Query / route | Behavior |
+|---------------|----------|
+| **`workspace_id`** on `GET .../avatars/groups`, `.../looks`, `.../voices` (with `ownership=private` / `type=private`) | Union of **your** assets plus assets **shared to that workspace**. Requires workspace membership. Shared rows include `shared: true` and `sharedByUserId`. |
+| **`POST /api/workspaces/:workspaceId/heygen/avatars/:groupId/share`** | Avatar owner + workspace member → share group with workspace. |
+| **`DELETE .../avatars/:groupId/share`** | Avatar owner, or workspace **OWNER** / **ADMIN** → unshare. |
+| **`GET .../heygen/shared-avatars`** | List avatar groups shared to the workspace (metadata for team library UI). |
+| Voice share routes | Same pattern under `.../voices/:voiceId/share` and `GET .../shared-voices`. |
+
+**Creator in PRIVATE or TEAM:** Your own avatars always appear under `ownership=private` **without** sharing. In TEAM editor pickers, also pass `workspace_id` to include teammates’ shared avatars.
+
+**Credits:** Sharing does not change billing — avatar/voice library actions still use **personal** credits; scene videos still use the **workspace** pool on TEAM workspaces.
+
+See also [WORKSPACE_API.md](WORKSPACE_API.md) (HeyGen share routes) and [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md).
+
 **Legacy:** Avatars/voices created before this ownership tracking was deployed were never recorded and **will not appear** in the filtered private lists until recreated or backfilled.
 
 **Implementation note:** For **`ownership=private`** and **`type=private`**, the server still calls HeyGen with those params, then **filters the JSON locally** so other tenants’ rows disappear from the response. HeyGen’s list payloads vary (e.g. nested **`data`** arrays, **`avatar_group_list`**, **`looks`**, **`voices`**, **`suggestions`**); this backend discovers those containers and keeps only rows whose **group id** or **voice id** is stored for **your** JWT user (`heygen_avatars`, `heygen_voices`). **`POST /api/heygen/avatars`** resolves the avatar **group id** from nested **`data`** / **`avatar_group`** fields in HeyGen’s create response (not only a single top-level object) before writing **`heygen_avatars`**; if the response truly omits a group id until a future poll, nothing is recorded yet and private lists stay empty until creation returns one. It prefers **non-empty** array fields when several keys exist, rewrites pagination totals (**`total`**, **`count`**, **`total_count`**) when present to match the filtered length, and records voice ids from **clone** or **`POST .../voices/select`** so **private voice lists** stay consistent (design suggestions are not auto-recorded). For **`GET .../voices?type=private`**, after filtering HeyGen’s list, the server **merges in** voice ids stored in **`heygen_voices`** for your user that HeyGen did not return (common for some design-selected voices), using each row’s saved **`raw`** from **`/voices/select`** or clone where possible.
@@ -38,6 +60,7 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 **Query (optional)** – forwarded to HeyGen; common keys include:
 
 - `ownership` – `public` or `private` (**private**: filtered to the current user’s recorded avatar groups — see **User-scoped private avatars and voices** above)
+- `workspace_id` – optional UUID; with `ownership=private`, merges **shared workspace** avatar groups (requires membership)
 - `limit` – integer **1–50**
 - `token` – pagination cursor (string)
 
@@ -60,6 +83,7 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 - `group_id`
 - `avatar_type` – `studio_avatar`, `digital_twin`, or `photo_avatar`
 - `ownership` – `public` or `private` (**private**: filtered to groups owned by the current user; **`group_id` + private** requires ownership or **403**)
+- `workspace_id` – optional UUID; with `ownership=private`, allows `group_id` owned by you **or** shared to the workspace
 - `limit` – **1–50**
 - `token` – pagination cursor
 
@@ -212,6 +236,7 @@ Returns a consent / onboarding URL for a pending avatar group.
 **Query (optional)**
 
 - `type` – `public` or `private` (**private**: filtered to voices recorded for the current user from **select** or **clone** — see **User-scoped private avatars and voices** above)
+- `workspace_id` – optional UUID; with `type=private`, merges voices **shared to that workspace**
 - `engine`, `language`, `gender` (`male` \| `female`)
 - `limit` – **1–100**
 - `token` – pagination cursor
