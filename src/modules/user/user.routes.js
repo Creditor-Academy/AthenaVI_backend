@@ -11,9 +11,6 @@ const validate = require('../../middlewares/validate.middleware');
 const userValidation = require('../validations/user.validation');
 const {uploadProfile} = require('../../middlewares/upload.middleware');
 
-// GET /api/user - Get all users (public route for now)
-router.get('/getall', authMiddleware, userController.getAllUsers);
-
 // protected route to get user profile
 router.get('/profile', authMiddleware, userController.getUserProfile);
 router.get('/capabilities', authMiddleware, userController.getUserCapabilities);

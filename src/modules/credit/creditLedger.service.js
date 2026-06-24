@@ -450,6 +450,55 @@ async function deallocateFromWorkspace({ ownerUserId, workspaceId, amountAc }) {
   return result;
 }
 
+async function platformRevokeWorkspace({ workspaceId, amountAc, revokedByUserId, reason }) {
+  const amount = Math.floor(Number(amountAc) || 0);
+  if (amount <= 0) {
+    throw new AppError(messages.INVALID_CREDIT_AMOUNT, 400);
+  }
+  const workspaceMeta = await getWorkspaceOrThrow(workspaceId);
+  if (workspaceMeta.credits < amount) {
+    throw new AppError(messages.INSUFFICIENT_CREDITS, 402);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const workspace = await applyDeltaInTx(tx, {
+      pool: 'workspace',
+      workspaceId,
+      userId: null,
+      delta: -amount,
+    });
+    const transaction = await recordLedgerEntry(tx, {
+      userId: revokedByUserId,
+      workspaceId,
+      amount: -amount,
+      type: 'platform_revoke',
+      scope: SCOPE.WORKSPACE,
+      reference: reason || null,
+      metadata: { revokedByUserId, reason: reason || null, target: 'workspace' },
+    });
+    return { workspace, transaction };
+  });
+
+  inboxService
+    .notifyCreditsWorkspaceRevoke({
+      workspaceId,
+      workspaceName: workspaceMeta.name,
+      ownerId: workspaceMeta.ownerId,
+      amount,
+      reason,
+    })
+    .catch((error) => console.error('Workspace credits revoke notification failed:', error));
+  inboxService
+    .maybeNotifyCreditsLow({
+      workspaceId,
+      pool: 'workspace',
+      balance: result.workspace.credits,
+    })
+    .catch((error) => console.error('Credits low notification failed:', error));
+
+  return result;
+}
+
 module.exports = {
   resolveBillingTarget,
   getBalances,
@@ -458,6 +507,7 @@ module.exports = {
   platformGrant,
   platformRevoke,
   platformGrantWorkspace,
+  platformRevokeWorkspace,
   allocateToWorkspace,
   deallocateFromWorkspace,
   getUserOrThrow,

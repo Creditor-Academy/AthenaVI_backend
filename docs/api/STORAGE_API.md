@@ -163,7 +163,7 @@ Submits a storage upgrade request and emails the platform superadmin inbox. Does
 | `429` | One successful request per user per cooldown window (default 24h); includes `Retry-After` header |
 | `500` | Notification email not configured (`PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL` / `PLATFORM_SUPERADMIN_EMAILS`) or SMTP failure |
 
-Requests are persisted with status `pending`. When a platform superadmin grants storage to the user, the latest pending request is automatically marked `approved`.
+Requests are persisted with status `pending`. When a platform superadmin grants storage to the user, the latest pending request is automatically marked `approved`. Superadmins can list and reject requests via [`SUPERADMIN_API.md`](SUPERADMIN_API.md) (`GET /api/superadmin/storage/requests`, `POST .../reject`). Rejected requests notify the user via inbox (`STORAGE_UPGRADE_REJECTED`).
 
 ---
 

@@ -15,7 +15,6 @@
 | GET | `/api/auth/google` | No | Start Google OAuth |
 | GET | `/api/auth/superadmin/google` | No | Start Google OAuth (superadmin portal) |
 | GET | `/api/auth/google/callback` | No | Google redirect (OAuth) |
-| GET | `/api/user/getall` | Bearer | List all users |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | GET | `/api/user/storage` | Bearer | My storage quota summary (+ active pending upgrade request) |
@@ -72,10 +71,29 @@
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
+| GET | `/api/superadmin/users` | Bearer + platform superadmin | List users (credits + storage) |
+| PATCH | `/api/superadmin/users/:userId/platform-access` | Bearer + platform superadmin | Grant/revoke platform superadmin flag |
+| GET | `/api/superadmin/users/:userId/credits` | Bearer + platform superadmin | User personal balance |
+| GET | `/api/superadmin/users/:userId/credits/history` | Bearer + platform superadmin | User credit ledger |
+| POST | `/api/superadmin/users/:userId/credits/grant` | Bearer + platform superadmin | Grant personal credits |
+| POST | `/api/superadmin/users/:userId/credits/revoke` | Bearer + platform superadmin | Revoke personal credits |
 | GET | `/api/superadmin/users/:userId/storage` | Bearer + platform superadmin | User storage summary |
+| GET | `/api/superadmin/users/:userId/storage/history` | Bearer + platform superadmin | User storage ledger |
 | POST | `/api/superadmin/users/:userId/storage/grant` | Bearer + platform superadmin | Grant storage bytes/tier |
 | POST | `/api/superadmin/users/:userId/storage/revoke` | Bearer + platform superadmin | Revoke storage bytes |
-| GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary (inbox + HeyGen wallet) |
+| GET | `/api/superadmin/storage/tiers` | Bearer + platform superadmin | Storage tier presets |
+| GET | `/api/superadmin/storage/requests` | Bearer + platform superadmin | Storage upgrade request queue |
+| POST | `/api/superadmin/storage/requests/:requestId/reject` | Bearer + platform superadmin | Reject storage upgrade request |
+| GET | `/api/superadmin/workspaces` | Bearer + platform superadmin | List TEAM workspaces with pools |
+| GET | `/api/superadmin/workspaces/:workspaceId/credits` | Bearer + platform superadmin | Workspace pool summary |
+| GET | `/api/superadmin/workspaces/:workspaceId/credits/history` | Bearer + platform superadmin | Workspace credit ledger |
+| GET | `/api/superadmin/workspaces/:workspaceId/credits/usage-by-member` | Bearer + platform superadmin | Usage by member |
+| POST | `/api/superadmin/workspaces/:workspaceId/credits/grant` | Bearer + platform superadmin | Grant workspace pool credits |
+| POST | `/api/superadmin/workspaces/:workspaceId/credits/revoke` | Bearer + platform superadmin | Revoke workspace pool credits |
+| GET | `/api/superadmin/reports/credits/usage` | Bearer + platform superadmin | Usage report (aggregates + breakdown) |
+| GET | `/api/superadmin/reports/credits/platform-actions` | Bearer + platform superadmin | Platform grant/revoke audit |
+| GET | `/api/superadmin/heygen/account` | Bearer + platform superadmin | HeyGen API wallet |
+| GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

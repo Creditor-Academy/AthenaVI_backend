@@ -1,28 +1,112 @@
 # Platform Superadmin API
 
-> **Frontend integration guide:** [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) — portal login, OAuth, capabilities toggle, and credit admin API examples.
+> **Frontend integration guide:** [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) — portal login, OAuth, capabilities toggle, and admin API examples.
 
 Base path: **`/api/superadmin`**
 
-**Portal auth (single login page):** use normal `POST /api/auth/login` or `GET /api/auth/google`, then `GET /api/user/capabilities` to show the admin toggle. Optional dedicated admin login: `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. All use the same JWT; this document covers **credit** and **storage** admin routes.
+**Portal auth (single login page):** use normal `POST /api/auth/login` or `GET /api/auth/google`, then `GET /api/user/capabilities` to show the admin toggle. Optional dedicated admin login: `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. All use the same JWT.
 
-Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`** comma-separated). Not the same as workspace **ADMIN** role.
+Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`**). Not the same as workspace **ADMIN** role.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/superadmin/users` | List users with credits + storage (`page`, `limit`, `search`) |
+| `GET` | `/api/superadmin/users` | List users with credits + storage (`page`, `limit`, `search` on email or name) |
+| `PATCH` | `/api/superadmin/users/:userId/platform-access` | Body: `{ isPlatformSuperadmin }` |
 | `GET` | `/api/superadmin/users/:userId/credits` | User personal balance |
 | `GET` | `/api/superadmin/users/:userId/credits/history` | Full user ledger |
 | `POST` | `/api/superadmin/users/:userId/credits/grant` | Body: `{ amount, reason? }` |
 | `POST` | `/api/superadmin/users/:userId/credits/revoke` | Body: `{ amount, reason? }` |
 | `GET` | `/api/superadmin/users/:userId/storage` | User storage quota summary |
+| `GET` | `/api/superadmin/users/:userId/storage/history` | User storage ledger |
 | `POST` | `/api/superadmin/users/:userId/storage/grant` | Body: `{ additionalBytes, reason? }` or `{ tierId, reason? }` |
 | `POST` | `/api/superadmin/users/:userId/storage/revoke` | Body: `{ amountBytes, reason? }` |
+| `GET` | `/api/superadmin/storage/tiers` | Storage tier presets (`id`, `label`, `limitBytes`) |
+| `GET` | `/api/superadmin/storage/requests` | Storage upgrade queue (`status` = `pending` \| `approved` \| `rejected`) |
+| `POST` | `/api/superadmin/storage/requests/:requestId/reject` | Body: `{ reviewNote? }` |
+| `GET` | `/api/superadmin/workspaces` | List TEAM workspaces (`page`, `limit`, `search`) |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits` | TEAM workspace pool summary |
+| `GET` | `/api/superadmin/workspaces/:workspaceId/credits/history` | Workspace credit ledger |
+| `GET` | `/api/superadmin/workspaces/:workspaceId/credits/usage-by-member` | Usage aggregated by member |
 | `POST` | `/api/superadmin/workspaces/:workspaceId/credits/grant` | Direct workspace top-up |
-| `GET` | `/api/superadmin/reports/credits/usage` | Usage report (`from`, `to`, optional filters) |
-| `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing (prepaid USD wallet via `HEYGEN_API_KEY`) |
+| `POST` | `/api/superadmin/workspaces/:workspaceId/credits/revoke` | Revoke workspace pool credits |
+| `GET` | `/api/superadmin/reports/credits/usage` | Usage report (`from`, `to`, filters, `topLimit`) |
+| `GET` | `/api/superadmin/reports/credits/platform-actions` | Platform grant/revoke audit |
+| `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
+
+---
+
+### Platform access management
+
+```http
+PATCH /api/superadmin/users/:userId/platform-access
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "isPlatformSuperadmin": true }
+```
+
+**400** — cannot demote yourself or remove the last accessible superadmin.
+
+**Note:** `PLATFORM_SUPERADMIN_EMAILS` env allowlist still grants access independently of the DB flag.
+
+---
+
+### Storage upgrade triage
+
+```http
+GET /api/superadmin/storage/requests?status=pending&page=1&limit=20
+```
+
+**200** — `data.requests[]` includes request fields plus `user: { id, email, name }`.
+
+```http
+POST /api/superadmin/storage/requests/:requestId/reject
+Content-Type: application/json
+
+{ "reviewNote": "Optional reason shown to user" }
+```
+
+**404** if request not found. **400** if not `pending`. Notifies user via inbox (`STORAGE_UPGRADE_REJECTED`).
+
+New user requests also notify superadmins via inbox (`PLATFORM_STORAGE_UPGRADE_REQUEST`) in addition to email.
+
+---
+
+### Workspace admin
+
+```http
+GET /api/superadmin/workspaces?page=1&limit=20&search=acme
+```
+
+**200** — `data.workspaces[]`: `workspaceId`, `name`, `type`, `workspaceCredits`, `owner`, `memberCount`, `createdAt`.
+
+```http
+POST /api/superadmin/workspaces/:workspaceId/credits/revoke
+Content-Type: application/json
+
+{ "amount": 500, "reason": "Correction" }
+```
+
+**402** if workspace pool insufficient. Notifies workspace owner (`CREDITS_WORKSPACE_REVOKE`).
+
+---
+
+### Usage report (extended)
+
+`GET /api/superadmin/reports/credits/usage` returns backward-compatible totals plus:
+
+- `byFeature` — grouped by `metadata.feature`
+- `byDay` — UTC date buckets
+- `topUsers` / `topWorkspaces` — top N by usage (query `topLimit`, default 10, max 25)
+
+### Platform actions audit
+
+`GET /api/superadmin/reports/credits/platform-actions` — paginated `platform_grant` / `platform_revoke` transactions with `user`, `workspace`, and `actor` enrichment.
+
+Query: `page`, `limit`, `from`, `to`, optional `type`, optional `scope` (`user` \| `workspace`).
+
+---
 
 ### Platform alerts summary
 
@@ -46,143 +130,27 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-Platform HeyGen wallet low alerts are also written to the superadmin user's **`/api/user/inbox`** (`type: PLATFORM_HEYGEN_WALLET_LOW`). A background job re-checks the wallet on `PLATFORM_ALERTS_JOB_INTERVAL_MS` (default 1h).
+Platform alerts (`PLATFORM_HEYGEN_WALLET_LOW`, `PLATFORM_STORAGE_UPGRADE_REQUEST`) appear in **`/api/user/inbox`** with `category: platform`. Background job re-checks HeyGen wallet on `PLATFORM_ALERTS_JOB_INTERVAL_MS` (default 1h).
+
+---
 
 ### HeyGen API wallet (platform COGS)
 
-Proxies HeyGen **`GET /v3/users/me`** using server **`HEYGEN_API_KEY`** (`x-api-key`). With API key auth, HeyGen bills the **prepaid USD wallet** (pay-as-you-go tier).
-
-```http
-GET /api/superadmin/heygen/account
-Authorization: Bearer <accessToken>
-```
-
-**200** — `data.account`:
-
-```json
-{
-  "username": "jane_doe",
-  "email": "jane@example.com",
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "billingType": "wallet",
-  "wallet": {
-    "currency": "usd",
-    "remainingBalanceUsd": 42.5,
-    "autoReload": { "enabled": false }
-  },
-  "subscription": null,
-  "usageBased": null,
-  "fetchedAt": "2026-06-05T12:00:00.000Z"
-}
-```
-
-| `billingType` | Populated field | Meaning |
-|---------------|-----------------|--------|
-| `wallet` | `wallet.remainingBalanceUsd` | Prepaid USD balance (API tier) |
-| `subscription` | `subscription.credits` | OAuth / enterprise credit pools |
-| `usage_based` | `usageBased` | Metered billing |
+Proxies HeyGen **`GET /v3/users/me`** using server **`HEYGEN_API_KEY`**.
 
 **500** if `HEYGEN_API_KEY` is missing. **401/502** if HeyGen rejects the key.
 
 ---
 
-### Storage admin
+### Storage grant / revoke notes
 
-Byte fields use **binary bytes** (1024³ per GiB). No fixed upper cap on grant/revoke amounts (positive integers only).
+- Storage grant and revoke update `User.storageLimit`.
+- Every change writes a `storage_transactions` ledger row.
+- Revoke is blocked if the new limit would be below current `storageUsed`.
+- Grant auto-approves the user's latest pending upgrade request.
 
-#### List users (includes storage)
-
-```http
-GET /api/superadmin/users?page=1&limit=20&search=optional@email.com
-Authorization: Bearer <accessToken>
-```
-
-Each user in `data.users` includes `storageLimit` and `storageUsed` (bytes).
-
-#### Get user storage summary
-
-```http
-GET /api/superadmin/users/:userId/storage
-Authorization: Bearer <accessToken>
-```
-
-**200** — same shape as [`GET /api/user/storage`](STORAGE_API.md) (`limitBytes`, `usedBytes`, `availableBytes`, `percentUsed`, `tier`, `activeUpgradeRequest`).
-
-#### Grant storage
-
-```http
-POST /api/superadmin/users/:userId/storage/grant
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-```
-
-Provide **either** `tierId` **or** `additionalBytes` (not both required; `tierId` takes precedence when both are sent — prefer one mode per request).
-
-| Mode | Body | Effect |
-|------|------|--------|
-| Preset tier | `{ "tierId": "plus_10gb", "reason": "..." }` | Sets **absolute** limit to tier size |
-| Add bytes | `{ "additionalBytes": 107374182400, "reason": "..." }` | **Increments** current limit by that many bytes |
-
-| `tierId` | Limit (bytes) | Label |
-|----------|---------------|--------|
-| `free` | `1073741824` | Free (1 GiB) |
-| `plus_10gb` | `10737418240` | Plus 10 GB |
-| `pro_50gb` | `53687091200` | Pro 50 GB |
-
-| Field | Required | Rules |
-|-------|----------|--------|
-| `tierId` | One of `tierId` / `additionalBytes` | `free` \| `plus_10gb` \| `pro_50gb` |
-| `additionalBytes` | One of `tierId` / `additionalBytes` | Positive integer (any size) |
-| `reason` | No | Max 500 characters |
-
-**200** — `data`:
-
-```json
-{
-  "user": {
-    "id": "user-uuid",
-    "storageLimit": 10737418240,
-    "storageUsed": 123456789
-  },
-  "transaction": {
-    "id": "tx-uuid",
-    "amountBytes": 10737418240,
-    "type": "platform_grant",
-    "tierId": "plus_10gb",
-    "reference": "Manual upgrade",
-    "createdAt": "2026-06-24T12:00:00.000Z"
-  }
-}
-```
-
-Approves the user's latest **pending** storage upgrade request (if any).
-
-#### Revoke storage
-
-```http
-POST /api/superadmin/users/:userId/storage/revoke
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-
-{
-  "amountBytes": 1073741824,
-  "reason": "Plan downgrade"
-}
-```
-
-| Field | Required | Rules |
-|-------|----------|--------|
-| `amountBytes` | Yes | Positive integer — subtracted from current `storageLimit` |
-| `reason` | No | Max 500 characters |
-
-**400** if the new limit would be below `storageUsed`.
-
-**200** — same shape as grant (`user` + `transaction` with negative `amountBytes`).
-
-User-facing storage contracts: [`STORAGE_API.md`](STORAGE_API.md).
+User-facing storage: [`STORAGE_API.md`](STORAGE_API.md).
 
 ---
 
 **[← API index](README.md)** · [Project root README](../../README.md)
-

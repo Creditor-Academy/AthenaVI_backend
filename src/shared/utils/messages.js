@@ -131,6 +131,15 @@ module.exports = {
     'Storage upgrade notification email is not configured',
   STORAGE_UPGRADE_BYTES_MISMATCH:
     'requestedAdditionalBytes must equal requestedAdditionalGb × 1024³',
+  STORAGE_UPGRADE_REQUEST_NOT_FOUND: 'Storage upgrade request not found',
+  STORAGE_UPGRADE_REQUEST_NOT_PENDING: 'Storage upgrade request is not pending',
+  STORAGE_UPGRADE_REQUEST_REJECTED: 'Storage upgrade request rejected',
+  STORAGE_TIERS_FETCHED: 'Storage tiers fetched successfully',
+  WORKSPACES_FETCHED: 'Workspaces fetched successfully',
+  PLATFORM_ACCESS_UPDATED: 'Platform superadmin access updated',
+  CANNOT_DEMOTE_SELF_SUPERADMIN: 'You cannot remove your own platform superadmin access',
+  CANNOT_REMOVE_LAST_SUPERADMIN: 'Cannot remove the last platform superadmin',
+  PLATFORM_ACTIONS_REPORT_FETCHED: 'Platform credit actions report fetched',
 
   // Folder
   FOLDER_NAME_REQUIRED: 'Folder name is required',

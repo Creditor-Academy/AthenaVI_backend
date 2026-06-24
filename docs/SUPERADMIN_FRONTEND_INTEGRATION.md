@@ -483,7 +483,33 @@ Content-Type: application/json
 
 **400** if new limit would fall below `storageUsed`.
 
-### 8.5 Display helper
+### 8.5 Storage tiers reference
+
+```http
+GET /api/superadmin/storage/tiers
+```
+
+Use before grant UI to populate tier dropdown (`id`, `label`, `limitBytes`).
+
+### 8.6 Storage upgrade queue
+
+```http
+GET /api/superadmin/storage/requests?status=pending&page=1&limit=20
+POST /api/superadmin/storage/requests/:requestId/reject
+Content-Type: application/json
+
+{ "reviewNote": "Optional message to user" }
+```
+
+Superadmins also receive `PLATFORM_STORAGE_UPGRADE_REQUEST` inbox notifications (`GET /api/user/inbox?category=platform`).
+
+### 8.7 User storage history
+
+```http
+GET /api/superadmin/users/:userId/storage/history?page=1&limit=20&type=optional
+```
+
+### 8.8 Display helper
 
 ```javascript
 const GIB = 1024 ** 3;
@@ -496,7 +522,46 @@ function formatBytes(bytes) {
 
 ---
 
-## 9. Recommended UI flows
+## 9. Workspace admin APIs
+
+```http
+GET /api/superadmin/workspaces?page=1&limit=20&search=acme
+GET /api/superadmin/workspaces/:workspaceId/credits/history?page=1&limit=20
+GET /api/superadmin/workspaces/:workspaceId/credits/usage-by-member?page=1&limit=20
+POST /api/superadmin/workspaces/:workspaceId/credits/revoke
+Content-Type: application/json
+
+{ "amount": 500, "reason": "Correction" }
+```
+
+---
+
+## 10. Reports and platform access
+
+### Extended usage report
+
+`GET /api/superadmin/reports/credits/usage?from=...&to=...&topLimit=10`
+
+Response `data.report` includes `byFeature`, `byDay`, `topUsers`, `topWorkspaces` in addition to totals.
+
+### Platform actions audit
+
+`GET /api/superadmin/reports/credits/platform-actions?page=1&limit=20&scope=workspace`
+
+### Manage superadmin flag
+
+```http
+PATCH /api/superadmin/users/:userId/platform-access
+Content-Type: application/json
+
+{ "isPlatformSuperadmin": true }
+```
+
+**400** if demoting yourself or the last superadmin. Env `PLATFORM_SUPERADMIN_EMAILS` still grants access independently.
+
+---
+
+## 11. Recommended UI flows
 
 ### Single login + toggle (our setup)
 
@@ -519,17 +584,26 @@ flowchart TD
 | User list + search | `GET /api/superadmin/users` |
 | User detail / balance | `GET /api/superadmin/users/:userId/credits` |
 | User storage quota | `GET /api/superadmin/users/:userId/storage` |
-| User ledger | `GET /api/superadmin/users/:userId/credits/history` |
+| User credit ledger | `GET /api/superadmin/users/:userId/credits/history` |
+| User storage ledger | `GET /api/superadmin/users/:userId/storage/history` |
 | Grant / revoke credits | `POST .../credits/grant` or `POST .../credits/revoke` |
 | Grant / revoke storage | `POST .../storage/grant` or `POST .../storage/revoke` |
+| Storage tier presets | `GET /api/superadmin/storage/tiers` |
+| Storage upgrade queue | `GET /api/superadmin/storage/requests` |
+| Reject storage request | `POST /api/superadmin/storage/requests/:requestId/reject` |
+| Workspace list | `GET /api/superadmin/workspaces` |
 | Workspace pool view | `GET /api/superadmin/workspaces/:workspaceId/credits` |
-| Workspace top-up | `POST /api/superadmin/workspaces/:workspaceId/credits/grant` |
+| Workspace ledger / usage | `GET .../credits/history`, `GET .../credits/usage-by-member` |
+| Workspace top-up / revoke | `POST .../credits/grant`, `POST .../credits/revoke` |
 | Usage dashboard | `GET /api/superadmin/reports/credits/usage` |
+| Platform actions audit | `GET /api/superadmin/reports/credits/platform-actions` |
+| Platform access toggle | `PATCH /api/superadmin/users/:userId/platform-access` |
+| Platform alerts + HeyGen wallet | `GET /api/superadmin/alerts/summary` |
 | HeyGen USD wallet | `GET /api/superadmin/heygen/account` |
 
 ---
 
-## 10. Error handling
+## 12. Error handling
 
 | Status | Typical cause | Frontend action |
 |--------|---------------|-----------------|
@@ -566,7 +640,7 @@ async function superadminFetch(path, options = {}) {
 
 ---
 
-## 11. Checklist
+## 13. Checklist
 
 ### Single app (one login page)
 
@@ -577,7 +651,9 @@ async function superadminFetch(path, options = {}) {
 - [ ] Guard `/admin/*` routes (redirect if capabilities false)
 - [ ] All `/api/superadmin/*` calls use `Authorization: Bearer` + `credentials: 'include'` where cookies matter
 - [ ] Handle **403** on credit admin API calls
-- [ ] Storage admin: show `storageLimit` / `storageUsed` on user list; grant via `tierId` or custom `additionalBytes`
+- [ ] Storage upgrade queue: `GET /api/superadmin/storage/requests`; reject via POST
+- [ ] Workspace list before drilling into pool by `workspaceId`
+- [ ] Usage report uses extended `byFeature` / `topUsers` fields when building dashboards
 - [ ] “Back to platform” is client-side navigation only
 
 ### General

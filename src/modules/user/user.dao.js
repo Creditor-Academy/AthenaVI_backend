@@ -1,9 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
 
-const getAllUsers = async () => {
-  return prisma.user.findMany();
-};
-
 const getUserById = async (userId) => {
   return prisma.user.findUnique({
     where: { id: userId },
@@ -45,8 +41,7 @@ const updateUserProfileImageById = async (userId, profileImageUrl) => {
 
 
 module.exports = {
-  getAllUsers,
   getUserById,
   updateUserById,
-  updateUserProfileImageById
+  updateUserProfileImageById,
 };

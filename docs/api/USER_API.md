@@ -6,27 +6,6 @@ All routes below require **`Authorization: Bearer <access_token>`**.
 
 ---
 
-## Get all users
-
-Returns all user records from the database (intended for admin or internal use). **Responses currently include full user rows as stored** (e.g. may include `password` when the account has a password). Prefer a dedicated admin API with field selection for production exposure.
-
-| | |
-|---|---|
-| **Method** | `GET` |
-| **Path** | `/api/user/getall` |
-| **Auth** | Bearer |
-
-**Response (200)** – `data`:
-
-```json
-{
-  "users": [ { "id": "...", "email": "...", "name": "...", "password": "...", ... } ],
-  "count": 10
-}
-```
-
----
-
 ## Get profile
 
 | | |

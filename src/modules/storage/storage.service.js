@@ -254,12 +254,83 @@ async function submitStorageUpgradeRequest(userId, payload) {
     html,
   });
 
+  const inboxService = require('../inbox/inbox.service');
+  inboxService
+    .notifyPlatformStorageUpgradeRequest({
+      requestId,
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+      requestedAdditionalGb,
+      urgency,
+      reason,
+    })
+    .catch((error) => console.error('Storage upgrade platform notification failed:', error));
+
   await storageUpgradeRateLimit.recordSuccess(userId);
 
   return {
     requestId,
     submittedAt,
     status: 'pending',
+  };
+}
+
+async function listStorageUpgradeRequestsForAdmin(page, limit, status) {
+  const normalizedStatus = status ? String(status).trim().toUpperCase() : undefined;
+  const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+  if (normalizedStatus && !allowedStatuses.includes(normalizedStatus)) {
+    throw new AppError(messages.INVALID_REQUEST, 400);
+  }
+
+  const result = await storageDao.listStorageUpgradeRequests({
+    page,
+    limit,
+    status: normalizedStatus,
+  });
+
+  return {
+    requests: result.requests.map((record) => ({
+      ...serializeStorageUpgradeRequest(record),
+      user: record.user
+        ? { id: record.user.id, email: record.user.email, name: record.user.name }
+        : null,
+    })),
+    pagination: result.pagination,
+  };
+}
+
+async function rejectStorageUpgradeRequest({ requestId, reviewedByUserId, reviewNote }) {
+  const result = await storageDao.rejectStorageUpgradeRequest({
+    requestId,
+    reviewedByUserId,
+    reviewNote,
+  });
+
+  if (!result) {
+    throw new AppError(messages.STORAGE_UPGRADE_REQUEST_NOT_FOUND, 404);
+  }
+  if (result.error === 'not_pending') {
+    throw new AppError(messages.STORAGE_UPGRADE_REQUEST_NOT_PENDING, 400);
+  }
+
+  const inboxService = require('../inbox/inbox.service');
+  const { request } = result;
+  inboxService
+    .notifyStorageUpgradeRejected({
+      userId: request.userId,
+      requestedAdditionalGb: request.requestedAdditionalGb,
+      reviewNote,
+    })
+    .catch((error) => console.error('Storage upgrade rejection notification failed:', error));
+
+  return {
+    request: {
+      ...serializeStorageUpgradeRequest(request),
+      user: request.user
+        ? { id: request.user.id, email: request.user.email, name: request.user.name }
+        : null,
+    },
   };
 }
 
@@ -271,4 +342,6 @@ module.exports = {
   grantUserStorage,
   revokeUserStorage,
   submitStorageUpgradeRequest,
+  listStorageUpgradeRequestsForAdmin,
+  rejectStorageUpgradeRequest,
 };

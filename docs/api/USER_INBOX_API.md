@@ -13,10 +13,10 @@ Workspace invitations are delivered by **email** and, when the invitee already h
 | `category` | Types (examples) |
 |------------|------------------|
 | `videos` | `VIDEO_EXPORT_COMPLETED`, `VIDEO_EXPORT_FAILED` (final Remotion export only) |
-| `credits` | `CREDITS_PLATFORM_GRANT`, `CREDITS_LOW_PERSONAL`, `CREDITS_ALLOCATED`, … |
-| `storage` | `STORAGE_THRESHOLD_WARNING`, `STORAGE_UPLOAD_BLOCKED`, … |
+| `credits` | `CREDITS_PLATFORM_GRANT`, `CREDITS_WORKSPACE_REVOKE`, `CREDITS_LOW_PERSONAL`, `CREDITS_ALLOCATED`, … |
+| `storage` | `STORAGE_THRESHOLD_WARNING`, `STORAGE_UPGRADE_REJECTED`, `STORAGE_UPLOAD_BLOCKED`, … |
 | `workspace` | `WORKSPACE_INVITATION`, `WORKSPACE_MEMBER_JOINED`, … |
-| `platform` | `PLATFORM_HEYGEN_WALLET_LOW` (superadmin only) |
+| `platform` | `PLATFORM_HEYGEN_WALLET_LOW`, `PLATFORM_STORAGE_UPGRADE_REQUEST` (superadmin only) |
 
 **TEAM workspace video exports:** when a member exports a final video, the **exporter**, all **OWNER**s, and all **ADMIN**s receive a notification (deduplicated per user).
 

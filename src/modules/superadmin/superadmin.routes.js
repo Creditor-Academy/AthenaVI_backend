@@ -15,6 +15,12 @@ router.get(
   superadminController.listUsers
 );
 
+router.patch(
+  '/users/:userId/platform-access',
+  validate(superadminValidation.platformAccessBodySchema),
+  superadminController.updateUserPlatformAccess
+);
+
 router.get(
   '/users/:userId/credits',
   validate(superadminValidation.userIdParamsSchema),
@@ -31,6 +37,12 @@ router.get(
   '/users/:userId/storage',
   validate(superadminValidation.userIdParamsSchema),
   superadminController.getUserStorage
+);
+
+router.get(
+  '/users/:userId/storage/history',
+  validate(superadminValidation.storageHistoryQuerySchema),
+  superadminController.getUserStorageHistory
 );
 
 router.post(
@@ -57,10 +69,42 @@ router.post(
   superadminController.revokeUserCredits
 );
 
+router.get('/storage/tiers', superadminController.getStorageTiers);
+
+router.get(
+  '/storage/requests',
+  validate(superadminValidation.storageRequestsQuerySchema),
+  superadminController.listStorageUpgradeRequests
+);
+
+router.post(
+  '/storage/requests/:requestId/reject',
+  validate(superadminValidation.rejectStorageRequestBodySchema),
+  superadminController.rejectStorageUpgradeRequest
+);
+
+router.get(
+  '/workspaces',
+  validate(superadminValidation.listWorkspacesQuerySchema),
+  superadminController.listWorkspaces
+);
+
 router.get(
   '/workspaces/:workspaceId/credits',
   validate(superadminValidation.workspaceIdParamsSchema),
   superadminController.getWorkspaceCredits
+);
+
+router.get(
+  '/workspaces/:workspaceId/credits/history',
+  validate(superadminValidation.workspaceHistoryQuerySchema),
+  superadminController.getWorkspaceCreditHistory
+);
+
+router.get(
+  '/workspaces/:workspaceId/credits/usage-by-member',
+  validate(superadminValidation.workspacePaginationQuerySchema),
+  superadminController.getWorkspaceUsageByMember
 );
 
 router.post(
@@ -69,10 +113,22 @@ router.post(
   superadminController.grantWorkspaceCredits
 );
 
+router.post(
+  '/workspaces/:workspaceId/credits/revoke',
+  validate(superadminValidation.grantRevokeWorkspaceBodySchema),
+  superadminController.revokeWorkspaceCredits
+);
+
 router.get(
   '/reports/credits/usage',
   validate(superadminValidation.usageReportQuerySchema),
   superadminController.getUsageReport
+);
+
+router.get(
+  '/reports/credits/platform-actions',
+  validate(superadminValidation.platformActionsQuerySchema),
+  superadminController.getPlatformActionsReport
 );
 
 router.get('/heygen/account', superadminController.getHeygenAccount);

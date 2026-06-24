@@ -16,6 +16,14 @@ const workspaceIdParamsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const requestIdParamsSchema = Joi.object({
+  params: Joi.object({
+    requestId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
 const grantRevokeBodySchema = Joi.object({
   params: Joi.object({
     userId: Joi.string().uuid().required(),
@@ -73,6 +81,16 @@ const listUsersQuerySchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const listWorkspacesQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    search: Joi.string().trim().max(255).optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
 const historyQuerySchema = Joi.object({
   params: Joi.object({
     userId: Joi.string().uuid().required(),
@@ -85,6 +103,61 @@ const historyQuerySchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const workspaceHistoryQuerySchema = Joi.object({
+  params: Joi.object({
+    workspaceId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    type: Joi.string().trim().max(64).optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const workspacePaginationQuerySchema = Joi.object({
+  params: Joi.object({
+    workspaceId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const storageHistoryQuerySchema = Joi.object({
+  params: Joi.object({
+    userId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    type: Joi.string().trim().max(64).optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const storageRequestsQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    status: Joi.string().valid('pending', 'approved', 'rejected').optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const rejectStorageRequestBodySchema = Joi.object({
+  params: Joi.object({
+    requestId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    reviewNote: Joi.string().trim().max(500).optional(),
+  }).default({}),
+});
+
 const usageReportQuerySchema = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({
@@ -92,18 +165,51 @@ const usageReportQuerySchema = Joi.object({
     to: Joi.date().iso().optional(),
     workspaceId: Joi.string().uuid().optional(),
     userId: Joi.string().uuid().optional(),
+    topLimit: Joi.number().integer().min(1).max(25).default(10),
   }).unknown(false),
   body: Joi.object({}).unknown(false),
+});
+
+const platformActionsQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    from: Joi.date().iso().optional(),
+    to: Joi.date().iso().optional(),
+    type: Joi.string().valid('platform_grant', 'platform_revoke').optional(),
+    scope: Joi.string().valid('user', 'workspace').optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const platformAccessBodySchema = Joi.object({
+  params: Joi.object({
+    userId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    isPlatformSuperadmin: Joi.boolean().required(),
+  }).required(),
 });
 
 module.exports = {
   userIdParamsSchema,
   workspaceIdParamsSchema,
+  requestIdParamsSchema,
   grantRevokeBodySchema,
   grantStorageBodySchema,
   revokeStorageBodySchema,
   grantRevokeWorkspaceBodySchema,
   listUsersQuerySchema,
+  listWorkspacesQuerySchema,
   historyQuerySchema,
+  workspaceHistoryQuerySchema,
+  workspacePaginationQuerySchema,
+  storageHistoryQuerySchema,
+  storageRequestsQuerySchema,
+  rejectStorageRequestBodySchema,
   usageReportQuerySchema,
+  platformActionsQuerySchema,
+  platformAccessBodySchema,
 };

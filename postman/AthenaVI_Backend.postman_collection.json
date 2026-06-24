@@ -208,14 +208,6 @@
       },
       "item": [
         {
-          "name": "Get all users",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/user/getall"
-          }
-        },
-        {
           "name": "Get profile",
           "request": {
             "method": "GET",

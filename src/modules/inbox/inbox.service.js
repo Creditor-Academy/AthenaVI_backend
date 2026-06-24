@@ -590,6 +590,67 @@ async function clearPlatformHeygenWalletLow() {
   );
 }
 
+async function notifyPlatformStorageUpgradeRequest({
+  requestId,
+  userId,
+  userEmail,
+  userName,
+  requestedAdditionalGb,
+  urgency,
+  reason,
+}) {
+  const { listPlatformSuperadminUserIds } = require('../../shared/services/platformSuperadmin.service');
+  const adminUserIds = await listPlatformSuperadminUserIds();
+
+  return notifyMany(adminUserIds, {
+    type: 'PLATFORM_STORAGE_UPGRADE_REQUEST',
+    referenceId: `storage_upgrade_${requestId}`,
+    title: 'Storage upgrade request',
+    message: `${userName || userEmail} requested +${requestedAdditionalGb} GB (${urgency}).`,
+    metadata: {
+      requestId,
+      userId,
+      userEmail,
+      userName,
+      requestedAdditionalGb,
+      urgency,
+      reason,
+      scope: 'platform',
+    },
+  });
+}
+
+async function notifyStorageUpgradeRejected({ userId, requestedAdditionalGb, reviewNote }) {
+  return notifyUser({
+    userId,
+    type: 'STORAGE_UPGRADE_REJECTED',
+    referenceId: `storage_reject_${userId}_${Date.now()}`,
+    title: 'Storage upgrade request declined',
+    message: reviewNote
+      ? `Your request for +${requestedAdditionalGb} GB was declined: ${reviewNote}`
+      : `Your request for +${requestedAdditionalGb} GB was declined.`,
+    metadata: { requestedAdditionalGb, reviewNote: reviewNote || null },
+  });
+}
+
+async function notifyCreditsWorkspaceRevoke({
+  workspaceId,
+  workspaceName,
+  ownerId,
+  amount,
+  reason,
+}) {
+  return notifyUser({
+    userId: ownerId,
+    type: 'CREDITS_WORKSPACE_REVOKE',
+    referenceId: `ws_revoke_${workspaceId}_${Date.now()}`,
+    workspaceId,
+    title: `Credits removed from ${workspaceName || 'workspace'}`,
+    message: `${amount} AC were removed from your team workspace pool.`,
+    metadata: { workspaceId, workspaceName, amount, reason: reason || null },
+  });
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -706,6 +767,9 @@ module.exports = {
   notifyWorkspaceRoleChanged,
   notifyPlatformHeygenWalletLow,
   clearPlatformHeygenWalletLow,
+  notifyPlatformStorageUpgradeRequest,
+  notifyStorageUpgradeRejected,
+  notifyCreditsWorkspaceRevoke,
   listInbox,
   getUnreadCount,
   getNotification,

@@ -246,6 +246,76 @@ const approveLatestPendingStorageUpgradeRequest = async (userId, reviewedByUserI
   });
 };
 
+const listStorageUpgradeRequests = async ({ page, limit, status }) => {
+  const skip = (page - 1) * limit;
+  const where = status ? { status } : {};
+
+  const [requests, total] = await Promise.all([
+    prisma.storageUpgradeRequest.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        user: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+    }),
+    prisma.storageUpgradeRequest.count({ where }),
+  ]);
+
+  return {
+    requests,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    },
+  };
+};
+
+const findStorageUpgradeRequestById = (requestId) => {
+  return prisma.storageUpgradeRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      user: {
+        select: { id: true, email: true, name: true },
+      },
+    },
+  });
+};
+
+const rejectStorageUpgradeRequest = async ({ requestId, reviewedByUserId, reviewNote }) => {
+  const existing = await prisma.storageUpgradeRequest.findUnique({
+    where: { id: requestId },
+  });
+  if (!existing) {
+    return null;
+  }
+  if (existing.status !== 'PENDING') {
+    return { error: 'not_pending', request: existing };
+  }
+
+  const request = await prisma.storageUpgradeRequest.update({
+    where: { id: requestId },
+    data: {
+      status: 'REJECTED',
+      reviewedAt: new Date(),
+      reviewedByUserId,
+      reviewNote: reviewNote || null,
+    },
+    include: {
+      user: {
+        select: { id: true, email: true, name: true },
+      },
+    },
+  });
+
+  return { request };
+};
+
 module.exports = {
   getUserStorage,
   updateUserStorageLimit,
@@ -260,5 +330,8 @@ module.exports = {
   listStorageUpgradeRequestsByUser,
   findLatestPendingStorageUpgradeRequest,
   approveLatestPendingStorageUpgradeRequest,
+  listStorageUpgradeRequests,
+  findStorageUpgradeRequestById,
+  rejectStorageUpgradeRequest,
   prisma,
 };
