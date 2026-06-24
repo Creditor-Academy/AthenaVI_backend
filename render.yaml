@@ -1,0 +1,70 @@
+# Render Blueprint — Athena VI backend (testing)
+# Uses your EXISTING Aiven Postgres + existing Render Key Value (Redis).
+# You must paste DATABASE_URL and REDIS_URL in the dashboard (sync: false below).
+#
+# Deploy: Render Dashboard → Blueprints → New Blueprint Instance → connect this repo.
+
+services:
+  - type: web
+    name: athenavi-backend
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install --production=false && npx prisma generate
+    preDeployCommand: npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SALT_ROUNDS
+        value: "10"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: JSON_BODY_LIMIT
+        value: 32mb
+      - key: SMTP_PORT
+        value: "587"
+      - key: HEYGEN_BILLING_MODE
+        value: payg
+      # --- Paste from .env.development / your secret stores ---
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: HEYGEN_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: PLATFORM_SUPERADMIN_EMAILS
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
+      - key: PIXABAY_API_KEY
+        sync: false

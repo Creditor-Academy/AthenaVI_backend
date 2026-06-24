@@ -1,10 +1,14 @@
+const fs = require('fs');
+const path = require('path');
 const dotenv = require('dotenv');
 
 const envFile =
   process.env.NODE_ENV === 'production'
     ? '.env.production'
     : '.env.development';
-dotenv.config({ path: envFile });
+if (fs.existsSync(path.join(process.cwd(), envFile))) {
+  dotenv.config({ path: envFile });
+}
 
 const app = require('./app');
 const prisma = require("./shared/config/prismaClient");

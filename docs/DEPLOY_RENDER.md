@@ -1,0 +1,180 @@
+# Deploy Athena VI backend on Render (testing)
+
+Staging deployment on [Render](https://render.com) using:
+
+- **PostgreSQL** — existing **Aiven** database (same as local `DATABASE_URL`)
+- **Redis** — existing **Render Key Value** instance (same account, Oregon)
+- **Web service** — this repo (`render.yaml` creates only the web service)
+
+Migrations run on every deploy: `npx prisma migrate deploy` (pre-deploy command).
+
+---
+
+## What you do in Render (checklist)
+
+### 1. Push code
+
+Commit and push `render.yaml` (and the rest of the repo) to GitHub/GitLab/Bitbucket.
+
+### 2. Create the web service
+
+**Option A — Blueprint (if repo has `render.yaml`)**
+
+1. [dashboard.render.com](https://dashboard.render.com) → **New +** → **Blueprint**
+2. Connect the **AthenaVI_backend** repository
+3. Render shows **one** resource: `athenavi-backend` (web service)
+4. Click **Apply** — Render will prompt for secret env vars marked `sync: false`
+
+**Option B — Manual web service**
+
+1. **New +** → **Web Service** → connect repo
+2. Name: `athenavi-backend`
+3. Region: **Oregon** (same as your Redis)
+4. Branch: your deploy branch (e.g. `main`)
+5. Runtime: **Node**
+6. Build command: `npm install --production=false && npx prisma generate`
+7. **Advanced** → Pre-deploy command: `npx prisma migrate deploy`
+8. Start command: `npm start`
+9. Instance type: **Starter** (recommended for always-on testing)
+
+### 3. Set environment variables
+
+Open the web service → **Environment** → add variables below.
+
+Copy values from your local `.env.development` unless noted.
+
+#### Required (app will not start without these)
+
+| Variable | Where to get it |
+|----------|-----------------|
+| `DATABASE_URL` | Aiven console → your Postgres service → **Connection information** → URI with `?sslmode=require` |
+| `REDIS_URL` | Render → your **Key Value** instance → **Connect** → **Internal Redis URL** (preferred) or External URL |
+| `JWT_SECRET` | Same as local, or generate a new long random string for staging |
+| `BACKEND_URL` | Set **after** first deploy: `https://<service-name>.onrender.com` (no trailing slash) |
+| `FRONTEND_URL` | Your staging frontend URL (e.g. Vercel/Netlify preview) |
+| `CORS_ORIGINS` | Same as `FRONTEND_URL` (comma-separated if multiple origins) |
+
+#### AWS (assets, uploads)
+
+| Variable | |
+|----------|--|
+| `AWS_ACCESS_KEY_ID` | From `.env.development` |
+| `AWS_SECRET_ACCESS_KEY` | From `.env.development` |
+| `AWS_REGION` | e.g. `us-east-1` |
+| `AWS_S3_BUCKET` | e.g. `virtual-instructor` |
+
+#### Auth & email
+
+| Variable | |
+|----------|--|
+| `GOOGLE_CLIENT_ID` | Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud Console |
+| `SMTP_HOST` | e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | |
+| `SMTP_PASS` | |
+
+#### Integrations (optional but recommended for full testing)
+
+| Variable | |
+|----------|--|
+| `HEYGEN_API_KEY` | |
+| `PLATFORM_SUPERADMIN_EMAILS` | Comma-separated emails |
+| `PEXELS_API_KEY` | Stock media |
+| `UNSPLASH_ACCESS_KEY` | Stock media |
+| `PIXABAY_API_KEY` | Stock media |
+
+#### Already set by `render.yaml` (no action needed if using Blueprint)
+
+`NODE_ENV=production`, `SALT_ROUNDS=10`, `TRUST_PROXY_HOPS=1`, `JSON_BODY_LIMIT=32mb`, `HEYGEN_BILLING_MODE=payg`
+
+Click **Save Changes** — Render redeploys automatically.
+
+### 4. Allow Render to reach Aiven Postgres
+
+Aiven blocks unknown IPs by default.
+
+1. Aiven console → your Postgres service → **Integrations** or **Network / IP filter**
+2. For a quick test: allow **`0.0.0.0/0`** (or add Render’s outbound IPs if you use static egress)
+3. Without this, deploy logs show database connection timeouts
+
+Your app already uses SSL to Aiven (`sslmode=require` in `DATABASE_URL`).
+
+### 5. Redis URL — internal vs external
+
+Your Key Value instance is on Render **Oregon**. With the web service also in **Oregon**:
+
+1. Open the Key Value service → **Connect**
+2. Copy **Internal Redis URL** → paste as `REDIS_URL` on the web service
+
+Use `rediss://` if Render shows TLS (your local config uses `rediss://`).
+
+### 6. Google OAuth redirect
+
+In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your OAuth client:
+
+Add **Authorized redirect URI**:
+
+```text
+https://<your-render-host>/api/auth/google/callback
+```
+
+Example: `https://athenavi-backend.onrender.com/api/auth/google/callback`
+
+Update `BACKEND_URL` to match that host.
+
+### 7. Verify deploy
+
+1. **Logs** tab — look for:
+   - `prisma migrate deploy` success (pre-deploy)
+   - `Database connected and verified`
+   - `Redis connected`
+   - `Server running on port ...`
+2. Browser or curl:
+
+```bash
+curl https://<your-render-host>/
+# → Virtual Instructor Backend Running
+```
+
+API base: `https://<your-render-host>/api`
+
+Point your staging frontend at that base URL (`REACT_APP_API_URL` / `VITE_API_URL` etc.).
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  FE[Staging frontend] -->|HTTPS /api| WEB[Render Web Service\nathenavi-backend]
+  WEB -->|DATABASE_URL SSL| AIVEN[Aiven PostgreSQL]
+  WEB -->|REDIS_URL internal| KV[Render Key Value\nexisting instance]
+  WEB --> S3[AWS S3]
+  WEB --> HG[HeyGen API]
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Pre-deploy: `Can't reach database` | Aiven IP allowlist; check `DATABASE_URL` and `sslmode=require` |
+| `Redis error` / connection refused | Use **Internal** Redis URL; web service region = Oregon |
+| CORS errors from browser | Set `FRONTEND_URL` or `CORS_ORIGINS` to exact frontend origin (no trailing slash) |
+| Google login redirect fails | `BACKEND_URL` + Google redirect URI must match Render URL |
+| Cookies / refresh not working | Frontend must use `credentials: 'include'`; API origin must be in CORS list |
+| Remotion render fails | Normal on small instances — needs more RAM/CPU; API otherwise works |
+
+---
+
+## Remotion note
+
+Server-side Remotion renders need Chrome and significant memory. On Starter, most routes work; render endpoints may timeout. Scale up or use a dedicated worker if you need renders in staging.
+
+---
+
+## Local env reference
+
+[`.env.example`](../.env.example) · [`docs/api/ENVIRONMENT.md`](api/ENVIRONMENT.md)
