@@ -1,9 +1,9 @@
 # Superadmin Portal — Frontend Integration Guide
 
-This guide is for frontend developers building the **superadmin credit admin UI** inside the same app as the main platform. There is **one shared login page** — superadmins use normal login, then switch to the admin section via a toggle. It covers capabilities, toggle behavior, and credit admin APIs.
+This guide is for frontend developers building the **superadmin credit and storage admin UI** inside the same app as the main platform. There is **one shared login page** — superadmins use normal login, then switch to the admin section via a toggle. It covers capabilities, toggle behavior, and credit admin APIs.
 
 **Canonical HTTP contracts** (all backend routes): [`docs/api/README.md`](api/README.md) · [Auth](api/AUTH_API.md) · [Superadmin](api/SUPERADMIN_API.md) · [User](api/USER_API.md)  
-**Related:** [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) (main editor app) · [`CREDITS_FRONTEND_INTEGRATION.md`](./CREDITS_FRONTEND_INTEGRATION.md) (main app credits UX)
+**Related:** [`PROJECT_EDITOR_INTEGRATION.md`](./PROJECT_EDITOR_INTEGRATION.md) (main editor app) · [`CREDITS_FRONTEND_INTEGRATION.md`](./CREDITS_FRONTEND_INTEGRATION.md) (main app credits UX) · [`STORAGE_API.md`](api/STORAGE_API.md) (user storage + upgrade requests)
 
 ---
 
@@ -16,9 +16,10 @@ This guide is for frontend developers building the **superadmin credit admin UI*
 5. [Capabilities (portal toggle)](#5-capabilities-portal-toggle)
 6. [Token refresh & logout](#6-token-refresh--logout)
 7. [Credit admin APIs](#7-credit-admin-apis)
-8. [Recommended UI flows](#8-recommended-ui-flows)
-9. [Error handling](#9-error-handling)
-10. [Checklist](#10-checklist)
+8. [Storage admin APIs](#8-storage-admin-apis)
+9. [Recommended UI flows](#9-recommended-ui-flows)
+10. [Error handling](#10-error-handling)
+11. [Checklist](#11-checklist)
 
 ---
 
@@ -202,6 +203,8 @@ GET /api/superadmin/users?page=1&limit=20&search=optional@email.com
       "email": "user@example.com",
       "name": "Jane Doe",
       "credits": 5000,
+      "storageLimit": 1073741824,
+      "storageUsed": 123456789,
       "isPlatformSuperadmin": false,
       "createdAt": "2025-01-15T10:00:00.000Z"
     }
@@ -420,7 +423,80 @@ Authorization: Bearer <accessToken>
 
 ---
 
-## 8. Recommended UI flows
+## 8. Storage admin APIs
+
+**Base path:** `/api/superadmin` (same auth as credits)
+
+Storage quotas are in **bytes** (binary: 1 GiB = `1073741824`). API JSON uses **numbers**. There is **no fixed upper cap** on grant/revoke amounts — any positive integer is accepted.
+
+### 8.1 List users (storage columns)
+
+`GET /api/superadmin/users` — each user includes `storageLimit` and `storageUsed` (bytes) in addition to `credits`.
+
+### 8.2 Get user storage summary
+
+```http
+GET /api/superadmin/users/:userId/storage
+```
+
+**200** — same fields as main-app `GET /api/user/storage`: `limitBytes`, `usedBytes`, `availableBytes`, `percentUsed`, `tier`, `activeUpgradeRequest`.
+
+### 8.3 Grant storage
+
+```http
+POST /api/superadmin/users/:userId/storage/grant
+Content-Type: application/json
+```
+
+**Option A — preset tier (sets absolute limit):**
+
+```json
+{ "tierId": "plus_10gb", "reason": "Support ticket" }
+```
+
+| `tierId` | Bytes |
+|----------|-------|
+| `free` | `1073741824` |
+| `plus_10gb` | `10737418240` |
+| `pro_50gb` | `53687091200` |
+
+**Option B — add any amount (increments current limit):**
+
+```json
+{ "additionalBytes": 107374182400, "reason": "Enterprise deal" }
+```
+
+Send **one** mode per request (`tierId` **or** `additionalBytes`).
+
+**200** — `data.user.storageLimit`, `data.user.storageUsed`, `data.transaction.amountBytes`.
+
+Auto-approves the user's latest pending storage upgrade request when present.
+
+### 8.4 Revoke storage
+
+```http
+POST /api/superadmin/users/:userId/storage/revoke
+Content-Type: application/json
+
+{ "amountBytes": 1073741824, "reason": "Downgrade" }
+```
+
+**400** if new limit would fall below `storageUsed`.
+
+### 8.5 Display helper
+
+```javascript
+const GIB = 1024 ** 3;
+function formatBytes(bytes) {
+  if (bytes >= GIB) return `${(bytes / GIB).toFixed(1)} GiB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
+  return `${bytes} B`;
+}
+```
+
+---
+
+## 9. Recommended UI flows
 
 ### Single login + toggle (our setup)
 
@@ -442,8 +518,10 @@ flowchart TD
 |--------|-----|
 | User list + search | `GET /api/superadmin/users` |
 | User detail / balance | `GET /api/superadmin/users/:userId/credits` |
+| User storage quota | `GET /api/superadmin/users/:userId/storage` |
 | User ledger | `GET /api/superadmin/users/:userId/credits/history` |
-| Grant / revoke modal | `POST .../grant` or `POST .../revoke` |
+| Grant / revoke credits | `POST .../credits/grant` or `POST .../credits/revoke` |
+| Grant / revoke storage | `POST .../storage/grant` or `POST .../storage/revoke` |
 | Workspace pool view | `GET /api/superadmin/workspaces/:workspaceId/credits` |
 | Workspace top-up | `POST /api/superadmin/workspaces/:workspaceId/credits/grant` |
 | Usage dashboard | `GET /api/superadmin/reports/credits/usage` |
@@ -451,13 +529,13 @@ flowchart TD
 
 ---
 
-## 9. Error handling
+## 10. Error handling
 
 | Status | Typical cause | Frontend action |
 |--------|---------------|-----------------|
 | **401** | Missing/expired token | Call `POST /api/auth/refresh` or redirect to login |
 | **403** | Not platform superadmin | Hide superadmin UI; show “access denied” on admin routes |
-| **400** | Validation (bad UUID, amount, etc.) | Show `message` / `errors` from response |
+| **400** | Validation (bad UUID, amount, revoke below used storage, etc.) | Show `message` / `errors` from response |
 | **402** | Insufficient credits on revoke | Show balance error; refresh user balance |
 | **404** | User or workspace not found | Show not-found state |
 
@@ -488,7 +566,7 @@ async function superadminFetch(path, options = {}) {
 
 ---
 
-## 10. Checklist
+## 11. Checklist
 
 ### Single app (one login page)
 
@@ -499,6 +577,7 @@ async function superadminFetch(path, options = {}) {
 - [ ] Guard `/admin/*` routes (redirect if capabilities false)
 - [ ] All `/api/superadmin/*` calls use `Authorization: Bearer` + `credentials: 'include'` where cookies matter
 - [ ] Handle **403** on credit admin API calls
+- [ ] Storage admin: show `storageLimit` / `storageUsed` on user list; grant via `tierId` or custom `additionalBytes`
 - [ ] “Back to platform” is client-side navigation only
 
 ### General

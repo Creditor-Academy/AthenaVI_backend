@@ -104,6 +104,10 @@
 
 ---
 
+### Storage byte fields
+
+Routes under `/api/user/storage`, `/api/workspaces/:id/storage`, and `/api/superadmin/users/:id/storage/*` use **binary bytes** in JSON numbers (`1073741824` = 1 GiB). Superadmin grant accepts `tierId` (preset absolute limit) or `additionalBytes` (increment; no fixed max). Details: [STORAGE_API.md](STORAGE_API.md), [SUPERADMIN_API.md](SUPERADMIN_API.md).
+
 ---
 
 **[← API index](README.md)** · [Project root README](../../README.md)

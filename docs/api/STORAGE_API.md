@@ -2,10 +2,18 @@
 
 Base paths:
 
-- **`/api/user/storage`** (current user quota + history)
+- **`/api/user/storage`** (current user quota + history + upgrade requests)
 - **`/api/workspaces/:workspaceId/storage`** (workspace footprint + owner quota)
 
 All routes require **`Authorization: Bearer <access_token>`**.
+
+### Byte units
+
+- All `*Bytes` fields are **binary bytes** (powers of 1024), not decimal GB.
+- Examples: 1 GiB = `1073741824`; 10 GiB = `10737418240`; 50 GiB = `53687091200`.
+- API JSON uses **numbers** (not strings). Quotas are stored as PostgreSQL `BIGINT` server-side.
+
+Preset tiers (for display / superadmin `tierId`): `free` (1 GiB default), `plus_10gb`, `pro_50gb`. Superadmin may grant **any positive** `additionalBytes` without a fixed upper cap.
 
 ---
 

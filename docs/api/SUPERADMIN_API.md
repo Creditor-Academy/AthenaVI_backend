@@ -4,13 +4,13 @@
 
 Base path: **`/api/superadmin`**
 
-**Portal auth (single login page):** use normal `POST /api/auth/login` or `GET /api/auth/google`, then `GET /api/user/capabilities` to show the admin toggle. Optional dedicated admin login: `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. All use the same JWT; this section documents **credit admin** routes only.
+**Portal auth (single login page):** use normal `POST /api/auth/login` or `GET /api/auth/google`, then `GET /api/user/capabilities` to show the admin toggle. Optional dedicated admin login: `POST /api/auth/superadmin/login`, `GET /api/auth/superadmin/google`. All use the same JWT; this document covers **credit** and **storage** admin routes.
 
 Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformSuperadmin` or email in **`PLATFORM_SUPERADMIN_EMAILS`** comma-separated). Not the same as workspace **ADMIN** role.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/superadmin/users` | List users with balances (`page`, `limit`, `search`) |
+| `GET` | `/api/superadmin/users` | List users with credits + storage (`page`, `limit`, `search`) |
 | `GET` | `/api/superadmin/users/:userId/credits` | User personal balance |
 | `GET` | `/api/superadmin/users/:userId/credits/history` | Full user ledger |
 | `POST` | `/api/superadmin/users/:userId/credits/grant` | Body: `{ amount, reason? }` |
@@ -87,13 +87,100 @@ Authorization: Bearer <accessToken>
 
 ---
 
-### Storage grant / revoke notes
+### Storage admin
 
-- Storage grant and revoke update `User.storageLimit` (stored as `BIGINT` bytes).
-- Byte amounts in API bodies and responses use JSON numbers (e.g. `10737418240` for 10 GiB). No fixed upper cap on grant/revoke amounts beyond positive integers.
-- Optional `tierId` (`free`, `plus_10gb`, `pro_50gb`) sets a preset limit; `additionalBytes` adds any positive amount on top of the current limit.
-- Every change writes a `storage_transactions` ledger row.
-- Revoke is blocked if the new limit would be below current `storageUsed`.
+Byte fields use **binary bytes** (1024³ per GiB). No fixed upper cap on grant/revoke amounts (positive integers only).
+
+#### List users (includes storage)
+
+```http
+GET /api/superadmin/users?page=1&limit=20&search=optional@email.com
+Authorization: Bearer <accessToken>
+```
+
+Each user in `data.users` includes `storageLimit` and `storageUsed` (bytes).
+
+#### Get user storage summary
+
+```http
+GET /api/superadmin/users/:userId/storage
+Authorization: Bearer <accessToken>
+```
+
+**200** — same shape as [`GET /api/user/storage`](STORAGE_API.md) (`limitBytes`, `usedBytes`, `availableBytes`, `percentUsed`, `tier`, `activeUpgradeRequest`).
+
+#### Grant storage
+
+```http
+POST /api/superadmin/users/:userId/storage/grant
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+Provide **either** `tierId` **or** `additionalBytes` (not both required; `tierId` takes precedence when both are sent — prefer one mode per request).
+
+| Mode | Body | Effect |
+|------|------|--------|
+| Preset tier | `{ "tierId": "plus_10gb", "reason": "..." }` | Sets **absolute** limit to tier size |
+| Add bytes | `{ "additionalBytes": 107374182400, "reason": "..." }` | **Increments** current limit by that many bytes |
+
+| `tierId` | Limit (bytes) | Label |
+|----------|---------------|--------|
+| `free` | `1073741824` | Free (1 GiB) |
+| `plus_10gb` | `10737418240` | Plus 10 GB |
+| `pro_50gb` | `53687091200` | Pro 50 GB |
+
+| Field | Required | Rules |
+|-------|----------|--------|
+| `tierId` | One of `tierId` / `additionalBytes` | `free` \| `plus_10gb` \| `pro_50gb` |
+| `additionalBytes` | One of `tierId` / `additionalBytes` | Positive integer (any size) |
+| `reason` | No | Max 500 characters |
+
+**200** — `data`:
+
+```json
+{
+  "user": {
+    "id": "user-uuid",
+    "storageLimit": 10737418240,
+    "storageUsed": 123456789
+  },
+  "transaction": {
+    "id": "tx-uuid",
+    "amountBytes": 10737418240,
+    "type": "platform_grant",
+    "tierId": "plus_10gb",
+    "reference": "Manual upgrade",
+    "createdAt": "2026-06-24T12:00:00.000Z"
+  }
+}
+```
+
+Approves the user's latest **pending** storage upgrade request (if any).
+
+#### Revoke storage
+
+```http
+POST /api/superadmin/users/:userId/storage/revoke
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "amountBytes": 1073741824,
+  "reason": "Plan downgrade"
+}
+```
+
+| Field | Required | Rules |
+|-------|----------|--------|
+| `amountBytes` | Yes | Positive integer — subtracted from current `storageLimit` |
+| `reason` | No | Max 500 characters |
+
+**400** if the new limit would be below `storageUsed`.
+
+**200** — same shape as grant (`user` + `transaction` with negative `amountBytes`).
+
+User-facing storage contracts: [`STORAGE_API.md`](STORAGE_API.md).
 
 ---
 
