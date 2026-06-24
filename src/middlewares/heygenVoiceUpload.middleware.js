@@ -58,6 +58,31 @@ function heygenVoiceFileUpload(req, res, next) {
   });
 }
 
+/** Multipart POST /api/heygen/voices/clone — JSON requests skip multer. */
+function heygenVoiceCloneMultipart(req, res, next) {
+  const ct = String(req.headers['content-type'] || '').toLowerCase();
+  if (!ct.includes('multipart/form-data')) {
+    return next();
+  }
+  return upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return next(new AppError('File too large (max 100 MB for HeyGen voice clone upload)', 400));
+      }
+      return next(err);
+    }
+    if (!req.file) {
+      return next(
+        new AppError(
+          'file is required for multipart voice clone (or use JSON with audio.type url from POST /api/heygen/voices/upload)',
+          400
+        )
+      );
+    }
+    next();
+  });
+}
+
 function cleanupHeygenVoiceUploadFile(file) {
   if (!file?.path) return;
   fs.unlink(file.path, () => {});
@@ -65,6 +90,7 @@ function cleanupHeygenVoiceUploadFile(file) {
 
 module.exports = {
   heygenVoiceFileUpload,
+  heygenVoiceCloneMultipart,
   cleanupHeygenVoiceUploadFile,
   HEYGEN_VOICE_CLONE_MIMES,
   HEYGEN_VOICE_UPLOAD_MAX_BYTES: MAX_BYTES,

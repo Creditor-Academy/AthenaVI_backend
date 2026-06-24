@@ -1,4 +1,5 @@
 const { getJson, getJsonSafe, postJson } = require('../../shared/services/heygenV3.client');
+const { ensureHeygenAssetRef } = require('./heygenAssets.service');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
@@ -686,7 +687,11 @@ async function listAvatarLooks(userId, query) {
 }
 
 async function createAvatar(userId, body) {
-  const raw = await postJson('/v3/avatars', body);
+  const payload = { ...(body || {}) };
+  if (payload.file) {
+    payload.file = await ensureHeygenAssetRef(payload.file);
+  }
+  const raw = await postJson('/v3/avatars', payload);
   const avatarGroupId = extractAvatarGroupIdFromCreateResponse(raw);
   if (avatarGroupId) {
     const status =
@@ -729,7 +734,11 @@ async function designVoice(_userId, body) {
 }
 
 async function cloneVoice(userId, body) {
-  const raw = await postJson('/v3/voices/clone', body);
+  const payload = { ...(body || {}) };
+  if (payload.audio) {
+    payload.audio = await ensureHeygenAssetRef(payload.audio);
+  }
+  const raw = await postJson('/v3/voices/clone', payload);
   const voiceIds = extractVoiceIdsFromVoiceResponse(raw);
   const name = body?.voice_name != null ? String(body.voice_name) : null;
   for (const voiceId of voiceIds) {

@@ -13,7 +13,7 @@ module.exports = (err, req, res, next) => {
     (typeof err.message === 'string' && err.message.toLowerCase().includes('too large'))
   ) {
     const hint =
-      'JSON body exceeds server limit (voice clone base64 is large). Set JSON_BODY_LIMIT (e.g. JSON_BODY_LIMIT=32mb) or send clone audio as type url / asset_id instead of base64.';
+      'JSON body exceeds server limit (voice clone base64 is large). Use multipart POST /api/heygen/voices/clone with field file, or POST /api/heygen/voices/upload then JSON with audio.type url. Optional: JSON_BODY_LIMIT=32mb.';
     return errorResponse(req, res, 413, hint, [hint]);
   }
 
@@ -27,13 +27,18 @@ module.exports = (err, req, res, next) => {
     const url = String(req.originalUrl || '');
     const isLargeAvatarUpload = url.includes('/avatars/upload');
     const isVoiceUpload = url.includes('/voices/upload');
+    const isVoiceCloneMultipart = url.includes('/voices/clone');
+    const isAvatarCreateMultipart =
+      url.endsWith('/avatars') || url.match(/\/avatars$/);
     const msg =
       err.code === 'LIMIT_FILE_SIZE'
         ? isLargeAvatarUpload
           ? 'File too large (max 900 MB for HeyGen avatar file upload)'
-          : isVoiceUpload
+          : isVoiceUpload || isVoiceCloneMultipart
             ? 'File too large (max 100 MB for HeyGen voice clone upload)'
-            : 'File too large (max 32 MB for HeyGen avatar upload)'
+            : isAvatarCreateMultipart
+              ? 'File too large (max 900 MB for HeyGen avatar create multipart)'
+              : 'File too large (max 32 MB for HeyGen avatar upload)'
         : err.message || 'Upload error';
     return errorResponse(req, res, 400, msg, [msg]);
   }

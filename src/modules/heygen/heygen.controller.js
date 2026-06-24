@@ -3,10 +3,16 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenV3Service = require('./heygenV3.service');
-const { uploadFile, uploadLocalFile, deleteFile } = require('../s3/s3.service');
+const {
+  HEYGEN_URL_INPUT_MAX_BYTES,
+  directUploadLocalFile,
+} = require('./heygenAssets.service');
+const fs = require('fs/promises');
+const { uploadLocalFile, deleteFile } = require('../s3/s3.service');
 const {
   HEYGEN_AVATAR_PHOTO_MIMES,
   HEYGEN_AVATAR_TWIN_MIMES,
+  cleanupHeygenAvatarCreateFile,
 } = require('../../middlewares/heygenAvatarCreate.middleware');
 const { cleanupHeygenAvatarUploadFile } = require('../../middlewares/heygenAvatarUpload.middleware');
 const { cleanupHeygenVoiceUploadFile } = require('../../middlewares/heygenVoiceUpload.middleware');
@@ -25,11 +31,33 @@ function assertCreateAvatarPayload(body) {
       'file is required for digital_twin and photo (object with type url | asset_id | base64 per HeyGen v3)',
       400
     );
+  } else if (body.file.type === 'base64') {
+    throw new AppError(
+      'Avatar file must not use base64 in JSON. Use multipart POST /api/heygen/avatars with field file, or POST /api/heygen/avatars/upload then JSON with file.type url.',
+      400
+    );
   }
 }
 
+async function heygenFileRefFromLocalPath(localPath, userId, folder, originalName, mime) {
+  const st = await fs.stat(localPath);
+  if (st.size > HEYGEN_URL_INPUT_MAX_BYTES) {
+    const asset_id = await directUploadLocalFile(localPath, originalName, mime);
+    return { file: { type: 'asset_id', asset_id }, uploadedKey: null };
+  }
+  const { key, url } = await uploadLocalFile(
+    localPath,
+    'users',
+    userId,
+    folder,
+    originalName,
+    mime
+  );
+  return { file: { type: 'url', url }, uploadedKey: key };
+}
+
 async function payloadFromMultipart(req, userId) {
-  if (!req.file?.buffer) return null;
+  if (!req.file?.path) return null;
 
   const type = req.body.type != null ? String(req.body.type).trim() : '';
   const name = req.body.name != null ? String(req.body.name).trim() : '';
@@ -71,12 +99,13 @@ async function payloadFromMultipart(req, userId) {
 
   let uploadedKey = null;
   try {
-    const { key, url } = await uploadFile(
-      req.file.buffer,
-      'users',
+    const originalName =
+      req.file.originalname || (type === 'digital_twin' ? 'training.mp4' : 'avatar.jpg');
+    const { file, uploadedKey: key } = await heygenFileRefFromLocalPath(
+      req.file.path,
       userId,
       'heygen-avatar-uploads',
-      req.file.originalname || (type === 'digital_twin' ? 'training.mp4' : 'avatar.jpg'),
+      originalName,
       mime
     );
     uploadedKey = key;
@@ -84,10 +113,7 @@ async function payloadFromMultipart(req, userId) {
     const payload = {
       type,
       name,
-      file: {
-        type: 'url',
-        url,
-      },
+      file,
     };
 
     const avatar_group_id = req.body.avatar_group_id;
@@ -104,7 +130,87 @@ async function payloadFromMultipart(req, userId) {
       await deleteFile(uploadedKey).catch(() => {});
     }
     throw err;
+  } finally {
+    cleanupHeygenAvatarCreateFile(req.file);
   }
+}
+
+function parseBooleanFormField(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (value === true || value === 'true' || value === '1') return true;
+  if (value === false || value === 'false' || value === '0') return false;
+  return Boolean(value);
+}
+
+async function payloadFromVoiceCloneMultipart(req, userId) {
+  if (!req.file?.path) return null;
+
+  const voice_name = (req.body.voice_name || req.body.voiceName || '').trim();
+  if (!voice_name) {
+    throw new AppError('voice_name or voiceName is required for voice clone', 400);
+  }
+
+  let uploadedKey = null;
+  try {
+    const { key, url } = await uploadLocalFile(
+      req.file.path,
+      'users',
+      userId,
+      'heygen-voice-uploads',
+      req.file.originalname || 'voice-sample.mp3',
+      req.file.mimetype
+    );
+    uploadedKey = key;
+
+    const payload = {
+      voice_name,
+      audio: { type: 'url', url },
+    };
+    const rbn = parseBooleanFormField(
+      req.body.remove_background_noise ?? req.body.removeBackgroundNoise
+    );
+    if (rbn !== undefined) payload.remove_background_noise = rbn;
+    if (req.body.language != null && String(req.body.language).trim() !== '') {
+      payload.language = String(req.body.language).trim();
+    }
+    return payload;
+  } catch (err) {
+    if (uploadedKey) {
+      await deleteFile(uploadedKey).catch(() => {});
+    }
+    throw err;
+  } finally {
+    cleanupHeygenVoiceUploadFile(req.file);
+  }
+}
+
+function assertCloneVoicePayload(body) {
+  const voice_name = (body?.voice_name || body?.voiceName || '').trim();
+  if (!voice_name) {
+    throw new AppError('voice_name or voiceName is required (HeyGen POST /v3/voices/clone)', 400);
+  }
+  if (!body?.audio || typeof body.audio !== 'object' || !body.audio.type) {
+    throw new AppError(
+      'audio is required with type: url | asset_id | base64 (HeyGen POST /v3/voices/clone)',
+      400
+    );
+  }
+  if (body.audio.type === 'base64') {
+    throw new AppError(
+      'Voice clone audio must not use base64. Use multipart POST /api/heygen/voices/clone with field file, or POST /api/heygen/voices/upload then JSON with audio.type url.',
+      400
+    );
+  }
+  return {
+    voice_name,
+    audio: body.audio,
+    ...(body.language != null && String(body.language).trim() !== ''
+      ? { language: String(body.language).trim() }
+      : {}),
+    ...(body.remove_background_noise !== undefined
+      ? { remove_background_noise: Boolean(body.remove_background_noise) }
+      : {}),
+  };
 }
 
 const listAvatarGroups = asyncHandler(async (req, res) => {
@@ -125,16 +231,19 @@ const uploadAvatarFile = asyncHandler(async (req, res) => {
   let uploadedKey = null;
 
   try {
-    const { key, url } = await uploadLocalFile(
+    const { file: heygenFile, uploadedKey: key } = await heygenFileRefFromLocalPath(
       file.path,
-      'users',
       userId,
       'heygen-avatar-uploads',
       file.originalname || 'training.mp4',
       file.mimetype
     );
     uploadedKey = key;
-    return successResponse(req, res, { url }, 200, messages.HEYGEN_AVATAR_FILE_UPLOADED);
+    const data =
+      heygenFile.type === 'asset_id'
+        ? { asset_id: heygenFile.asset_id }
+        : { url: heygenFile.url };
+    return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_FILE_UPLOADED);
   } catch (err) {
     if (uploadedKey) {
       await deleteFile(uploadedKey).catch(() => {});
@@ -244,10 +353,12 @@ const selectVoice = asyncHandler(async (req, res) => {
 
 const cloneVoice = asyncHandler(async (req, res) => {
   const userId = req.user.id;
+  const fromMultipart = await payloadFromVoiceCloneMultipart(req, userId);
+  const cloneBody = fromMultipart ?? assertCloneVoicePayload(req.body);
   await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.VOICE_CLONE);
-  const data = await heygenV3Service.cloneVoice(userId, req.body);
+  const data = await heygenV3Service.cloneVoice(userId, cloneBody);
   const voiceId = data?.voiceId ?? data?.voiceCloneId ?? `clone-${Date.now()}`;
-  const voiceName = req.body?.voice_name || req.body?.voiceName || null;
+  const voiceName = cloneBody.voice_name || null;
   await userCreditBilling.chargeUserFeature({
     userId,
     feature: FEATURE.VOICE_CLONE,

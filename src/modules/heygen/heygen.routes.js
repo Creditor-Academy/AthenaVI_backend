@@ -3,7 +3,7 @@ const { authMiddleware } = require('../../middlewares/auth.middlware');
 const validate = require('../../middlewares/validate.middleware');
 const { heygenCreateAvatarMultipart } = require('../../middlewares/heygenAvatarCreate.middleware');
 const { heygenAvatarFileUpload } = require('../../middlewares/heygenAvatarUpload.middleware');
-const { heygenVoiceFileUpload } = require('../../middlewares/heygenVoiceUpload.middleware');
+const { heygenVoiceFileUpload, heygenVoiceCloneMultipart } = require('../../middlewares/heygenVoiceUpload.middleware');
 const heygenController = require('./heygen.controller');
 const heygenValidation = require('./heygen.validation');
 
@@ -45,7 +45,7 @@ router.post(
 
 router.post(
   '/voices/clone',
-  validate(heygenValidation.cloneVoiceBody),
+  heygenVoiceCloneMultipart,
   heygenController.cloneVoice
 );
 

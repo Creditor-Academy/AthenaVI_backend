@@ -94,11 +94,13 @@ Use this to upload an image or video directly from Postman or the app without ho
 - Form fields: **`type`** (`photo` or **`digital_twin` only**), **`name`** (required).
 - Binary field **`file`** (required): **photo** → `image/jpeg`, `image/png`, or `image/webp`; **digital_twin** → same images or **`video/mp4`** / **`video/webm`**.
 - Optional text fields: **`avatar_group_id`**, **`reference_images`** as a **JSON string** array (same shape as JSON API).
-- Max **32 MB** per file. **`prompt`** avatars — use **JSON** only (no `file`).
+- Max **900 MB** per file. **`prompt`** avatars — use **JSON** only (no `file`).
 
 The server uploads the file to **S3** and forwards HeyGen **`file`: `{ type: "url", url }`** (not base64).
 
-**Digital twin (recommended)** — for training videos over **32 MB**, use **Upload avatar training file** below, then create with JSON and `file.type: "url"`. For voice clone from the same session, use **Upload voice clone audio** and `POST .../voices/clone` with `audio.type: "url"` — do not send base64 in JSON.
+**Do not** send `file.type: "base64"` in JSON — the API returns **400**.
+
+**Digital twin (recommended)** — use **Option B** (multipart `POST /api/heygen/avatars`) or **upload + JSON** below. For voice clone, use **multipart `POST /api/heygen/voices/clone`** or **voices/upload** + JSON — never base64 audio in JSON.
 
 **Response (200)** – `data`: HeyGen creation response. On success, the server persists the new avatar **group id** for the current user (when HeyGen returns it) so it appears under **`ownership=private`** lists (groups and looks).
 
@@ -131,7 +133,11 @@ Stage a photo or training video on S3 and return a **public HTTPS URL** for use 
 **Frontend flow**
 
 1. `POST /api/heygen/avatars/upload` with the training video (`file`).
-2. `POST /api/heygen/avatars` (JSON) with `type: "digital_twin"`, `name`, and `file: { "type": "url", "url": "<url from step 1>" }`.
+2. `POST /api/heygen/avatars` (JSON):
+   - If step 1 returned **`url`**: `file: { "type": "url", "url": "..." }` (files **≤ 32 MB** on HeyGen’s side).
+   - If step 1 returned **`asset_id`**: `file: { "type": "asset_id", "asset_id": "..." }` (files **> 32 MB** — server uploads via HeyGen direct upload).
+
+For files **> 32 MB**, HeyGen does **not** accept `file.type: "url"` even from S3. The API uploads to HeyGen automatically when you pass a large staging URL, or returns `asset_id` from `/avatars/upload` for large files.
 
 Requires **AWS S3** env (`AWS_S3_BUCKET`, `AWS_REGION`, credentials). The bucket (or object prefix) must allow **public read** so HeyGen can fetch the URL.
 
@@ -288,14 +294,23 @@ Maps to HeyGen **`POST /v3/voices/clone`**. Poll **`GET /api/heygen/voices/:voic
 | **Path** | `/api/heygen/voices/clone` |
 | **Auth** | Bearer |
 
-**Request body** (proxied to HeyGen; use snake_case or camelCase for the name field)
+**Option A — Multipart** (`Content-Type: multipart/form-data`) — **preferred for digital twin**
+
+- **`file`** (required): clone audio — `audio/mpeg`, `audio/wav`, `audio/webm`, `video/mp4`, or `video/webm` (max **100 MB**).
+- **`voice_name`** or **`voiceName`** (required).
+- Optional: **`remove_background_noise`** / **`removeBackgroundNoise`**, **`language`**.
+
+The server uploads to S3 and calls HeyGen with `audio.type: "url"`.
+
+**Option B — JSON** (`Content-Type: application/json`)
 
 - `voice_name` or `voiceName`: string, **1–100** chars (required).
 - `audio`: object (required) — HeyGen asset union:
-  - `{ "type": "url", "url": "https://..." }`
+  - `{ "type": "url", "url": "https://..." }` (from **`POST /api/heygen/voices/upload`**)
   - `{ "type": "asset_id", "asset_id": "..." }`
-  - `{ "type": "base64", "media_type": "audio/mpeg", "data": "..." }`
 - Optional: `language`, `remove_background_noise` / `removeBackgroundNoise` (boolean; HeyGen default **true**).
+
+**Do not** send `audio.type: "base64"` — returns **400** (large payloads may hit **413** before the handler runs).
 
 Example:
 
@@ -321,7 +336,7 @@ The clone id is **stored for the current user** (`source: clone`) so it appears 
 
 **Troubleshooting (browser / CreateVoice)**
 
-- **Body size** — Base64 audio grows ~4/3 vs raw bytes. The server uses **`express.json`** with limit **`JSON_BODY_LIMIT`** (default **32mb** in code). If the request never reaches HeyGen, you may see **413** with a hint to raise the limit or use **`url`** / **`asset_id`** instead of base64. For **digital twin**, use **`POST /api/heygen/voices/upload`** then clone with **`audio.type: "url"`**.
+- **Body size** — Do not use base64. Use **multipart `POST /api/heygen/voices/clone`** with field **`file`**, or **`POST /api/heygen/voices/upload`** then JSON with **`audio.type: "url"`**. **413** means the client still sent a large JSON body.
 - **Format** — HeyGen may reject some containers/codecs. **Chrome `MediaRecorder` often outputs WebM**; if clone fails with a HeyGen **400**, try **WAV/MP3** (`audio/wav`, `audio/mpeg`) or upload to HeyGen assets and send **`asset_id`**.
 - **Errors** — When HeyGen rejects the payload, the API usually returns **400** with HeyGen’s message in **`errors`** (not a silent **500**).
 

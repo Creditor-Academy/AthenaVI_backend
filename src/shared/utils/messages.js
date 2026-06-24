@@ -189,6 +189,7 @@ module.exports = {
   HEYGEN_NOT_CONFIGURED: 'HeyGen is not configured (missing HEYGEN_API_KEY)',
   HEYGEN_FORBIDDEN: 'You do not have access to this HeyGen resource',
   HEYGEN_REQUEST_FAILED: 'HeyGen API request failed',
+  HEYGEN_DIRECT_UPLOAD_FAILED: 'HeyGen direct asset upload failed',
   HEYGEN_AVATAR_ENGINE_UNSUPPORTED:
     'This avatar look does not support the requested rendering engine',
   HEYGEN_WEBM_NOT_SUPPORTED_FOR_LOOK:
