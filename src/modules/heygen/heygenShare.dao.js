@@ -76,6 +76,26 @@ async function unshareVoiceFromWorkspace({ workspaceId, voiceId }) {
   });
 }
 
+async function deleteAllAvatarSharesForGroup(avatarGroupId) {
+  if (!avatarGroupId) return;
+  await prisma.heygenWorkspaceShare.deleteMany({
+    where: {
+      resourceType: RESOURCE_TYPES.AVATAR,
+      avatarGroupId,
+    },
+  });
+}
+
+async function deleteAllVoiceSharesForVoice(voiceId) {
+  if (!voiceId) return;
+  await prisma.heygenWorkspaceShare.deleteMany({
+    where: {
+      resourceType: RESOURCE_TYPES.VOICE,
+      voiceId,
+    },
+  });
+}
+
 async function listAvatarSharesForWorkspace(workspaceId) {
   return prisma.heygenWorkspaceShare.findMany({
     where: {
@@ -183,8 +203,10 @@ module.exports = {
   findWorkspaceMember,
   shareAvatarToWorkspace,
   unshareAvatarFromWorkspace,
+  deleteAllAvatarSharesForGroup,
   shareVoiceToWorkspace,
   unshareVoiceFromWorkspace,
+  deleteAllVoiceSharesForVoice,
   listAvatarSharesForWorkspace,
   listVoiceSharesForWorkspace,
   listSharedAvatarGroupIdsForWorkspace,

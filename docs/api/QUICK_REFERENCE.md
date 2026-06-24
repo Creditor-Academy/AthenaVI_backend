@@ -100,6 +100,9 @@
 | POST | `/api/heygen/voices/upload` | Bearer | Upload voice clone audio to S3; returns public `url` (max ~100 MB) |
 | POST | `/api/heygen/avatars` | Bearer | Create HeyGen avatar (records group for private lists) |
 | POST | `/api/heygen/avatars/:groupId/consent` | Bearer | HeyGen avatar consent (own group only; else **403**) |
+| DELETE | `/api/heygen/avatars/:groupId` | Bearer | Delete custom avatar group (+ paired clone voice; optional `voice_id` query) |
+| DELETE | `/api/heygen/avatars/looks/:lookId` | Bearer | Delete one avatar look; last look cascades to group delete |
+| DELETE | `/api/heygen/voices/:voiceId` | Bearer | Delete cloned custom voice only (`source: clone`; else **400**) |
 | GET | `/api/heygen/voices` | Bearer | List HeyGen voices (`type=private` filtered; optional `workspace_id` merges shared) |
 | POST | `/api/heygen/voices` | Bearer | Design voice (suggestions only; does not add to My voices) |
 | POST | `/api/heygen/voices/select` | Bearer | Persist user’s chosen voiceId to My voices |

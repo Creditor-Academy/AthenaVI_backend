@@ -136,6 +136,34 @@ const createAvatarConsentBody = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const deleteAvatarGroupParams = Joi.object({
+  body: Joi.object({}).unknown(false),
+  params: Joi.object({
+    groupId: Joi.string().trim().min(1).required(),
+  }).unknown(false),
+  query: Joi.object({
+    voice_id: Joi.string().trim().allow('', null),
+  }).unknown(false),
+});
+
+const deleteAvatarLookParams = Joi.object({
+  body: Joi.object({}).unknown(false),
+  params: Joi.object({
+    lookId: Joi.string().trim().min(1).required(),
+  }).unknown(false),
+  query: Joi.object({
+    voice_id: Joi.string().trim().allow('', null),
+  }).unknown(false),
+});
+
+const deleteVoiceParams = Joi.object({
+  body: Joi.object({}).unknown(false),
+  params: Joi.object({
+    voiceId: Joi.string().required(),
+  }).unknown(false),
+  query: Joi.object({}).unknown(false),
+});
+
 const previewSpeechBody = Joi.object({
   body: Joi.object({
     text: Joi.string().min(1).max(5000).required(),
@@ -168,6 +196,9 @@ module.exports = {
   selectVoiceBody,
   cloneVoiceBody,
   getVoiceParams,
+  deleteAvatarGroupParams,
+  deleteAvatarLookParams,
+  deleteVoiceParams,
   createAvatarConsentBody,
   previewSpeechBody,
   createAvatarBodySchema,

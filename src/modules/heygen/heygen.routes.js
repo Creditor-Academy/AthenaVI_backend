@@ -35,6 +35,18 @@ router.post(
   heygenController.createAvatarConsent
 );
 
+router.delete(
+  '/avatars/looks/:lookId',
+  validate(heygenValidation.deleteAvatarLookParams),
+  heygenController.deleteAvatarLook
+);
+
+router.delete(
+  '/avatars/:groupId',
+  validate(heygenValidation.deleteAvatarGroupParams),
+  heygenController.deleteAvatarGroup
+);
+
 router.get('/voices', validate(heygenValidation.listVoicesQuery), heygenController.listVoices);
 
 router.post(
@@ -53,6 +65,12 @@ router.get(
   '/voices/:voiceId',
   validate(heygenValidation.getVoiceParams),
   heygenController.getVoice
+);
+
+router.delete(
+  '/voices/:voiceId',
+  validate(heygenValidation.deleteVoiceParams),
+  heygenController.deleteVoice
 );
 
 router.post(

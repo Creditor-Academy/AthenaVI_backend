@@ -18,6 +18,9 @@ The backend uses a single **`HEYGEN_API_KEY`**, so HeyGen’s own “private” 
 | **`GET /api/heygen/avatars/looks?ownership=private`** | Response lists only looks whose avatar group id is **owned by that user**. If **`group_id`** is set together with **`ownership=private`**, the user must own that group or the API returns **403** (`message`: **`HEYGEN_FORBIDDEN`**). |
 | **`GET /api/heygen/voices?type=private`** | Only voices **recorded for the current user** in `heygen_voices`: from **`POST /api/heygen/voices/select`** (after picking a design suggestion) or **`POST /api/heygen/voices/clone`**. Design suggestions alone are **not** stored. |
 | **`POST /api/heygen/avatars/:groupId/consent`** | **403** if `groupId` is not owned by the current user. |
+| **`DELETE /api/heygen/avatars/:groupId`** | **403** if group not owned; optional `voice_id` for paired digital-twin clone. |
+| **`DELETE /api/heygen/avatars/looks/:lookId`** | **403** if parent group not owned. |
+| **`DELETE /api/heygen/voices/:voiceId`** | **403** if not owned; **400** if not a cloned voice (`source: select`). |
 | **`GET /api/heygen/voices/:voiceId`** | **403** only for **another user’s cloned** voice (`source: clone` in `heygen_voices`). Public / selected catalog voices are readable by anyone; **select** can add the same `voiceId` to each user’s My voices separately. |
 | **`ownership=public`**, **`type=public`**, or omitted filters | Unchanged passthrough to HeyGen (no user filtering). |
 
@@ -222,6 +225,68 @@ Returns a consent / onboarding URL for a pending avatar group.
 **Response (200)** – `data`: HeyGen payload.
 
 **403** – **`HEYGEN_FORBIDDEN`** — `:groupId` is not owned by the current user.
+
+---
+
+## Delete avatar group
+
+Permanently deletes a custom avatar group (and all its looks) on HeyGen, plus any **paired custom voice** owned by the user. Does not delete public HeyGen catalog avatars.
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/heygen/avatars/:groupId` |
+| **Auth** | Bearer |
+
+**Query (optional)**
+
+- `voice_id` — comma-separated cloned voice id(s) from the digital twin flow when they differ from HeyGen’s `default_voice_id` on the group.
+
+**Behavior**
+
+1. **403** if `:groupId` is not in `heygen_avatars` for the current user.
+2. Reads HeyGen `GET /v3/avatars/{groupId}` for `default_voice_id`.
+3. Deletes paired voices the user owns (`heygen_voices`) when `source` is `clone` or the id is the group’s `default_voice_id` — via HeyGen `DELETE /v3/voices/{id}` and local cleanup.
+4. Deletes the group on HeyGen (`DELETE /v3/avatars/{groupId}`).
+5. Removes `heygen_avatars` row and all workspace avatar shares for that group.
+
+**Response (200)** – `data` includes `avatarGroupId`, `deletedVoiceIds`, and `heygen` (HeyGen delete payload).
+
+---
+
+## Delete avatar look
+
+Deletes a single custom look (`photo_avatar`, `digital_twin`, kit looks). If it was the **last** look in the group, cascades to **full group delete** (including paired voice cleanup).
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/heygen/avatars/looks/:lookId` |
+| **Auth** | Bearer |
+
+**Query (optional)** – `voice_id` (same as group delete; used when the last look triggers group cascade).
+
+**403** – parent group not owned by the current user.
+
+**Response (200)** – `data` includes `lookId`, `groupId`, `cascadedGroupDelete`, `deletedVoiceIds`, and `heygen`.
+
+---
+
+## Delete custom voice (clone)
+
+Deletes a **cloned** custom voice only (`POST /api/heygen/voices/clone`). Does **not** delete any avatar.
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/heygen/voices/:voiceId` |
+| **Auth** | Bearer |
+
+**403** – voice not in `heygen_voices` for the current user.
+
+**400** – `message`: **`Only cloned custom voices can be deleted`** when `source` is `select` (catalog voice added via `POST /api/heygen/voices/select`).
+
+**Response (200)** – `data`: `{ "voiceId": "...", "deleted": true }`.
 
 ---
 

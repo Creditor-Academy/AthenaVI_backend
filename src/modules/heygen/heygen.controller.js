@@ -320,6 +320,22 @@ const createAvatarConsent = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.HEYGEN_CONSENT_OK);
 });
 
+const deleteAvatarGroup = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const data = await heygenV3Service.deleteAvatarGroup(userId, req.params.groupId, {
+    voiceIds: req.query.voice_id,
+  });
+  return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_DELETED);
+});
+
+const deleteAvatarLook = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const data = await heygenV3Service.deleteAvatarLook(userId, req.params.lookId, {
+    voiceIds: req.query.voice_id,
+  });
+  return successResponse(req, res, data, 200, messages.HEYGEN_AVATAR_LOOK_DELETED);
+});
+
 const listVoices = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const data = await heygenV3Service.listVoices(userId, req.query);
@@ -378,6 +394,12 @@ const getVoice = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DETAIL_OK);
 });
 
+const deleteVoice = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const data = await heygenV3Service.deleteVoice(userId, req.params.voiceId);
+  return successResponse(req, res, data, 200, messages.HEYGEN_VOICE_DELETED);
+});
+
 const previewSpeech = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const payload = {
@@ -417,10 +439,13 @@ module.exports = {
   uploadVoiceFile,
   createAvatar,
   createAvatarConsent,
+  deleteAvatarGroup,
+  deleteAvatarLook,
   listVoices,
   designVoice,
   selectVoice,
   cloneVoice,
   getVoice,
+  deleteVoice,
   previewSpeech,
 };

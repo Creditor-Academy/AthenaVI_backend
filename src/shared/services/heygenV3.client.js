@@ -104,11 +104,25 @@ async function postJson(path, jsonBody) {
   return heygenFetch(path, { method: 'POST', jsonBody });
 }
 
+async function deleteJson(path) {
+  return heygenFetch(path, { method: 'DELETE' });
+}
+
+/** DELETE that treats HTTP 404 as success (idempotent delete). */
+async function deleteJsonSafe(path) {
+  const { res, body } = await heygenFetchRaw(path, { method: 'DELETE' });
+  if (res.status === 404) return body;
+  mapHeyGenStatus(res, body);
+  return body;
+}
+
 module.exports = {
   HEYGEN_BASE,
   getApiKey,
   getJson,
   getJsonSafe,
   postJson,
+  deleteJson,
+  deleteJsonSafe,
   buildQueryString,
 };

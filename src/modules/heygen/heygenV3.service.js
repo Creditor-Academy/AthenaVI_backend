@@ -1,8 +1,9 @@
-const { getJson, getJsonSafe, postJson } = require('../../shared/services/heygenV3.client');
+const { getJson, getJsonSafe, postJson, deleteJson, deleteJsonSafe } = require('../../shared/services/heygenV3.client');
 const { ensureHeygenAssetRef } = require('./heygenAssets.service');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
+const heygenShareDao = require('./heygenShare.dao');
 const heygenAccess = require('./heygenAccess.service');
 const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
 
@@ -813,6 +814,178 @@ async function createAvatarConsent(userId, groupId, body) {
   return postJson(`/v3/avatars/${encodeURIComponent(groupId)}/consent`, body || {});
 }
 
+function parseExplicitVoiceIds(explicitVoiceIds) {
+  if (!explicitVoiceIds) return [];
+  const raw = Array.isArray(explicitVoiceIds) ? explicitVoiceIds.join(',') : String(explicitVoiceIds);
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function assertUserOwnsAvatarGroup(userId, groupId) {
+  const owns = await heygenDao.userOwnsAvatarGroup(userId, groupId);
+  if (!owns) {
+    throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+  }
+}
+
+async function cleanupLocalAvatarGroup(userId, groupId) {
+  await heygenDao.deleteAvatarRecord(userId, groupId);
+  await heygenShareDao.deleteAllAvatarSharesForGroup(groupId);
+}
+
+async function cleanupLocalVoice(userId, voiceId) {
+  await heygenDao.deleteVoiceRecord(userId, voiceId);
+  await heygenShareDao.deleteAllVoiceSharesForVoice(voiceId);
+}
+
+async function deleteVoiceOnHeygenSafe(voiceId) {
+  if (!voiceId) return;
+  await deleteJsonSafe(`/v3/voices/${encodeURIComponent(voiceId)}`);
+}
+
+async function resolvePairedVoiceIdsForGroupDelete(userId, groupId, explicitVoiceIds = []) {
+  let defaultVoiceId = null;
+  try {
+    const raw = await getJson(`/v3/avatars/${encodeURIComponent(groupId)}`);
+    const data = raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw;
+    const dv =
+      data && typeof data === 'object'
+        ? data.default_voice_id ?? data.defaultVoiceId ?? null
+        : null;
+    if (dv != null && String(dv).trim() !== '') {
+      defaultVoiceId = String(dv).trim();
+    }
+  } catch {
+    // Group may already be removed upstream during look-delete cascade.
+  }
+
+  const candidates = new Set(parseExplicitVoiceIds(explicitVoiceIds));
+  if (defaultVoiceId) candidates.add(defaultVoiceId);
+
+  const result = [];
+  for (const id of candidates) {
+    if (!(await heygenDao.userOwnsVoice(userId, id))) continue;
+    const row = await heygenDao.getVoiceRecord(userId, id);
+    if (!row) continue;
+    if (row.source === 'clone' || id === defaultVoiceId) {
+      result.push(id);
+    }
+  }
+  return result;
+}
+
+async function deleteAvatarGroup(userId, groupId, options = {}) {
+  const normalizedGroupId = String(groupId || '').trim();
+  if (!normalizedGroupId) {
+    throw new AppError('groupId is required', 400);
+  }
+  await assertUserOwnsAvatarGroup(userId, normalizedGroupId);
+
+  const explicitVoiceIds = parseExplicitVoiceIds(options.voiceIds);
+  const pairedVoiceIds = await resolvePairedVoiceIdsForGroupDelete(
+    userId,
+    normalizedGroupId,
+    explicitVoiceIds
+  );
+
+  const heygen = await deleteJsonSafe(`/v3/avatars/${encodeURIComponent(normalizedGroupId)}`);
+
+  const deletedVoiceIds = [];
+  for (const voiceId of pairedVoiceIds) {
+    await deleteVoiceOnHeygenSafe(voiceId);
+    await cleanupLocalVoice(userId, voiceId);
+    deletedVoiceIds.push(voiceId);
+  }
+
+  await cleanupLocalAvatarGroup(userId, normalizedGroupId);
+
+  return {
+    avatarGroupId: normalizedGroupId,
+    deletedVoiceIds,
+    heygen,
+  };
+}
+
+function looksListIsEmpty(raw) {
+  if (!raw || typeof raw !== 'object') return true;
+  const data = raw.data !== undefined ? raw.data : raw;
+  const looks = coerceLooksArray(
+    Array.isArray(data) ? data : data && typeof data === 'object' ? data.looks : null
+  );
+  return looks.length === 0;
+}
+
+async function deleteAvatarLook(userId, lookId, options = {}) {
+  const normalizedLookId = String(lookId || '').trim();
+  if (!normalizedLookId) {
+    throw new AppError('lookId is required', 400);
+  }
+
+  const groupId = await heygenAccess.resolveAvatarGroupIdFromLook(normalizedLookId);
+  if (!groupId) {
+    throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+  }
+  await assertUserOwnsAvatarGroup(userId, groupId);
+
+  const heygenLook = await deleteJson(
+    `/v3/avatars/looks/${encodeURIComponent(normalizedLookId)}`
+  );
+
+  let remainingLooks;
+  try {
+    remainingLooks = await getJson('/v3/avatars/looks', { group_id: groupId, limit: 1 });
+  } catch {
+    remainingLooks = null;
+  }
+
+  if (looksListIsEmpty(remainingLooks)) {
+    const cascade = await deleteAvatarGroup(userId, groupId, {
+      voiceIds: options.voiceIds,
+    });
+    return {
+      lookId: normalizedLookId,
+      groupId,
+      cascadedGroupDelete: true,
+      deletedVoiceIds: cascade.deletedVoiceIds,
+      heygen: heygenLook,
+      cascade,
+    };
+  }
+
+  return {
+    lookId: normalizedLookId,
+    groupId,
+    cascadedGroupDelete: false,
+    deletedVoiceIds: [],
+    heygen: heygenLook,
+  };
+}
+
+async function deleteVoice(userId, voiceId) {
+  const normalizedVoiceId = String(voiceId || '').trim();
+  if (!normalizedVoiceId) {
+    throw new AppError('voiceId is required', 400);
+  }
+
+  const row = await heygenDao.getVoiceRecord(userId, normalizedVoiceId);
+  if (!row) {
+    throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
+  }
+  if (row.source !== 'clone') {
+    throw new AppError(messages.HEYGEN_VOICE_DELETE_NOT_CLONE, 400);
+  }
+
+  await deleteVoiceOnHeygenSafe(normalizedVoiceId);
+  await cleanupLocalVoice(userId, normalizedVoiceId);
+
+  return {
+    voiceId: normalizedVoiceId,
+    deleted: true,
+  };
+}
+
 async function listVoices(userId, query) {
   const raw = await getJson('/v3/voices', query);
   if (query?.type !== 'private') return raw;
@@ -1035,6 +1208,9 @@ module.exports = {
   getAvatarLook,
   createAvatar,
   createAvatarConsent,
+  deleteAvatarGroup,
+  deleteAvatarLook,
+  deleteVoice,
   listVoices,
   designVoice,
   cloneVoice,

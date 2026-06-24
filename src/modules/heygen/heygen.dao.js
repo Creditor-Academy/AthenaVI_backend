@@ -139,6 +139,30 @@ async function userOwnsVoice(userId, voiceId) {
   return Boolean(row);
 }
 
+async function deleteAvatarRecord(userId, avatarGroupId) {
+  if (!userId || !avatarGroupId) return;
+  await prisma.heygenAvatar.deleteMany({
+    where: { userId, avatarGroupId },
+  });
+}
+
+async function deleteVoiceRecord(userId, voiceId) {
+  if (!userId || !voiceId) return;
+  await prisma.heygenVoice.deleteMany({
+    where: { userId, voiceId },
+  });
+}
+
+async function getVoiceRecord(userId, voiceId) {
+  if (!userId || !voiceId) return null;
+  return prisma.heygenVoice.findUnique({
+    where: {
+      userId_voiceId: { userId, voiceId: String(voiceId) },
+    },
+    select: { voiceId: true, source: true },
+  });
+}
+
 /** Clone voices are user-specific; block other users from detail when a clone row exists for someone else. */
 async function cloneVoiceOwnedByOtherUser(userId, voiceId) {
   if (!voiceId) return false;
@@ -158,5 +182,8 @@ module.exports = {
   listHeygenVoicesByVoiceIds,
   userOwnsAvatarGroup,
   userOwnsVoice,
+  deleteAvatarRecord,
+  deleteVoiceRecord,
+  getVoiceRecord,
   cloneVoiceOwnedByOtherUser,
 };

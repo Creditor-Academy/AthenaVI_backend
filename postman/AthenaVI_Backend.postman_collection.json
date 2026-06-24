@@ -1422,6 +1422,40 @@
           }
         },
         {
+          "name": "Delete avatar group",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/heygen/avatars/{{groupId}}?voice_id={{voiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "heygen", "avatars", "{{groupId}}"],
+              "query": [
+                { "key": "voice_id", "value": "{{voiceId}}", "description": "Optional paired clone from digital twin flow" }
+              ]
+            },
+            "description": "Deletes custom avatar group on HeyGen and locally. Optional `voice_id` deletes paired cloned voice. **403** if group not owned."
+          }
+        },
+        {
+          "name": "Delete avatar look",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/avatars/looks/{{avatarLookId}}",
+            "description": "Deletes one look. If last look in group, cascades to full group delete (+ paired voice). Uses `avatarLookId` from List avatar looks."
+          }
+        },
+        {
+          "name": "Delete custom voice (clone)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/heygen/voices/{{voiceId}}",
+            "description": "Deletes cloned voice only (`POST .../voices/clone`). **400** for selected catalog voices. **403** if not yours. Does not delete avatar."
+          }
+        },
+        {
           "name": "List voices (public)",
           "event": [
             {
