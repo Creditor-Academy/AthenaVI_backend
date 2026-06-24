@@ -10,6 +10,23 @@ Migrations run on every deploy: `npx prisma migrate deploy` (pre-deploy command)
 
 ---
 
+## Free tier — why Render asks for a card
+
+The blueprint uses **`plan: free`** for the web service. You should **not** need a card for that alone.
+
+If Render still asks for payment details, check:
+
+| Cause | What to do |
+|-------|------------|
+| **Starter / Standard selected** | Change **Instance type** to **Free** (Blueprint → edit service, or manual create flow) |
+| **Paid workspace** | Use **Hobby** workspace, not Professional / Organization |
+| **Existing Redis is paid** | Your Key Value instance may already be on a paid plan — that is separate; the web service can still be Free |
+| **Upgrading during signup** | Skip any “upgrade” prompts; pick Free explicitly |
+
+**Free web service limits:** spins down after ~15 min idle, ~30–60 s cold start on wake-up, 512 MB RAM. Fine for API testing; not ideal for always-on demos.
+
+---
+
 ## What you do in Render (checklist)
 
 ### 1. Push code
@@ -35,7 +52,7 @@ Commit and push `render.yaml` (and the rest of the repo) to GitHub/GitLab/Bitbuc
 6. Build command: `npm install --production=false && npx prisma generate`
 7. **Advanced** → Pre-deploy command: `npx prisma migrate deploy`
 8. Start command: `npm start`
-9. Instance type: **Starter** (recommended for always-on testing)
+9. Instance type: **Free** (no card required for the web service; spins down after ~15 min idle)
 
 ### 3. Set environment variables
 
@@ -171,7 +188,7 @@ flowchart LR
 
 ## Remotion note
 
-Server-side Remotion renders need Chrome and significant memory. On Starter, most routes work; render endpoints may timeout. Scale up or use a dedicated worker if you need renders in staging.
+Server-side Remotion renders need Chrome and significant memory. On the Free plan (512 MB), most API routes work; render endpoints will likely timeout.
 
 ---
 
