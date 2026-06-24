@@ -66,7 +66,7 @@ Copy values from your local `.env.development` unless noted.
 | Variable | Where to get it |
 |----------|-----------------|
 | `DATABASE_URL` | Aiven console → your Postgres service → **Connection information** → URI with `?sslmode=require` |
-| `REDIS_URL` | Render → your **Key Value** instance → **Connect** → **Internal Redis URL** (preferred) or External URL |
+| `REDIS_URL` | Render → your **Key Value** instance → **Connect** → **Internal Redis URL** only (not External) |
 | `JWT_SECRET` | Same as local, or generate a new long random string for staging |
 | `BACKEND_URL` | Set **after** first deploy: `https://<service-name>.onrender.com` (no trailing slash) |
 | `FRONTEND_URL` | Your staging frontend URL (e.g. Vercel/Netlify preview) |
@@ -118,14 +118,17 @@ Aiven blocks unknown IPs by default.
 
 Your app already uses SSL to Aiven (`sslmode=require` in `DATABASE_URL`).
 
-### 5. Redis URL — internal vs external
+### 5. Redis URL — must be internal
 
-Your Key Value instance is on Render **Oregon**. With the web service also in **Oregon**:
+Your Key Value instance blocks **external** clients unless their IP is on the allowlist.  
+If logs show `Client IP address is not in the allowlist`, you pasted the **External** URL.
 
 1. Open the Key Value service → **Connect**
-2. Copy **Internal Redis URL** → paste as `REDIS_URL` on the web service
+2. Copy **Internal Redis URL** (hostname is `red-…`, not `…keyvalue.render.com`)
+3. Set that as `REDIS_URL` on the web service
+4. Web service region must be **Oregon** (same as the Key Value instance)
 
-Use `rediss://` if Render shows TLS (your local config uses `rediss://`).
+Do **not** copy the External URL from `.env.development` — that works from your laptop, not from another Render service without allowlisting.
 
 ### 6. Google OAuth redirect
 
@@ -179,7 +182,8 @@ flowchart LR
 | Symptom | Fix |
 |---------|-----|
 | Pre-deploy / startup: `Can't reach database` | Aiven IP allowlist; check `DATABASE_URL` and `sslmode=require` |
-| `Redis error` / connection refused | Use **Internal** Redis URL; web service region = Oregon |
+| `Redis error` / `not in the allowlist` | `REDIS_URL` must be **Internal Redis URL**, not External |
+| `self-signed certificate in certificate chain` (Postgres) | Fixed in code for Aiven; redeploy after pull. Keep `?sslmode=require` in `DATABASE_URL` — app strips it for the runtime client |
 | CORS errors from browser | Set `FRONTEND_URL` or `CORS_ORIGINS` to exact frontend origin (no trailing slash) |
 | Google login redirect fails | `BACKEND_URL` + Google redirect URI must match Render URL |
 | Cookies / refresh not working | Frontend must use `credentials: 'include'`; API origin must be in CORS list |

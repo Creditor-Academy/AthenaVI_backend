@@ -20,6 +20,18 @@ redisClient.on("error", (err) => {
 });
 
 const connectRedis = async () => {
+  const redisUrl = process.env.REDIS_URL || "";
+  if (
+    redisUrl.includes("keyvalue.render.com") ||
+    redisUrl.includes("oregon-keyvalue.render.com")
+  ) {
+    console.warn(
+      "REDIS_URL looks like an external Render Key Value URL. " +
+        "On Render web services, use the Internal Redis URL from the Key Value Connect tab " +
+        "(ipAllowList blocks external clients).",
+    );
+  }
+
   if (!redisClient.isOpen) {
     await redisClient.connect();
   }
