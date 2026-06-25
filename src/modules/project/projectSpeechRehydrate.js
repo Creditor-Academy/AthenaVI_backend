@@ -1,4 +1,5 @@
 const { generateSpeechRequestHash } = require('../../shared/utils/requestHash');
+const { extractAssetId } = require('../../shared/utils/projectAssetIds');
 
 function getEffectiveSpeechFields(scene, content = {}) {
   const presenter = scene?.presenter && typeof scene.presenter === 'object' ? scene.presenter : {};
@@ -210,7 +211,12 @@ function rehydrateSpeechInProjectData({ workspaceId, projectId, data, speechRows
     const elements = scene.elements.map((element) => {
       const content = element.content && typeof element.content === 'object' ? element.content : {};
       const elementSpeechId = content.speechGenerationId;
-      if (element.type === 'audio' && (elementSpeechId || resolved.speechGenerationId)) {
+      const hasUploadedAsset = Boolean(extractAssetId(content));
+      if (
+        element.type === 'audio' &&
+        (elementSpeechId || resolved.speechGenerationId) &&
+        !(hasUploadedAsset && !elementSpeechId)
+      ) {
         const idToApply =
           elementSpeechId && validIds.has(elementSpeechId)
             ? elementSpeechId

@@ -261,6 +261,85 @@ For narration without a talking-head video, use **`POST .../speech`** ([PROJECT_
 }
 ```
 
+### Audio clip element (uploaded asset)
+
+Use for scene narration or background music uploaded via the workspace assets API. Set `role` to `scene-audio` for the primary scene track.
+
+```json
+{
+  "id": "clip_audio_1719234567890",
+  "type": "audio",
+  "role": "scene-audio",
+  "layer": 0,
+  "startFrame": 0,
+  "durationInFrames": 240,
+  "timing": { "startFrame": 0, "durationInFrames": 240 },
+  "placement": {
+    "x": 0,
+    "y": 0,
+    "width": 100,
+    "height": 100,
+    "rotation": 0,
+    "scale": 1,
+    "opacity": 1
+  },
+  "content": {
+    "assetId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "mediaType": "audio"
+  },
+  "audio": {
+    "volume": 1,
+    "playbackRate": 1,
+    "preservePitch": true,
+    "muted": false,
+    "loop": false,
+    "pan": 0,
+    "fadeIn": { "durationInFrames": 15 },
+    "fadeOut": { "durationInFrames": 30 },
+    "trim": { "startFrame": 0, "endFrame": 900 }
+  },
+  "visible": true,
+  "animations": []
+}
+```
+
+Send playback settings on top-level **`audio`** or **`content.audio`** (server mirrors both on save/GET).
+
+#### Audio properties panel → API fields
+
+| UI panel field | JSON path | Type / values | Export (Remotion) |
+|----------------|-----------|---------------|-------------------|
+| **Volume** | `audio.volume` | number `0`–`1` | Yes |
+| **Mute** | `audio.muted` | boolean | Yes |
+| **Playback speed** | `audio.playbackRate` or `audio.playbackSpeed` | number `0.25`–`4` (`1` = normal) | Yes |
+| **Preserve pitch** | `audio.preservePitch` | boolean | Persisted (browser preview); speed uses `playbackRate` |
+| **Pitch (semitones)** | `audio.pitchSemitones` | number `-24`–`24` | Persisted for preview |
+| **Pitch (multiplier)** | `audio.pitch` | number `0.25`–`4` | Alias; converted to `pitchSemitones` on save |
+| **Fade in** | `audio.fadeIn` | `{ durationInFrames, startFrame? }` | Yes (volume ramp) |
+| **Fade out** | `audio.fadeOut` | `{ durationInFrames, startFrame? }` | Yes (volume ramp) |
+| **Loop** | `audio.loop` | boolean | Yes |
+| **Trim in (source)** | `audio.trim.startFrame` or `audio.trimBefore` / `audio.trimStartFrame` | integer frames | Yes (`trimBefore`) |
+| **Trim out (source)** | `audio.trim.endFrame` or `audio.trimAfter` / `audio.trimEndFrame` | integer frames | Yes (`trimAfter`) |
+| **Pan (L/R)** | `audio.pan` | number `-1` (left) – `1` (right) | Persisted for editor preview |
+| **Reverse** | `audio.reverse` | boolean | Persisted for editor preview |
+| **Normalize** | `audio.normalize` | boolean | Persisted (future export) |
+| **Visible** | `visible` | boolean | Yes (omits clip when `false`) |
+| **Timeline** | `timing` / `startFrame` / `durationInFrames` | frames | Yes |
+
+- **`content.assetId`** — UUID from `POST /api/workspaces/:workspaceId/assets` (MP3 / MPEG).
+- **`content.mediaType`** — `"audio"` for uploaded clips; backend defaults this when `assetId` is set.
+- For **TTS narration** (no upload), use `content.speechGenerationId` from `POST .../speech` instead of `assetId`.
+- **`animations`** with `fade-in` / `fade-out` also drive **volume** on audio elements (alternative to `audio.fadeIn` / `fadeOut`).
+
+**Animations alternative (volume fade):**
+
+```json
+"animations": [
+  { "type": "fade-in", "startFrame": 0, "durationInFrames": 15 },
+  { "type": "fade-out", "startFrame": 210, "durationInFrames": 30 }
+]
+```
+
 ### Text properties panel → API fields
 
 Map your editor **Text Properties** panel to the save payload as follows. Send **both** `content` and `style` on `PATCH .../data` (backend persists both; server merges `style` into `content` for Remotion export).

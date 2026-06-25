@@ -12,6 +12,7 @@ const {
   buildAnimatedStyle,
   resolveAnimatedText,
 } = require('./animations');
+const { resolveAudioPlaybackProps } = require('./audioPlayback');
 const { DELAY_RENDER_TIMEOUT_MS } = require('./renderTimeouts');
 
 function BackgroundLayer({ background }) {
@@ -309,6 +310,27 @@ function resolveMediaObjectFit(element, content = {}) {
   return 'contain';
 }
 
+function AudioElement({ element }) {
+  const frame = useCurrentFrame();
+  const { volume, playbackRate, loop, muted, trimBefore, trimAfter } = resolveAudioPlaybackProps({
+    frame,
+    element,
+  });
+
+  return (
+    <Audio
+      src={element.content?.src}
+      volume={volume}
+      playbackRate={playbackRate}
+      loop={loop}
+      muted={muted}
+      {...(trimBefore != null ? { trimBefore } : {})}
+      {...(trimAfter != null ? { trimAfter } : {})}
+      delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
+    />
+  );
+}
+
 function MediaElement({ element, frame, fps }) {
   const content = element.content || {};
   const containerStyle = {
@@ -352,7 +374,7 @@ function MediaElement({ element, frame, fps }) {
         </div>
       );
     case 'audio':
-      return <Audio src={element.content?.src} delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS} />;
+      return <AudioElement element={element} />;
     default:
       return null;
   }

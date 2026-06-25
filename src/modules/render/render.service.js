@@ -11,6 +11,7 @@ const { toJsonNumber } = require('../../shared/utils/byteSize');
 const projectDao = require('../project/project.dao');
 const renderDao = require('./render.dao');
 const heygenService = require('../video/services/heygen.service');
+const speechService = require('../speech/speech.service');
 const { getPresignedGetUrl, uploadFileToKey } = require('../s3/s3.service');
 const { createSceneHash } = require('./cache/sceneHash');
 const {
@@ -34,6 +35,7 @@ const {
   isHeygenAvatarElement,
   normalizeEditorProjectData,
 } = require('../project/projectEditorNormalize');
+const { getEffectiveSpeechFields } = require('../project/projectSpeechRehydrate');
 const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
 const PRESIGN_TTL_SECONDS = 3600;
@@ -132,6 +134,31 @@ async function resolveElementContent({ workspaceId, projectId, scene, element, a
       src: await getPresignedGetUrl(heygenRow.s3Key, PRESIGN_TTL_SECONDS),
       assetKey: heygenRow.s3Key,
     };
+  }
+
+  if (element.type === 'audio' && !extractAssetId(content)) {
+    const effective = getEffectiveSpeechFields(scene, content);
+    const speechGenerationId = (
+      content.speechGenerationId ||
+      effective.speechGenerationId ||
+      ''
+    )
+      .toString()
+      .trim();
+    if (speechGenerationId) {
+      const speechRow = await speechService.assertSpeechPlayable(
+        workspaceId,
+        projectId,
+        speechGenerationId
+      );
+
+      return {
+        ...content,
+        speechGenerationId,
+        src: await getPresignedGetUrl(speechRow.s3Key, PRESIGN_TTL_SECONDS),
+        assetKey: speechRow.s3Key,
+      };
+    }
   }
 
   const assetId = extractAssetId(content);

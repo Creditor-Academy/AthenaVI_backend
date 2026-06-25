@@ -43,6 +43,20 @@ const TRANSITION_TYPES = [
   'chop',
 ];
 
+/** Known element roles (editor semantics; not exhaustive). */
+const ELEMENT_ROLES = {
+  SCENE_AUDIO: 'scene-audio',
+};
+
+/** `content.mediaType` for uploaded audio clips (workspace assets). */
+const AUDIO_MEDIA_TYPES = ['audio'];
+
+/** Volume fade step on audio elements (`audio.fadeIn` / `audio.fadeOut`). */
+const AUDIO_FADE_KEYS = ['fadeIn', 'fadeOut'];
+
+/** Re-exported from shared audio settings util (see `src/shared/utils/audioSettings.js`). */
+const { AUDIO_SETTINGS_KEYS, AUDIO_PLAYBACK_RATE_MIN, AUDIO_PLAYBACK_RATE_MAX } = require('../utils/audioSettings');
+
 const ANIMATION_TYPES = [
   'fade-in',
   'fade-out',
@@ -83,6 +97,12 @@ const CANVAS_PRESETS = {
 
 module.exports = {
   ELEMENT_TYPES,
+  ELEMENT_ROLES,
+  AUDIO_MEDIA_TYPES,
+  AUDIO_FADE_KEYS,
+  AUDIO_SETTINGS_KEYS,
+  AUDIO_PLAYBACK_RATE_MIN,
+  AUDIO_PLAYBACK_RATE_MAX,
   TRANSITION_TYPES,
   ANIMATION_TYPES,
   PROJECT_STATUSES,

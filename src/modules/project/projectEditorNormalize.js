@@ -4,6 +4,7 @@
  */
 
 const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
+const { mergeAudioSettings } = require('../../shared/utils/audioSettings');
 
 /** Typography keys mirrored in both `style` and `content` for text round-trip. */
 const TEXT_TYPOGRAPHY_KEYS = [
@@ -34,6 +35,34 @@ const TEXT_TYPOGRAPHY_KEYS = [
   'italic',
   'variant',
 ];
+
+function syncAudioSettings(element) {
+  if (element.type !== 'audio') {
+    return element;
+  }
+
+  const content =
+    element.content && typeof element.content === 'object' ? { ...element.content } : {};
+  const topAudio = element.audio && typeof element.audio === 'object' ? { ...element.audio } : {};
+  const contentAudio =
+    content.audio && typeof content.audio === 'object' ? { ...content.audio } : {};
+
+  const merged = mergeAudioSettings(contentAudio, topAudio, content);
+
+  if (!Object.keys(merged).length) {
+    return element;
+  }
+
+  return {
+    ...element,
+    audio: merged,
+    content: {
+      ...content,
+      audio: merged,
+      ...(merged.volume != null ? { volume: merged.volume } : {}),
+    },
+  };
+}
 
 const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 
@@ -255,8 +284,13 @@ function mergeContentForRender(element) {
     }
   }
 
-  if (element.type === 'audio' && element.audio && typeof element.audio === 'object') {
-    content.audio = { ...(content.audio || {}), ...element.audio };
+  if (element.type === 'audio') {
+    if (content.assetId && content.mediaType == null) {
+      content.mediaType = 'audio';
+    }
+    if (element.audio && typeof element.audio === 'object') {
+      content.audio = { ...(content.audio || {}), ...element.audio };
+    }
   }
 
   return content;
@@ -267,7 +301,7 @@ function normalizeElement(element) {
     return element;
   }
 
-  const synced = syncTextTypography(element);
+  const synced = syncAudioSettings(syncTextTypography(element));
   const timing = synced.timing && typeof synced.timing === 'object' ? synced.timing : {};
   const startFrame =
     synced.startFrame != null ? Number(synced.startFrame) : Number(timing.startFrame);
@@ -282,12 +316,18 @@ function normalizeElement(element) {
     startFrame: Number.isFinite(startFrame) ? startFrame : 0,
     durationInFrames:
       Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
+    timing: {
+      ...(synced.timing && typeof synced.timing === 'object' ? synced.timing : {}),
+      startFrame: Number.isFinite(startFrame) ? startFrame : 0,
+      durationInFrames:
+        Number.isFinite(durationInFrames) && durationInFrames >= 1 ? durationInFrames : 1,
+    },
     placement: resolvePlacementWithOpacity(synced),
     content: mergeContentForRender(synced),
     animations: normalizeAnimations(synced.animations),
   };
 
-  return syncTextTypography(withContent);
+  return syncAudioSettings(syncTextTypography(withContent));
 }
 
 function normalizeScene(scene) {
@@ -373,6 +413,7 @@ module.exports = {
   normalizeLayer,
   normalizeAnimations,
   syncTextTypography,
+  syncAudioSettings,
   isHeygenAvatarElement,
   getEffectiveHeygenFields,
   TEXT_TYPOGRAPHY_KEYS,

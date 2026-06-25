@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const {
   ELEMENT_TYPES,
+  AUDIO_MEDIA_TYPES,
   TRANSITION_TYPES,
   ANIMATION_TYPES,
   PROJECT_STATUSES,
@@ -9,6 +10,11 @@ const {
 } = require('../../shared/constants/videoEditor');
 const { avatarEngineField } = require('../../shared/validations/heygenFields');
 const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
+const {
+  AUDIO_PLAYBACK_RATE_MIN,
+  AUDIO_PLAYBACK_RATE_MAX,
+  normalizeAudioSettings,
+} = require('../../shared/utils/audioSettings');
 
 const uuidParam = Joi.string().uuid().required();
 
@@ -107,8 +113,55 @@ const presenterSchema = Joi.object({
 const generationSchema = Joi.object({
   status: Joi.string().allow('', null).optional(),
   heygenVideoId: Joi.alternatives().try(Joi.string().uuid(), Joi.string().trim()).optional(),
+  speechGenerationId: Joi.string().uuid().optional(),
   generatedVideoUrl: Joi.string().allow('', null).optional(),
   thumbnailUrl: Joi.string().allow('', null).optional(),
+}).unknown(true);
+
+const audioFadeStepSchema = Joi.object({
+  durationInFrames: Joi.number().integer().min(0).required(),
+  startFrame: Joi.number().integer().min(0).optional(),
+  easing: Joi.string().trim().optional(),
+}).unknown(true);
+
+const audioTrimSchema = Joi.object({
+  startFrame: Joi.number().integer().min(0).optional(),
+  endFrame: Joi.number().integer().min(0).optional(),
+}).unknown(true);
+
+const audioSettingsSchema = Joi.object({
+  volume: Joi.number().min(0).max(1).optional(),
+  fadeIn: audioFadeStepSchema.optional(),
+  fadeOut: audioFadeStepSchema.optional(),
+  playbackRate: Joi.number().min(AUDIO_PLAYBACK_RATE_MIN).max(AUDIO_PLAYBACK_RATE_MAX).optional(),
+  playbackSpeed: Joi.number().min(AUDIO_PLAYBACK_RATE_MIN).max(AUDIO_PLAYBACK_RATE_MAX).optional(),
+  pitch: Joi.number().min(AUDIO_PLAYBACK_RATE_MIN).max(AUDIO_PLAYBACK_RATE_MAX).optional(),
+  pitchSemitones: Joi.number().min(-24).max(24).optional(),
+  preservePitch: Joi.boolean().optional(),
+  muted: Joi.boolean().optional(),
+  loop: Joi.boolean().optional(),
+  pan: Joi.number().min(-1).max(1).optional(),
+  trim: audioTrimSchema.optional(),
+  trimStartFrame: Joi.number().integer().min(0).optional(),
+  trimEndFrame: Joi.number().integer().min(0).optional(),
+  trimBefore: Joi.number().integer().min(0).optional(),
+  trimAfter: Joi.number().integer().min(0).optional(),
+  reverse: Joi.boolean().optional(),
+  normalize: Joi.boolean().optional(),
+})
+  .unknown(true)
+  .custom((value) => normalizeAudioSettings(value));
+
+const audioContentSchema = Joi.object({
+  assetId: Joi.string().uuid().optional(),
+  mediaType: Joi.string()
+    .valid(...AUDIO_MEDIA_TYPES)
+    .optional(),
+  speechGenerationId: Joi.string().uuid().optional(),
+  voiceId: Joi.string().trim().allow('', null).optional(),
+  script: Joi.string().allow('', null).optional(),
+  volume: Joi.number().min(0).max(1).optional(),
+  audio: audioSettingsSchema.optional(),
 }).unknown(true);
 
 const baseElementSchema = Joi.object({
@@ -142,14 +195,14 @@ const baseElementSchema = Joi.object({
   editable: Joi.boolean().optional(),
   isBackground: Joi.boolean().optional(),
   headingLevel: Joi.alternatives().try(Joi.string(), Joi.number()).optional(),
-  audio: Joi.object().unknown(true).optional(),
+  audio: audioSettingsSchema.optional(),
 })
   .unknown(true)
   .custom((value, helpers) => {
-    const timing = value.timing && typeof value.timing === 'object' ? value.timing : {};
-    const startFrame = value.startFrame != null ? value.startFrame : timing.startFrame;
+    const inputTiming = value.timing && typeof value.timing === 'object' ? value.timing : {};
+    const startFrame = value.startFrame != null ? value.startFrame : inputTiming.startFrame;
     const durationInFrames =
-      value.durationInFrames != null ? value.durationInFrames : timing.durationInFrames;
+      value.durationInFrames != null ? value.durationInFrames : inputTiming.durationInFrames;
 
     if (startFrame == null || durationInFrames == null) {
       return helpers.message(
@@ -174,13 +227,60 @@ const baseElementSchema = Joi.object({
         ? value.animations
         : [];
 
+    let content = value.content && typeof value.content === 'object' ? { ...value.content } : {};
+    let audioSettings =
+      value.audio && typeof value.audio === 'object' ? { ...value.audio } : undefined;
+    if (value.type === 'audio') {
+      const { error: audioContentError, value: coercedAudioContent } = audioContentSchema.validate(
+        content,
+        { abortEarly: false }
+      );
+      if (audioContentError) {
+        return helpers.message(
+          audioContentError.details.map((d) => d.message.replace(/"/g, '')).join('; ')
+        );
+      }
+      content = coercedAudioContent;
+      if (content.assetId && !content.mediaType) {
+        content.mediaType = 'audio';
+      }
+
+      const nestedAudio =
+        content.audio && typeof content.audio === 'object' ? { ...content.audio } : {};
+      const mergedAudio = { ...nestedAudio, ...(audioSettings || {}) };
+      if (content.volume != null && mergedAudio.volume == null) {
+        mergedAudio.volume = content.volume;
+      }
+      if (Object.keys(mergedAudio).length > 0) {
+        const { error: audioSettingsError, value: coercedAudio } = audioSettingsSchema.validate(
+          mergedAudio,
+          { abortEarly: false }
+        );
+        if (audioSettingsError) {
+          return helpers.message(
+            audioSettingsError.details.map((d) => d.message.replace(/"/g, '')).join('; ')
+          );
+        }
+        audioSettings = coercedAudio;
+        content.audio = coercedAudio;
+      }
+    }
+
+    const timing = {
+      ...inputTiming,
+      startFrame,
+      durationInFrames,
+    };
+
     return {
       ...value,
       layer: Number.isFinite(Number(value.layer)) ? Math.trunc(Number(value.layer)) : value.layer,
       startFrame,
       durationInFrames,
+      timing,
       placement: normalizedPlacement,
-      content: value.content && typeof value.content === 'object' ? value.content : {},
+      content,
+      ...(audioSettings ? { audio: audioSettings } : {}),
       animations,
     };
   });
