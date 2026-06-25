@@ -9,6 +9,17 @@ const { getPlatformSuperadminNotificationEmails } = require('../../shared/servic
 const { STORAGE_TIERS, getStorageTierById } = require('../../shared/config/storagePricing');
 const { toBigInt, toJsonNumber } = require('../../shared/utils/byteSize');
 
+function serializeStorageTransaction(transaction) {
+  if (!transaction) {
+    return null;
+  }
+
+  return {
+    ...transaction,
+    amountBytes: toJsonNumber(transaction.amountBytes),
+  };
+}
+
 function serializeStorageUpgradeRequest(record) {
   if (!record) {
     return null;
@@ -96,10 +107,7 @@ async function getUserStorageHistory(userId, page, limit, type) {
   );
 
   return {
-    transactions: result.transactions.map((transaction) => ({
-      ...transaction,
-      amountBytes: toJsonNumber(transaction.amountBytes),
-    })),
+    transactions: result.transactions.map(serializeStorageTransaction),
     pagination: result.pagination,
   };
 }
@@ -166,16 +174,24 @@ async function grantUserStorage({ targetUserId, tierId, additionalBytes, reason,
     reason
   );
 
-  return result;
+  return {
+    user: result.user,
+    transaction: serializeStorageTransaction(result.transaction),
+  };
 }
 
 async function revokeUserStorage({ targetUserId, amountBytes, reason, revokedByUserId }) {
-  return storageLedger.platformRevokeStorage({
+  const result = await storageLedger.platformRevokeStorage({
     targetUserId,
     amountBytes,
     reason,
     revokedByUserId,
   });
+
+  return {
+    user: result.user,
+    transaction: serializeStorageTransaction(result.transaction),
+  };
 }
 
 function assertRequestedBytesMatchGb(requestedAdditionalGb, requestedAdditionalBytes) {
