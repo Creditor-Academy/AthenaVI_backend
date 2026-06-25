@@ -40,6 +40,13 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
 | [docs/SUPERADMIN_FRONTEND_INTEGRATION.md](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal login, capabilities, credit admin |
 
+### Deployment
+
+| Guide | Purpose |
+|-------|---------|
+| [docs/DEVOPS_DEPLOYMENT.md](docs/DEVOPS_DEPLOYMENT.md) | **Production AWS** — ALB + EC2 + Nginx, GoDaddy DNS (`vi.api.lmsathena.com`) |
+| [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md) | Render staging (testing) |
+
 ---
 
 ## Run locally

@@ -233,6 +233,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Environment | [`docs/api/ENVIRONMENT.md`](docs/api/ENVIRONMENT.md) |
 | **Editor / project integration (frontend)** | [`docs/PROJECT_EDITOR_INTEGRATION.md`](docs/PROJECT_EDITOR_INTEGRATION.md) |
 | **Superadmin portal (frontend)** | [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) |
+| **Production deployment (AWS)** | [`docs/DEVOPS_DEPLOYMENT.md`](docs/DEVOPS_DEPLOYMENT.md) |
 
 ---
 
