@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 
 const getWorkspaceCredits = async (workspaceId) => {
   return prisma.workspace.findUnique({
@@ -200,7 +201,11 @@ const listUsersWithCredits = async ({ page, limit, search }) => {
   ]);
 
   return {
-    users,
+    users: users.map((user) => ({
+      ...user,
+      storageLimit: toJsonNumber(user.storageLimit),
+      storageUsed: toJsonNumber(user.storageUsed),
+    })),
     pagination: {
       total,
       page,

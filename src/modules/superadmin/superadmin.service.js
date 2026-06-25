@@ -117,7 +117,7 @@ async function getUserStorageSummary(userId) {
 }
 
 async function getUserStorageHistory(userId, page, limit, type) {
-  return storageDao.listStorageTransactionsByUser(userId, page, limit, type || undefined);
+  return storageService.getUserStorageHistory(userId, page, limit, type);
 }
 
 async function getStorageTiers() {
