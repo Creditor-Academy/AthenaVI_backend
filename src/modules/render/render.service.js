@@ -637,12 +637,13 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
     });
   });
 
-  return render;
+  return serializeProjectRender(render);
 };
 
 const listProjectRenders = async (workspaceId, projectId) => {
   await getProjectOrThrow(workspaceId, projectId);
-  return renderDao.listProjectRenders(workspaceId, projectId);
+  const renders = await renderDao.listProjectRenders(workspaceId, projectId);
+  return renders.map(serializeProjectRender);
 };
 
 const getProjectRender = async (workspaceId, projectId, renderId) => {
@@ -651,7 +652,7 @@ const getProjectRender = async (workspaceId, projectId, renderId) => {
   if (!render) {
     throw new AppError(messages.PROJECT_RENDER_NOT_FOUND, 404);
   }
-  return render;
+  return serializeProjectRender(render);
 };
 
 function sanitizeDownloadFilename(name) {
@@ -691,7 +692,7 @@ const getRenderDownloadUrl = async (workspaceId, projectId, renderId) => {
     }),
     expiresInSeconds: PRESIGN_TTL_SECONDS,
     filename,
-    render,
+    render: serializeProjectRender(render),
   };
 };
 
@@ -717,6 +718,16 @@ async function enrichTriggeredBy(renders) {
     ...item,
     triggeredByUser: item.triggeredBy ? userMap.get(item.triggeredBy) || null : null,
   }));
+}
+
+function serializeProjectRender(render) {
+  if (!render) {
+    return render;
+  }
+  return {
+    ...render,
+    fileSizeBytes: toJsonNumber(render.fileSizeBytes),
+  };
 }
 
 function toVideoListItem(row) {

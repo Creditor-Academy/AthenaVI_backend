@@ -6,7 +6,7 @@ const AppError = require('../../shared/utils/AppError');
 const { collectAssetIds } = require('../../shared/utils/projectAssetIds');
 const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
-const { toJsonNumber } = require('../../shared/utils/byteSize');
+const { toBigInt, toJsonNumber } = require('../../shared/utils/byteSize');
 
 function serializeAsset(asset) {
   if (!asset) {
@@ -118,7 +118,7 @@ const persistWorkspaceAsset = async ({
       const asset = await assetDao.createAsset(tx, {
         workspaceId: workspace.id,
         uploadedBy: userId,
-        size,
+        size: toBigInt(size),
         url,
         key,
         type: contentType,
@@ -183,7 +183,8 @@ const renameAsset = async ({ assetId, workspace, userId, name }) => {
   }
 
   assertCanManageAsset({ workspace, userId, asset });
-  return assetDao.updateAssetName(assetId, name.trim());
+  const updated = await assetDao.updateAssetName(assetId, name.trim());
+  return serializeAsset(updated);
 };
 
 const deleteAsset = async ({ assetId, workspace, userId }) => {

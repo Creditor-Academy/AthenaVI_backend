@@ -60,6 +60,33 @@ function sumPrismaAggregate(value) {
   return toJsonNumber(value ?? 0);
 }
 
+/**
+ * Deep-clone API payloads so Prisma BigInt fields (and nested ones) serialize via JSON.
+ * Dates are left as Date instances; express.json stringifies them to ISO-8601.
+ */
+function jsonSafeDeep(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (typeof value === 'bigint') {
+    return toJsonNumber(value);
+  }
+  if (typeof value !== 'object') {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(jsonSafeDeep);
+  }
+  const out = {};
+  for (const [key, child] of Object.entries(value)) {
+    out[key] = jsonSafeDeep(child);
+  }
+  return out;
+}
+
 module.exports = {
   toBigInt,
   toJsonNumber,
@@ -71,4 +98,5 @@ module.exports = {
   byteLte,
   sumNullableByteFields,
   sumPrismaAggregate,
+  jsonSafeDeep,
 };

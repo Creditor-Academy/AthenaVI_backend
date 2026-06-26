@@ -5,6 +5,7 @@ const { generateHeygenRequestHash } = require('../../../shared/utils/requestHash
 const { uploadFileToKey, getPresignedGetUrl } = require('../../s3/s3.service');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
+const { toJsonNumber } = require('../../../shared/utils/byteSize');
 const { buildHeygenSceneVideoKey } = require('../../../shared/utils/videoStorageKeys');
 const {
   normalizeHeygenOutputFormat,
@@ -564,6 +565,7 @@ function enrichHeygenVideoForClient(record) {
   const playbackUrl = heygenPlaybackUrl(record);
   return {
     ...record,
+    fileSizeBytes: toJsonNumber(record.fileSizeBytes),
     playbackReady: isHeygenVideoPlayable(record),
     playbackUrl,
     s3Ready: Boolean(record.s3Key),
@@ -788,7 +790,7 @@ const getS3ObjectLocationForVideo = async (workspaceId, projectId, id) => {
     key,
     region: String(region).trim(),
     objectArn,
-    heygenVideo: updated,
+    heygenVideo: enrichHeygenVideoForClient(updated),
   };
 };
 

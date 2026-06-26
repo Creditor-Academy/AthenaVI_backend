@@ -6,6 +6,7 @@ const { uploadFileToKey, getPresignedGetUrl } = require('../s3/s3.service');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
+const { toJsonNumber } = require('../../shared/utils/byteSize');
 const { buildSpeechSceneAudioKey } = require('../../shared/utils/videoStorageKeys');
 const projectStorageService = require('../project/projectStorage.service');
 const creditLedger = require('../credit/creditLedger.service');
@@ -58,6 +59,7 @@ function isSpeechPlayable(record) {
 function enrichSpeechGenerationForClient(record) {
   return {
     ...record,
+    fileSizeBytes: toJsonNumber(record.fileSizeBytes),
     playbackReady: isSpeechPlayable(record),
     playbackUrl: null,
     s3Ready: Boolean(record.s3Key),

@@ -1,8 +1,10 @@
+const { jsonSafeDeep } = require('./byteSize');
+
 exports.successResponse = (req, res, data, statusCode, message) => {
   return res.status(statusCode).json({
     success: true,
     message,
-    data,
+    data: jsonSafeDeep(data),
   });
 };
 
