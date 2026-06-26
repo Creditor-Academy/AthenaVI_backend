@@ -87,7 +87,6 @@ pipeline {
                 """
             }
         }
-
     }
 
     post {
@@ -95,17 +94,15 @@ pipeline {
             echo "========================================"
             echo "Backend CI Pipeline Completed Successfully"
             echo "Docker Image Pushed to Amazon ECR"
+            echo "Repository is kept in Jenkins Workspace"
             echo "========================================"
         }
 
         failure {
             echo "========================================"
             echo "Backend CI Pipeline Failed"
+            echo "Repository is available for debugging"
             echo "========================================"
-        }
-
-        always {
-            cleanWs()
         }
     }
 }
