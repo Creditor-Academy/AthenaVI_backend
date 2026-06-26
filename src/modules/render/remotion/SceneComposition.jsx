@@ -19,6 +19,13 @@ const {
   resolveCanvasBackgroundColor,
 } = require('./transparentVideo');
 
+function getElementAnimationContext(element) {
+  return {
+    elementStartFrame: element.startFrame || 0,
+    elementDuration: element.durationInFrames,
+  };
+}
+
 function BackgroundLayer({ background, fallbackColor = '#000000' }) {
   if (!background || background.type === 'color') {
     const value = background?.value;
@@ -58,10 +65,12 @@ function TextLikeElement({ element, frame, fps }) {
   const content = element.content || {};
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const typography = { ...content, ...style };
+  const animationContext = getElementAnimationContext(element);
   const text = resolveAnimatedText({
     frame,
     text: content.text || '',
     animations: element.animations,
+    ...animationContext,
   });
 
   const textDecoration =
@@ -77,6 +86,7 @@ function TextLikeElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...getElementAnimationContext(element),
         }),
         display: 'flex',
         alignItems: 'center',
@@ -120,6 +130,7 @@ function IconElement({ element, frame, fps }) {
   const content = element.content || {};
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const filters = element.filters && typeof element.filters === 'object' ? element.filters : {};
+  const animationContext = getElementAnimationContext(element);
 
   return (
     <div
@@ -129,6 +140,7 @@ function IconElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...animationContext,
         }),
         display: 'flex',
         alignItems: 'center',
@@ -168,6 +180,7 @@ function FrameElement({ element, frame, fps }) {
       fps,
       placement: element.placement,
       animations: element.animations,
+      ...getElementAnimationContext(element),
     }),
     overflow: 'hidden',
     backgroundColor: style.backgroundColor || '#e2e8f0',
@@ -208,6 +221,7 @@ function ShapeElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...getElementAnimationContext(element),
         }),
         backgroundColor: fill == null || fill === '' ? 'transparent' : fill,
         clipPath: style.clipPath,
@@ -340,12 +354,14 @@ function AudioElement({ element }) {
 
 function MediaElement({ element, frame, fps }) {
   const content = element.content || {};
+  const animationContext = getElementAnimationContext(element);
   const containerStyle = {
     ...buildAnimatedStyle({
       frame,
       fps,
       placement: element.placement,
       animations: element.animations,
+      ...animationContext,
     }),
     overflow: 'hidden',
     ...getMediaShapeStyle(content, element.placement),

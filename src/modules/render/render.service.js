@@ -45,7 +45,7 @@ const inboxService = require('../inbox/inbox.service');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
 /** Bump when Remotion compositing changes so scene caches re-render. */
-const SCENE_RENDER_COMPOSITOR_VERSION = 2;
+const SCENE_RENDER_COMPOSITOR_VERSION = 3;
 let remotionBundlePromise = null;
 
 async function getProjectOrThrow(workspaceId, projectId) {

@@ -5,24 +5,14 @@ const {
   AUDIO_PLAYBACK_RATE_MIN,
   AUDIO_PLAYBACK_RATE_MAX,
 } = require('../../../shared/utils/audioSettings');
+const {
+  clamp,
+  coerceAnimationsList,
+  getAnimationProgress,
+  normalizeTimedEffectStartFrame,
+} = require('./animations/timing');
 
-function clamp(value, min = 0, max = 1) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function getAnimationProgress(frame, animation) {
-  const startFrame = Number(animation.startFrame || 0);
-  const durationInFrames = Math.max(Number(animation.durationInFrames || 0), 1);
-  const localFrame = frame - startFrame;
-
-  if (localFrame <= 0) {
-    return 0;
-  }
-
-  return clamp(localFrame / durationInFrames);
-}
-
-function applyFadeIn(volume, frame, fadeIn) {
+function applyFadeIn(volume, frame, fadeIn, elementStartFrame = 0, elementDuration) {
   if (!fadeIn || typeof fadeIn !== 'object') {
     return volume;
   }
@@ -32,12 +22,25 @@ function applyFadeIn(volume, frame, fadeIn) {
     return volume;
   }
 
-  const startFrame = Number(fadeIn.startFrame) || 0;
-  const progress = getAnimationProgress(frame, { startFrame, durationInFrames });
+  const normalizedFade = normalizeTimedEffectStartFrame(
+    fadeIn,
+    elementStartFrame,
+    elementDuration
+  );
+  const progress = getAnimationProgress(
+    frame,
+    {
+      startFrame: normalizedFade.startFrame || 0,
+      durationInFrames,
+      easing: normalizedFade.easing,
+    },
+    elementStartFrame,
+    elementDuration
+  );
   return volume * progress;
 }
 
-function applyFadeOut(volume, frame, fadeOut, durationInFrames) {
+function applyFadeOut(volume, frame, fadeOut, durationInFrames, elementStartFrame = 0) {
   if (!fadeOut || typeof fadeOut !== 'object') {
     return volume;
   }
@@ -47,26 +50,35 @@ function applyFadeOut(volume, frame, fadeOut, durationInFrames) {
     return volume;
   }
 
-  const startFrame =
-    fadeOut.startFrame != null
-      ? Number(fadeOut.startFrame)
-      : Math.max(durationInFrames - fadeDuration, 0);
-  const progress = getAnimationProgress(frame, {
-    startFrame,
-    durationInFrames: fadeDuration,
-  });
+  const normalizedFade = normalizeTimedEffectStartFrame(
+    {
+      ...fadeOut,
+      startFrame:
+        fadeOut.startFrame != null
+          ? fadeOut.startFrame
+          : Math.max(durationInFrames - fadeDuration, 0),
+    },
+    elementStartFrame,
+    durationInFrames
+  );
+  const progress = getAnimationProgress(
+    frame,
+    {
+      startFrame: normalizedFade.startFrame,
+      durationInFrames: fadeDuration,
+      easing: normalizedFade.easing,
+    },
+    elementStartFrame,
+    durationInFrames
+  );
 
   return volume * (1 - progress);
 }
 
-function applyAnimationFades(volume, frame, animations) {
-  if (!Array.isArray(animations)) {
-    return volume;
-  }
-
+function applyAnimationFades(volume, frame, animations, elementStartFrame = 0, elementDuration) {
   let nextVolume = volume;
-  for (const animation of animations) {
-    const progress = getAnimationProgress(frame, animation);
+  for (const animation of coerceAnimationsList(animations)) {
+    const progress = getAnimationProgress(frame, animation, elementStartFrame, elementDuration);
 
     if (animation.type === 'fade-in') {
       nextVolume *= interpolate(progress, [0, 1], [0, 1], {
@@ -88,6 +100,7 @@ function applyAnimationFades(volume, frame, animations) {
 
 function resolveAudioVolume({ frame, element, settings: presetSettings }) {
   const durationInFrames = Math.max(Number(element?.durationInFrames) || 1, 1);
+  const elementStartFrame = Number(element?.startFrame) || 0;
   const settings = presetSettings || normalizeAudioSettings(collectAudioSettings(element));
 
   let volume = settings.volume != null ? Number(settings.volume) : 1;
@@ -96,9 +109,21 @@ function resolveAudioVolume({ frame, element, settings: presetSettings }) {
   }
   volume = clamp(volume, 0, 1);
 
-  volume = applyFadeIn(volume, frame, settings.fadeIn);
-  volume = applyFadeOut(volume, frame, settings.fadeOut, durationInFrames);
-  volume = applyAnimationFades(volume, frame, element?.animations);
+  volume = applyFadeIn(volume, frame, settings.fadeIn, elementStartFrame, durationInFrames);
+  volume = applyFadeOut(
+    volume,
+    frame,
+    settings.fadeOut,
+    durationInFrames,
+    elementStartFrame
+  );
+  volume = applyAnimationFades(
+    volume,
+    frame,
+    element?.animations,
+    elementStartFrame,
+    durationInFrames
+  );
 
   return clamp(volume, 0, 1);
 }

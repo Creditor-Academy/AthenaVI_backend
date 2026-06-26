@@ -1,22 +1,18 @@
 const { interpolate, spring } = require('remotion');
+const {
+  coerceAnimationsList,
+  getAnimationProgress,
+  resolveAnimationStartFrame,
+} = require('./timing');
 
-function clamp(value, min = 0, max = 1) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function getAnimationProgress(frame, animation) {
-  const startFrame = Number(animation.startFrame || 0);
-  const durationInFrames = Math.max(Number(animation.durationInFrames || 0), 1);
-  const localFrame = frame - startFrame;
-
-  if (localFrame <= 0) {
-    return 0;
-  }
-
-  return clamp(localFrame / durationInFrames);
-}
-
-function buildAnimatedStyle({ frame, fps, placement, animations = [] }) {
+function buildAnimatedStyle({
+  frame,
+  fps,
+  placement,
+  animations = [],
+  elementStartFrame = 0,
+  elementDuration,
+}) {
   const baseScale = placement.scale ?? 1;
   const baseRotation = placement.rotation ?? 0;
   const baseOpacity = placement.opacity ?? 1;
@@ -27,8 +23,15 @@ function buildAnimatedStyle({ frame, fps, placement, animations = [] }) {
   let scale = baseScale;
   let rotation = baseRotation;
 
-  for (const animation of animations) {
-    const progress = getAnimationProgress(frame, animation);
+  const duration =
+    elementDuration != null
+      ? elementDuration
+      : Number.isFinite(Number(placement?.durationInFrames))
+        ? Number(placement.durationInFrames)
+        : undefined;
+
+  for (const animation of coerceAnimationsList(animations)) {
+    const progress = getAnimationProgress(frame, animation, elementStartFrame, duration);
     const distance = Number(animation.distance ?? 80);
     const degrees = Number(animation.degrees ?? 20);
 
@@ -106,9 +109,14 @@ function buildAnimatedStyle({ frame, fps, placement, animations = [] }) {
         });
         break;
       case 'bounce': {
+        const bounceStart = resolveAnimationStartFrame(
+          animation,
+          elementStartFrame,
+          duration
+        );
         const value = spring({
           fps,
-          frame: Math.max(frame - Number(animation.startFrame || 0), 0),
+          frame: Math.max(frame - bounceStart, 0),
           config: {
             damping: 10,
             stiffness: 120,
@@ -141,14 +149,22 @@ function buildAnimatedStyle({ frame, fps, placement, animations = [] }) {
   };
 }
 
-function resolveAnimatedText({ frame, text, animations = [] }) {
-  const typewriter = animations.find((animation) => animation.type === 'typewriter');
+function resolveAnimatedText({
+  frame,
+  text,
+  animations = [],
+  elementStartFrame = 0,
+  elementDuration,
+}) {
+  const typewriter = coerceAnimationsList(animations).find(
+    (animation) => animation.type === 'typewriter'
+  );
 
   if (!typewriter || typeof text !== 'string') {
     return text;
   }
 
-  const progress = getAnimationProgress(frame, typewriter);
+  const progress = getAnimationProgress(frame, typewriter, elementStartFrame, elementDuration);
   const visibleChars = Math.max(Math.floor(text.length * progress), 0);
   return text.slice(0, visibleChars);
 }

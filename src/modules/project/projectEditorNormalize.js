@@ -5,6 +5,7 @@
 
 const { normalizeTransitionPayload } = require('../../shared/utils/projectTransition');
 const { mergeAudioSettings } = require('../../shared/utils/audioSettings');
+const { coerceAnimationsList } = require('../../shared/utils/animationTiming');
 
 /** Typography keys mirrored in both `style` and `content` for text round-trip. */
 const TEXT_TYPOGRAPHY_KEYS = [
@@ -195,9 +196,7 @@ function normalizeLayer(layer) {
 }
 
 function normalizeAnimations(animations) {
-  if (Array.isArray(animations)) return animations;
-  if (animations && typeof animations === 'object') return animations;
-  return [];
+  return coerceAnimationsList(animations);
 }
 
 function normalizeTransition(transition) {
