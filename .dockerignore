@@ -10,3 +10,9 @@ coverage
 logs
 combined.log
 error.log
+docs
+postman
+graphify-out
+.cursor
+*.md
+Jenkinsfile
