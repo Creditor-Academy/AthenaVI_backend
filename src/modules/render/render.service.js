@@ -35,11 +35,17 @@ const {
   isHeygenAvatarElement,
   normalizeEditorProjectData,
 } = require('../project/projectEditorNormalize');
+const {
+  heygenOutputContentType,
+  resolveHeygenOutputFormatFromRecord,
+} = require('../../shared/utils/heygenVideoFormat');
 const { getEffectiveSpeechFields } = require('../project/projectSpeechRehydrate');
 const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
+/** Bump when Remotion compositing changes so scene caches re-render. */
+const SCENE_RENDER_COMPOSITOR_VERSION = 3;
 let remotionBundlePromise = null;
 
 async function getProjectOrThrow(workspaceId, projectId) {
@@ -86,9 +92,20 @@ async function resolveAssetSource(asset) {
   };
 }
 
-async function resolveBackground(background, assetLookup) {
+async function resolveBackground(background, assetLookup, videoSettings = {}) {
+  const fallbackColor =
+    videoSettings.backgroundColor && videoSettings.backgroundColor !== 'transparent'
+      ? videoSettings.backgroundColor
+      : '#000000';
+
   if (!background || background.type === 'color') {
-    return background || { type: 'color', value: '#000000' };
+    if (!background) {
+      return { type: 'color', value: fallbackColor };
+    }
+    if (!background.value || background.value === 'transparent') {
+      return { type: 'color', value: fallbackColor };
+    }
+    return background;
   }
 
   const assetId = extractAssetId(background);
@@ -127,12 +144,16 @@ async function resolveElementContent({ workspaceId, projectId, scene, element, a
       projectId,
       heygenVideoId
     );
+    const outputFormat = resolveHeygenOutputFormatFromRecord(heygenRow);
 
     return {
       ...content,
       heygenVideoId,
       src: await getPresignedGetUrl(heygenRow.s3Key, PRESIGN_TTL_SECONDS),
       assetKey: heygenRow.s3Key,
+      outputFormat,
+      hasAlpha: outputFormat === 'webm',
+      mimeType: heygenOutputContentType(outputFormat),
     };
   }
 
@@ -192,10 +213,17 @@ async function resolveElementContent({ workspaceId, projectId, scene, element, a
     }
   }
 
+  if (element.type === 'audio') {
+    const src = typeof content.src === 'string' ? content.src.trim() : '';
+    if (!src || !/^https?:\/\//i.test(src)) {
+      throw new AppError(messages.PROJECT_AUDIO_SOURCE_REQUIRED, 409);
+    }
+  }
+
   return content;
 }
 
-async function buildSceneManifest({ workspaceId, projectId, scene, assetLookup }) {
+async function buildSceneManifest({ workspaceId, projectId, scene, assetLookup, videoSettings }) {
   const resolvedElements = [];
   for (const element of scene.elements || []) {
     resolvedElements.push({
@@ -212,7 +240,7 @@ async function buildSceneManifest({ workspaceId, projectId, scene, assetLookup }
 
   return {
     ...scene,
-    background: await resolveBackground(scene.background, assetLookup),
+    background: await resolveBackground(scene.background, assetLookup, videoSettings),
     elements: resolvedElements,
   };
 }
@@ -232,8 +260,10 @@ async function resolveProjectManifest(project) {
       projectId: project.id,
       scene,
       assetLookup,
+      videoSettings: data.videoSettings,
     });
     const sceneHash = createSceneHash({
+      compositorVersion: SCENE_RENDER_COMPOSITOR_VERSION,
       videoSettings: data.videoSettings,
       scene: manifest,
     });
@@ -351,7 +381,6 @@ async function renderSceneCaches({
         transition: scene.transition || null,
       },
     });
-    await projectStorageService.recalculateProjectStorage(project.id);
 
     sceneCacheEntries.push({
       sceneId: scene.sceneId,
@@ -637,12 +666,13 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
     });
   });
 
-  return render;
+  return serializeProjectRender(render);
 };
 
 const listProjectRenders = async (workspaceId, projectId) => {
   await getProjectOrThrow(workspaceId, projectId);
-  return renderDao.listProjectRenders(workspaceId, projectId);
+  const renders = await renderDao.listProjectRenders(workspaceId, projectId);
+  return renders.map(serializeProjectRender);
 };
 
 const getProjectRender = async (workspaceId, projectId, renderId) => {
@@ -651,7 +681,7 @@ const getProjectRender = async (workspaceId, projectId, renderId) => {
   if (!render) {
     throw new AppError(messages.PROJECT_RENDER_NOT_FOUND, 404);
   }
-  return render;
+  return serializeProjectRender(render);
 };
 
 function sanitizeDownloadFilename(name) {
@@ -691,7 +721,7 @@ const getRenderDownloadUrl = async (workspaceId, projectId, renderId) => {
     }),
     expiresInSeconds: PRESIGN_TTL_SECONDS,
     filename,
-    render,
+    render: serializeProjectRender(render),
   };
 };
 
@@ -717,6 +747,16 @@ async function enrichTriggeredBy(renders) {
     ...item,
     triggeredByUser: item.triggeredBy ? userMap.get(item.triggeredBy) || null : null,
   }));
+}
+
+function serializeProjectRender(render) {
+  if (!render) {
+    return render;
+  }
+  return {
+    ...render,
+    fileSizeBytes: toJsonNumber(render.fileSizeBytes),
+  };
 }
 
 function toVideoListItem(row) {

@@ -1,5 +1,6 @@
 const { successResponse } = require('../../shared/utils/apiResponse');
 const asyncHandler = require('../../shared/utils/asyncHandler');
+const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const assetService = require('./asset.service');
 
@@ -7,6 +8,10 @@ const uploadAsset = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const file = req.file;
   const workspace = req.workspace;
+
+  if (!file) {
+    throw new AppError(messages.INVALID_FILE_TYPE, 400);
+  }
 
   const asset = await assetService.uploadAsset({
     userId,

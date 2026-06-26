@@ -1,0 +1,27 @@
+# Production compose for EC2 (/opt/athena-vi). Image tag is set at deploy time.
+# Nginx on the host proxies to 127.0.0.1:9000 — do not expose 9000 publicly.
+
+name: athena-vi
+
+services:
+  api:
+    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+    container_name: athena-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - '127.0.0.1:9000:9000'
+    shm_size: '1gb'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:9000/',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

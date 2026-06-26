@@ -137,10 +137,14 @@ function buildCreateProjectEditorState({
 }
 
 function estimateProjectDuration(projectState) {
-  return (projectState.scenes || []).reduce(
+  const total = (projectState.scenes || []).reduce(
     (sum, scene) => sum + Number(scene.durationInFrames || 0),
     0
   );
+  if (!Number.isFinite(total) || total < 0) {
+    return 0;
+  }
+  return Math.trunc(total);
 }
 
 async function assertFolderInWorkspace(folderId, workspaceId) {
@@ -317,6 +321,9 @@ const saveProjectData = async (workspaceId, projectId, userId, data) => {
   });
   await projectStorageService.recalculateProjectStorage(projectId);
   const refreshed = await projectDao.findProjectById(workspaceId, projectId);
+  if (!refreshed) {
+    throw new AppError(messages.PROJECT_NOT_FOUND, 404);
+  }
   return enrichProject(refreshed);
 };
 

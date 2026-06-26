@@ -7,6 +7,9 @@ const USER_FIELD_MAP = [
 ];
 
 function baseProjectFields(project) {
+  if (!project) {
+    return null;
+  }
   return {
     id: project.id,
     name: project.name,
@@ -43,6 +46,9 @@ async function enrichProjects(projects, { includeData = false } = {}) {
 }
 
 async function enrichProject(project, { includeData = true } = {}) {
+  if (!project) {
+    return null;
+  }
   const [enriched] = await enrichProjects([project], { includeData });
   return enriched;
 }

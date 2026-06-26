@@ -14,10 +14,24 @@ const {
 } = require('./animations');
 const { resolveAudioPlaybackProps } = require('./audioPlayback');
 const { DELAY_RENDER_TIMEOUT_MS } = require('./renderTimeouts');
+const {
+  isTransparentVideoSource,
+  resolveCanvasBackgroundColor,
+} = require('./transparentVideo');
 
-function BackgroundLayer({ background }) {
+function getElementAnimationContext(element) {
+  return {
+    elementStartFrame: element.startFrame || 0,
+    elementDuration: element.durationInFrames,
+  };
+}
+
+function BackgroundLayer({ background, fallbackColor = '#000000' }) {
   if (!background || background.type === 'color') {
-    return <AbsoluteFill style={{ backgroundColor: background?.value || '#000000' }} />;
+    const value = background?.value;
+    const resolvedColor =
+      value && value !== 'transparent' ? value : fallbackColor;
+    return <AbsoluteFill style={{ backgroundColor: resolvedColor }} />;
   }
 
   if ((background.type === 'image' || background.type === 'asset-image') && background.src) {
@@ -44,17 +58,19 @@ function BackgroundLayer({ background }) {
     );
   }
 
-  return <AbsoluteFill style={{ backgroundColor: '#000000' }} />;
+  return <AbsoluteFill style={{ backgroundColor: fallbackColor }} />;
 }
 
 function TextLikeElement({ element, frame, fps }) {
   const content = element.content || {};
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const typography = { ...content, ...style };
+  const animationContext = getElementAnimationContext(element);
   const text = resolveAnimatedText({
     frame,
     text: content.text || '',
     animations: element.animations,
+    ...animationContext,
   });
 
   const textDecoration =
@@ -70,6 +86,7 @@ function TextLikeElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...getElementAnimationContext(element),
         }),
         display: 'flex',
         alignItems: 'center',
@@ -113,6 +130,7 @@ function IconElement({ element, frame, fps }) {
   const content = element.content || {};
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const filters = element.filters && typeof element.filters === 'object' ? element.filters : {};
+  const animationContext = getElementAnimationContext(element);
 
   return (
     <div
@@ -122,6 +140,7 @@ function IconElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...animationContext,
         }),
         display: 'flex',
         alignItems: 'center',
@@ -161,6 +180,7 @@ function FrameElement({ element, frame, fps }) {
       fps,
       placement: element.placement,
       animations: element.animations,
+      ...getElementAnimationContext(element),
     }),
     overflow: 'hidden',
     backgroundColor: style.backgroundColor || '#e2e8f0',
@@ -201,6 +221,7 @@ function ShapeElement({ element, frame, fps }) {
           fps,
           placement: element.placement,
           animations: element.animations,
+          ...getElementAnimationContext(element),
         }),
         backgroundColor: fill == null || fill === '' ? 'transparent' : fill,
         clipPath: style.clipPath,
@@ -333,12 +354,14 @@ function AudioElement({ element }) {
 
 function MediaElement({ element, frame, fps }) {
   const content = element.content || {};
+  const animationContext = getElementAnimationContext(element);
   const containerStyle = {
     ...buildAnimatedStyle({
       frame,
       fps,
       placement: element.placement,
       animations: element.animations,
+      ...animationContext,
     }),
     overflow: 'hidden',
     ...getMediaShapeStyle(content, element.placement),
@@ -358,6 +381,7 @@ function MediaElement({ element, frame, fps }) {
         <div style={containerStyle}>
           <OffthreadVideo
             src={element.content?.src}
+            transparent={isTransparentVideoSource(content)}
             delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
             style={mediaStyle}
           />
@@ -403,10 +427,12 @@ function SceneElement({ element }) {
   return <MediaElement element={element} frame={frame} fps={fps} />;
 }
 
-function SceneComposition({ scene }) {
+function SceneComposition({ scene, videoSettings = {} }) {
+  const canvasColor = resolveCanvasBackgroundColor(videoSettings, scene.background);
+
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
-      <BackgroundLayer background={scene.background} />
+    <AbsoluteFill style={{ backgroundColor: canvasColor, overflow: 'hidden' }}>
+      <BackgroundLayer background={scene.background} fallbackColor={canvasColor} />
       {(scene.elements || [])
         .slice()
         .sort((a, b) => a.layer - b.layer)
