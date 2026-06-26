@@ -192,6 +192,13 @@ async function resolveElementContent({ workspaceId, projectId, scene, element, a
     }
   }
 
+  if (element.type === 'audio') {
+    const src = typeof content.src === 'string' ? content.src.trim() : '';
+    if (!src || !/^https?:\/\//i.test(src)) {
+      throw new AppError(messages.PROJECT_AUDIO_SOURCE_REQUIRED, 409);
+    }
+  }
+
   return content;
 }
 
@@ -351,7 +358,6 @@ async function renderSceneCaches({
         transition: scene.transition || null,
       },
     });
-    await projectStorageService.recalculateProjectStorage(project.id);
 
     sceneCacheEntries.push({
       sceneId: scene.sceneId,

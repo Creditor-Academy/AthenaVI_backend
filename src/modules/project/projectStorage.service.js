@@ -19,27 +19,27 @@ function computeJsonSizeBytes(data) {
 }
 
 function sumFileSizeBytes(rows) {
-  return toJsonNumber(sumNullableByteFields(rows, 'fileSizeBytes'));
+  return sumNullableByteFields(rows, 'fileSizeBytes');
 }
 
 async function sumReferencedAssetBytes(workspaceId, projectData) {
   const assetIds = collectAssetIds(projectData);
   if (!assetIds.length) {
-    return 0;
+    return 0n;
   }
 
   const assets = await projectDao.findAssetsByIds(workspaceId, assetIds);
-  return toJsonNumber(assets.reduce((sum, asset) => sum + toBigInt(asset.size), 0n));
+  return assets.reduce((sum, asset) => sum + toBigInt(asset.size), 0n);
 }
 
 async function computeProjectStorageBytes(project) {
-  const jsonBytes = computeJsonSizeBytes(project.data);
+  const jsonBytes = toBigInt(computeJsonSizeBytes(project.data));
   const assetBytes = await sumReferencedAssetBytes(project.workspaceId, project.data);
   const heygenBytes = sumFileSizeBytes(project.heygenResponses);
   const renderBytes = sumFileSizeBytes(project.projectRenders);
   const cacheBytes = sumFileSizeBytes(project.sceneRenderCaches);
 
-  return jsonBytes + assetBytes + heygenBytes + renderBytes + cacheBytes;
+  return toJsonNumber(jsonBytes + assetBytes + heygenBytes + renderBytes + cacheBytes);
 }
 
 async function recalculateProjectStorage(projectId) {
