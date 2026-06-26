@@ -8,11 +8,6 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
-    tools {
-        // Jenkins Tool Name
-        hudson.plugins.sonar.SonarRunnerInstallation 'SonarScanner'
-    }
-
     stages {
 
         stage('Checkout Source') {
@@ -35,14 +30,18 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv('Sonarqube') {
-                    sh """
-                    sonar-scanner \
-                    -Dsonar.projectKey=AthenaVI-Backend \
-                    -Dsonar.projectName=AthenaVI-Backend \
-                    -Dsonar.sources=src \
-                    -Dsonar.sourceEncoding=UTF-8
-                    """
+                script {
+                    def scannerHome = tool 'SonarScanner'
+
+                    withSonarQubeEnv('Sonarqube') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=AthenaVI-Backend \
+                        -Dsonar.projectName=AthenaVI-Backend \
+                        -Dsonar.sources=src \
+                        -Dsonar.sourceEncoding=UTF-8
+                        """
+                    }
                 }
             }
         }
@@ -50,8 +49,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                docker build \
-                -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
+                docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
                 """
             }
         }
@@ -89,20 +87,25 @@ pipeline {
                 """
             }
         }
+
     }
 
     post {
         success {
-            echo "======================================="
-            echo "Backend Pipeline Completed Successfully"
-            echo "Docker Image pushed to Amazon ECR"
-            echo "======================================="
+            echo "========================================"
+            echo "Backend CI Pipeline Completed Successfully"
+            echo "Docker Image Pushed to Amazon ECR"
+            echo "========================================"
         }
 
         failure {
-            echo "======================================="
-            echo "Pipeline Failed"
-            echo "======================================="
+            echo "========================================"
+            echo "Backend CI Pipeline Failed"
+            echo "========================================"
+        }
+
+        always {
+            cleanWs()
         }
     }
 }
