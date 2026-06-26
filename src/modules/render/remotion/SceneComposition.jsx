@@ -14,10 +14,17 @@ const {
 } = require('./animations');
 const { resolveAudioPlaybackProps } = require('./audioPlayback');
 const { DELAY_RENDER_TIMEOUT_MS } = require('./renderTimeouts');
+const {
+  isTransparentVideoSource,
+  resolveCanvasBackgroundColor,
+} = require('./transparentVideo');
 
-function BackgroundLayer({ background }) {
+function BackgroundLayer({ background, fallbackColor = '#000000' }) {
   if (!background || background.type === 'color') {
-    return <AbsoluteFill style={{ backgroundColor: background?.value || '#000000' }} />;
+    const value = background?.value;
+    const resolvedColor =
+      value && value !== 'transparent' ? value : fallbackColor;
+    return <AbsoluteFill style={{ backgroundColor: resolvedColor }} />;
   }
 
   if ((background.type === 'image' || background.type === 'asset-image') && background.src) {
@@ -44,7 +51,7 @@ function BackgroundLayer({ background }) {
     );
   }
 
-  return <AbsoluteFill style={{ backgroundColor: '#000000' }} />;
+  return <AbsoluteFill style={{ backgroundColor: fallbackColor }} />;
 }
 
 function TextLikeElement({ element, frame, fps }) {
@@ -358,6 +365,7 @@ function MediaElement({ element, frame, fps }) {
         <div style={containerStyle}>
           <OffthreadVideo
             src={element.content?.src}
+            transparent={isTransparentVideoSource(content)}
             delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
             style={mediaStyle}
           />
@@ -403,10 +411,12 @@ function SceneElement({ element }) {
   return <MediaElement element={element} frame={frame} fps={fps} />;
 }
 
-function SceneComposition({ scene }) {
+function SceneComposition({ scene, videoSettings = {} }) {
+  const canvasColor = resolveCanvasBackgroundColor(videoSettings, scene.background);
+
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
-      <BackgroundLayer background={scene.background} />
+    <AbsoluteFill style={{ backgroundColor: canvasColor, overflow: 'hidden' }}>
+      <BackgroundLayer background={scene.background} fallbackColor={canvasColor} />
       {(scene.elements || [])
         .slice()
         .sort((a, b) => a.layer - b.layer)
