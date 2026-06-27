@@ -6,7 +6,6 @@ COPY package*.json ./
 
 # Copy Prisma schema BEFORE npm ci
 COPY prisma ./prisma
-
 COPY prisma.config.ts ./
 
 RUN npm ci
@@ -20,7 +19,7 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Remotion / Chromium system libraries (see https://www.remotion.dev/docs/docker)
+# Install required system libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
     libdbus-1-3 \
@@ -38,19 +37,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcups2 \
     fontconfig \
     ffmpeg \
-  && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app .
 
+# Remove development dependencies and keep Prisma CLI
 RUN npm prune --omit=dev \
-  && npm install --no-save prisma@^7.2.0 \
-  && npx remotion browser ensure
+ && npm install --no-save prisma@^7.2.0
 
 ENV NODE_ENV=production
 
 EXPOSE 9000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:9000/',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
+CMD node -e "require('http').get('http://127.0.0.1:9000/',(r)=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"
 
 CMD ["node", "src/server.js"]
