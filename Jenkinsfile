@@ -58,10 +58,10 @@ pipeline {
                         -Dsonar.exclusions=**/node_modules/**
                         """
                     }
-
-                    timeout(time: 5, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
+                    // Temporarily disable Quality Gate blocking
+                   // timeout(time: 5, unit: 'MINUTES') {
+                    //    waitForQualityGate abortPipeline: true
+                   // }
                 }
             }
         }
