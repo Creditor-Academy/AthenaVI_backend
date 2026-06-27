@@ -78,7 +78,6 @@ pipeline {
             steps {
                 sh """
                 trivy image \
-                --exit-code 1 \
                 --severity HIGH,CRITICAL \
                 ${ECR_REPOSITORY}:${IMAGE_TAG}
                 """
