@@ -4,7 +4,7 @@ const updateUserProfileValidation = Joi.object({
   body: Joi.object({
     name: Joi.string().min(2).max(100),
     phoneNumber: Joi.string()
-      .pattern(/^\+?[0-9()\-]* ?[0-9()\-]*$/)
+      .pattern(/^\+?[0-9()-]* ?[0-9()-]*$/)
       .min(8)
       .max(20)
       .messages({
