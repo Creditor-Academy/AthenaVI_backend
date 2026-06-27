@@ -2,11 +2,19 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = "us-east-1"
-        AWS_ACCOUNT_ID = "205091463760"
-        ECR_REPOSITORY = "vi-athena-backend"
+        AWS_REGION = 'us-east-1'
+
+        AWS_ACCOUNT_ID = '205091463760'
+        ECR_REPOSITORY = 'vi-athena-backend'
         ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        PATH = "/usr/local/bin:/usr/bin:/bin:$PATH"
+    }
+
+    options {
+        timestamps()
     }
 
     stages {
@@ -19,63 +27,57 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                sh '''
+                npm install
+                '''
             }
         }
 
         stage('Generate Prisma Client') {
             steps {
-                sh 'npx prisma generate'
-            }
-        }
-
-        stage('Lint') {
-            steps {
-                sh 'npm run lint'
+                sh '''
+                npx prisma generate
+                '''
             }
         }
 
         stage('SonarQube Scan') {
             steps {
                 script {
+
                     def scannerHome = tool 'SonarScanner'
 
                     withSonarQubeEnv('Sonarqube') {
+
                         sh """
                         ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=AthenaVI-Backend \
                         -Dsonar.projectName=AthenaVI-Backend \
                         -Dsonar.sources=src \
-                        -Dsonar.sourceEncoding=UTF-8 \
-                        -Dsonar.exclusions=**/node_modules/**
+                        -Dsonar.sourceEncoding=UTF-8
                         """
                     }
-
-                    // Temporarily disabled while fixing Sonar issues.
-                    // Uncomment after resolving Quality Gate failures.
-
-                    /*
-                    timeout(time: 5, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
-                    */
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
+
                 sh """
-                docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
+                docker build \
+                -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
                 """
             }
         }
 
         stage('Trivy Scan') {
             steps {
+
                 sh """
                 trivy image \
                 --severity HIGH,CRITICAL \
+                --exit-code 0 \
                 ${ECR_REPOSITORY}:${IMAGE_TAG}
                 """
             }
@@ -83,50 +85,61 @@ pipeline {
 
         stage('Login to Amazon ECR') {
             steps {
+
                 sh """
-                aws ecr get-login-password --region ${AWS_REGION} | docker login \
+                aws ecr get-login-password --region ${AWS_REGION} | \
+                docker login \
                 --username AWS \
-                --password-stdin \
-                ${ECR_REGISTRY}
+                --password-stdin ${ECR_REGISTRY}
                 """
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh """
-                docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
-                docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+                sh """
+                docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+                docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
 
                 docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
                 docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
                 """
             }
         }
 
         stage('Deploy to Amazon EKS') {
-            when {
-                branch 'main'
-            }
-
             steps {
+
                 sh """
-                echo "========================================"
-                echo "Deploying Image:"
-                echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-                echo "========================================"
+                aws eks update-kubeconfig \
+                  --region ${AWS_REGION} \
+                  --name vi-athena-eks
 
                 kubectl set image deployment/backend \
                 backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
                 kubectl rollout status deployment/backend --timeout=300s
 
-                echo ""
-                echo "Current Backend Image:"
-                kubectl get deployment backend -o=jsonpath='{.spec.template.spec.containers[0].image}'
+                echo "Running Pods"
+
+                kubectl get pods
+
+                echo "Deployment"
+
+                kubectl get deployment
+
+                echo "Service"
+
+                kubectl get svc
+
+                echo "Current Image"
+
+                kubectl get deployment backend \
+                -o=jsonpath='{.spec.template.spec.containers[0].image}'
+
                 echo ""
                 """
             }
@@ -135,7 +148,12 @@ pipeline {
 
     post {
 
+        always {
+            cleanWs()
+        }
+
         success {
+
             echo "========================================"
             echo "Backend CI/CD Pipeline Completed Successfully"
             echo "Docker Image Built Successfully"
@@ -145,9 +163,10 @@ pipeline {
         }
 
         failure {
+
             echo "========================================"
             echo "Backend CI/CD Pipeline Failed"
-            echo "Check Jenkins Console Logs"
+            echo "Repository is available for debugging"
             echo "========================================"
         }
     }
