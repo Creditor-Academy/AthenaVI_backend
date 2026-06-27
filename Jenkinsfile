@@ -1,7 +1,3 @@
-// CD (Deploy stage): set Jenkins job env APP_HOST (EC2 hostname/IP).
-// Add SSH credential id "ec2-deploy-ssh" in Jenkins (private key for DEPLOY_USER).
-// On EC2: /opt/athena-vi/.env.production must exist (from Secrets Manager / SSM).
-
 pipeline {
     agent any
 
@@ -11,10 +7,6 @@ pipeline {
         ECR_REPOSITORY = "vi-athena-backend"
         ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        DEPLOY_DIR = "/opt/athena-vi"
-        DEPLOY_USER = "deploy-user"
-        APP_HOST = "${env.APP_HOST ?: ''}"
-        HEALTH_CHECK_URL = "https://vi.api.lmsathena.com/"
     }
 
     stages {
@@ -58,10 +50,15 @@ pipeline {
                         -Dsonar.exclusions=**/node_modules/**
                         """
                     }
-                    // Temporarily disable Quality Gate blocking
-                   // timeout(time: 5, unit: 'MINUTES') {
-                    //    waitForQualityGate abortPipeline: true
-                   // }
+
+                    // Temporarily disabled while fixing Sonar issues.
+                    // Uncomment after resolving Quality Gate failures.
+
+                    /*
+                    timeout(time: 5, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
+                    */
                 }
             }
         }
@@ -104,11 +101,8 @@ pipeline {
                 docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} \
                 ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
 
-                docker push \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-
-                docker push \
-                ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+                docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+                docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
                 """
             }
         }
@@ -120,17 +114,27 @@ pipeline {
 
             steps {
                 sh """
+                echo "========================================"
+                echo "Deploying Image:"
+                echo "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+                echo "========================================"
+
                 kubectl set image deployment/backend \
-                backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${BUILD_NUMBER}
+                backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
                 kubectl rollout status deployment/backend --timeout=300s
+
+                echo ""
+                echo "Current Backend Image:"
+                kubectl get deployment backend -o=jsonpath='{.spec.template.spec.containers[0].image}'
+                echo ""
                 """
             }
         }
-
     }
 
     post {
+
         success {
             echo "========================================"
             echo "Backend CI/CD Pipeline Completed Successfully"
@@ -143,7 +147,7 @@ pipeline {
         failure {
             echo "========================================"
             echo "Backend CI/CD Pipeline Failed"
-            echo "Repository is available for debugging"
+            echo "Check Jenkins Console Logs"
             echo "========================================"
         }
     }
