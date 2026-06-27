@@ -10,7 +10,7 @@ pipeline {
         AWS_ACCOUNT_ID = "205091463760"
         ECR_REPOSITORY = "vi-athena-backend"
         ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         DEPLOY_DIR = "/opt/athena-vi"
         DEPLOY_USER = "deploy-user"
         APP_HOST = "${env.APP_HOST ?: ''}"
@@ -121,7 +121,7 @@ pipeline {
             steps {
                 sh """
                 kubectl set image deployment/backend \
-                backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+                backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${BUILD_NUMBER}
 
                 kubectl rollout status deployment/backend --timeout=300s
                 """
