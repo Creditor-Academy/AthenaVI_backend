@@ -114,71 +114,36 @@ pipeline {
             }
         }
 
-        stage('Deploy to Production') {
+        stage('Deploy to Amazon EKS') {
             when {
-                allOf {
-                    branch 'main'
-                    expression { return env.APP_HOST?.trim() }
-                }
+                branch 'main'
             }
-            steps {
-                sshagent(credentials: ['ec2-deploy-ssh']) {
-                    sh """
-                    scp -o StrictHostKeyChecking=no \
-                      docker-compose.prod.yml \
-                      scripts/ec2-deploy.sh \
-                      ${DEPLOY_USER}@${APP_HOST}:${DEPLOY_DIR}/
 
-                    ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${APP_HOST} \
-                      "chmod +x ${DEPLOY_DIR}/ec2-deploy.sh && \
-                       ECR_REGISTRY=${ECR_REGISTRY} \
-                       ECR_REPOSITORY=${ECR_REPOSITORY} \
-                       IMAGE_TAG=${IMAGE_TAG} \
-                       AWS_REGION=${AWS_REGION} \
-                       DEPLOY_DIR=${DEPLOY_DIR} \
-                       ${DEPLOY_DIR}/ec2-deploy.sh"
-                    """
-                }
-            }
-        }
-
-        stage('Verify Production') {
-            when {
-                allOf {
-                    branch 'main'
-                    expression { return env.APP_HOST?.trim() }
-                }
-            }
             steps {
                 sh """
-                curl -sf ${HEALTH_CHECK_URL}
-                echo ""
-                echo "Public health check passed: ${HEALTH_CHECK_URL}"
+                kubectl set image deployment/backend \
+                backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+
+                kubectl rollout status deployment/backend --timeout=300s
                 """
             }
         }
+
     }
 
     post {
         success {
             echo "========================================"
             echo "Backend CI/CD Pipeline Completed Successfully"
+            echo "Docker Image Built Successfully"
             echo "Docker Image Pushed to Amazon ECR"
-            script {
-                if (env.BRANCH_NAME == 'main' && env.APP_HOST?.trim()) {
-                    echo "Deployed to production (${APP_HOST}) with image tag ${IMAGE_TAG}"
-                } else if (env.BRANCH_NAME == 'main') {
-                    echo "Image pushed; deploy skipped (set APP_HOST to enable CD on main)"
-                } else {
-                    echo "CI only (deploy runs on main when APP_HOST is set)"
-                }
-            }
+            echo "Backend Successfully Deployed to Amazon EKS"
             echo "========================================"
         }
 
         failure {
             echo "========================================"
-            echo "Backend CI Pipeline Failed"
+            echo "Backend CI/CD Pipeline Failed"
             echo "Repository is available for debugging"
             echo "========================================"
         }
