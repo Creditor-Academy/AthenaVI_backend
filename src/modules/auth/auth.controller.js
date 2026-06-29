@@ -156,10 +156,17 @@ const googleCallback = asyncHandler(async (req, res) => {
       userAgent: req.headers['user-agent'],
       ip: getClientIp(req),
     });
-  } catch (err) {
-    const error = err.message || 'oauth_failed';
-    return res.redirect(302, `${errorRedirect}?error=${encodeURIComponent(error)}`);
-  }
+ } catch (err) {
+  console.error("========== GOOGLE OAUTH ERROR ==========");
+  console.error(err);
+  console.error(err.stack);
+
+  const error = err.message || "oauth_failed";
+  return res.redirect(
+    302,
+    `${errorRedirect}?error=${encodeURIComponent(error)}`
+  );
+}
 
   const { accessToken, rawRefreshToken, user, portal, isPlatformSuperadmin } = result;
   setRefreshCookie(res, rawRefreshToken);
