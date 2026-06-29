@@ -28,6 +28,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
+                set -e
                 npm install
                 '''
             }
@@ -36,6 +37,7 @@ pipeline {
         stage('Generate Prisma Client') {
             steps {
                 sh '''
+                set -e
                 npx prisma generate
                 '''
             }
@@ -50,6 +52,8 @@ pipeline {
                     withSonarQubeEnv('Sonarqube') {
 
                         sh """
+                        set -e
+
                         ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=AthenaVI-Backend \
                         -Dsonar.projectName=AthenaVI-Backend \
@@ -63,8 +67,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-
                 sh """
+                set -e
+
                 docker build \
                 -t ${ECR_REPOSITORY}:${IMAGE_TAG} .
                 """
@@ -73,8 +78,9 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-
                 sh """
+                set -e
+
                 trivy image \
                 --severity HIGH,CRITICAL \
                 --exit-code 0 \
@@ -85,8 +91,9 @@ pipeline {
 
         stage('Login to Amazon ECR') {
             steps {
-
                 sh """
+                set -e
+
                 aws ecr get-login-password --region ${AWS_REGION} | \
                 docker login \
                 --username AWS \
@@ -97,8 +104,9 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-
                 sh """
+                set -e
+
                 docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
                 docker tag ${ECR_REPOSITORY}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
@@ -110,10 +118,23 @@ pipeline {
             }
         }
 
+        stage('Run Prisma Migrations') {
+            steps {
+                sh """
+                set -e
+
+                export DATABASE_URL='postgresql://postgres:Viathena12345678!@vi-athena-postgres.cudsmc82cvxc.us-east-1.rds.amazonaws.com:5432/viathena?sslmode=require'
+
+                npx prisma migrate deploy
+                """
+            }
+        }
+
         stage('Deploy to Amazon EKS') {
             steps {
-
                 sh """
+                set -e
+
                 aws eks update-kubeconfig \
                   --region ${AWS_REGION} \
                   --name vi-athena-eks
@@ -121,27 +142,35 @@ pipeline {
                 kubectl set image deployment/backend \
                 backend=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
 
-                kubectl rollout status deployment/backend --timeout=300s
+                if ! kubectl rollout status deployment/backend --timeout=300s; then
+                    echo "Deployment failed. Rolling back..."
+                    kubectl rollout undo deployment/backend
+                    exit 1
+                fi
 
-                echo "Running Pods"
-
+                echo ""
+                echo "========== Running Pods =========="
                 kubectl get pods
 
-                echo "Deployment"
-
+                echo ""
+                echo "========== Deployments =========="
                 kubectl get deployment
 
-                echo "Service"
-
+                echo ""
+                echo "========== Services =========="
                 kubectl get svc
 
-                echo "Current Image"
+                echo ""
+                echo "========== Rollout History =========="
+                kubectl rollout history deployment/backend
 
+                echo ""
+                echo "========== Current Image =========="
                 kubectl get deployment backend \
                 -o=jsonpath='{.spec.template.spec.containers[0].image}'
 
                 echo ""
-                """
+            """
             }
         }
     }
@@ -158,6 +187,7 @@ pipeline {
             echo "Backend CI/CD Pipeline Completed Successfully"
             echo "Docker Image Built Successfully"
             echo "Docker Image Pushed to Amazon ECR"
+            echo "Prisma Migrations Applied Successfully"
             echo "Backend Successfully Deployed to Amazon EKS"
             echo "========================================"
         }
@@ -166,7 +196,7 @@ pipeline {
 
             echo "========================================"
             echo "Backend CI/CD Pipeline Failed"
-            echo "Repository is available for debugging"
+            echo "Deployment Rolled Back (if rollout failed)"
             echo "========================================"
         }
     }
