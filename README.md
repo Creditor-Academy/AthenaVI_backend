@@ -73,4 +73,4 @@ Default port: **9000** (`http://localhost:9000/api`).
 
 ---
 
-**Canonical API source of truth:** [docs/api/](docs/api/) (formerly a single monolithic README).
+**Canonical API source of truth:** [docs/api/](docs/api/) (formerly a single monolithic README)
