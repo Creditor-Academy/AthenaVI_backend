@@ -15,6 +15,7 @@
 | GET | `/api/auth/google` | No | Start Google OAuth |
 | GET | `/api/auth/superadmin/google` | No | Start Google OAuth (superadmin portal) |
 | GET | `/api/auth/google/callback` | No | Google redirect (OAuth) |
+| POST | `/api/early-access/request` | No | Submit early access request (rate limited) |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | GET | `/api/user/storage` | Bearer | My storage quota summary (+ active pending upgrade request) |

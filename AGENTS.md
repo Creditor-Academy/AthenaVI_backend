@@ -219,6 +219,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Index (start here) | [`docs/api/README.md`](docs/api/README.md) |
 | Base URL, envelopes, auth | [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md) |
 | Auth API | [`docs/api/AUTH_API.md`](docs/api/AUTH_API.md) |
+| Early Access API | [`docs/api/EARLY_ACCESS_API.md`](docs/api/EARLY_ACCESS_API.md) |
 | User API | [`docs/api/USER_API.md`](docs/api/USER_API.md) |
 | User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |

@@ -15,6 +15,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | Doc | Base path | Topics |
 |-----|-----------|--------|
 | [AUTH_API.md](AUTH_API.md) | `/api/auth` | OTP, register, login, refresh, logout, password reset, Google OAuth |
+| [EARLY_ACCESS_API.md](EARLY_ACCESS_API.md) | `/api/early-access` | Public early access interest form |
 | [USER_API.md](USER_API.md) | `/api/user` | Profile, capabilities, profile image |
 | [STORAGE_API.md](STORAGE_API.md) | `/api/user/storage` | Storage quota, history, workspace footprint |
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |

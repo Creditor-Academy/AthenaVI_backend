@@ -134,6 +134,12 @@ module.exports = {
   STORAGE_UPGRADE_REQUEST_NOT_FOUND: 'Storage upgrade request not found',
   STORAGE_UPGRADE_REQUEST_NOT_PENDING: 'Storage upgrade request is not pending',
   STORAGE_UPGRADE_REQUEST_REJECTED: 'Storage upgrade request rejected',
+  EARLY_ACCESS_RECEIVED:
+    "Your early access request has been received. We'll be in touch within 1-3 business days.",
+  EARLY_ACCESS_DUPLICATE: 'An early access request with this email already exists.',
+  EARLY_ACCESS_RATE_LIMITED: 'Too many requests. Please try again later.',
+  EARLY_ACCESS_VALIDATION: 'Name and email are required.',
+  EARLY_ACCESS_INTERNAL_ERROR: 'Something went wrong. Please try again.',
   STORAGE_TIERS_FETCHED: 'Storage tiers fetched successfully',
   WORKSPACES_FETCHED: 'Workspaces fetched successfully',
   PLATFORM_ACCESS_UPDATED: 'Platform superadmin access updated',

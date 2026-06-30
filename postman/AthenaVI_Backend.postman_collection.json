@@ -41,6 +41,24 @@
       ]
     },
     {
+      "name": "Early Access",
+      "item": [
+        {
+          "name": "Submit early access request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@company.com\",\n  \"company\": \"Acme Corp\",\n  \"role\": \"L&D Manager\",\n  \"useCase\": \"Corporate Training\",\n  \"message\": \"We want to use Athena VI for employee onboarding at scale.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/early-access/request"
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

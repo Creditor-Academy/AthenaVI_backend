@@ -620,6 +620,34 @@ async function notifyPlatformStorageUpgradeRequest({
   });
 }
 
+async function notifyPlatformEarlyAccessRequest({
+  requestId,
+  name,
+  email,
+  company,
+  role,
+  useCase,
+}) {
+  const { listPlatformSuperadminUserIds } = require('../../shared/services/platformSuperadmin.service');
+  const adminUserIds = await listPlatformSuperadminUserIds();
+
+  return notifyMany(adminUserIds, {
+    type: 'PLATFORM_EARLY_ACCESS_REQUEST',
+    referenceId: `early_access_${requestId}`,
+    title: 'Early access request',
+    message: `${name} (${email}) requested early access.`,
+    metadata: {
+      requestId,
+      name,
+      email,
+      company: company || null,
+      role: role || null,
+      useCase: useCase || null,
+      scope: 'platform',
+    },
+  });
+}
+
 async function notifyStorageUpgradeRejected({ userId, requestedAdditionalGb, reviewNote }) {
   return notifyUser({
     userId,
@@ -819,6 +847,7 @@ module.exports = {
   notifyPlatformHeygenWalletLow,
   clearPlatformHeygenWalletLow,
   notifyPlatformStorageUpgradeRequest,
+  notifyPlatformEarlyAccessRequest,
   notifyStorageUpgradeRejected,
   notifyCreditsWorkspaceRevoke,
   notifyProjectComment,
