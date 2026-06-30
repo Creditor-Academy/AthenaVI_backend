@@ -55,6 +55,11 @@
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |
 | DELETE | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Delete project and related assets |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | List project comments |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | Create comment |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/comments/:commentId` | Bearer + member | Update own comment |
+| DELETE | `/api/workspaces/:workspaceId/projects/:projectId/comments/:commentId` | Bearer + member | Delete comment |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/comments/mentionable-users` | Bearer + member | Mention autocomplete |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | Start Remotion render |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | List project renders |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` | Bearer + member | Get render status/details |
@@ -94,6 +99,7 @@
 | GET | `/api/superadmin/reports/credits/platform-actions` | Bearer + platform superadmin | Platform grant/revoke audit |
 | GET | `/api/superadmin/heygen/account` | Bearer + platform superadmin | HeyGen API wallet |
 | GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary |
+| POST | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast (`productEmails` opt-in) |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

@@ -22,6 +22,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Login, register, OTP, OAuth | [docs/api/AUTH_API.md](docs/api/AUTH_API.md) |
 | User profile & capabilities | [docs/api/USER_API.md](docs/api/USER_API.md) |
 | Inbox notifications | [docs/api/USER_INBOX_API.md](docs/api/USER_INBOX_API.md) |
+| Project comments | [docs/api/PROJECT_COMMENTS_API.md](docs/api/PROJECT_COMMENTS_API.md) |
 | Settings & account security | [docs/api/USER_SETTINGS_API.md](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [docs/api/WORKSPACE_API.md](docs/api/WORKSPACE_API.md) |
 | Assets | [docs/api/ASSETS_API.md](docs/api/ASSETS_API.md) |
@@ -38,6 +39,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
+| [docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md](docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md) | Notifications settings, inbox bell, project comments |
 | [docs/SUPERADMIN_FRONTEND_INTEGRATION.md](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal login, capabilities, credit admin |
 
 ### Deployment

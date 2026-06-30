@@ -15,6 +15,7 @@ const prisma = require("./shared/config/prismaClient");
 const logger = require('./shared/utils/logger');
 const { startAccountDeletionJob } = require('./shared/jobs/accountDeletion.job');
 const { startPlatformAlertsJob } = require('./shared/jobs/platformAlerts.job');
+const { startWeeklyDigestJob } = require('./shared/jobs/weeklyDigest.job');
 
 const PORT = process.env.PORT || 9000;
 
@@ -40,6 +41,7 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startAccountDeletionJob();
   startPlatformAlertsJob();
+  startWeeklyDigestJob();
 });
 
 const shutdown = async (signal) => {

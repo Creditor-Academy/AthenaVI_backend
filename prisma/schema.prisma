@@ -59,6 +59,8 @@ enum InboxNotificationType {
   PLATFORM_HEYGEN_WALLET_LOW
   PLATFORM_STORAGE_UPGRADE_REQUEST
   CREDITS_WORKSPACE_REVOKE
+  PROJECT_COMMENT_ADDED
+  PROJECT_COMMENT_MENTION
 }
 
 enum StorageUpgradeRequestStatus {
@@ -105,6 +107,7 @@ model User {
   settings UserSettings?
   inboxNotifications UserInboxNotification[]
   storageUpgradeRequests StorageUpgradeRequest[]
+  projectComments ProjectComment[] @relation("ProjectCommentAuthor")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -126,6 +129,7 @@ model UserSettings {
   storageAlerts                Boolean @default(true) @map("storage_alerts")
   workspaceTeamAlerts          Boolean @default(true) @map("workspace_team_alerts")
   platformAdminAlerts          Boolean @default(true) @map("platform_admin_alerts")
+  lastWeeklyDigestSentAt       DateTime? @map("last_weekly_digest_sent_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -157,6 +161,7 @@ model Workspace {
   projectRenders     ProjectRender[]
   sceneRenderCaches  SceneRenderCache[]
   heygenWorkspaceShares HeygenWorkspaceShare[]
+  projectComments    ProjectComment[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -403,8 +408,29 @@ model Project {
   speechGenerations  SpeechGeneration[]
   projectRenders     ProjectRender[]
   sceneRenderCaches  SceneRenderCache[]
+  comments           ProjectComment[]
 
   @@index([updatedBy])
+}
+
+model ProjectComment {
+  id               String    @id @default(uuid())
+  workspaceId      String    @map("workspace_id")
+  projectId        String    @map("project_id")
+  authorId         String    @map("author_id")
+  body             String
+  mentionedUserIds String[]  @map("mentioned_user_ids")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author    User      @relation("ProjectCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([workspaceId])
+  @@map("project_comments")
 }
 
 model Asset {

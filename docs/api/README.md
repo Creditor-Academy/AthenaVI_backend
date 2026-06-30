@@ -20,6 +20,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |
 | [USER_SETTINGS_API.md](USER_SETTINGS_API.md) | `/api/user/settings` | Appearance, notifications, security, account deletion |
 | [WORKSPACE_API.md](WORKSPACE_API.md) | `/api/workspaces` | Workspaces, members, invitations, folders, projects, Remotion renders |
+| [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |
 | [STOCK_API.md](STOCK_API.md) | `/api/stock` | Stock library search (Pexels, Unsplash, Pixabay) and import |
 | [CREDITS_API.md](CREDITS_API.md) | `/api/credits` | Balances, history, estimates, TEAM allocation |
@@ -35,6 +36,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
 | [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |
+| [NOTIFICATIONS_FRONTEND_INTEGRATION.md](../NOTIFICATIONS_FRONTEND_INTEGRATION.md) | Notifications settings, inbox, comments |
 | [SUPERADMIN_FRONTEND_INTEGRATION.md](../SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal, capabilities toggle, credit + storage admin UI |
 
 ## Agent / repo handbook

@@ -135,4 +135,10 @@ router.get('/heygen/account', superadminController.getHeygenAccount);
 
 router.get('/alerts/summary', superadminController.getAlertsSummary);
 
+router.post(
+  '/broadcasts/product-email',
+  validate(superadminValidation.productEmailBroadcastBodySchema),
+  superadminController.sendProductEmailBroadcast
+);
+
 module.exports = router;

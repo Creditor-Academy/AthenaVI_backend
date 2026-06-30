@@ -134,6 +134,41 @@ Platform alerts (`PLATFORM_HEYGEN_WALLET_LOW`, `PLATFORM_STORAGE_UPGRADE_REQUEST
 
 ---
 
+### Product email broadcast
+
+```http
+POST /api/superadmin/broadcasts/product-email
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+**Request body**
+
+```json
+{
+  "subject": "New feature: …",
+  "html": "<p>…</p>",
+  "text": "optional plain text",
+  "confirm": "send"
+}
+```
+
+Sends to all users with **`productEmails: true`** in notification settings. Requires `confirm` exactly `"send"`.
+
+**200** – `data`:
+
+```json
+{
+  "recipientCount": 42,
+  "sentCount": 40,
+  "failedCount": 2
+}
+```
+
+Email-only channel (no inbox notification). See [`SUPERADMIN_FRONTEND_INTEGRATION.md`](../SUPERADMIN_FRONTEND_INTEGRATION.md).
+
+---
+
 ### HeyGen API wallet (platform COGS)
 
 Proxies HeyGen **`GET /v3/users/me`** using server **`HEYGEN_API_KEY`**.

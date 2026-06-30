@@ -654,6 +654,7 @@ async function superadminFetch(path, options = {}) {
 - [ ] Storage upgrade queue: `GET /api/superadmin/storage/requests`; reject via POST
 - [ ] Workspace list before drilling into pool by `workspaceId`
 - [ ] Usage report uses extended `byFeature` / `topUsers` fields when building dashboards
+- [ ] Product email broadcast: `POST /api/superadmin/broadcasts/product-email` with `confirm: "send"`
 - [ ] “Back to platform” is client-side navigation only
 
 ### General

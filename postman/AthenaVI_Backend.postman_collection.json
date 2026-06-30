@@ -17,6 +17,7 @@
     { "key": "avatarLookId", "value": "replace-with-heygen-look-id" },
     { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" },
     { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
+    { "key": "commentId", "value": "00000000-0000-4000-8000-000000000013" },
     { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
     { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" },
     { "key": "avatarEngine", "value": "avatar_iv" },
@@ -843,6 +844,73 @@
                 "method": "GET",
                 "header": [],
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}/stream"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comments",
+          "description": "Project-scoped comments with @mentions. See docs/api/PROJECT_COMMENTS_API.md",
+          "item": [
+            {
+              "name": "List comments",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments"
+              }
+            },
+            {
+              "name": "Mentionable users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments/mentionable-users?q="
+              }
+            },
+            {
+              "name": "Create comment",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const j = pm.response.json();",
+                      "const id = j.data && j.data.comment && j.data.comment.id;",
+                      "if (id) { pm.collectionVariables.set('commentId', id); }"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"Looks great — please review the intro.\",\n  \"mentionedUserIds\": []\n}"
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments"
+              }
+            },
+            {
+              "name": "Update comment",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"body\": \"Updated comment text.\",\n  \"mentionedUserIds\": []\n}"
+                },
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments/{{commentId}}"
+              }
+            },
+            {
+              "name": "Delete comment",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments/{{commentId}}"
               }
             }
           ]
@@ -1793,6 +1861,20 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/revoke"
+          }
+        },
+        {
+          "name": "Superadmin - product email broadcast",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "description": "Sends to users with productEmails: true. Requires confirm: send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"New Athena VI features\",\n  \"html\": \"<p>We shipped improvements to the editor this week.</p>\",\n  \"confirm\": \"send\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email"
           }
         }
       ]
