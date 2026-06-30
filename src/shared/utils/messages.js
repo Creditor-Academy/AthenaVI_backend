@@ -171,7 +171,7 @@ module.exports = {
 
 
   // Asset
-  INVALID_FILE_TYPE: 'Only JPG, PNG, WEBP images, MP4 videos, and MP3 audio are allowed',
+  INVALID_FILE_TYPE: 'Only JPG, PNG, WEBP, SVG images, MP4 videos, and MP3 audio are allowed',
   WORKSPACE_OWNER_NOT_FOUND: 'Workspace owner not found',
   STORAGE_LIMIT_EXCEEDED: 'Storage limit exceeded for the owner',
   ASSET_NOT_FOUND: 'Asset not found',
