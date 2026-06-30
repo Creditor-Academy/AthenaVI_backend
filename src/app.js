@@ -38,7 +38,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 app.get('/', (req, res) => {
-  res.send('Virtual Instructor Backend Running ');
+    res.send('Backend API is running');
+});
+
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'UP',
+        timestamp: new Date().toISOString()
+    });
 });
 
 const userRoutes = require('./modules/user/user.routes');
