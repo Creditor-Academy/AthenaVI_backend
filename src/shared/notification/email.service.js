@@ -23,7 +23,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
     const mailer = getTransporter();
 
     await mailer.sendMail({
-      from: `"Your App" <${process.env.SMTP_USER}>`,
+      from: `"Virtual Studio" <${process.env.SMTP_USER}>`,
       to,
       subject,
       text,
