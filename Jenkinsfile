@@ -161,11 +161,11 @@ pipeline {
                 kubectl get svc
 
                 echo ""
-                echo "========== Rollout History =========="
+                echo "========== Rollout History ========="
                 kubectl rollout history deployment/backend
 
                 echo ""
-                echo "========== Current Image =========="
+                echo "========== Current Image ========="
                 kubectl get deployment backend \
                 -o=jsonpath='{.spec.template.spec.containers[0].image}'
 
