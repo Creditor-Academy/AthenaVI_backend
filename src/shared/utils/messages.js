@@ -234,6 +234,8 @@ module.exports = {
   HEYGEN_VOICE_CLONE_STARTED: 'Voice clone job created',
   HEYGEN_VOICE_DETAIL_OK: 'Voice details fetched',
   HEYGEN_SPEECH_PREVIEW_OK: 'Speech preview generated',
+  HEYGEN_VOICE_SPEECH_PREVIEW_UNSUPPORTED:
+    'This voice does not support custom speech preview (Starfish TTS). Use previewAudioUrl for a fixed sample, or choose a Starfish-compatible voice (GET /api/heygen/voices?engine=starfish).',
   HEYGEN_AVATAR_SHARED: 'Avatar shared with workspace',
   HEYGEN_AVATAR_UNSHARED: 'Avatar unshared from workspace',
   HEYGEN_VOICE_SHARED: 'Voice shared with workspace',

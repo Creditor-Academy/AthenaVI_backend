@@ -181,6 +181,8 @@ async function generateProjectSpeech(input) {
     estimatedAc: estimate.athenaCredits,
   });
 
+  await heygenV3Service.assertVoiceSupportsStarfishSpeech(voiceId);
+
   const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
   const billingContext = {
     script,
