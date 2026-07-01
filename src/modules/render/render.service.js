@@ -418,10 +418,11 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
       where: { id: render.projectId },
       select: { id: true, name: true },
     });
-    projectName = project?.name || null;
+    const rawName = project?.name != null ? String(project.name).trim() : '';
+    projectName = rawName || null;
   }
 
-  await creditLedger.chargeUsage({
+  const chargeResult = await creditLedger.chargeUsage({
     scope: SCOPE.WORKSPACE,
     workspaceId,
     userId,
@@ -442,9 +443,22 @@ async function chargeRenderIfNeeded({ renderId, workspaceId, userId, durationInF
     },
   });
 
+  if (chargeResult?.skipped && chargeResult.reason === 'zero_amount') {
+    await renderDao.updateProjectRender(renderId, {
+      billingStatus: 'skipped',
+      creditsCharged: 0,
+      billedDurationSec: durationSeconds,
+    });
+    return;
+  }
+
+  const creditsCharged =
+    chargeResult?.charged ??
+    (chargeResult?.transaction ? Math.abs(chargeResult.transaction.amount) : pricing.athenaCredits);
+
   await renderDao.updateProjectRender(renderId, {
     billingStatus: 'charged',
-    creditsCharged: pricing.athenaCredits,
+    creditsCharged,
     billedDurationSec: durationSeconds,
   });
 }
@@ -550,6 +564,14 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
     const totalDuration = buildSceneTimings(cachedScenes).durationInFrames;
     const fps = manifest.videoSettings?.fps || 30;
 
+    await chargeRenderIfNeeded({
+      renderId,
+      workspaceId,
+      userId,
+      durationInFrames: totalDuration,
+      fps,
+    });
+
     await renderDao.updateProjectRender(renderId, {
       status: 'completed',
       progress: 100,
@@ -558,13 +580,6 @@ async function processProjectRender({ renderId, workspaceId, projectId, userId, 
       fileSizeBytes: finalBuffer.length,
       completedAt: new Date(),
       error: null,
-    });
-    await chargeRenderIfNeeded({
-      renderId,
-      workspaceId,
-      userId,
-      durationInFrames: totalDuration,
-      fps,
     });
     await projectDao.updateProject(projectId, {
       status: 'completed',
