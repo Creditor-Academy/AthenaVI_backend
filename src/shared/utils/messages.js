@@ -91,6 +91,7 @@ module.exports = {
   WORKSPACE_INVITATION_EXPIRED: 'Invitation has expired or is invalid',
   WORKSPACE_INVITATION_EMAIL_MISMATCH: 'Invitation was sent to a different email address',
   WORKSPACE_INVITATION_ACCEPTED: 'Invitation accepted successfully',
+  WORKSPACE_INVITATION_FETCHED: 'Invitation fetched successfully',
   WORKSPACE_MEMBER_REMOVED: 'Member removed successfully',
   WORKSPACE_ROLE_UPDATED: 'Role updated successfully',
   WORKSPACE_ONLY_OWNER_CHANGE_ROLES: 'Only the owner can change member roles',

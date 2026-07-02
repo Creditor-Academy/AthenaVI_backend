@@ -14,6 +14,7 @@ const {
   getWorkspaceMembers,
   inviteMember,
   acceptInvitation,
+  getInvitationPreview,
   removeMember,
   changeMemberRole,
   cancelInvitation,
@@ -154,6 +155,12 @@ router.post(
   authMiddleware,
   validate(workspaceValidations.acceptInvitationSchema),
   acceptInvitation
+);
+
+router.get(
+  '/invitations/:token',
+  validate(workspaceValidations.getInvitationByTokenSchema),
+  getInvitationPreview
 );
 
 //member management routes

@@ -12,6 +12,7 @@ const verifyAndRegisterSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
     otp: Joi.number().integer().min(100000).max(999999).required(),
+    invitationToken: Joi.string().uuid().optional(),
   }),
 });
 

@@ -35,17 +35,22 @@ const resendOtp = asyncHandler(async (req, res) => {
 });
 
 const verifyAndRegister = asyncHandler(async (req, res) => {
-  const { name, email, password, otp } = req.body;
-  const { accessToken, rawRefreshToken, user } = await authService.registerUser({
+  const { name, email, password, otp, invitationToken } = req.body;
+  const { accessToken, rawRefreshToken, user, workspace } = await authService.registerUser({
     name,
     email,
     password,
     otp,
+    invitationToken,
     userAgent: req.headers['user-agent'],
     ip: getClientIp(req),
   });
   setRefreshCookie(res, rawRefreshToken);
-  return successResponse(req, res, { accessToken, user }, 201, messages.USER_CREATED);
+  const data = { accessToken, user };
+  if (workspace) {
+    data.workspace = workspace;
+  }
+  return successResponse(req, res, data, 201, messages.USER_CREATED);
 });
 
 const login = asyncHandler(async (req, res) => {

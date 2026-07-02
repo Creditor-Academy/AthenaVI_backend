@@ -115,6 +115,7 @@ model User {
   inboxNotifications UserInboxNotification[]
   storageUpgradeRequests StorageUpgradeRequest[]
   projectComments ProjectComment[] @relation("ProjectCommentAuthor")
+  sentInvitations Invitation[] @relation("InvitationInvitedBy")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -197,15 +198,18 @@ model Invitation {
   role        WorkspaceRole
   token       String           @unique
   status      InvitationStatus @default(PENDING)
+  invitedById String?          @map("invited_by_id")
   expiresAt   DateTime         @map("expires_at")
   createdAt   DateTime         @default(now()) @map("created_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User?     @relation("InvitationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([email])
   @@index([token])
   @@index([expiresAt])
+  @@index([invitedById])
   @@map("invitations")
 }
 

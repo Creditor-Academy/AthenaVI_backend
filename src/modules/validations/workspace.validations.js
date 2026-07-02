@@ -44,6 +44,12 @@ const acceptInvitationSchema = Joi.object({
   }),
 });
 
+const getInvitationByTokenSchema = Joi.object({
+  params: Joi.object({
+    token: Joi.string().uuid().required(),
+  }),
+});
+
 const removeMemberSchema = Joi.object({ params: Joi.object({
   workspaceId: Joi.string().uuid().required(),
   memberId: Joi.string().uuid().required(),
@@ -62,6 +68,7 @@ module.exports = {
   renameWorkspaceSchema,
   inviteMemberSchema,
   acceptInvitationSchema,
+  getInvitationByTokenSchema,
   removeMemberSchema,
   changeMemberRoleSchema,
   cancelInvitationSchema,

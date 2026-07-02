@@ -36,6 +36,7 @@
 | POST | `/api/workspaces` | Bearer | Create team workspace |
 | GET | `/api/workspaces` | Bearer | List my workspaces |
 | POST | `/api/workspaces/invitations/accept` | Bearer | Accept invite |
+| GET | `/api/workspaces/invitations/:token` | — | Preview invite (signup vs login) |
 | GET | `/api/workspaces/:id` | Bearer + member | Get workspace |
 | PATCH | `/api/workspaces/:id` | Bearer + OWNER | Rename workspace |
 | DELETE | `/api/workspaces/:id` | Bearer + OWNER | Delete workspace |

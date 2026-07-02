@@ -128,6 +128,18 @@ const acceptInvitation = asyncHandler(async (req, res) => {
   );
 });
 
+const getInvitationPreview = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const invitation = await workspaceService.getInvitationPreview(token);
+  return successResponse(
+    req,
+    res,
+    { invitation },
+    200,
+    messages.WORKSPACE_INVITATION_FETCHED
+  );
+});
+
 const removeMember = asyncHandler(async (req, res) => {
   const workspaceId = req.params.workspaceId;
   const memberId = req.params.memberId;
@@ -173,6 +185,7 @@ module.exports = {
   getWorkspaceMembers,
   inviteMember,
   acceptInvitation,
+  getInvitationPreview,
   cancelInvitation,
   getWorkspaceInvitations,
   removeMember,

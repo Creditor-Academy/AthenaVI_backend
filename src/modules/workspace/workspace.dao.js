@@ -157,7 +157,10 @@ const createInvitation = async (data) => {
 const findInvitationByToken = async (token) => {
   return await prisma.invitation.findUnique({
     where: { token },
-    include: { workspace: true },
+    include: {
+      workspace: true,
+      invitedBy: { select: { id: true, email: true, name: true } },
+    },
   });
 };
 

@@ -12,6 +12,7 @@
     { "key": "folderId", "value": "00000000-0000-4000-8000-000000000002" },
     { "key": "assetId", "value": "00000000-0000-4000-8000-000000000003" },
     { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
+    { "key": "invitationToken", "value": "00000000-0000-4000-8000-000000000099" },
     { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
     { "key": "groupId", "value": "replace-with-heygen-group-id" },
     { "key": "avatarLookId", "value": "replace-with-heygen-look-id" },
@@ -434,6 +435,13 @@
             "method": "DELETE",
             "header": [],
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invitations/{{invitationId}}"
+          }
+        },
+        {
+          "name": "Preview invitation",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/workspaces/invitations/{{invitationToken}}"
           }
         },
         {

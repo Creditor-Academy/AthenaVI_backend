@@ -18,6 +18,7 @@ const inboxService = require('../../inbox/inbox.service');
 const { normalizeEmail } = require('../../../shared/utils/normalizeEmail');
 const { isPrismaUniqueConstraintError } = require('../../../shared/utils/prismaErrors');
 const { getSaltRounds } = require('../../../shared/utils/bcryptConfig');
+const workspaceService = require('../../workspace/workspace.service');
 const {
   hasPlatformSuperadminAccess,
 } = require('../../../shared/services/platformSuperadmin.service');
@@ -74,10 +75,26 @@ async function sendOtp(email) {
   }
 }
 
-async function registerUser({ name, email, password, otp, userAgent, ip }) {
+async function registerUser({
+  name,
+  email,
+  password,
+  otp,
+  userAgent,
+  ip,
+  invitationToken,
+}) {
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) {
     throw new AppError(messages.EMAIL_REQUIRED, 400);
+  }
+
+  let pendingInvitation = null;
+  if (invitationToken) {
+    pendingInvitation = await workspaceService.resolvePendingInvitation(invitationToken);
+    if (pendingInvitation.email.toLowerCase() !== normalizedEmail) {
+      throw new AppError(messages.WORKSPACE_INVITATION_EMAIL_MISMATCH, 400);
+    }
   }
 
   const existingUser = await authDao.findUserByEmail(normalizedEmail);
@@ -104,14 +121,22 @@ async function registerUser({ name, email, password, otp, userAgent, ip }) {
     throw err;
   }
 
+  let workspace = null;
   try {
+    if (pendingInvitation) {
+      workspace = await workspaceService.acceptInvitation(invitationToken, user.id);
+    }
     await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
   } catch (err) {
-    logger.error('Failed to sync pending workspace invitations after register', {
+    logger.error('Failed to process workspace invitations after register', {
       userId: user.id,
       email: user.email,
+      invitationToken: invitationToken || null,
       error: err.message,
     });
+    if (pendingInvitation) {
+      throw err;
+    }
   }
 
   const { accessToken, rawRefreshToken } = await _issueSessionAndTokens({
@@ -120,7 +145,12 @@ async function registerUser({ name, email, password, otp, userAgent, ip }) {
     ip,
   });
 
-  return { accessToken, rawRefreshToken, user: { name: user.name, email: user.email } };
+  return {
+    accessToken,
+    rawRefreshToken,
+    user: { name: user.name, email: user.email },
+    workspace,
+  };
 }
 
 async function loginUser({ email, password, userAgent, ip }) {
