@@ -324,6 +324,10 @@ Redirect the browser to this URL. The user is sent to Google, then to the backen
 | **Path** | `/api/auth/google` |
 | **Auth** | None |
 
+**Query (optional)**
+
+- `invitationToken` (UUID) — pass this when the user starts Google sign-in from `/invitations/accept/:token`. On callback success, the invitation is auto-accepted for the Google account (email must match invitation email).
+
 ---
 
 ### Start Google sign-in (superadmin portal)
@@ -355,12 +359,12 @@ Google redirects here after consent. **Not called by your frontend directly**—
 
 On success, the backend redirects to:
 
-- **Main portal:** `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/auth/callback`)
+- **Main portal:** `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>[&workspace_id=<workspace_id>]` (default path `/auth/callback`)
 - **Superadmin portal** (started via `/api/auth/superadmin/google`): `{FRONTEND_URL}{SUPERADMIN_OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/admin/auth/callback`)
 
 (URL-encoded token in the hash.)
 
-The frontend should read `access_token` from the hash and store it. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user" }` (superadmin flow also includes `isPlatformSuperadmin` and `portal`) instead of redirecting.
+The frontend should read `access_token` from the hash and store it. When OAuth started with `invitationToken` and the invite is accepted, `workspace_id` is also included in the hash so you can redirect the user to that workspace immediately. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user", "workspace?" }` (superadmin flow also includes `isPlatformSuperadmin` and `portal`) instead of redirecting.
 
 On error, the user is redirected to `{FRONTEND_URL}?error=...` with an error code in the query string.
 

@@ -38,6 +38,12 @@ const googleCallbackSchema = Joi.object({
   }),
 }); 
 
+const googleRedirectSchema = Joi.object({
+  query: Joi.object({
+    invitationToken: Joi.string().uuid().optional(),
+  }),
+});
+
 
 
 module.exports = {
@@ -45,5 +51,6 @@ module.exports = {
   verifyAndRegisterSchema,
   loginSchema,
   resetPasswordSchema,
-  googleCallbackSchema
+  googleCallbackSchema,
+  googleRedirectSchema,
 };

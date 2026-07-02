@@ -58,7 +58,7 @@ router.post(
 );
 
 // Google OAuth (GET so browser can be redirected)
-router.get('/google', googleRedirect);
+router.get('/google', validate(authValidation.googleRedirectSchema), googleRedirect);
 router.get('/superadmin/google', superadminGoogleRedirect);
 router.get(
   '/google/callback',

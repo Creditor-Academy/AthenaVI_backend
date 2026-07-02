@@ -17,19 +17,25 @@ const jwks = jwksClient({
 
 /**
  * Store OAuth state in Redis (CSRF protection).
- * @param {'main'|'superadmin'} [portal='main']
+ * @param {{ portal?: 'main'|'superadmin', invitationToken?: string|null }} [options]
  * @returns {string} state
  */
-const createState = async (portal = 'main') => {
+const createState = async (options = {}) => {
+  const { portal = 'main', invitationToken = null } = options;
   const state = crypto.randomBytes(32).toString('hex');
   const portalValue = portal === 'superadmin' ? 'superadmin' : 'main';
-  await redisClient.set(OAUTH_STATE_PREFIX + state, portalValue, { EX: OAUTH_STATE_TTL });
+  const payload = JSON.stringify({
+    portal: portalValue,
+    invitationToken:
+      portalValue === 'superadmin' ? null : invitationToken || null,
+  });
+  await redisClient.set(OAUTH_STATE_PREFIX + state, payload, { EX: OAUTH_STATE_TTL });
   return state;
 };
 
 /**
  * Consume state: verify it exists and delete (one-time use).
- * @returns {Promise<'main'|'superadmin'|null>} portal if valid
+ * @returns {Promise<{portal: 'main'|'superadmin', invitationToken: string|null} | null>}
  */
 const consumeState = async (state) => {
   if (!state) return null;
@@ -37,7 +43,18 @@ const consumeState = async (state) => {
   const value = await redisClient.get(key);
   if (!value) return null;
   await redisClient.del(key);
-  return value === 'superadmin' ? 'superadmin' : 'main';
+  try {
+    const parsed = JSON.parse(value);
+    const portal = parsed?.portal === 'superadmin' ? 'superadmin' : 'main';
+    const invitationToken = typeof parsed?.invitationToken === 'string'
+      ? parsed.invitationToken
+      : null;
+    return { portal, invitationToken: portal === 'superadmin' ? null : invitationToken };
+  } catch {
+    // Backward compatibility for states created before payload became JSON.
+    const portal = value === 'superadmin' ? 'superadmin' : 'main';
+    return { portal, invitationToken: null };
+  }
 };
 
 /**

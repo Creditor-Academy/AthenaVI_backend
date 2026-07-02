@@ -367,9 +367,15 @@ async function resetPassword({ token, newPassword }) {
 }
 
 async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
-  const portal = await googleOAuth.consumeState(state);
-  if (!portal) {
+  const statePayload = await googleOAuth.consumeState(state);
+  if (!statePayload) {
     throw new AppError('invalid_state', 400);
+  }
+  const { portal, invitationToken } = statePayload;
+
+  let pendingInvitation = null;
+  if (portal !== 'superadmin' && invitationToken) {
+    pendingInvitation = await workspaceService.resolvePendingInvitation(invitationToken);
   }
 
   let tokens;
@@ -397,6 +403,9 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
   }
 
   const normalizedEmail = normalizeEmail(email);
+  if (pendingInvitation && pendingInvitation.email.toLowerCase() !== normalizedEmail) {
+    throw new AppError(messages.WORKSPACE_INVITATION_EMAIL_MISMATCH, 400);
+  }
 
   let user;
   const existingAccount = await authDao.findAccountByProvider('google', providerAccountId);
@@ -457,6 +466,11 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
   );
   await securityService.recoverAccountIfPending(user);
 
+  let workspace = null;
+  if (pendingInvitation) {
+    workspace = await workspaceService.acceptInvitation(invitationToken, user.id);
+  }
+
   if (portal === 'superadmin' && !hasPlatformSuperadminAccess(user)) {
     throw new AppError(messages.PLATFORM_SUPERADMIN_REQUIRED, 403);
   }
@@ -471,6 +485,7 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
     accessToken,
     rawRefreshToken,
     user: { name: user.name, email: user.email },
+    workspace,
     accountRecovered,
     portal,
   };

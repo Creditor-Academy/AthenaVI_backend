@@ -242,7 +242,10 @@ Sends an email with an accept link. The email subject is **`{inviter name} invit
 
 `{FRONTEND_URL}/invitations/accept/<token>`
 
-**Unregistered invitees:** the frontend should call **`GET /api/workspaces/invitations/:token`** (no auth) to load workspace details and whether signup is required. If `requiresRegistration` is `true`, show the signup form with the invitation email pre-filled, then **`POST /api/auth/register`** with optional `invitationToken` set to the same token — the user is added to the workspace automatically on successful registration.
+**Unregistered invitees:** the frontend should call **`GET /api/workspaces/invitations/:token`** (no auth) to load workspace details and whether signup is required. If `requiresRegistration` is `true`, show the signup form with the invitation email pre-filled, then either:
+- **Email signup:** `POST /api/auth/register` with optional `invitationToken` set to the same token.
+- **Google signup/login:** redirect to `GET /api/auth/google?invitationToken=<token>`.
+In both cases, the user is added to the workspace automatically on success.
 
 **Registered invitees:** prompt login, then **`POST /api/workspaces/invitations/accept`** with `{ "token" }` in the body.
 
