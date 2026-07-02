@@ -253,6 +253,12 @@ function mergeContentForRender(element) {
     if (style.flipVertical != null && content.flipVertical == null) {
       content.flipVertical = style.flipVertical;
     }
+    if (style.scaleX === -1 && content.flipHorizontal == null) {
+      content.flipHorizontal = true;
+    }
+    if (style.scaleY === -1 && content.flipVertical == null) {
+      content.flipVertical = true;
+    }
     if (style.opacity != null && content.opacity == null) {
       content.opacity = style.opacity;
     }
@@ -281,6 +287,19 @@ function mergeContentForRender(element) {
       }
       Object.assign(content, style);
     }
+  }
+
+  if (style.flipHorizontal != null && content.flipHorizontal == null) {
+    content.flipHorizontal = style.flipHorizontal;
+  }
+  if (style.flipVertical != null && content.flipVertical == null) {
+    content.flipVertical = style.flipVertical;
+  }
+  if (style.scaleX === -1 && content.flipHorizontal == null) {
+    content.flipHorizontal = true;
+  }
+  if (style.scaleY === -1 && content.flipVertical == null) {
+    content.flipVertical = true;
   }
 
   if (element.type === 'audio') {

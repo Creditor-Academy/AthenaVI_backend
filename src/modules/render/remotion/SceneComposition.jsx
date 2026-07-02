@@ -81,13 +81,7 @@ function TextLikeElement({ element, frame, fps }) {
   return (
     <div
       style={{
-        ...buildAnimatedStyle({
-          frame,
-          fps,
-          placement: element.placement,
-          animations: element.animations,
-          ...getElementAnimationContext(element),
-        }),
+        ...buildElementAnimatedStyle(element, frame, fps),
         display: 'flex',
         alignItems: 'center',
         justifyContent:
@@ -135,13 +129,7 @@ function IconElement({ element, frame, fps }) {
   return (
     <div
       style={{
-        ...buildAnimatedStyle({
-          frame,
-          fps,
-          placement: element.placement,
-          animations: element.animations,
-          ...animationContext,
-        }),
+        ...buildElementAnimatedStyle(element, frame, fps),
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -175,13 +163,7 @@ function FrameElement({ element, frame, fps }) {
   const objectFit = fill?.objectFit || fill?.fit || 'cover';
 
   const containerStyle = {
-    ...buildAnimatedStyle({
-      frame,
-      fps,
-      placement: element.placement,
-      animations: element.animations,
-      ...getElementAnimationContext(element),
-    }),
+    ...buildElementAnimatedStyle(element, frame, fps),
     overflow: 'hidden',
     backgroundColor: style.backgroundColor || '#e2e8f0',
     borderRadius: style.borderRadius || 0,
@@ -216,13 +198,7 @@ function ShapeElement({ element, frame, fps }) {
   return (
     <div
       style={{
-        ...buildAnimatedStyle({
-          frame,
-          fps,
-          placement: element.placement,
-          animations: element.animations,
-          ...getElementAnimationContext(element),
-        }),
+        ...buildElementAnimatedStyle(element, frame, fps),
         backgroundColor: fill == null || fill === '' ? 'transparent' : fill,
         clipPath: style.clipPath,
         ...shapeStyle,
@@ -319,6 +295,28 @@ function buildFlipTransform(content = {}) {
   return `scale(${scaleX}, ${scaleY})`;
 }
 
+function resolveFlipFlags(element) {
+  const content = element.content || {};
+  const style = element.style && typeof element.style === 'object' ? element.style : {};
+  return {
+    flipHorizontal: !!(content.flipHorizontal || style.flipHorizontal || content.scaleX === -1 || style.scaleX === -1),
+    flipVertical: !!(content.flipVertical || style.flipVertical || content.scaleY === -1 || style.scaleY === -1),
+  };
+}
+
+function buildElementAnimatedStyle(element, frame, fps) {
+  const flip = resolveFlipFlags(element);
+  return buildAnimatedStyle({
+    frame,
+    fps,
+    placement: element.placement,
+    animations: element.animations,
+    ...getElementAnimationContext(element),
+    flipHorizontal: flip.flipHorizontal,
+    flipVertical: flip.flipVertical,
+  });
+}
+
 function resolveMediaObjectFit(element, content = {}) {
   const style = element.style && typeof element.style === 'object' ? element.style : {};
   const resolved = style.objectFit || content.fit || content.objectFit;
@@ -356,13 +354,7 @@ function MediaElement({ element, frame, fps }) {
   const content = element.content || {};
   const animationContext = getElementAnimationContext(element);
   const containerStyle = {
-    ...buildAnimatedStyle({
-      frame,
-      fps,
-      placement: element.placement,
-      animations: element.animations,
-      ...animationContext,
-    }),
+    ...buildElementAnimatedStyle(element, frame, fps),
     overflow: 'hidden',
     ...getMediaShapeStyle(content, element.placement),
   };
@@ -371,7 +363,6 @@ function MediaElement({ element, frame, fps }) {
     height: '100%',
     objectFit: resolveMediaObjectFit(element, content),
     filter: buildCssFilterString(content.filters),
-    transform: buildFlipTransform(content),
   };
 
   switch (element.type) {
@@ -404,7 +395,47 @@ function MediaElement({ element, frame, fps }) {
   }
 }
 
-function SceneElement({ element }) {
+function GroupElement({ element, scene, frame, fps }) {
+  const content = element.content || {};
+  const childIds = new Set(element.childIds || content.childIds || []);
+  const children = (scene.elements || []).filter((el) => childIds.has(el.id));
+
+  return (
+    <div style={buildElementAnimatedStyle(element, frame, fps)}>
+      {children.map((child) => (
+        <div
+          key={child.id}
+          style={{
+            position: 'absolute',
+            left: child.placement?.x ?? 0,
+            top: child.placement?.y ?? 0,
+            width: child.placement?.width ?? 100,
+            height: child.placement?.height ?? 100,
+            transform: (() => {
+              const rot = child.placement?.rotation ?? 0;
+              const sc = child.placement?.scale ?? 1;
+              const flipH = child.content?.flipHorizontal || child.style?.flipHorizontal;
+              const flipV = child.content?.flipVertical || child.style?.flipVertical;
+              const fx = flipH ? -1 : 1;
+              const fy = flipV ? -1 : 1;
+              const parts = [];
+              if (rot) parts.push(`rotate(${rot}deg)`);
+              if (sc !== 1) parts.push(`scale(${sc})`);
+              if (fx !== 1 || fy !== 1) parts.push(`scale(${fx}, ${fy})`);
+              return parts.join(' ') || undefined;
+            })(),
+            transformOrigin: 'center center',
+            overflow: 'hidden',
+          }}
+        >
+          <SceneElement element={child} scene={scene} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SceneElement({ element, scene }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -424,6 +455,10 @@ function SceneElement({ element }) {
     return <ShapeElement element={element} frame={frame} fps={fps} />;
   }
 
+  if (element.type === 'group') {
+    return <GroupElement element={element} scene={scene} frame={frame} fps={fps} />;
+  }
+
   return <MediaElement element={element} frame={frame} fps={fps} />;
 }
 
@@ -434,6 +469,7 @@ function SceneComposition({ scene, videoSettings = {} }) {
     <AbsoluteFill style={{ backgroundColor: canvasColor, overflow: 'hidden' }}>
       <BackgroundLayer background={scene.background} fallbackColor={canvasColor} />
       {(scene.elements || [])
+        .filter((el) => !el.groupId)
         .slice()
         .sort((a, b) => a.layer - b.layer)
         .map((element) => (
@@ -442,7 +478,7 @@ function SceneComposition({ scene, videoSettings = {} }) {
             from={element.startFrame || 0}
             durationInFrames={element.durationInFrames}
           >
-            <SceneElement element={element} />
+            <SceneElement element={element} scene={scene} />
           </Sequence>
         ))}
     </AbsoluteFill>
