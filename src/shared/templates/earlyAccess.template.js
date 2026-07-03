@@ -154,7 +154,98 @@ The Athena VI Team`;
   return { subject, text, html };
 }
 
+const STATUS_EMAIL_COPY = {
+  PENDING: {
+    subject: 'Your Athena VI early access request is pending',
+    headline: 'Request received',
+    body:
+      'Thanks for your interest in Athena VI. Your early access request is pending and queued for our team.',
+  },
+  UNDER_REVIEW: {
+    subject: 'Your Athena VI early access request is under review',
+    headline: 'Under review',
+    body:
+      'Our team has started reviewing your early access request. We will email you when the status changes again.',
+  },
+  IN_DISCUSSION: {
+    subject: 'Your Athena VI early access request is in discussion',
+    headline: 'In discussion',
+    body:
+      'Your early access request is being discussed with our team. We may reach out if we need more details.',
+  },
+  APPROVED: {
+    subject: 'Your Athena VI early access request was approved',
+    headline: 'Approved',
+    body:
+      'Great news — your early access request has been approved. You can now sign up and start using Athena VI.',
+  },
+  REJECTED: {
+    subject: 'Update on your Athena VI early access request',
+    headline: 'Not approved at this time',
+    body:
+      'Thank you for your interest in Athena VI. After review, we are unable to approve your early access request right now.',
+  },
+};
+
+function buildEarlyAccessStatusUpdateEmail({ name, email, requestId, status }) {
+  const dbStatus = String(status).toUpperCase().replace(/-/g, '_');
+  const copy = STATUS_EMAIL_COPY[dbStatus] || STATUS_EMAIL_COPY.PENDING;
+  const greetingName = firstName(name);
+  const signupUrl = process.env.FRONTEND_URL || 'https://athenavi.com';
+  const statusLabel = dbStatus.replace(/_/g, ' ').toLowerCase();
+
+  const approvedExtra =
+    dbStatus === 'APPROVED'
+      ? `\n\nSign up here: ${signupUrl}/register`
+      : '';
+
+  const text = `Hi ${greetingName},
+
+${copy.body}
+
+Request ID: ${requestId}
+Status: ${statusLabel}
+${approvedExtra}
+
+If you have questions, reply to this email.
+
+The Athena VI Team`;
+
+  const approvedHtml =
+    dbStatus === 'APPROVED'
+      ? `<p style="margin:16px 0 0;">
+          <a href="${escapeHtml(`${signupUrl}/register`)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-size:14px;font-weight:bold;">
+            Sign up to Athena VI
+          </a>
+        </p>`
+      : '';
+
+  const html = `
+  <div style="background-color:#f4f6f8;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:10px;padding:32px 28px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+      <p style="margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;">
+        Early access · ${escapeHtml(copy.headline)}
+      </p>
+      <h2 style="color:#2d3748;margin:0 0 16px;font-size:22px;">Hi ${escapeHtml(greetingName)},</h2>
+      <p style="margin:0 0 16px;color:#2d3748;font-size:15px;line-height:1.6;">
+        ${escapeHtml(copy.body)}
+      </p>
+      <div style="background:#f7fafc;border-radius:6px;padding:16px 18px;margin-bottom:8px;">
+        <p style="margin:0 0 4px;color:#718096;font-size:12px;font-weight:bold;text-transform:uppercase;">Request ID</p>
+        <p style="margin:0 0 12px;color:#2d3748;font-size:14px;">${escapeHtml(requestId)}</p>
+        <p style="margin:0 0 4px;color:#718096;font-size:12px;font-weight:bold;text-transform:uppercase;">Status</p>
+        <p style="margin:0;color:#2d3748;font-size:14px;text-transform:capitalize;">${escapeHtml(statusLabel)}</p>
+      </div>
+      ${approvedHtml}
+      <p style="margin:20px 0 0;color:#718096;font-size:14px;">The Athena VI Team</p>
+    </div>
+  </div>`;
+
+  return { subject: copy.subject, text, html };
+}
+
 module.exports = {
   buildEarlyAccessSuperadminNotificationEmail,
   buildEarlyAccessConfirmationEmail,
+  buildEarlyAccessStatusUpdateEmail,
 };

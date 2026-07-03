@@ -91,6 +91,11 @@
 | GET | `/api/superadmin/storage/tiers` | Bearer + platform superadmin | Storage tier presets |
 | GET | `/api/superadmin/storage/requests` | Bearer + platform superadmin | Storage upgrade request queue |
 | POST | `/api/superadmin/storage/requests/:requestId/reject` | Bearer + platform superadmin | Reject storage upgrade request |
+| GET | `/api/superadmin/early-access/requests` | Bearer + platform superadmin | Early access request queue |
+| GET | `/api/superadmin/early-access/requests/:requestId` | Bearer + platform superadmin | Single early access request |
+| PATCH | `/api/superadmin/early-access/requests/:requestId/status` | Bearer + platform superadmin | Update status (`under_review`, `in_discussion`, `approved`, `rejected`) |
+| POST | `/api/superadmin/early-access/requests/:requestId/approve` | Bearer + platform superadmin | Approve early access request |
+| POST | `/api/superadmin/early-access/requests/:requestId/reject` | Bearer + platform superadmin | Reject early access request |
 | GET | `/api/superadmin/workspaces` | Bearer + platform superadmin | List TEAM workspaces with pools |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits` | Bearer + platform superadmin | Workspace pool summary |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits/history` | Bearer + platform superadmin | Workspace credit ledger |

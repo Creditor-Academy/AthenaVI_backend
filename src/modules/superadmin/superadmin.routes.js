@@ -133,6 +133,36 @@ router.get(
 
 router.get('/heygen/account', superadminController.getHeygenAccount);
 
+router.get(
+  '/early-access/requests',
+  validate(superadminValidation.earlyAccessRequestsQuerySchema),
+  superadminController.listEarlyAccessRequests
+);
+
+router.get(
+  '/early-access/requests/:requestId',
+  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
+  superadminController.getEarlyAccessRequest
+);
+
+router.post(
+  '/early-access/requests/:requestId/approve',
+  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
+  superadminController.approveEarlyAccessRequest
+);
+
+router.post(
+  '/early-access/requests/:requestId/reject',
+  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
+  superadminController.rejectEarlyAccessRequest
+);
+
+router.patch(
+  '/early-access/requests/:requestId/status',
+  validate(superadminValidation.earlyAccessUpdateStatusBodySchema),
+  superadminController.updateEarlyAccessRequestStatus
+);
+
 router.get('/alerts/summary', superadminController.getAlertsSummary);
 
 router.get(

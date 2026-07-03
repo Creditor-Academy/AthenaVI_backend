@@ -235,6 +235,43 @@ const productEmailBroadcastRecipientsQuerySchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const earlyAccessRequestIdParam = Joi.string()
+  .pattern(/^ea_[A-Za-z0-9_-]+$/)
+  .max(20)
+  .required();
+
+const earlyAccessRequestsQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    status: Joi.string()
+      .valid('pending', 'under_review', 'in_discussion', 'approved', 'rejected')
+      .optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const earlyAccessUpdateStatusBodySchema = Joi.object({
+  params: Joi.object({
+    requestId: earlyAccessRequestIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    status: Joi.string()
+      .valid('under_review', 'in_discussion', 'approved', 'rejected')
+      .required(),
+  }).required(),
+});
+
+const earlyAccessRequestIdParamsSchema = Joi.object({
+  params: Joi.object({
+    requestId: earlyAccessRequestIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
 module.exports = {
   userIdParamsSchema,
   workspaceIdParamsSchema,
@@ -258,4 +295,7 @@ module.exports = {
   broadcastIdParamsSchema,
   productEmailBroadcastHistoryQuerySchema,
   productEmailBroadcastRecipientsQuerySchema,
+  earlyAccessRequestsQuerySchema,
+  earlyAccessRequestIdParamsSchema,
+  earlyAccessUpdateStatusBodySchema,
 };

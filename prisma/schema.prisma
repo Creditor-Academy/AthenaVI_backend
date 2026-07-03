@@ -66,6 +66,8 @@ enum InboxNotificationType {
 
 enum EarlyAccessRequestStatus {
   PENDING
+  UNDER_REVIEW
+  IN_DISCUSSION
   APPROVED
   REJECTED
 }

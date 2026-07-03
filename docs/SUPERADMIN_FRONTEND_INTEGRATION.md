@@ -599,6 +599,9 @@ flowchart TD
 | Platform actions audit | `GET /api/superadmin/reports/credits/platform-actions` |
 | Platform access toggle | `PATCH /api/superadmin/users/:userId/platform-access` |
 | Platform alerts + HeyGen wallet | `GET /api/superadmin/alerts/summary` |
+| Early access queue | `GET /api/superadmin/early-access/requests` |
+| Early access status update | `PATCH .../early-access/requests/:requestId/status` with `{ "status": "under_review" }` |
+| Early access approve / reject | `POST .../early-access/requests/:requestId/approve` or `.../reject` |
 | HeyGen USD wallet | `GET /api/superadmin/heygen/account` |
 | Product email broadcast | `POST /api/superadmin/broadcasts/product-email` |
 | Product email broadcast history | `GET /api/superadmin/broadcasts/product-email` |
