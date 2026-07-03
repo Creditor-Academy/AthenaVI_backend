@@ -1,21 +1,32 @@
+const {
+  brandName,
+  escapeHtml,
+  preferencesUrl,
+  wrapEmailHtml,
+} = require('./emailLayout');
+
 const buildProductAnnouncementEmail = ({ subject, htmlBody, textBody }) => {
-  const settingsUrl = `${process.env.FRONTEND_URL || ''}/settings/notifications`;
+  const settingsUrl = preferencesUrl();
+
   const text =
     textBody ||
-    `${subject}\n\nManage notification preferences: ${settingsUrl}\n\nYou received this because you opted in to product emails on Athena VI.`;
+    `${subject}\n\nManage notification preferences: ${settingsUrl}\n\nYou received this because you opted in to product emails on ${brandName()}.`;
 
-  const html = `
-  <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;padding:40px 30px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-      <div style="color:#4a5568;font-size:15px;line-height:1.6;">${htmlBody}</div>
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
-      <p style="color:#718096;font-size:12px;">
-        You received this because you opted in to product emails.
-        <a href="${settingsUrl}" style="color:#2563eb;">Manage notification preferences</a>
-      </p>
-      <p style="color:#718096;font-size:12px;margin-top:16px;">Athena VI</p>
+  const bodyHtml = `
+    <div style="color:#1A202C;font-size:15px;line-height:1.6;">
+      ${htmlBody}
     </div>
-  </div>`;
+    <p style="margin:24px 0 0;color:#64748B;font-size:13px;line-height:1.5;border-top:1px solid #E2E8F0;padding-top:20px;">
+      You received this because you opted in to product emails from ${escapeHtml(brandName())}.
+    </p>`;
+
+  const html = wrapEmailHtml({
+    preheader: subject,
+    title: escapeHtml(subject),
+    bodyHtml,
+    variant: 'user',
+    includePreferencesLink: true,
+  });
 
   return { subject, text, html };
 };

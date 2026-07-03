@@ -3,7 +3,7 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const crypto = require('crypto');
 const { sendEmail } = require('../../shared/notification/email.service');
-const invitationTemplate = require('../../shared/templates/invitation.template');
+const buildInvitationEmail = require('../../shared/templates/invitation.template');
 const inboxService = require('../inbox/inbox.service');
 
 const INVITATION_EXPIRY_DAYS = 7;
@@ -206,10 +206,16 @@ async function inviteMember(workspaceId, inviterId, email, role) {
   const inviterName = inviter?.name || inviter?.email || 'A teammate';
 
   try {
+    const invitationEmail = buildInvitationEmail(
+      invitationLink,
+      workspace.name,
+      inviterName
+    );
     await sendEmail({
       to: normalizedEmail,
-      subject: `${inviterName} invited you to join ${workspace.name}`,
-      html: invitationTemplate(invitationLink, workspace.name, inviterName),
+      subject: invitationEmail.subject,
+      text: invitationEmail.text,
+      html: invitationEmail.html,
     });
   } catch (emailError) {
     console.error('Failed to send invitation email:', emailError);
