@@ -1894,13 +1894,37 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "description": "Sends to users with productEmails: true. Requires confirm: send.",
+            "description": "Sends to users with productEmails: true. Requires confirm: send. Returns broadcastId for history.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"subject\": \"New Athena VI features\",\n  \"html\": \"<p>We shipped improvements to the editor this week.</p>\",\n  \"confirm\": \"send\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email"
+          }
+        },
+        {
+          "name": "Superadmin - list product email broadcasts",
+          "request": {
+            "method": "GET",
+            "description": "Paginated broadcast history (subject, counts, sentBy, htmlBody).",
+            "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Superadmin - get product email broadcast",
+          "request": {
+            "method": "GET",
+            "description": "Single broadcast by id.",
+            "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email/{{broadcastId}}"
+          }
+        },
+        {
+          "name": "Superadmin - list product email broadcast recipients",
+          "request": {
+            "method": "GET",
+            "description": "Per-user delivery log. Optional status=SENT or FAILED.",
+            "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email/{{broadcastId}}/recipients?page=1&limit=50"
           }
         }
       ]

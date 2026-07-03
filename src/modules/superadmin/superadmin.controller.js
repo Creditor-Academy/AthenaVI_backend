@@ -310,6 +310,38 @@ const sendProductEmailBroadcast = asyncHandler(async (req, res) => {
   return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCAST_SENT);
 });
 
+const listProductEmailBroadcasts = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const result = await superadminBroadcastService.listProductEmailBroadcasts({ page, limit });
+  return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCASTS_FETCHED);
+});
+
+const getProductEmailBroadcast = asyncHandler(async (req, res) => {
+  const broadcast = await superadminBroadcastService.getProductEmailBroadcast(
+    req.params.broadcastId
+  );
+  return successResponse(req, res, { broadcast }, 200, messages.PRODUCT_EMAIL_BROADCAST_FETCHED);
+});
+
+const listProductEmailBroadcastRecipients = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const result = await superadminBroadcastService.listProductEmailBroadcastRecipients({
+    broadcastId: req.params.broadcastId,
+    page,
+    limit,
+    status: req.query.status,
+  });
+  return successResponse(
+    req,
+    res,
+    result,
+    200,
+    messages.PRODUCT_EMAIL_BROADCAST_RECIPIENTS_FETCHED
+  );
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -335,4 +367,7 @@ module.exports = {
   rejectStorageUpgradeRequest,
   getAlertsSummary,
   sendProductEmailBroadcast,
+  listProductEmailBroadcasts,
+  getProductEmailBroadcast,
+  listProductEmailBroadcastRecipients,
 };

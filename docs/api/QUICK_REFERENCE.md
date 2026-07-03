@@ -102,6 +102,9 @@
 | GET | `/api/superadmin/heygen/account` | Bearer + platform superadmin | HeyGen API wallet |
 | GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary |
 | POST | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast (`productEmails` opt-in) |
+| GET | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast history (paginated) |
+| GET | `/api/superadmin/broadcasts/product-email/:broadcastId` | Bearer + platform superadmin | Single broadcast detail |
+| GET | `/api/superadmin/broadcasts/product-email/:broadcastId/recipients` | Bearer + platform superadmin | Per-recipient delivery log (`status` filter) |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

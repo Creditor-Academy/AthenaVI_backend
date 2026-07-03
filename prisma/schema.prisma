@@ -76,6 +76,11 @@ enum StorageUpgradeRequestStatus {
   REJECTED
 }
 
+enum ProductEmailBroadcastRecipientStatus {
+  SENT
+  FAILED
+}
+
 model User {
   id            String  @id @default(uuid())
   email         String  @unique
@@ -116,6 +121,8 @@ model User {
   storageUpgradeRequests StorageUpgradeRequest[]
   projectComments ProjectComment[] @relation("ProjectCommentAuthor")
   sentInvitations Invitation[] @relation("InvitationInvitedBy")
+  productEmailBroadcastsSent ProductEmailBroadcast[] @relation("ProductEmailBroadcastSentBy")
+  productEmailBroadcastRecipients ProductEmailBroadcastRecipient[]
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -665,4 +672,43 @@ model EarlyAccessRequest {
 
   @@index([status, createdAt])
   @@map("early_access_requests")
+}
+
+model ProductEmailBroadcast {
+  id             String   @id @default(uuid())
+  subject        String
+  htmlBody       String   @map("html_body") @db.Text
+  textBody       String?  @map("text_body") @db.Text
+  sentByUserId   String   @map("sent_by_user_id")
+  recipientCount Int      @map("recipient_count")
+  sentCount      Int      @map("sent_count")
+  failedCount    Int      @map("failed_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  sentBy     User @relation("ProductEmailBroadcastSentBy", fields: [sentByUserId], references: [id], onDelete: Restrict)
+  recipients ProductEmailBroadcastRecipient[]
+
+  @@index([createdAt])
+  @@index([sentByUserId])
+  @@map("product_email_broadcasts")
+}
+
+model ProductEmailBroadcastRecipient {
+  id          String                               @id @default(uuid())
+  broadcastId String                               @map("broadcast_id")
+  userId      String                               @map("user_id")
+  email       String
+  name        String?
+  status      ProductEmailBroadcastRecipientStatus
+  error       String?
+  sentAt      DateTime?                            @map("sent_at")
+  createdAt   DateTime                             @default(now()) @map("created_at")
+
+  broadcast ProductEmailBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, userId])
+  @@index([broadcastId])
+  @@index([userId])
+  @@map("product_email_broadcast_recipients")
 }

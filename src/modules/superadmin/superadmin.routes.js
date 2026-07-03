@@ -135,6 +135,24 @@ router.get('/heygen/account', superadminController.getHeygenAccount);
 
 router.get('/alerts/summary', superadminController.getAlertsSummary);
 
+router.get(
+  '/broadcasts/product-email',
+  validate(superadminValidation.productEmailBroadcastHistoryQuerySchema),
+  superadminController.listProductEmailBroadcasts
+);
+
+router.get(
+  '/broadcasts/product-email/:broadcastId',
+  validate(superadminValidation.broadcastIdParamsSchema),
+  superadminController.getProductEmailBroadcast
+);
+
+router.get(
+  '/broadcasts/product-email/:broadcastId/recipients',
+  validate(superadminValidation.productEmailBroadcastRecipientsQuerySchema),
+  superadminController.listProductEmailBroadcastRecipients
+);
+
 router.post(
   '/broadcasts/product-email',
   validate(superadminValidation.productEmailBroadcastBodySchema),

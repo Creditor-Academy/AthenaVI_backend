@@ -255,4 +255,8 @@ module.exports = {
   HEYGEN_ACCOUNT_FETCHED: 'HeyGen account billing fetched',
   SUPERADMIN_ALERTS_FETCHED: 'Superadmin alerts summary fetched',
   PRODUCT_EMAIL_BROADCAST_SENT: 'Product email broadcast sent',
+  PRODUCT_EMAIL_BROADCASTS_FETCHED: 'Product email broadcasts fetched',
+  PRODUCT_EMAIL_BROADCAST_FETCHED: 'Product email broadcast fetched',
+  PRODUCT_EMAIL_BROADCAST_NOT_FOUND: 'Product email broadcast not found',
+  PRODUCT_EMAIL_BROADCAST_RECIPIENTS_FETCHED: 'Product email broadcast recipients fetched',
 };
