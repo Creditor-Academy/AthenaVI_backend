@@ -3319,3 +3319,76 @@
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T10:55:16.110Z"}
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T10:55:16.191Z"}
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T10:55:16.192Z"}
+{"level":"error","message":"Error: Unauthorized\n    at D:\\AthenaVI_backend\\src\\middlewares\\auth.middlware.js:11:11\n    at D:\\AthenaVI_backend\\src\\shared\\utils\\asyncHandler.js:2:19\n    at Layer.handleRequest (D:\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)\n    at D:\\AthenaVI_backend\\node_modules\\router\\index.js:297:9\n    at processParams (D:\\AthenaVI_backend\\node_modules\\router\\index.js:582:12)\n    at next (D:\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)\n    at Function.handle (D:\\AthenaVI_backend\\node_modules\\router\\index.js:186:3)\n    at router (D:\\AthenaVI_backend\\node_modules\\router\\index.js:60:12)\n    at Layer.handleRequest (D:\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)","timestamp":"2026-07-03T10:58:36.344Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:06:48.824Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:06:48.828Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:06:48.851Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:06:48.852Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:06:57.264Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:06:57.268Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:06:57.294Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:06:57.295Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:07:25.152Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:07:25.156Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:07:25.176Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:07:25.177Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:08:02.978Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:08:02.984Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:08:03.019Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:08:03.020Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:08:57.523Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:08:57.527Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:08:57.550Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:08:57.551Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:13:47.971Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:13:47.977Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:13:48.001Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:13:48.002Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:13:54.002Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:13:54.008Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:13:54.044Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:13:54.044Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:14:10.471Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:14:10.476Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:14:10.502Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:14:10.503Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:16:57.650Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:16:57.655Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:16:57.699Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:16:57.700Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:17:03.417Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:17:03.423Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:17:03.453Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:17:03.454Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:17:09.465Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:17:09.470Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:17:09.495Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:17:09.496Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:17:16.830Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:17:16.838Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:17:16.889Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:17:16.891Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:17:24.051Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:17:24.060Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:17:24.111Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:17:24.112Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:17:30.420Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:17:30.429Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:17:30.478Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:17:30.482Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:19:32.238Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:19:32.242Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:19:32.267Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:19:32.268Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:20:00.064Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:20:00.069Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:20:00.090Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:20:00.091Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:20:09.056Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:20:09.060Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:20:09.084Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:20:09.084Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-03T11:20:34.363Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-03T11:20:34.368Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-03T11:20:34.397Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-03T11:20:34.398Z"}

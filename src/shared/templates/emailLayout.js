@@ -2,8 +2,8 @@ const DEFAULT_EMAIL_LOGO_URL =
   'https://testing-vi.s3.us-east-1.amazonaws.com/Copilot_20260703_145052.png';
 
 const BRAND = {
-  headerBg: '#0B1F3A',
-  headerBgLight: '#132D50',
+  headerBg: '#0E1627',
+  headerBgLight: '#1A2840',
   headerText: '#FFFFFF',
   pageBg: '#E8EDF3',
   cardBg: '#FFFFFF',
@@ -28,16 +28,17 @@ const WHY_CHOOSE_US = [
     description:
       'Generate professional videos in minutes with our advanced AI technology.',
     tags: ['Real-time Gen', 'HD 4K Support', 'AI-Powered Creation'],
+    layout: 'wide',
     theme: {
-      bg: '#E4EDFA',
-      border: '#AFC4E3',
-      accent: '#1E4A8C',
-      iconBg: '#2563EB',
-      iconLight: '#93C5FD',
-      tagBg: 'rgba(37,99,235,0.12)',
-      tagText: '#1E40AF',
+      bg: '#D8E0EC',
+      border: '#B8C4D4',
+      accent: '#0E1627',
+      stripe: '#0E1627',
+      watermark: '#0E1627',
+      watermarkOpacity: '0.12',
+      tagBg: '#C5D0E0',
+      tagText: '#0E1627',
     },
-    graphic: 'ai',
   },
   {
     number: '02',
@@ -47,16 +48,17 @@ const WHY_CHOOSE_US = [
     description:
       'Personalize every aspect of your videos with intuitive editing tools.',
     tags: ['Infinite Edit', 'Layer Control'],
+    layout: 'tall',
     theme: {
-      bg: '#E8EEF8',
-      border: '#B5C5E0',
-      accent: '#1A3D6B',
-      iconBg: '#1E40AF',
-      iconLight: '#A5B4FC',
-      tagBg: 'rgba(30,64,175,0.11)',
-      tagText: '#1E3A8A',
+      bg: '#E5C5C1',
+      border: '#D4A8A3',
+      accent: '#5C4549',
+      stripe: '#B08B89',
+      watermark: '#B08B89',
+      watermarkOpacity: '0.28',
+      tagBg: '#D9B0AB',
+      tagText: '#4A383C',
     },
-    graphic: 'toolkit',
   },
   {
     number: '03',
@@ -65,16 +67,17 @@ const WHY_CHOOSE_US = [
     description:
       'Enable users to ask questions using voice and receive intelligent spoken responses.',
     tags: ['Smart NLP', 'Instant Voice'],
+    layout: 'tall',
     theme: {
-      bg: '#E2EFFA',
-      border: '#A8C8E6',
-      accent: '#0F4C7A',
-      iconBg: '#0284C7',
-      iconLight: '#7DD3FC',
-      tagBg: 'rgba(2,132,199,0.11)',
-      tagText: '#0369A1',
+      bg: '#DDD0D4',
+      border: '#C4B0B6',
+      accent: '#4A3A40',
+      stripe: '#7F6269',
+      watermark: '#7F6269',
+      watermarkOpacity: '0.22',
+      tagBg: '#CDBBC1',
+      tagText: '#4A3A40',
     },
-    graphic: 'vocal',
   },
   {
     number: '04',
@@ -83,18 +86,28 @@ const WHY_CHOOSE_US = [
     description:
       'Jump-start your projects with professionally designed templates built for creators and teams.',
     tags: ['Ready to Use', 'Fully Editable', 'Creator-Ready'],
+    layout: 'wide',
     theme: {
-      bg: '#EBF0F9',
-      border: '#BBC8E0',
-      accent: '#1E3354',
-      iconBg: '#334E7A',
-      iconLight: '#94A3B8',
-      tagBg: 'rgba(51,78,122,0.1)',
-      tagText: '#1E3354',
+      bg: '#F4E1E0',
+      border: '#E0C4C2',
+      accent: '#5C4549',
+      stripe: '#B08B89',
+      watermark: '#B08B89',
+      watermarkOpacity: '0.2',
+      tagBg: '#EBD4D2',
+      tagText: '#5C4549',
     },
-    graphic: 'templates',
   },
 ];
+
+const BENTO = {
+  wide: '64%',
+  narrow: '36%',
+  row1Height: '188px',
+  row2Height: '280px',
+  radius: '20px',
+  gap: '5px',
+};
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -158,7 +171,16 @@ function emailMobileStyles() {
           height: auto !important;
         }
         .feature-pad { padding: 0 0 12px 0 !important; }
-        .feature-card-wrap { height: auto !important; min-height: 0 !important; }
+        .bento-grid { border-spacing: 0 !important; }
+        .bento-wide, .bento-narrow {
+          display: block !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 0 0 10px 0 !important;
+          height: auto !important;
+        }
+        .bento-card-body { height: auto !important; min-height: 0 !important; }
+        .bento-watermark { font-size: 36px !important; }
         .premium-card { padding: 16px 14px !important; min-height: 0 !important; height: auto !important; }
         .stat-col {
           display: block !important;
@@ -184,7 +206,6 @@ function emailMobileStyles() {
           width: 100% !important;
           padding: 0 0 14px 0 !important;
         }
-        .premium-card { padding: 16px 14px !important; min-height: 0 !important; }
         .otp-code { font-size: 28px !important; letter-spacing: 5px !important; }
       }
     </style>`;
@@ -412,166 +433,151 @@ function bulletList(items) {
     </table>`;
 }
 
-function featureGraphicHtml(type, theme) {
-  const dot = (color, size = 5) =>
-    `<td style="width:${size}px;height:${size}px;background-color:${color};border-radius:50%;font-size:0;line-height:0;">&nbsp;</td>`;
-
-  const bar = (color, w, h = 14) =>
-    `<td style="width:${w}px;height:${h}px;background-color:${color};border-radius:3px;font-size:0;line-height:0;">&nbsp;</td>`;
-
-  const graphics = {
-    ai: `
-      <table role="presentation" cellpadding="2" cellspacing="2" style="margin:0 auto;">
-        <tr>${dot('#FFFFFF')}${dot(theme.iconLight)}</tr>
-        <tr>${dot(theme.iconLight)}${dot('#FFFFFF')}</tr>
-      </table>`,
-    toolkit: `
-      <table role="presentation" cellpadding="0" cellspacing="3" style="margin:0 auto;">
-        <tr>${bar('#FFFFFF', 22, 4)}</tr>
-        <tr>${bar(theme.iconLight, 18, 4)}</tr>
-        <tr>${bar('rgba(255,255,255,0.55)', 14, 4)}</tr>
-      </table>`,
-    vocal: `
-      <table role="presentation" cellpadding="1" cellspacing="2" style="margin:0 auto;">
-        <tr>
-          ${bar('#FFFFFF', 3, 8)}
-          ${bar(theme.iconLight, 3, 14)}
-          ${bar('#FFFFFF', 3, 18)}
-          ${bar(theme.iconLight, 3, 12)}
-          ${bar('#FFFFFF', 3, 10)}
-        </tr>
-      </table>`,
-    templates: `
-      <table role="presentation" cellpadding="2" cellspacing="2" style="margin:0 auto;">
-        <tr>${bar('#FFFFFF', 10, 10)}${bar(theme.iconLight, 10, 10)}</tr>
-        <tr>${bar(theme.iconLight, 10, 10)}${bar('#FFFFFF', 10, 10)}</tr>
-      </table>`,
+function bentoFeatureCardCell(feature, slot) {
+  const theme = feature.theme;
+  const slots = {
+    'r1-wide': {
+      width: BENTO.wide,
+      height: BENTO.row1Height,
+      pad: `padding:0 ${BENTO.gap} ${BENTO.gap} 0;`,
+      className: 'bento-wide',
+    },
+    'r1-narrow': {
+      width: BENTO.narrow,
+      height: BENTO.row1Height,
+      pad: `padding:0 0 ${BENTO.gap} ${BENTO.gap};`,
+      className: 'bento-narrow',
+    },
+    'r2-narrow': {
+      width: BENTO.narrow,
+      height: BENTO.row2Height,
+      pad: `padding:${BENTO.gap} ${BENTO.gap} 0 0;`,
+      className: 'bento-narrow',
+    },
+    'r2-wide': {
+      width: BENTO.wide,
+      height: BENTO.row2Height,
+      pad: `padding:${BENTO.gap} 0 0 ${BENTO.gap};`,
+      className: 'bento-wide',
+    },
   };
-
-  return `
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
-      <tr>
-        <td style="width:48px;height:48px;background-color:${theme.iconBg};border-radius:14px;text-align:center;vertical-align:middle;box-shadow:0 4px 12px rgba(11,31,58,0.18);">
-          ${graphics[type] || graphics.ai}
-        </td>
-      </tr>
-    </table>`;
-}
-
-function premiumFeatureCard(feature, { cardHeight } = {}) {
-  const theme = feature.theme || {
-    bg: BRAND.featureBg,
-    border: BRAND.featureBorder,
-    accent: BRAND.headerBg,
-    iconBg: BRAND.headerBg,
-    iconLight: BRAND.accent,
-    tagBg: 'rgba(11,31,58,0.06)',
-    tagText: BRAND.headerBg,
-  };
+  const { width, height, pad, className } = slots[slot];
+  const isNarrow = className === 'bento-narrow';
+  const headlineSize = isNarrow ? '13px' : '15px';
+  const descSize = isNarrow ? '12px' : '13px';
+  const watermarkSize = isNarrow ? '56px' : '50px';
+  const cardPad = isNarrow ? '16px 14px' : '18px 18px';
 
   const subheadlineBlock = feature.subheadline
-    ? `<p style="margin:0 0 6px;color:${theme.accent};font-size:12px;font-weight:600;line-height:1.35;">
+    ? `<p style="margin:0 0 6px;color:${theme.accent};font-size:${isNarrow ? '11px' : '12px'};font-weight:600;line-height:1.35;">
          ${escapeHtml(feature.subheadline)}
        </p>`
     : '';
 
   const tagsBlock = feature.tags?.length
-    ? `<p style="margin:10px 0 0;font-size:0;line-height:0;">${feature.tags
+    ? `<p style="margin:0;font-size:0;line-height:0;">${feature.tags
         .map(
           (tag) => `
-          <span style="display:inline-block;margin:0 5px 5px 0;padding:3px 9px;background-color:${theme.tagBg};color:${theme.tagText};font-size:10px;font-weight:600;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
+          <span style="display:inline-block;margin:0 4px 4px 0;padding:4px 9px;background-color:${theme.tagBg};color:${theme.tagText};font-size:9px;font-weight:600;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
             ${escapeHtml(tag)}
           </span>`
         )
         .join('')}</p>`
-    : cardHeight
-      ? `<p style="margin:10px 0 0;font-size:0;line-height:0;height:0;">&nbsp;</p>`
-      : '';
+    : '';
 
-  const heightStyle = cardHeight
-    ? `height:${cardHeight}px;min-height:${cardHeight}px;box-sizing:border-box;overflow:hidden;`
-    : 'min-height:150px;';
-
-  const cardInner = `
-    <div class="premium-card" style="background-color:${theme.bg};border:1px solid ${theme.border};border-radius:14px;padding:0; ${heightStyle} box-shadow:0 6px 18px rgba(11,31,58,0.08);">
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:${theme.bg};border-radius:14px;">
-        <tr>
-          <td style="height:4px;background:linear-gradient(90deg,${theme.iconBg} 0%,${theme.iconLight} 100%);border-radius:14px 14px 0 0;font-size:0;line-height:0;">&nbsp;</td>
-        </tr>
-        <tr>
-          <td style="padding:16px 16px 12px;vertical-align:top;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-              <tr>
-                <td style="width:54px;vertical-align:top;padding-right:10px;">
-                  ${featureGraphicHtml(feature.graphic, theme)}
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0 0 4px;color:${theme.iconBg};font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;line-height:1.3;">
-                    <span style="color:${theme.accent};opacity:0.55;margin-right:4px;">${escapeHtml(feature.number)}</span>${escapeHtml(feature.category)}
-                  </p>
-                  <p style="margin:0;color:${theme.accent};font-size:14px;font-weight:700;line-height:1.35;">
-                    ${escapeHtml(feature.headline)}
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 16px 16px;vertical-align:top;">
-            ${subheadlineBlock}
-            <p style="margin:0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-              ${escapeHtml(feature.description)}
-            </p>
-            ${tagsBlock}
-          </td>
-        </tr>
-      </table>
-    </div>`;
-
-  if (!cardHeight) {
-    return cardInner;
-  }
-
-  return `
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="${cardHeight}" class="feature-card-wrap" style="height:${cardHeight}px;">
+  const headerRow = `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td valign="top" height="${cardHeight}" style="height:${cardHeight}px;vertical-align:top;">
-          ${cardInner}
+        <td valign="top" style="vertical-align:top;padding-right:8px;">
+          <p style="margin:0;color:${theme.accent};font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.3;">
+            ${escapeHtml(feature.category)}
+          </p>
+        </td>
+        <td align="right" valign="top" width="1" style="vertical-align:top;white-space:nowrap;">
+          <span class="bento-watermark" style="display:block;font-size:${watermarkSize};font-weight:800;color:${theme.watermark};opacity:${theme.watermarkOpacity};letter-spacing:-0.05em;line-height:0.85;font-family:${BRAND.fontFamily};">
+            ${escapeHtml(feature.number)}
+          </span>
         </td>
       </tr>
     </table>`;
+
+  const bodyBlock = `
+    <p style="margin:10px 0 6px;color:${theme.accent};font-size:${headlineSize};font-weight:700;line-height:1.3;">
+      ${escapeHtml(feature.headline)}
+    </p>
+    ${subheadlineBlock}
+    <p style="margin:0;color:${BRAND.textMuted};font-size:${descSize};line-height:1.5;">
+      ${escapeHtml(feature.description)}
+    </p>`;
+
+  const cardInner = isNarrow
+    ? `
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="100%" style="height:100%;">
+        <tr>
+          <td valign="top" style="vertical-align:top;">
+            ${headerRow}
+            ${bodyBlock}
+          </td>
+        </tr>
+        <tr>
+          <td height="100%" style="height:100%;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td valign="bottom" style="vertical-align:bottom;padding-top:10px;">
+            ${tagsBlock}
+          </td>
+        </tr>
+      </table>`
+    : `
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="100%" style="height:100%;">
+        <tr>
+          <td valign="top" style="vertical-align:top;">
+            ${headerRow}
+            ${bodyBlock}
+          </td>
+        </tr>
+        <tr>
+          <td valign="bottom" style="vertical-align:bottom;padding-top:12px;">
+            ${tagsBlock}
+          </td>
+        </tr>
+      </table>`;
+
+  return `
+    <td class="feature-col ${className} feature-pad" width="${width}" valign="top"
+      style="width:${width};${pad}vertical-align:top;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="bento-card-body"
+        style="border-collapse:separate;border-spacing:0;height:${height};min-height:${height};">
+        <tr>
+          <td bgcolor="${theme.bg}" class="bento-card-body" valign="top"
+            style="background-color:${theme.bg};border:1px solid ${theme.border};border-radius:${BENTO.radius};padding:${cardPad};height:${height};min-height:${height};vertical-align:top;">
+            ${cardInner}
+          </td>
+        </tr>
+      </table>
+    </td>`;
 }
 
-function whyChooseUsSection({
-  leading = false,
-  equalHeight = false,
-  cardHeight = 220,
-  align = 'center',
-} = {}) {
-  const cardOpts = equalHeight ? { cardHeight } : {};
-
-  const featureCells = WHY_CHOOSE_US.map(
-    (feature, index) => `
-      <td class="feature-col feature-pad" width="50%" valign="top" style="width:50%;padding:${index % 2 === 0 ? '0 6px 12px 0' : '0 0 12px 6px'};vertical-align:top;${equalHeight ? `height:${cardHeight}px;` : ''}">
-        ${premiumFeatureCard(feature, cardOpts)}
-      </td>`
-  );
-
-  const row1 = `<tr>${featureCells[0]}${featureCells[1]}</tr>`;
-  const row2 = `<tr>${featureCells[2]}${featureCells[3]}</tr>`;
-
+function whyChooseUsSection({ leading = false, align = 'center' } = {}) {
+  const [card01, card02, card03, card04] = WHY_CHOOSE_US;
   const leadBlock = leading ? '' : sectionDivider();
 
   return `
     ${leadBlock}
     ${sectionHeading(`Why choose ${brandName()}?`, { align })}
-    <p style="margin:0 0 18px;color:${BRAND.textMuted};font-size:13px;line-height:1.55;text-align:${align};">
+    <p style="margin:0 0 16px;color:${BRAND.textMuted};font-size:13px;line-height:1.55;text-align:${align};">
       Next-generation tools to create, customize, and deliver professional video experiences.
     </p>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 4px;">
-      ${row1}
-      ${row2}
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="bento-grid"
+      style="width:100%;margin:0 0 4px;border-collapse:separate;border-spacing:0;table-layout:fixed;">
+      <tr>
+        ${bentoFeatureCardCell(card01, 'r1-wide')}
+        ${bentoFeatureCardCell(card02, 'r1-narrow')}
+      </tr>
+      <tr>
+        ${bentoFeatureCardCell(card03, 'r2-narrow')}
+        ${bentoFeatureCardCell(card04, 'r2-wide')}
+      </tr>
     </table>`;
 }
 
@@ -714,8 +720,6 @@ function firstName(name) {
 
 const PRE_SIGNIN_WHY_CHOOSE_OPTS = {
   leading: true,
-  equalHeight: true,
-  cardHeight: 240,
   align: 'left',
 };
 
