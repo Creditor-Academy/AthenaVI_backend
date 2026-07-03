@@ -44,7 +44,6 @@ const findUsersWithNotificationPreference = async (prefKey) => {
 
   return prisma.user.findMany({
     where: {
-      email: { not: null },
       deletionScheduledAt: null,
       settings: {
         [prefKey]: true,
