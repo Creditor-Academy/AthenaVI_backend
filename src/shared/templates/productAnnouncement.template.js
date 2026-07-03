@@ -7,7 +7,6 @@ const buildProductAnnouncementEmail = ({ subject, htmlBody, textBody }) => {
   const html = `
   <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;padding:40px 30px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-      <h2 style="color:#2d3748;margin-bottom:16px;">${subject}</h2>
       <div style="color:#4a5568;font-size:15px;line-height:1.6;">${htmlBody}</div>
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
       <p style="color:#718096;font-size:12px;">
