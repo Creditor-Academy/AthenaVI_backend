@@ -14,6 +14,7 @@ const {
   getWorkspaceMembers,
   inviteMember,
   acceptInvitation,
+  getInvitationPreview,
   removeMember,
   changeMemberRole,
   cancelInvitation,
@@ -28,6 +29,7 @@ const renderRoutes = require('../render/render.routes');
 const renderController = require('../render/render.controller');
 const renderValidations = require('../render/render.validation');
 const speechRoutes = require('../speech/speech.routes');
+const commentRoutes = require('../comment/comment.routes');
 const heygenShareRoutes = require('../heygen/heygenShare.routes');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
@@ -71,6 +73,12 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   speechRoutes
+);
+router.use(
+  '/:workspaceId/projects/:projectId/comments',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  commentRoutes
 );
 router.use(
   '/:workspaceId/projects',
@@ -147,6 +155,12 @@ router.post(
   authMiddleware,
   validate(workspaceValidations.acceptInvitationSchema),
   acceptInvitation
+);
+
+router.get(
+  '/invitations/:token',
+  validate(workspaceValidations.getInvitationByTokenSchema),
+  getInvitationPreview
 );
 
 //member management routes

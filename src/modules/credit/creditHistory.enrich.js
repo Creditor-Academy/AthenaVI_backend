@@ -233,7 +233,11 @@ function buildUsageDetail(tx, ctx) {
       const renderId = meta.renderId || tx.reference;
       const render = renderId ? ctx.renderById.get(renderId) : null;
       const projectId = meta.projectId || render?.projectId || null;
-      const projectName = meta.projectName || ctx.projectById.get(projectId)?.name || null;
+      const projectName =
+        meta.projectName ||
+        meta.videoName ||
+        ctx.projectById.get(projectId)?.name ||
+        null;
       const workspaceName = base.workspaceName;
       const displayName = buildRemotionExportDisplayName(projectName, workspaceName);
       return {

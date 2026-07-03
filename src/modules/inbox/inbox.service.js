@@ -620,6 +620,34 @@ async function notifyPlatformStorageUpgradeRequest({
   });
 }
 
+async function notifyPlatformEarlyAccessRequest({
+  requestId,
+  name,
+  email,
+  company,
+  role,
+  useCase,
+}) {
+  const { listPlatformSuperadminUserIds } = require('../../shared/services/platformSuperadmin.service');
+  const adminUserIds = await listPlatformSuperadminUserIds();
+
+  return notifyMany(adminUserIds, {
+    type: 'PLATFORM_EARLY_ACCESS_REQUEST',
+    referenceId: `early_access_${requestId}`,
+    title: 'Early access request',
+    message: `${name} (${email}) requested early access.`,
+    metadata: {
+      requestId,
+      name,
+      email,
+      company: company || null,
+      role: role || null,
+      useCase: useCase || null,
+      scope: 'platform',
+    },
+  });
+}
+
 async function notifyStorageUpgradeRejected({ userId, requestedAdditionalGb, reviewNote }) {
   return notifyUser({
     userId,
@@ -651,6 +679,56 @@ async function notifyCreditsWorkspaceRevoke({
   });
 }
 
+async function notifyProjectComment({
+  comment,
+  project,
+  author,
+  workspace,
+  newMentionIds,
+  isCreate,
+}) {
+  const authorName = author?.name || 'Someone';
+  const projectName = project.name || 'your project';
+  const workspaceName = workspace?.name || 'workspace';
+  const mentionSet = new Set(newMentionIds || []);
+  const baseMetadata = {
+    workspaceId: comment.workspaceId,
+    projectId: comment.projectId,
+    projectName,
+    workspaceName,
+    commentId: comment.id,
+    authorId: author?.id,
+    authorName,
+  };
+
+  if (newMentionIds?.length) {
+    await notifyMany(newMentionIds, {
+      type: 'PROJECT_COMMENT_MENTION',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `${authorName} mentioned you in ${projectName}`,
+      message: comment.body.length > 120 ? `${comment.body.slice(0, 117)}...` : comment.body,
+      metadata: { ...baseMetadata, audience: 'mention' },
+    });
+  }
+
+  if (
+    isCreate &&
+    project.createdBy !== author?.id &&
+    !mentionSet.has(project.createdBy)
+  ) {
+    await notifyUser({
+      userId: project.createdBy,
+      type: 'PROJECT_COMMENT_ADDED',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `New comment on ${projectName}`,
+      message: `${authorName} commented on your project in ${workspaceName}.`,
+      metadata: { ...baseMetadata, audience: 'project_owner' },
+    });
+  }
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -658,6 +736,7 @@ function buildUnreadByCategory(unreadRows) {
     [CATEGORIES.STORAGE]: 0,
     [CATEGORIES.WORKSPACE]: 0,
     [CATEGORIES.PLATFORM]: 0,
+    [CATEGORIES.COLLABORATION]: 0,
   };
 
   for (const row of unreadRows) {
@@ -768,8 +847,10 @@ module.exports = {
   notifyPlatformHeygenWalletLow,
   clearPlatformHeygenWalletLow,
   notifyPlatformStorageUpgradeRequest,
+  notifyPlatformEarlyAccessRequest,
   notifyStorageUpgradeRejected,
   notifyCreditsWorkspaceRevoke,
+  notifyProjectComment,
   listInbox,
   getUnreadCount,
   getNotification,

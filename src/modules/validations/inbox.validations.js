@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const inboxCategories = ['videos', 'credits', 'storage', 'workspace', 'platform'];
+const inboxCategories = ['videos', 'credits', 'storage', 'workspace', 'platform', 'collaboration'];
 
 const listInboxSchema = Joi.object({
   query: Joi.object({

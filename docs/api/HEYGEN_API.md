@@ -463,6 +463,10 @@ Maps to HeyGen **`GET /v3/voices/{voice_id}`** — voice details and clone **sta
 - `input_type`: **`text`** (default) or **`ssml`**.
 - Optional: `speed` (**0.5–2**), `language`, `locale`.
 
+**Starfish only** — custom speech preview works only for **Starfish-compatible** voices. Cloned/private voices (`type: private`) are for avatar video narration, not `POST /v3/voices/speech`. List compatible voices with `GET /api/heygen/voices?engine=starfish`. Each voice in **`GET /api/heygen/voices`** includes **`supportsSpeechPreview`** (and **`previewAudioUrl`** when HeyGen provides a fixed sample).
+
+**400** – **`HEYGEN_VOICE_SPEECH_PREVIEW_UNSUPPORTED`** when the voice cannot use Starfish TTS.
+
 **Response (200)** – `data`: HeyGen speech preview payload.
 
 ---

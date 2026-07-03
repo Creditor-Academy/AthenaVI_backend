@@ -411,6 +411,7 @@ const previewSpeech = asyncHandler(async (req, res) => {
     locale: req.body.locale,
   };
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+  await heygenV3Service.assertVoiceSupportsStarfishSpeech(payload.voice_id);
   const estimate = await userCreditBilling.assertUserCanAffordFeature(
     userId,
     FEATURE.VOICE_PREVIEW,

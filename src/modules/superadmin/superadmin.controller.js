@@ -4,6 +4,7 @@ const messages = require('../../shared/utils/messages');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
 const superadminService = require('./superadmin.service');
 const superadminAlertsService = require('./superadminAlerts.service');
+const superadminBroadcastService = require('./superadminBroadcast.service');
 
 const grantUserCredits = asyncHandler(async (req, res) => {
   const { userId } = req.params;
@@ -299,6 +300,16 @@ const getAlertsSummary = asyncHandler(async (req, res) => {
   return successResponse(req, res, summary, 200, messages.SUPERADMIN_ALERTS_FETCHED);
 });
 
+const sendProductEmailBroadcast = asyncHandler(async (req, res) => {
+  const result = await superadminBroadcastService.broadcastProductEmail({
+    subject: req.body.subject,
+    html: req.body.html,
+    text: req.body.text,
+    sentByUserId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCAST_SENT);
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -323,4 +334,5 @@ module.exports = {
   listStorageUpgradeRequests,
   rejectStorageUpgradeRequest,
   getAlertsSummary,
+  sendProductEmailBroadcast,
 };

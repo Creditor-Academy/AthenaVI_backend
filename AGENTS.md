@@ -219,6 +219,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Index (start here) | [`docs/api/README.md`](docs/api/README.md) |
 | Base URL, envelopes, auth | [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md) |
 | Auth API | [`docs/api/AUTH_API.md`](docs/api/AUTH_API.md) |
+| Early Access API | [`docs/api/EARLY_ACCESS_API.md`](docs/api/EARLY_ACCESS_API.md) |
 | User API | [`docs/api/USER_API.md`](docs/api/USER_API.md) |
 | User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
@@ -226,6 +227,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |
+| **Notifications (frontend)** | [`docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md`](docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md) |
 | Platform superadmin | [`docs/api/SUPERADMIN_API.md`](docs/api/SUPERADMIN_API.md) |
 | HeyGen (user-scoped) | [`docs/api/HEYGEN_API.md`](docs/api/HEYGEN_API.md) |
 | HeyGen project videos | [`docs/api/HEYGEN_PROJECT_VIDEOS_API.md`](docs/api/HEYGEN_PROJECT_VIDEOS_API.md) |
@@ -316,6 +318,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
+| `docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md` | Frontend notifications guide (settings, inbox, comments) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |
 | `AGENTS.md` | This handbook |
 | `agent.md` | Pointer for `@agent.md` users |

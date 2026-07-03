@@ -12,6 +12,8 @@ function buildAnimatedStyle({
   animations = [],
   elementStartFrame = 0,
   elementDuration,
+  flipHorizontal = false,
+  flipVertical = false,
 }) {
   const baseScale = placement.scale ?? 1;
   const baseRotation = placement.rotation ?? 0;
@@ -137,6 +139,10 @@ function buildAnimatedStyle({
     }
   }
 
+  const flipX = flipHorizontal ? -1 : 1;
+  const flipY = flipVertical ? -1 : 1;
+  const flipPart = flipX !== 1 || flipY !== 1 ? ` scale(${flipX}, ${flipY})` : '';
+
   return {
     position: 'absolute',
     left: placement.x,
@@ -144,7 +150,7 @@ function buildAnimatedStyle({
     width: placement.width,
     height: placement.height,
     opacity,
-    transform: `translate(${translateX}px, ${translateY}px) scale(${scale}) rotate(${rotation}deg)`,
+    transform: `translate(${translateX}px, ${translateY}px) rotate(${rotation}deg) scale(${scale})${flipPart}`,
     transformOrigin: 'center center',
   };
 }

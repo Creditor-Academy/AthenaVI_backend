@@ -35,17 +35,22 @@ const resendOtp = asyncHandler(async (req, res) => {
 });
 
 const verifyAndRegister = asyncHandler(async (req, res) => {
-  const { name, email, password, otp } = req.body;
-  const { accessToken, rawRefreshToken, user } = await authService.registerUser({
+  const { name, email, password, otp, invitationToken } = req.body;
+  const { accessToken, rawRefreshToken, user, workspace } = await authService.registerUser({
     name,
     email,
     password,
     otp,
+    invitationToken,
     userAgent: req.headers['user-agent'],
     ip: getClientIp(req),
   });
   setRefreshCookie(res, rawRefreshToken);
-  return successResponse(req, res, { accessToken, user }, 201, messages.USER_CREATED);
+  const data = { accessToken, user };
+  if (workspace) {
+    data.workspace = workspace;
+  }
+  return successResponse(req, res, data, 201, messages.USER_CREATED);
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -129,13 +134,17 @@ const resetPassword = asyncHandler(async (req, res) => {
 // ----- Google OAuth -----
 
 const googleRedirect = asyncHandler(async (req, res) => {
-  const state = await googleOAuth.createState('main');
+  const { invitationToken } = req.query;
+  const state = await googleOAuth.createState({
+    portal: 'main',
+    invitationToken,
+  });
   const url = googleOAuth.getAuthUrl(state);
   res.redirect(302, url);
 });
 
 const superadminGoogleRedirect = asyncHandler(async (req, res) => {
-  const state = await googleOAuth.createState('superadmin');
+  const state = await googleOAuth.createState({ portal: 'superadmin' });
   const url = googleOAuth.getAuthUrl(state);
   res.redirect(302, url);
 });
@@ -168,7 +177,7 @@ const googleCallback = asyncHandler(async (req, res) => {
   );
 }
 
-  const { accessToken, rawRefreshToken, user, portal, isPlatformSuperadmin } = result;
+  const { accessToken, rawRefreshToken, user, workspace, portal, isPlatformSuperadmin } = result;
   setRefreshCookie(res, rawRefreshToken);
 
   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
@@ -176,14 +185,21 @@ const googleCallback = asyncHandler(async (req, res) => {
   const successPath = isSuperadminPortal
     ? process.env.SUPERADMIN_OAUTH_SUCCESS_PATH || '/admin/auth/callback'
     : process.env.OAUTH_SUCCESS_PATH || '/auth/callback';
+  const hashParams = new URLSearchParams({ access_token: accessToken });
+  if (workspace?.id) {
+    hashParams.set('workspace_id', workspace.id);
+  }
   const redirectUrl = frontendUrl
-    ? `${frontendUrl}${successPath}#access_token=${encodeURIComponent(accessToken)}`
+    ? `${frontendUrl}${successPath}#${hashParams.toString()}`
     : null;
 
   if (redirectUrl) {
     res.redirect(302, redirectUrl);
   } else {
     const data = { accessToken, user };
+    if (workspace) {
+      data.workspace = workspace;
+    }
     if (isSuperadminPortal) {
       data.isPlatformSuperadmin = isPlatformSuperadmin;
       data.portal = portal;

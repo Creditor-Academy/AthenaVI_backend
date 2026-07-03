@@ -193,6 +193,19 @@ const platformAccessBodySchema = Joi.object({
   }).required(),
 });
 
+const productEmailBroadcastBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    subject: Joi.string().trim().min(3).max(200).required(),
+    html: Joi.string().trim().min(10).required(),
+    text: Joi.string().trim().optional(),
+    confirm: Joi.string().valid('send').required().messages({
+      'any.only': 'Type send to confirm product email broadcast',
+    }),
+  }).required(),
+});
+
 module.exports = {
   userIdParamsSchema,
   workspaceIdParamsSchema,
@@ -212,4 +225,5 @@ module.exports = {
   usageReportQuerySchema,
   platformActionsQuerySchema,
   platformAccessBodySchema,
+  productEmailBroadcastBodySchema,
 };

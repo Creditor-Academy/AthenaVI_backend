@@ -36,7 +36,40 @@ const upsertSettings = async (userId, data) => {
   });
 };
 
+const findUsersWithNotificationPreference = async (prefKey) => {
+  const allowedKeys = ['weeklyDigestEmail', 'productEmails'];
+  if (!allowedKeys.includes(prefKey)) {
+    throw new Error(`Invalid notification preference key: ${prefKey}`);
+  }
+
+  return prisma.user.findMany({
+    where: {
+      email: { not: null },
+      deletionScheduledAt: null,
+      settings: {
+        [prefKey]: true,
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      settings: {
+        select: {
+          lastWeeklyDigestSentAt: true,
+        },
+      },
+    },
+  });
+};
+
+const updateLastWeeklyDigestSentAt = async (userId, sentAt = new Date()) => {
+  return upsertSettings(userId, { lastWeeklyDigestSentAt: sentAt });
+};
+
 module.exports = {
   findByUserId,
   upsertSettings,
+  findUsersWithNotificationPreference,
+  updateLastWeeklyDigestSentAt,
 };

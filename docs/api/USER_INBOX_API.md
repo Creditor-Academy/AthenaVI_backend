@@ -16,6 +16,7 @@ Workspace invitations are delivered by **email** and, when the invitee already h
 | `credits` | `CREDITS_PLATFORM_GRANT`, `CREDITS_WORKSPACE_REVOKE`, `CREDITS_LOW_PERSONAL`, `CREDITS_ALLOCATED`, … |
 | `storage` | `STORAGE_THRESHOLD_WARNING`, `STORAGE_UPGRADE_REJECTED`, `STORAGE_UPLOAD_BLOCKED`, … |
 | `workspace` | `WORKSPACE_INVITATION`, `WORKSPACE_MEMBER_JOINED`, … |
+| `collaboration` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION` |
 | `platform` | `PLATFORM_HEYGEN_WALLET_LOW`, `PLATFORM_STORAGE_UPGRADE_REQUEST` (superadmin only) |
 
 **TEAM workspace video exports:** when a member exports a final video, the **exporter**, all **OWNER**s, and all **ADMIN**s receive a notification (deduplicated per user).
@@ -37,7 +38,7 @@ Workspace invitations are delivered by **email** and, when the invitee already h
 | `unreadOnly` | `true` \| `false` | When `true`, only unread items |
 | `limit` | number | Max items (1–100, default 50) |
 | `type` | string | Filter by `InboxNotificationType` enum value |
-| `category` | `videos` \| `credits` \| `storage` \| `workspace` \| `platform` | Filter by category |
+| `category` | `videos` \| `credits` \| `storage` \| `workspace` \| `collaboration` \| `platform` | Filter by category |
 | `workspaceId` | UUID | Filter by workspace |
 
 **Response (200)** – `data`:

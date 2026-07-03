@@ -12,6 +12,7 @@ const verifyAndRegisterSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
     otp: Joi.number().integer().min(100000).max(999999).required(),
+    invitationToken: Joi.string().uuid().optional(),
   }),
 });
 
@@ -37,6 +38,12 @@ const googleCallbackSchema = Joi.object({
   }),
 }); 
 
+const googleRedirectSchema = Joi.object({
+  query: Joi.object({
+    invitationToken: Joi.string().uuid().optional(),
+  }),
+});
+
 
 
 module.exports = {
@@ -44,5 +51,6 @@ module.exports = {
   verifyAndRegisterSchema,
   loginSchema,
   resetPasswordSchema,
-  googleCallbackSchema
+  googleCallbackSchema,
+  googleRedirectSchema,
 };

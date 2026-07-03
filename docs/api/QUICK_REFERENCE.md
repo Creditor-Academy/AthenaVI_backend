@@ -15,6 +15,7 @@
 | GET | `/api/auth/google` | No | Start Google OAuth |
 | GET | `/api/auth/superadmin/google` | No | Start Google OAuth (superadmin portal) |
 | GET | `/api/auth/google/callback` | No | Google redirect (OAuth) |
+| POST | `/api/early-access/request` | No | Submit early access request (rate limited) |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | GET | `/api/user/storage` | Bearer | My storage quota summary (+ active pending upgrade request) |
@@ -35,6 +36,7 @@
 | POST | `/api/workspaces` | Bearer | Create team workspace |
 | GET | `/api/workspaces` | Bearer | List my workspaces |
 | POST | `/api/workspaces/invitations/accept` | Bearer | Accept invite |
+| GET | `/api/workspaces/invitations/:token` | — | Preview invite (signup vs login) |
 | GET | `/api/workspaces/:id` | Bearer + member | Get workspace |
 | PATCH | `/api/workspaces/:id` | Bearer + OWNER | Rename workspace |
 | DELETE | `/api/workspaces/:id` | Bearer + OWNER | Delete workspace |
@@ -55,6 +57,11 @@
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |
 | DELETE | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Delete project and related assets |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | List project comments |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | Create comment |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/comments/:commentId` | Bearer + member | Update own comment |
+| DELETE | `/api/workspaces/:workspaceId/projects/:projectId/comments/:commentId` | Bearer + member | Delete comment |
+| GET | `/api/workspaces/:workspaceId/projects/:projectId/comments/mentionable-users` | Bearer + member | Mention autocomplete |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | Start Remotion render |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders` | Bearer + member | List project renders |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/renders/:renderId` | Bearer + member | Get render status/details |
@@ -94,6 +101,7 @@
 | GET | `/api/superadmin/reports/credits/platform-actions` | Bearer + platform superadmin | Platform grant/revoke audit |
 | GET | `/api/superadmin/heygen/account` | Bearer + platform superadmin | HeyGen API wallet |
 | GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary |
+| POST | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast (`productEmails` opt-in) |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

@@ -6,6 +6,12 @@ const heygenDao = require('./heygen.dao');
 const heygenShareDao = require('./heygenShare.dao');
 const heygenAccess = require('./heygenAccess.service');
 const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
+const {
+  enrichVoiceWithSpeechHints,
+  enrichVoicesListBodyWithSpeechHints,
+  voiceSupportsStarfishSpeech,
+  isHeygenStarfishSpeechUnsupportedError,
+} = require('../../shared/constants/heygenVoice');
 
 function pickArray(data, keys) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -517,16 +523,22 @@ function dbRowToVoiceListItem(row) {
     const inner = raw.data !== undefined && raw.data !== null ? raw.data : raw;
     if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
       const id = itemVoiceId(inner) || row.voiceId;
-      return { ...inner, voice_id: id, voiceId: id };
+      return enrichVoiceWithSpeechHints({
+        ...inner,
+        voice_id: id,
+        voiceId: id,
+        ...(row.source === 'clone' ? { type: inner.type || 'private' } : {}),
+      });
     }
   }
   const id = row.voiceId;
-  return {
+  return enrichVoiceWithSpeechHints({
     voice_id: id,
     voiceId: id,
     ...(row.name != null ? { name: row.name } : {}),
     ...(row.language != null ? { language: row.language } : {}),
-  };
+    ...(row.source === 'clone' ? { type: 'private' } : {}),
+  });
 }
 
 async function augmentPrivateVoiceListFromDb(body, userId, allowedSet, sharedMetaByVoiceId = null) {
@@ -988,14 +1000,17 @@ async function deleteVoice(userId, voiceId) {
 
 async function listVoices(userId, query) {
   const raw = await getJson('/v3/voices', query);
-  if (query?.type !== 'private') return raw;
+  let next = enrichVoicesListBodyWithSpeechHints(raw);
+  if (query?.type !== 'private') return next;
   const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
   const { allowed, sharedMetaByVoiceId } = await heygenAccess.buildAllowedVoiceContext(
     userId,
     workspaceId
   );
-  const filtered = filterPrivateListBody(raw, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
-  return augmentPrivateVoiceListFromDb(filtered, userId, allowed, sharedMetaByVoiceId);
+  const filtered = filterPrivateListBody(next, allowed, itemVoiceId, VOICE_LIST_ARRAY_KEYS);
+  return enrichVoicesListBodyWithSpeechHints(
+    await augmentPrivateVoiceListFromDb(filtered, userId, allowed, sharedMetaByVoiceId)
+  );
 }
 
 async function designVoice(_userId, body) {
@@ -1064,11 +1079,42 @@ async function getVoice(userId, voiceId) {
   if (await heygenDao.cloneVoiceOwnedByOtherUser(userId, voiceId)) {
     throw new AppError(messages.HEYGEN_FORBIDDEN, 403);
   }
-  return getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
+  const raw = await getJson(`/v3/voices/${encodeURIComponent(voiceId)}`);
+  const hasEnvelope = raw && typeof raw === 'object' && 'data' in raw && raw.data != null;
+  const inner = hasEnvelope ? raw.data : raw;
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    const enriched = enrichVoiceWithSpeechHints(inner);
+    return hasEnvelope ? { ...raw, data: enriched } : enriched;
+  }
+  return raw;
+}
+
+async function assertVoiceSupportsStarfishSpeech(voiceId) {
+  const normalizedVoiceId = String(voiceId || '').trim();
+  if (!normalizedVoiceId) {
+    throw new AppError('voice_id is required', 400);
+  }
+
+  const raw = await getJson(`/v3/voices/${encodeURIComponent(normalizedVoiceId)}`);
+  const voice = unwrapHeygenData(raw);
+  if (!voiceSupportsStarfishSpeech(voice)) {
+    throw new AppError(messages.HEYGEN_VOICE_SPEECH_PREVIEW_UNSUPPORTED, 400);
+  }
 }
 
 async function generateSpeechPreview(body) {
-  return postJson('/v3/voices/speech', body);
+  try {
+    return await postJson('/v3/voices/speech', body);
+  } catch (err) {
+    if (
+      err instanceof AppError &&
+      err.statusCode === 400 &&
+      isHeygenStarfishSpeechUnsupportedError(err.message)
+    ) {
+      throw new AppError(messages.HEYGEN_VOICE_SPEECH_PREVIEW_UNSUPPORTED, 400);
+    }
+    throw err;
+  }
 }
 
 /** Normalize POST /v3/videos response */
@@ -1216,6 +1262,7 @@ module.exports = {
   cloneVoice,
   selectVoice,
   getVoice,
+  assertVoiceSupportsStarfishSpeech,
   generateSpeechPreview,
   getAccountBillingInfo,
   createVideo,

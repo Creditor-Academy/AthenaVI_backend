@@ -220,7 +220,7 @@ Returns **PENDING** invitations only.
 
 ## Invite member
 
-Sends an email with an accept link. If the invitee already has an AthenaVI account, a **`WORKSPACE_INVITATION`** item is also added to their platform inbox (`GET /api/user/inbox`). Users who register later with the same email receive matching inbox items on signup. Effective role for the invite must be **ADMIN** or **MEMBER** (OWNER is rejected by the server with **400** even if it passes generic validation).
+Sends an email with an accept link. The email subject is **`{inviter name} invited you to join {workspace name}`** and the body names both the workspace and the person who sent the invite. If the invitee already has an AthenaVI account, a **`WORKSPACE_INVITATION`** item is also added to their platform inbox (`GET /api/user/inbox`). Users who register later with the same email receive matching inbox items on signup. Effective role for the invite must be **ADMIN** or **MEMBER** (OWNER is rejected by the server with **400** even if it passes generic validation).
 
 | | |
 |---|---|
@@ -242,7 +242,12 @@ Sends an email with an accept link. If the invitee already has an AthenaVI accou
 
 `{FRONTEND_URL}/invitations/accept/<token>`
 
-The user completes signup/login and calls **Accept invitation** with that `token` in the body.
+**Unregistered invitees:** the frontend should call **`GET /api/workspaces/invitations/:token`** (no auth) to load workspace details and whether signup is required. If `requiresRegistration` is `true`, show the signup form with the invitation email pre-filled, then either:
+- **Email signup:** `POST /api/auth/register` with optional `invitationToken` set to the same token.
+- **Google signup/login:** redirect to `GET /api/auth/google?invitationToken=<token>`.
+In both cases, the user is added to the workspace automatically on success.
+
+**Registered invitees:** prompt login, then **`POST /api/workspaces/invitations/accept`** with `{ "token" }` in the body.
 
 - **409** if the user is already a member or a pending invite already exists for that email.
 
@@ -258,6 +263,44 @@ The user completes signup/login and calls **Accept invitation** with that `token
 | **Role** | OWNER or ADMIN |
 
 **Response (200)** – `data` includes `updatedInvitation` (invitee email string) and `message`; top-level `message` is also set.
+
+---
+
+## Preview invitation (public)
+
+Load invitation details from the email link **before** the user is authenticated. Use this on `/invitations/accept/:token` to decide whether to show signup or login.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/invitations/:token` |
+| **Auth** | None |
+
+**Response (200)** – `data`:
+
+```json
+{
+  "invitation": {
+    "email": "invitee@example.com",
+    "role": "MEMBER",
+    "expiresAt": "ISO8601",
+    "requiresRegistration": true,
+    "workspace": {
+      "id": "uuid",
+      "name": "My Team"
+    },
+    "inviter": {
+      "id": "uuid",
+      "name": "Jane Doe",
+      "email": "jane@example.com"
+    }
+  }
+}
+```
+
+- `requiresRegistration`: `true` when no AthenaVI account exists for `email` — show signup and pass the same token as `invitationToken` on register.
+- `inviter`: who sent the invite (`null` for invitations created before this field existed).
+- **400** if token invalid, not pending, or expired.
 
 ---
 

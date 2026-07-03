@@ -67,6 +67,8 @@ Same behavior and errors as [Generate OTP](#generate-otp).
 
 Verify OTP and create a new user. Returns access token and sets refresh token cookie. New user gets a **private workspace** automatically.
 
+When signing up from a workspace invitation link, include optional **`invitationToken`** (same UUID as in the invite URL). The email must match the invitation; on success the user is added to that workspace and `data.workspace` is returned.
+
 | | |
 |---|---|
 | **Method** | `POST` |
@@ -79,13 +81,15 @@ Verify OTP and create a new user. Returns access token and sets refresh token co
 - `email`: valid email.
 - `password`: string, minimum **8** characters.
 - `otp`: **number** between `100000` and `999999` (JSON number, not a quoted string).
+- `invitationToken` (optional): UUID from the workspace invitation link.
 
 ```json
 {
   "name": "John Doe",
   "email": "user@example.com",
   "password": "yourSecurePassword",
-  "otp": 308856
+  "otp": 308856,
+  "invitationToken": "00000000-0000-4000-8000-000000000001"
 }
 ```
 
@@ -94,9 +98,21 @@ Verify OTP and create a new user. Returns access token and sets refresh token co
 ```json
 {
   "accessToken": "eyJhbG...",
-  "user": { "name": "John Doe", "email": "user@example.com" }
+  "user": { "name": "John Doe", "email": "user@example.com" },
+  "workspace": {
+    "id": "uuid",
+    "name": "My Team",
+    "type": "TEAM",
+    "ownerId": "uuid",
+    "credits": 0,
+    "owner": { "id": "...", "email": "...", "name": "..." },
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
+  }
 }
 ```
+
+`workspace` is present only when `invitationToken` was supplied and accepted. Other pending invitations for the same email still appear in the inbox after signup.
 
 New users are created with `emailVerified: true` (OTP proves email ownership).
 
@@ -105,7 +121,9 @@ New users are created with `emailVerified: true` (OTP proves email ownership).
 | Status | When |
 |--------|------|
 | **400** | Validation failure (name, email, password min 8, OTP format). |
-| **409** | `Email already registered` — redirect user to login. |
+| **400** | `Invitation was sent to a different email address` when `invitationToken` email does not match `email`. |
+| **400** | Invalid or expired `invitationToken`. |
+| **409** | `Email already registered` — redirect user to login, then `POST /api/workspaces/invitations/accept`. |
 | **410** | OTP expired or not found. |
 | **429** | Too many OTP verification attempts. |
 
@@ -306,6 +324,10 @@ Redirect the browser to this URL. The user is sent to Google, then to the backen
 | **Path** | `/api/auth/google` |
 | **Auth** | None |
 
+**Query (optional)**
+
+- `invitationToken` (UUID) — pass this when the user starts Google sign-in from `/invitations/accept/:token`. On callback success, the invitation is auto-accepted for the Google account (email must match invitation email).
+
 ---
 
 ### Start Google sign-in (superadmin portal)
@@ -337,12 +359,12 @@ Google redirects here after consent. **Not called by your frontend directly**—
 
 On success, the backend redirects to:
 
-- **Main portal:** `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/auth/callback`)
+- **Main portal:** `{FRONTEND_URL}{OAUTH_SUCCESS_PATH}#access_token=<access_token>[&workspace_id=<workspace_id>]` (default path `/auth/callback`)
 - **Superadmin portal** (started via `/api/auth/superadmin/google`): `{FRONTEND_URL}{SUPERADMIN_OAUTH_SUCCESS_PATH}#access_token=<access_token>` (default path `/admin/auth/callback`)
 
 (URL-encoded token in the hash.)
 
-The frontend should read `access_token` from the hash and store it. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user" }` (superadmin flow also includes `isPlatformSuperadmin` and `portal`) instead of redirecting.
+The frontend should read `access_token` from the hash and store it. When OAuth started with `invitationToken` and the invite is accepted, `workspace_id` is also included in the hash so you can redirect the user to that workspace immediately. A refresh token cookie is set on success (same pattern as email login when redirect URL is configured). If `FRONTEND_URL` is not set, the API may respond with `200` and JSON `data`: `{ "accessToken", "user", "workspace?" }` (superadmin flow also includes `isPlatformSuperadmin` and `portal`) instead of redirecting.
 
 On error, the user is redirected to `{FRONTEND_URL}?error=...` with an error code in the query string.
 

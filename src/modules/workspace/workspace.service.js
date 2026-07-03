@@ -103,6 +103,43 @@ async function renameWorkspace(userId, workspaceId, name) {
 
 // INVITATION & MEMBER MANAGEMENT
 
+async function resolvePendingInvitation(token) {
+  const invitation = await workspaceDao.findInvitationByToken(token);
+  if (!invitation) {
+    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
+  }
+  if (invitation.status !== 'PENDING') {
+    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
+  }
+  if (invitation.expiresAt < new Date()) {
+    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
+  }
+  return invitation;
+}
+
+async function getInvitationPreview(token) {
+  const invitation = await resolvePendingInvitation(token);
+  const existingUser = await workspaceDao.findUserByEmail(invitation.email);
+
+  return {
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt,
+    requiresRegistration: !existingUser,
+    workspace: {
+      id: invitation.workspace.id,
+      name: invitation.workspace.name,
+    },
+    inviter: invitation.invitedBy
+      ? {
+          id: invitation.invitedBy.id,
+          name: invitation.invitedBy.name,
+          email: invitation.invitedBy.email,
+        }
+      : null,
+  };
+}
+
 async function inviteMember(workspaceId, inviterId, email, role) {
   if (!['ADMIN', 'MEMBER'].includes(role)) {
     throw new AppError(messages.WORKSPACE_INVITE_ROLE_INVALID, 400);
@@ -119,9 +156,10 @@ async function inviteMember(workspaceId, inviterId, email, role) {
     throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
   }
 
-  const [workspace, existingUser] = await Promise.all([
+  const [workspace, existingUser, inviter] = await Promise.all([
     workspaceDao.findWorkspaceById(workspaceId),
-    workspaceDao.findUserByEmail(normalizedEmail)
+    workspaceDao.findUserByEmail(normalizedEmail),
+    workspaceDao.findUserById(inviterId),
   ]);
 
   if (!workspace) {
@@ -160,23 +198,24 @@ async function inviteMember(workspaceId, inviterId, email, role) {
     role,
     token,
     status: 'PENDING',
+    invitedById: inviterId,
     expiresAt,
   });
 
   const invitationLink = `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
+  const inviterName = inviter?.name || inviter?.email || 'A teammate';
 
   try {
     await sendEmail({
       to: normalizedEmail,
-      subject: 'Invitation to join workspace',
-      html: invitationTemplate(invitationLink, workspace.name),
+      subject: `${inviterName} invited you to join ${workspace.name}`,
+      html: invitationTemplate(invitationLink, workspace.name, inviterName),
     });
   } catch (emailError) {
     console.error('Failed to send invitation email:', emailError);
   }
 
   if (existingUser) {
-    const inviter = await workspaceDao.findUserById(inviterId);
     await inboxService.notifyWorkspaceInvitation({
       userId: existingUser.id,
       invitation,
@@ -232,15 +271,7 @@ async function cancelInvitation(workspaceId, inviterId, invitationId) {
 }
 
 async function acceptInvitation(token, userId) {
-  const invitation = await workspaceDao.findInvitationByToken(token);
-  if (!invitation)
-    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
-  if (invitation.status !== 'PENDING') {
-    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
-  }
-  if (invitation.expiresAt < new Date()) {
-    throw new AppError(messages.WORKSPACE_INVITATION_EXPIRED, 400);
-  }
+  const invitation = await resolvePendingInvitation(token);
 
   const user = await workspaceDao.findUserById(userId);
   if (!user) throw new AppError(messages.UNAUTHORIZED, 401);
@@ -392,6 +423,8 @@ module.exports = {
   getWorkspaceById,
   deleteWorkspace,
   renameWorkspace,
+  resolvePendingInvitation,
+  getInvitationPreview,
   inviteMember,
   acceptInvitation,
   cancelInvitation,

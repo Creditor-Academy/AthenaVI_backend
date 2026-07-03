@@ -1,4 +1,4 @@
-const invitationTemplate = (link, workspaceName) => {
+const invitationTemplate = (link, workspaceName, inviterName) => {
   return `
   <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
     
@@ -9,7 +9,8 @@ const invitationTemplate = (link, workspaceName) => {
       </h2>
 
       <p style="color:#4a5568;font-size:15px;margin-bottom:25px;">
-        You have been invited to collaborate in the <strong>${workspaceName}</strong> workspace on AthenaVI.
+        <strong>${inviterName}</strong> has invited you to collaborate in the
+        <strong>${workspaceName}</strong> workspace on AthenaVI.
         Click the button below to accept the invitation.
       </p>
 
@@ -28,7 +29,7 @@ const invitationTemplate = (link, workspaceName) => {
       </a>
 
       <p style="color:#4a5568;font-size:14px;margin-top:25px;">
-        This invitation link will expire in <strong>24 hours</strong>.
+        This invitation link will expire in <strong>7 days</strong>.
       </p>
 
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
