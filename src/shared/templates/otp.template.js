@@ -8,7 +8,7 @@ const {
   primaryButton,
   sectionHeading,
   bulletList,
-  whyChooseUsSection,
+  whyChooseUsSectionPreSignIn,
   whyChooseUsText,
   sectionDivider,
   BRAND,
@@ -20,23 +20,27 @@ function buildOtpEmail(otp) {
 
   const text = `Welcome to ${brandName()}!
 
-${whyChooseUsText()}
+Verify your email
 
-Use the One-Time Password below to complete your verification:
+Use the One-Time Password below to complete your registration and start creating.
 
 ${otp}
 
 This OTP will expire in 5 minutes.
+
+${whyChooseUsText()}
+
+  • Verify your email — enter the code above to activate your account.
+  • Create your first project — build AI-powered training videos in minutes.
+  • Invite your team — collaborate in shared workspaces.
 
 If you did not request this email, you can safely ignore it.
 
 — ${brandName()}`;
 
   const bodyHtml = `
-    ${whyChooseUsSection({ leading: true })}
-    ${sectionDivider()}
-    ${sectionHeading('Verify your email')}
-    <p style="margin:0 0 16px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:center;">
+    ${sectionHeading('Verify your email', { align: 'left' })}
+    <p style="margin:0 0 20px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
       Use the One-Time Password below to complete your registration and start creating.
     </p>
     ${infoPanel({
@@ -47,9 +51,11 @@ If you did not request this email, you can safely ignore it.
           ${escapeHtml(otp)}
         </span>`,
     })}
-    <p style="margin:0;color:${BRAND.textMuted};font-size:14px;text-align:center;">
+    <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;text-align:left;">
       This code will expire in <strong>5 minutes</strong>.
     </p>
+    ${whyChooseUsSectionPreSignIn()}
+    ${sectionDivider()}
     ${bulletList([
       '<strong>Verify your email</strong> &mdash; enter the code above to activate your account.',
       '<strong>Create your first project</strong> &mdash; build AI-powered training videos in minutes.',
@@ -61,7 +67,7 @@ If you did not request this email, you can safely ignore it.
   const html = wrapEmailHtml({
     preheader: `Your verification code is ${otp}. Expires in 5 minutes.`,
     heroGreeting: 'Welcome!',
-    heroSubtitle: `Verify your email to get started with ${escapeHtml(brandName())}.`,
+    headerAlign: 'left',
     bodyHtml,
     variant: 'user',
   });

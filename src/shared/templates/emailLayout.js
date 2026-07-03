@@ -64,7 +64,7 @@ const WHY_CHOOSE_US = [
     headline: 'Voice-Based Interaction',
     description:
       'Enable users to ask questions using voice and receive intelligent spoken responses.',
-    tags: ['Smart NLP', 'Instant'],
+    tags: ['Smart NLP', 'Instant Voice'],
     theme: {
       bg: '#E2EFFA',
       border: '#A8C8E6',
@@ -82,7 +82,7 @@ const WHY_CHOOSE_US = [
     headline: 'World-class templates that empower creators',
     description:
       'Jump-start your projects with professionally designed templates built for creators and teams.',
-    tags: [],
+    tags: ['Ready to Use', 'Fully Editable', 'Creator-Ready'],
     theme: {
       bg: '#EBF0F9',
       border: '#BBC8E0',
@@ -543,7 +543,12 @@ function premiumFeatureCard(feature, { cardHeight } = {}) {
     </table>`;
 }
 
-function whyChooseUsSection({ leading = false, equalHeight = false, cardHeight = 220 } = {}) {
+function whyChooseUsSection({
+  leading = false,
+  equalHeight = false,
+  cardHeight = 220,
+  align = 'center',
+} = {}) {
   const cardOpts = equalHeight ? { cardHeight } : {};
 
   const featureCells = WHY_CHOOSE_US.map(
@@ -560,8 +565,8 @@ function whyChooseUsSection({ leading = false, equalHeight = false, cardHeight =
 
   return `
     ${leadBlock}
-    ${sectionHeading(`Why choose ${brandName()}?`)}
-    <p style="margin:0 0 18px;color:${BRAND.textMuted};font-size:13px;line-height:1.55;text-align:center;">
+    ${sectionHeading(`Why choose ${brandName()}?`, { align })}
+    <p style="margin:0 0 18px;color:${BRAND.textMuted};font-size:13px;line-height:1.55;text-align:${align};">
       Next-generation tools to create, customize, and deliver professional video experiences.
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 4px;">
@@ -593,9 +598,9 @@ function primaryButton({ href, label, fullWidth = false }) {
     </table>`;
 }
 
-function secondaryLink({ href, label }) {
+function secondaryLink({ href, label, align = 'center' }) {
   return `
-    <p style="margin:12px 0 0;font-size:13px;text-align:center;">
+    <p style="margin:12px 0 0;font-size:13px;text-align:${align};">
       <a href="${escapeHtml(href)}" style="color:${BRAND.accent};text-decoration:none;font-weight:500;">
         ${escapeHtml(label)}
       </a>
@@ -707,9 +712,21 @@ function firstName(name) {
   return trimmed.split(/\s+/)[0];
 }
 
+const PRE_SIGNIN_WHY_CHOOSE_OPTS = {
+  leading: true,
+  equalHeight: true,
+  cardHeight: 240,
+  align: 'left',
+};
+
+function whyChooseUsSectionPreSignIn(overrides = {}) {
+  return whyChooseUsSection({ ...PRE_SIGNIN_WHY_CHOOSE_OPTS, ...overrides });
+}
+
 module.exports = {
   BRAND,
   WHY_CHOOSE_US,
+  PRE_SIGNIN_WHY_CHOOSE_OPTS,
   DEFAULT_EMAIL_LOGO_URL,
   escapeHtml,
   brandName,
@@ -733,6 +750,7 @@ module.exports = {
   sectionDivider,
   bulletList,
   whyChooseUsSection,
+  whyChooseUsSectionPreSignIn,
   whyChooseUsText,
   brandWordmarkHtml,
 };

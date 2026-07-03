@@ -5,6 +5,8 @@ const {
   infoPanel,
   dataTable,
   formatSubmittedAt,
+  sectionHeading,
+  BRAND,
 } = require('./emailLayout');
 
 function formatGb(bytes) {
@@ -86,7 +88,7 @@ Reference: ${requestId}`;
     {
       label: 'From',
       valueHtml: `<strong>${escapeHtml(displayName)}</strong><br />
-        <a href="mailto:${escapeHtml(userEmail)}" style="color:#3B82F6;text-decoration:none;">${escapeHtml(userEmail)}</a>`,
+        <a href="mailto:${escapeHtml(userEmail)}" style="color:${BRAND.accent};text-decoration:none;">${escapeHtml(userEmail)}</a>`,
     },
     {
       label: 'Requested',
@@ -104,7 +106,7 @@ Reference: ${requestId}`;
     rows.push({
       label: 'Workspace',
       valueHtml: `<strong>${escapeHtml(workspaceName || 'Unnamed workspace')}</strong><br />
-        <span style="color:#64748B;">${escapeHtml(formatGb(workspaceFootprintBytes))} used in this workspace</span>`,
+        <span style="color:${BRAND.textMuted};">${escapeHtml(formatGb(workspaceFootprintBytes))} used in this workspace</span>`,
     });
   }
 
@@ -114,12 +116,13 @@ Reference: ${requestId}`;
   });
 
   const bodyHtml = `
+    ${sectionHeading('Request details', { align: 'left' })}
     ${dataTable(rows)}
     ${infoPanel({
       title: 'Reason',
-      contentHtml: `<p style="margin:0;color:#1A202C;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(reason)}</p>`,
+      contentHtml: `<p style="margin:0;color:${BRAND.textPrimary};font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(reason)}</p>`,
     })}
-    <p style="margin:0;color:#94A3B8;font-size:11px;">
+    <p style="margin:0;color:${BRAND.textLight};font-size:11px;text-align:left;">
       Reference: ${escapeHtml(requestId)}
     </p>`;
 

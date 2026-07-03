@@ -13,6 +13,7 @@ const {
   sectionHeading,
   bulletList,
   whyChooseUsSection,
+  whyChooseUsSectionPreSignIn,
   whyChooseUsText,
   sectionDivider,
   disclaimerText,
@@ -123,7 +124,7 @@ The ${brandName()} Team`;
       We&rsquo;ve received your request and our team will personally review your details.
       You&rsquo;ll hear back from us at <strong>${escapeHtml(email)}</strong> within 1&ndash;3 business days.
     </p>
-    ${whyChooseUsSection({ leading: true, equalHeight: true, cardHeight: 260 })}
+    ${whyChooseUsSectionPreSignIn()}
     ${sectionDivider()}
     ${infoPanel({
       title: 'What you submitted',
@@ -141,7 +142,7 @@ The ${brandName()} Team`;
       Ready to explore? We&rsquo;d love to show you around.
     </p>
     ${primaryButton({ href: home, label: `Open ${brandName()}`, fullWidth: true })}
-    ${secondaryLink({ href: explore, label: 'Explore products & use cases' })}`;
+    ${secondaryLink({ href: explore, label: 'Explore products & use cases', align: 'left' })}`;
 
   const html = wrapEmailHtml({
     preheader: `We received your early access request and will reply within 1-3 business days.`,
@@ -201,6 +202,8 @@ function buildEarlyAccessStatusUpdateEmail({ name, email, requestId, status }) {
 
 ${copy.body}
 
+${whyChooseUsText()}
+
 Request ID: ${requestId}
 Status: ${statusLabel}
 ${approvedExtra}
@@ -219,6 +222,8 @@ The ${brand} Team`;
     <p style="margin:0 0 24px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
       ${escapeHtml(copy.body)}
     </p>
+    ${whyChooseUsSectionPreSignIn()}
+    ${sectionDivider()}
     ${infoPanel({
       title: 'Request details',
       contentHtml: `

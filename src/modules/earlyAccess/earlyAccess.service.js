@@ -9,6 +9,7 @@ const {
 } = require('../../shared/services/platformSuperadmin.service');
 const {
   buildEarlyAccessSuperadminNotificationEmail,
+  buildEarlyAccessConfirmationEmail,
   buildEarlyAccessStatusUpdateEmail,
 } = require('../../shared/templates/earlyAccess.template');
 const {
@@ -113,6 +114,14 @@ async function submitEarlyAccessRequest(payload, ip) {
     submittedAt,
   });
 
+  const confirmationEmail = buildEarlyAccessConfirmationEmail({
+    name: requestRecord.name,
+    email: requestRecord.email,
+    company: requestRecord.company,
+    role: requestRecord.role,
+    useCase: requestRecord.useCase,
+  });
+
   try {
     await Promise.all([
       sendEmail({
@@ -121,7 +130,12 @@ async function submitEarlyAccessRequest(payload, ip) {
         text: superadminEmail.text,
         html: superadminEmail.html,
       }),
-      sendApplicantStatusEmail(requestRecord),
+      sendEmail({
+        to: requestRecord.email,
+        subject: confirmationEmail.subject,
+        text: confirmationEmail.text,
+        html: confirmationEmail.html,
+      }),
     ]);
   } catch (err) {
     console.error('Early access email send failed:', err);
