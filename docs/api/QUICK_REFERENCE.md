@@ -91,6 +91,11 @@
 | GET | `/api/superadmin/storage/tiers` | Bearer + platform superadmin | Storage tier presets |
 | GET | `/api/superadmin/storage/requests` | Bearer + platform superadmin | Storage upgrade request queue |
 | POST | `/api/superadmin/storage/requests/:requestId/reject` | Bearer + platform superadmin | Reject storage upgrade request |
+| GET | `/api/superadmin/early-access/requests` | Bearer + platform superadmin | Early access request queue |
+| GET | `/api/superadmin/early-access/requests/:requestId` | Bearer + platform superadmin | Single early access request |
+| PATCH | `/api/superadmin/early-access/requests/:requestId/status` | Bearer + platform superadmin | Update status (`under_review`, `in_discussion`, `approved`, `rejected`) |
+| POST | `/api/superadmin/early-access/requests/:requestId/approve` | Bearer + platform superadmin | Approve early access request |
+| POST | `/api/superadmin/early-access/requests/:requestId/reject` | Bearer + platform superadmin | Reject early access request |
 | GET | `/api/superadmin/workspaces` | Bearer + platform superadmin | List TEAM workspaces with pools |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits` | Bearer + platform superadmin | Workspace pool summary |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits/history` | Bearer + platform superadmin | Workspace credit ledger |
@@ -102,6 +107,9 @@
 | GET | `/api/superadmin/heygen/account` | Bearer + platform superadmin | HeyGen API wallet |
 | GET | `/api/superadmin/alerts/summary` | Bearer + platform superadmin | Platform alerts summary |
 | POST | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast (`productEmails` opt-in) |
+| GET | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast history (paginated) |
+| GET | `/api/superadmin/broadcasts/product-email/:broadcastId` | Bearer + platform superadmin | Single broadcast detail |
+| GET | `/api/superadmin/broadcasts/product-email/:broadcastId/recipients` | Bearer + platform superadmin | Per-recipient delivery log (`status` filter) |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

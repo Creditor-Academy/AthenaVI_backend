@@ -23,6 +23,11 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/storage/tiers` | Storage tier presets (`id`, `label`, `limitBytes`) |
 | `GET` | `/api/superadmin/storage/requests` | Storage upgrade queue (`status` = `pending` \| `approved` \| `rejected`) |
 | `POST` | `/api/superadmin/storage/requests/:requestId/reject` | Body: `{ reviewNote? }` |
+| `GET` | `/api/superadmin/early-access/requests` | Early access queue (`status` = `pending` \| `under_review` \| `in_discussion` \| `approved` \| `rejected`) |
+| `GET` | `/api/superadmin/early-access/requests/:requestId` | Single early access request |
+| `PATCH` | `/api/superadmin/early-access/requests/:requestId/status` | Body: `{ status }` — `under_review` \| `in_discussion` \| `approved` \| `rejected` |
+| `POST` | `/api/superadmin/early-access/requests/:requestId/approve` | Shortcut → `approved` |
+| `POST` | `/api/superadmin/early-access/requests/:requestId/reject` | Shortcut → `rejected` |
 | `GET` | `/api/superadmin/workspaces` | List TEAM workspaces (`page`, `limit`, `search`) |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits` | TEAM workspace pool summary |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits/history` | Workspace credit ledger |
@@ -73,6 +78,39 @@ New user requests also notify superadmins via inbox (`PLATFORM_STORAGE_UPGRADE_R
 
 ---
 
+### Early access triage
+
+Workflow: **`pending`** → **`under_review`** → **`in_discussion`** → **`approved`** / **`rejected`**.
+
+Each status change emails the applicant automatically (including **`pending`** on form submit).
+
+```http
+GET /api/superadmin/early-access/requests?status=pending&page=1&limit=20
+```
+
+**200** — `data.requests[]`: `requestId`, `name`, `email`, `company`, `role`, `useCase`, `message`, `status`, `createdAt`, `reviewedAt`, `reviewerId`. Includes `pagination`.
+
+```http
+GET /api/superadmin/early-access/requests/:requestId
+PATCH /api/superadmin/early-access/requests/:requestId/status
+Content-Type: application/json
+
+{ "status": "under_review" }
+```
+
+Allowed `status` values on PATCH: `under_review`, `in_discussion`, `approved`, `rejected`. Cannot revert to `pending`. **400** if already `approved`/`rejected` or status unchanged.
+
+```http
+POST /api/superadmin/early-access/requests/:requestId/approve
+POST /api/superadmin/early-access/requests/:requestId/reject
+```
+
+**404** if not found.
+
+`GET /api/superadmin/alerts/summary` → `pendingEarlyAccessCount` counts open requests (`pending`, `under_review`, `in_discussion`).
+
+---
+
 ### Workspace admin
 
 ```http
@@ -120,6 +158,7 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "unreadPlatformCount": 1,
+  "pendingEarlyAccessCount": 3,
   "heygenWallet": {
     "remainingBalanceUsd": 42.5,
     "currency": "usd",
@@ -153,17 +192,45 @@ Content-Type: application/json
 }
 ```
 
-Sends to all users with **`productEmails: true`** in notification settings. Requires `confirm` exactly `"send"`.
+Sends to all users with **`productEmails: true`** in notification settings. Requires `confirm` exactly `"send"`. Each broadcast is stored for history (see below).
 
 **200** – `data`:
 
 ```json
 {
+  "broadcastId": "uuid",
   "recipientCount": 42,
   "sentCount": 40,
   "failedCount": 2
 }
 ```
+
+#### List broadcast history
+
+```http
+GET /api/superadmin/broadcasts/product-email?page=1&limit=20
+Authorization: Bearer <accessToken>
+```
+
+**200** – `data.broadcasts[]`: `id`, `subject`, `htmlBody`, `textBody`, `recipientCount`, `sentCount`, `failedCount`, `createdAt`, `sentBy` (`id`, `email`, `name`). Includes `pagination`.
+
+#### Get one broadcast
+
+```http
+GET /api/superadmin/broadcasts/product-email/:broadcastId
+```
+
+**200** – `data.broadcast` (same fields as list item). **404** if not found.
+
+#### List recipients for a broadcast
+
+```http
+GET /api/superadmin/broadcasts/product-email/:broadcastId/recipients?page=1&limit=50&status=SENT
+```
+
+Query `status` optional: `SENT` | `FAILED`.
+
+**200** – `data.recipients[]`: `id`, `userId`, `email`, `name`, `status`, `error`, `sentAt`, `createdAt`, `user` (`id`, `email`, `name`). Includes `pagination`.
 
 Email-only channel (no inbox notification). See [`SUPERADMIN_FRONTEND_INTEGRATION.md`](../SUPERADMIN_FRONTEND_INTEGRATION.md).
 

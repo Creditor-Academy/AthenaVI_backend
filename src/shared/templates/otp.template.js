@@ -1,37 +1,78 @@
-const otpTemplate = (otp) => {
-  return `
-  <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;padding:40px 30px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-      
-      <h2 style="color:#2d3748;margin-bottom:10px;">Verify Your Email</h2>
-      
-      <p style="color:#4a5568;font-size:15px;margin-bottom:30px;">
-        Use the One-Time Password below to complete your verification.
-      </p>
+const {
+  brandName,
+  escapeHtml,
+  frontendUrl,
+  wrapEmailHtml,
+  infoPanel,
+  disclaimerText,
+  primaryButton,
+  sectionHeading,
+  bulletList,
+  whyChooseUsSectionPreSignIn,
+  whyChooseUsText,
+  sectionDivider,
+  BRAND,
+} = require('./emailLayout');
 
-      <div style="background:#f1f5f9;border-radius:8px;padding:20px;margin:20px 0;">
-        <span style="font-size:32px;letter-spacing:6px;font-weight:bold;color:#2563eb;">
-          ${otp}
-        </span>
-      </div>
+function buildOtpEmail(otp) {
+  const subject = 'Verify your email';
+  const home = frontendUrl();
 
-      <p style="color:#4a5568;font-size:14px;margin-top:20px;">
-        This OTP will expire in <strong>5 minutes</strong>.
-      </p>
+  const text = `Welcome to ${brandName()}!
 
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
+Verify your email
 
-      <p style="color:#718096;font-size:12px;">
-        If you did not request this email, you can safely ignore it.
-      </p>
+Use the One-Time Password below to complete your registration and start creating.
 
-      <p style="color:#a0aec0;font-size:11px;margin-top:10px;">
-        © ${new Date().getFullYear()} AthenaVI. All rights reserved.
-      </p>
+${otp}
 
-    </div>
-  </div>
-  `;
-};
+This OTP will expire in 5 minutes.
 
-module.exports = otpTemplate;
+${whyChooseUsText()}
+
+  • Verify your email — enter the code above to activate your account.
+  • Create your first project — build AI-powered training videos in minutes.
+  • Invite your team — collaborate in shared workspaces.
+
+If you did not request this email, you can safely ignore it.
+
+— ${brandName()}`;
+
+  const bodyHtml = `
+    ${sectionHeading('Verify your email', { align: 'left' })}
+    <p style="margin:0 0 20px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
+      Use the One-Time Password below to complete your registration and start creating.
+    </p>
+    ${infoPanel({
+      title: 'Your verification code',
+      centered: true,
+      contentHtml: `
+        <span class="otp-code" style="font-size:32px;letter-spacing:7px;font-weight:700;color:${BRAND.headerBg};font-family:Consolas,'Courier New',monospace;">
+          ${escapeHtml(otp)}
+        </span>`,
+    })}
+    <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;text-align:left;">
+      This code will expire in <strong>5 minutes</strong>.
+    </p>
+    ${whyChooseUsSectionPreSignIn()}
+    ${sectionDivider()}
+    ${bulletList([
+      '<strong>Verify your email</strong> &mdash; enter the code above to activate your account.',
+      '<strong>Create your first project</strong> &mdash; build AI-powered training videos in minutes.',
+      '<strong>Invite your team</strong> &mdash; collaborate in shared workspaces.',
+    ])}
+    ${primaryButton({ href: home, label: `Go to ${brandName()}`, fullWidth: true })}
+    ${disclaimerText('If you did not request this email, you can safely ignore it.')}`;
+
+  const html = wrapEmailHtml({
+    preheader: `Your verification code is ${otp}. Expires in 5 minutes.`,
+    heroGreeting: 'Welcome!',
+    headerAlign: 'left',
+    bodyHtml,
+    variant: 'user',
+  });
+
+  return { subject, text, html };
+}
+
+module.exports = buildOtpEmail;
