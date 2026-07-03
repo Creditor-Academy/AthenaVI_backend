@@ -96,6 +96,21 @@ router.post(
 );
 
 router.get('/', authMiddleware, getUserWorkspaces);
+
+// Public invitation routes (must be registered before /:workspaceId)
+router.get(
+  '/invitations/:token',
+  validate(workspaceValidations.getInvitationByTokenSchema),
+  getInvitationPreview
+);
+
+router.post(
+  '/invitations/accept',
+  authMiddleware,
+  validate(workspaceValidations.acceptInvitationSchema),
+  acceptInvitation
+);
+
 router.get(
   '/:workspaceId',
   authMiddleware,
@@ -148,19 +163,6 @@ router.delete(
   validate(workspaceValidations.cancelInvitationSchema),
   requireWorkspaceRole(ownerOrAdmin),
   cancelInvitation
-);
-
-router.post(
-  '/invitations/accept',
-  authMiddleware,
-  validate(workspaceValidations.acceptInvitationSchema),
-  acceptInvitation
-);
-
-router.get(
-  '/invitations/:token',
-  validate(workspaceValidations.getInvitationByTokenSchema),
-  getInvitationPreview
 );
 
 //member management routes
