@@ -45,6 +45,9 @@ COPY --from=builder /app .
 RUN npm prune --omit=dev \
  && npm install --no-save prisma@^7.2.0
 
+# Pre-install Chrome Headless Shell at build time (avoid runtime download on first render)
+RUN node scripts/ensure-remotion-browser.js
+
 ENV NODE_ENV=production
 
 EXPOSE 9000
