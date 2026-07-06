@@ -69,14 +69,14 @@ const WHY_CHOOSE_US = [
     tags: ['Smart NLP', 'Instant Voice'],
     layout: 'tall',
     theme: {
-      bg: '#DDD0D4',
-      border: '#C4B0B6',
-      accent: '#4A3A40',
-      stripe: '#7F6269',
-      watermark: '#7F6269',
-      watermarkOpacity: '0.22',
-      tagBg: '#CDBBC1',
-      tagText: '#4A3A40',
+      bg: '#D4EADC',
+      border: '#A8D4B8',
+      accent: '#1F4D38',
+      stripe: '#2D6B4F',
+      watermark: '#2D6B4F',
+      watermarkOpacity: '0.18',
+      tagBg: '#B8DEC4',
+      tagText: '#1F4D38',
     },
   },
   {
@@ -88,25 +88,25 @@ const WHY_CHOOSE_US = [
     tags: ['Ready to Use', 'Fully Editable', 'Creator-Ready'],
     layout: 'wide',
     theme: {
-      bg: '#F4E1E0',
-      border: '#E0C4C2',
-      accent: '#5C4549',
-      stripe: '#B08B89',
-      watermark: '#B08B89',
+      bg: '#E8E0F4',
+      border: '#C9BBE0',
+      accent: '#3D3560',
+      stripe: '#6B5B95',
+      watermark: '#6B5B95',
       watermarkOpacity: '0.2',
-      tagBg: '#EBD4D2',
-      tagText: '#5C4549',
+      tagBg: '#D5CBEA',
+      tagText: '#3D3560',
     },
   },
 ];
 
 const BENTO = {
-  wide: '64%',
-  narrow: '36%',
-  row1Height: '188px',
-  row2Height: '280px',
+  wide: '61%',
+  narrow: '39%',
+  gutter: '8px',
+  row1Height: '204px',
+  row2Height: '272px',
   radius: '20px',
-  gap: '5px',
 };
 
 function escapeHtml(value) {
@@ -172,6 +172,7 @@ function emailMobileStyles() {
         }
         .feature-pad { padding: 0 0 12px 0 !important; }
         .bento-grid { border-spacing: 0 !important; }
+        .bento-gutter-h, .bento-gutter-v { display: none !important; width: 0 !important; height: 0 !important; padding: 0 !important; font-size: 0 !important; line-height: 0 !important; }
         .bento-wide, .bento-narrow {
           display: block !important;
           width: 100% !important;
@@ -433,40 +434,20 @@ function bulletList(items) {
     </table>`;
 }
 
-function bentoFeatureCardCell(feature, slot) {
+function bentoGutterCell({ vertical = false } = {}) {
+  if (vertical) {
+    return `<tr class="bento-gutter-v"><td colspan="3" height="${BENTO.gutter}" style="height:${BENTO.gutter};font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td></tr>`;
+  }
+  return `<td class="bento-gutter-h" width="${BENTO.gutter}" style="width:${BENTO.gutter};font-size:0;line-height:0;">&nbsp;</td>`;
+}
+
+function bentoFeatureCardCell(feature, { width, height, className }) {
   const theme = feature.theme;
-  const slots = {
-    'r1-wide': {
-      width: BENTO.wide,
-      height: BENTO.row1Height,
-      pad: `padding:0 ${BENTO.gap} ${BENTO.gap} 0;`,
-      className: 'bento-wide',
-    },
-    'r1-narrow': {
-      width: BENTO.narrow,
-      height: BENTO.row1Height,
-      pad: `padding:0 0 ${BENTO.gap} ${BENTO.gap};`,
-      className: 'bento-narrow',
-    },
-    'r2-narrow': {
-      width: BENTO.narrow,
-      height: BENTO.row2Height,
-      pad: `padding:${BENTO.gap} ${BENTO.gap} 0 0;`,
-      className: 'bento-narrow',
-    },
-    'r2-wide': {
-      width: BENTO.wide,
-      height: BENTO.row2Height,
-      pad: `padding:${BENTO.gap} 0 0 ${BENTO.gap};`,
-      className: 'bento-wide',
-    },
-  };
-  const { width, height, pad, className } = slots[slot];
   const isNarrow = className === 'bento-narrow';
-  const headlineSize = isNarrow ? '13px' : '15px';
+  const headlineSize = isNarrow ? '13px' : '14px';
   const descSize = isNarrow ? '12px' : '13px';
-  const watermarkSize = isNarrow ? '56px' : '50px';
-  const cardPad = isNarrow ? '16px 14px' : '18px 18px';
+  const watermarkSize = isNarrow ? '52px' : '46px';
+  const cardPad = isNarrow ? '15px 13px' : '16px 16px';
 
   const subheadlineBlock = feature.subheadline
     ? `<p style="margin:0 0 6px;color:${theme.accent};font-size:${isNarrow ? '11px' : '12px'};font-weight:600;line-height:1.35;">
@@ -478,7 +459,7 @@ function bentoFeatureCardCell(feature, slot) {
     ? `<p style="margin:0;font-size:0;line-height:0;">${feature.tags
         .map(
           (tag) => `
-          <span style="display:inline-block;margin:0 4px 4px 0;padding:4px 9px;background-color:${theme.tagBg};color:${theme.tagText};font-size:9px;font-weight:600;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
+          <span style="display:inline-block;margin:0 4px 4px 0;padding:4px 8px;background-color:${theme.tagBg};color:${theme.tagText};font-size:9px;font-weight:600;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
             ${escapeHtml(tag)}
           </span>`
         )
@@ -488,7 +469,7 @@ function bentoFeatureCardCell(feature, slot) {
   const headerRow = `
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td valign="top" style="vertical-align:top;padding-right:8px;">
+        <td valign="top" style="vertical-align:top;padding-right:6px;">
           <p style="margin:0;color:${theme.accent};font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.3;">
             ${escapeHtml(feature.category)}
           </p>
@@ -502,60 +483,63 @@ function bentoFeatureCardCell(feature, slot) {
     </table>`;
 
   const bodyBlock = `
-    <p style="margin:10px 0 6px;color:${theme.accent};font-size:${headlineSize};font-weight:700;line-height:1.3;">
+    <p style="margin:8px 0 6px;color:${theme.accent};font-size:${headlineSize};font-weight:700;line-height:1.3;">
       ${escapeHtml(feature.headline)}
     </p>
     ${subheadlineBlock}
-    <p style="margin:0;color:${BRAND.textMuted};font-size:${descSize};line-height:1.5;">
+    <p style="margin:0;color:${BRAND.textMuted};font-size:${descSize};line-height:1.45;">
       ${escapeHtml(feature.description)}
     </p>`;
 
-  const cardInner = isNarrow
-    ? `
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="100%" style="height:100%;">
-        <tr>
-          <td valign="top" style="vertical-align:top;">
-            ${headerRow}
-            ${bodyBlock}
-          </td>
-        </tr>
-        <tr>
-          <td height="100%" style="height:100%;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td>
-        </tr>
-        <tr>
-          <td valign="bottom" style="vertical-align:bottom;padding-top:10px;">
-            ${tagsBlock}
-          </td>
-        </tr>
-      </table>`
-    : `
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="100%" style="height:100%;">
-        <tr>
-          <td valign="top" style="vertical-align:top;">
-            ${headerRow}
-            ${bodyBlock}
-          </td>
-        </tr>
-        <tr>
-          <td valign="bottom" style="vertical-align:bottom;padding-top:12px;">
-            ${tagsBlock}
-          </td>
-        </tr>
-      </table>`;
+  const cardInner = `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" height="100%" style="height:100%;">
+      <tr>
+        <td valign="top" style="vertical-align:top;">
+          ${headerRow}
+          ${bodyBlock}
+        </td>
+      </tr>
+      <tr>
+        <td height="100%" style="height:100%;font-size:0;line-height:0;mso-line-height-rule:exactly;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td valign="bottom" style="vertical-align:bottom;padding-top:8px;">
+          ${tagsBlock}
+        </td>
+      </tr>
+    </table>`;
 
   return `
-    <td class="feature-col ${className} feature-pad" width="${width}" valign="top"
-      style="width:${width};${pad}vertical-align:top;">
+    <td class="feature-col ${className} feature-pad" width="${width}" valign="top" height="${parseInt(height, 10)}"
+      style="width:${width};vertical-align:top;height:${height};">
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="bento-card-body"
-        style="border-collapse:separate;border-spacing:0;height:${height};min-height:${height};">
+        style="border-collapse:separate;border-spacing:0;height:${height};">
         <tr>
-          <td bgcolor="${theme.bg}" class="bento-card-body" valign="top"
-            style="background-color:${theme.bg};border:1px solid ${theme.border};border-radius:${BENTO.radius};padding:${cardPad};height:${height};min-height:${height};vertical-align:top;">
+          <td bgcolor="${theme.bg}" class="bento-card-body" valign="top" height="${parseInt(height, 10)}"
+            style="background-color:${theme.bg};border:1px solid ${theme.border};border-radius:${BENTO.radius};padding:${cardPad};height:${height};max-height:${height};overflow:hidden;vertical-align:top;mso-line-height-rule:exactly;">
             ${cardInner}
           </td>
         </tr>
       </table>
     </td>`;
+}
+
+function bentoRow(wideFeature, narrowFeature, rowHeight) {
+  return `
+    <tr>
+      ${bentoFeatureCardCell(wideFeature, { width: BENTO.wide, height: rowHeight, className: 'bento-wide' })}
+      ${bentoGutterCell()}
+      ${bentoFeatureCardCell(narrowFeature, { width: BENTO.narrow, height: rowHeight, className: 'bento-narrow' })}
+    </tr>`;
+}
+
+function bentoRowReversed(narrowFeature, wideFeature, rowHeight) {
+  return `
+    <tr>
+      ${bentoFeatureCardCell(narrowFeature, { width: BENTO.narrow, height: rowHeight, className: 'bento-narrow' })}
+      ${bentoGutterCell()}
+      ${bentoFeatureCardCell(wideFeature, { width: BENTO.wide, height: rowHeight, className: 'bento-wide' })}
+    </tr>`;
 }
 
 function whyChooseUsSection({ leading = false, align = 'center' } = {}) {
@@ -569,15 +553,10 @@ function whyChooseUsSection({ leading = false, align = 'center' } = {}) {
       Next-generation tools to create, customize, and deliver professional video experiences.
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="bento-grid"
-      style="width:100%;margin:0 0 4px;border-collapse:separate;border-spacing:0;table-layout:fixed;">
-      <tr>
-        ${bentoFeatureCardCell(card01, 'r1-wide')}
-        ${bentoFeatureCardCell(card02, 'r1-narrow')}
-      </tr>
-      <tr>
-        ${bentoFeatureCardCell(card03, 'r2-narrow')}
-        ${bentoFeatureCardCell(card04, 'r2-wide')}
-      </tr>
+      style="width:100%;margin:0 0 4px;border-collapse:collapse;table-layout:fixed;">
+      ${bentoRow(card01, card02, BENTO.row1Height)}
+      ${bentoGutterCell({ vertical: true })}
+      ${bentoRowReversed(card03, card04, BENTO.row2Height)}
     </table>`;
 }
 
