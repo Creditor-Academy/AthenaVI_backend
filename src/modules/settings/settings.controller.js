@@ -73,6 +73,18 @@ const getSecurity = asyncHandler(async (req, res) => {
   );
 });
 
+const updateSecurity = asyncHandler(async (req, res) => {
+  const security = await securityService.updateSecuritySettings(req.user.id, req.body);
+
+  return successResponse(
+    req,
+    res,
+    { security },
+    200,
+    messages.SETTINGS_SECURITY_UPDATED
+  );
+});
+
 const changePassword = asyncHandler(async (req, res) => {
   await securityService.changePassword(req.user.id, req.body);
 
@@ -108,6 +120,7 @@ module.exports = {
   getNotifications,
   updateNotifications,
   getSecurity,
+  updateSecurity,
   changePassword,
   deleteAccount,
 };

@@ -26,6 +26,13 @@ router.patch(
 router.get('/security', authMiddleware, settingsController.getSecurity);
 
 router.patch(
+  '/security',
+  authMiddleware,
+  validate(settingsValidation.updateSecurityValidation),
+  settingsController.updateSecurity
+);
+
+router.patch(
   '/security/password',
   authMiddleware,
   validate(settingsValidation.changePasswordValidation),

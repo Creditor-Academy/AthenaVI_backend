@@ -36,6 +36,7 @@ module.exports = {
   SETTINGS_NOTIFICATIONS_FETCHED: 'Notification settings fetched successfully',
   SETTINGS_NOTIFICATIONS_UPDATED: 'Notification settings updated successfully',
   SETTINGS_SECURITY_FETCHED: 'Security settings fetched successfully',
+  SETTINGS_SECURITY_UPDATED: 'Security settings updated successfully',
   PASSWORD_CHANGED_SUCCESSFULLY: 'Password changed successfully',
   CURRENT_PASSWORD_INCORRECT: 'Current password is incorrect',
   PASSWORD_CHANGE_NOT_AVAILABLE:

@@ -1,6 +1,7 @@
 const prisma = require('../../shared/config/prismaClient');
 const { DEFAULT_APPEARANCE } = require('./appearance.constants');
 const { DEFAULT_NOTIFICATIONS } = require('./notifications.constants');
+const { DEFAULT_LOGIN_ALERTS } = require('./security.constants');
 
 const defaultCreateData = {
   interfaceMode: 'LIGHT',
@@ -16,6 +17,7 @@ const defaultCreateData = {
   storageAlerts: DEFAULT_NOTIFICATIONS.storageAlerts,
   workspaceTeamAlerts: DEFAULT_NOTIFICATIONS.workspaceTeamAlerts,
   platformAdminAlerts: DEFAULT_NOTIFICATIONS.platformAdminAlerts,
+  loginAlerts: DEFAULT_LOGIN_ALERTS,
 };
 
 const findByUserId = async (userId) => {

@@ -146,6 +146,7 @@ model UserSettings {
   storageAlerts                Boolean @default(true) @map("storage_alerts")
   workspaceTeamAlerts          Boolean @default(true) @map("workspace_team_alerts")
   platformAdminAlerts          Boolean @default(true) @map("platform_admin_alerts")
+  loginAlerts                  Boolean @default(true) @map("login_alerts")
   lastWeeklyDigestSentAt       DateTime? @map("last_weekly_digest_sent_at")
 
   createdAt DateTime @default(now()) @map("created_at")
