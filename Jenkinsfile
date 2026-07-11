@@ -183,13 +183,13 @@ pipeline {
 
         success {
 
-            echo "======================================="
+            echo "======================================"
             echo "Backend CI/CD Pipeline Completed Successfully"
             echo "Docker Image Built Successfully"
             echo "Docker Image Pushed to Amazon ECR"
             echo "Prisma Migrations Applied Successfully"
             echo "Backend Successfully Deployed to Amazon EKS"
-            echo "======================================="
+            echo "======================================"
         }
 
         failure {
