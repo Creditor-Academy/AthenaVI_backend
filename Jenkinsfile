@@ -149,11 +149,11 @@ pipeline {
                 fi
 
                 echo ""
-                echo "========== Running Pods =========="
+                echo "========== Running Pods ========="
                 kubectl get pods
 
                 echo ""
-                echo "========== Deployments =========="
+                echo "========== Deployments ========="
                 kubectl get deployment
 
                 echo ""
