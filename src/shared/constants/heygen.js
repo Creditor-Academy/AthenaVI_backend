@@ -61,17 +61,25 @@ function extractLookIdFromLookBody(lookBody) {
 
 /**
  * Looks that must be rendered via HeyGen legacy POST /v2/video/generate.
+ * Includes expressive public looks and Avatar III-only studio looks (e.g. Diora_public_3).
  * @param {unknown} lookBody
  * @returns {boolean}
  */
 function usesHeygenLegacyV2VideoLook(lookBody) {
-  const supported = extractSupportedApiEnginesFromLook(lookBody);
-  if (Array.isArray(supported) && supported.length === 0) {
+  const rawEngines = extractRawSupportedApiEnginesFromLook(lookBody);
+  if (Array.isArray(rawEngines) && rawEngines.length === 0) {
     return true;
   }
+
+  const v3Engines = extractSupportedApiEnginesFromLook(lookBody);
+  if (Array.isArray(rawEngines) && rawEngines.length > 0 && (!v3Engines || v3Engines.length === 0)) {
+    // e.g. supported_api_engines: ['avatar_iii'] — no IV/V → must use v2.
+    return true;
+  }
+
   const lookId = extractLookIdFromLookBody(lookBody);
   if (!usesHeygenLegacyV2VideoApi(lookId)) return false;
-  return supported == null || supported.length === 0;
+  return v3Engines == null || v3Engines.length === 0;
 }
 
 /** @deprecated use usesHeygenLegacyV2VideoLook */
@@ -86,32 +94,38 @@ function buildHeygenVideoEnginePayload(avatarEngine) {
   return { type };
 }
 
+/** HeyGen v3 rejects Avatar IV for studio / digital-twin video avatars. */
+function isStudioOrDigitalTwinAvatarType(avatarType) {
+  const type = avatarType != null ? String(avatarType).trim() : '';
+  return type === 'studio_avatar' || type === 'digital_twin';
+}
+
 /**
- * @param {unknown} lookBody HeyGen GET look response
- * @returns {string[]|null}
+ * Map Avatar IV → V for studio/video avatars (HeyGen v3 rejects IV for those types).
+ * @param {'avatar_iv'|'avatar_v'} engine
+ * @param {string|undefined|null} avatarType
+ * @returns {'avatar_iv'|'avatar_v'}
  */
-function extractSupportedApiEnginesFromLook(lookBody) {
-  /**
-   * HeyGen look responses are inconsistently wrapped:
-   * - `{ data: ... }` / `{ data: { data: ... } }`
-   * - `supported_api_engines` may be nested under `avatar_item`, `look`, or deeper.
-   *
-   * This function scans the payload (bounded) and returns a normalized list of:
-   * `['avatar_iv', 'avatar_v']` (subset), or `null` if we can't find any.
-   */
+function coerceEngineForAvatarType(engine, avatarType) {
+  if (!isStudioOrDigitalTwinAvatarType(avatarType)) return engine;
+  if (engine === HEYGEN_AVATAR_ENGINES.IV) return HEYGEN_AVATAR_ENGINES.V;
+  return engine;
+}
+
+/**
+ * Raw engine strings from look metadata (avatar_iii, avatar_iv, avatar_v, …).
+ * @param {unknown} lookBody
+ * @returns {string[]|null} null if field missing; [] if explicitly empty
+ */
+function extractRawSupportedApiEnginesFromLook(lookBody) {
   const MAX_DEPTH = 8;
   const MAX_NODES = 2000;
   const visited = new Set();
-  const found = new Set();
+  const found = [];
+  const seen = new Set();
   let nodesVisited = 0;
   let sawExplicitEmpty = false;
-
-  function tryCollectEngineValue(v) {
-    const normalized = normalizeHeygenAvatarEngine(v);
-    if (normalized === HEYGEN_AVATAR_ENGINES.IV || normalized === HEYGEN_AVATAR_ENGINES.V) {
-      found.add(normalized);
-    }
-  }
+  let sawArray = false;
 
   function scan(node, depth) {
     if (nodesVisited++ > MAX_NODES || depth > MAX_DEPTH) return;
@@ -129,24 +143,52 @@ function extractSupportedApiEnginesFromLook(lookBody) {
 
     const direct = node.supported_api_engines ?? node.supportedApiEngines;
     if (Array.isArray(direct)) {
+      sawArray = true;
       if (direct.length === 0) sawExplicitEmpty = true;
       for (const e of direct) {
         if (e == null) continue;
-        tryCollectEngineValue(e);
+        const value = String(e).trim().toLowerCase();
+        if (!value || seen.has(value)) continue;
+        seen.add(value);
+        found.push(value);
       }
-      if (found.size >= 2) return;
     }
 
-    // Generic scan with depth+node limits to find `supported_api_engines` anywhere.
     for (const v of Object.values(node)) {
       scan(v, depth + 1);
-      if (found.size >= 2) return;
     }
   }
 
   scan(lookBody, 0);
-  if (found.size === 0) {
-    return sawExplicitEmpty ? [] : null;
+  if (!sawArray) return null;
+  if (found.length === 0) return sawExplicitEmpty ? [] : null;
+  return found;
+}
+
+/**
+ * @param {unknown} lookBody HeyGen GET look response
+ * @returns {string[]|null}
+ */
+function extractSupportedApiEnginesFromLook(lookBody) {
+  /**
+   * HeyGen look responses are inconsistently wrapped:
+   * - `{ data: ... }` / `{ data: { data: ... } }`
+   * - `supported_api_engines` may be nested under `avatar_item`, `look`, or deeper.
+   *
+   * Returns only v3 engines: `['avatar_iv', 'avatar_v']` (subset), or `null` if none.
+   * Explicit empty `[]` is returned as `[]`. Avatar III-only looks return `[]`-equivalent
+   * via usesHeygenLegacyV2VideoLook (raw engines without IV/V).
+   */
+  const raw = extractRawSupportedApiEnginesFromLook(lookBody);
+  if (raw == null) return null;
+  if (raw.length === 0) return [];
+
+  const found = new Set();
+  for (const e of raw) {
+    const normalized = normalizeHeygenAvatarEngine(e);
+    if (normalized === HEYGEN_AVATAR_ENGINES.IV || normalized === HEYGEN_AVATAR_ENGINES.V) {
+      found.add(normalized);
+    }
   }
   return [...found];
 }
@@ -185,7 +227,7 @@ function getLookSupportedVideoEngines(lookBody) {
  *   engineCoerced: boolean,
  * }}
  */
-function resolveVideoPlanForLook(lookBody, requestedEngine) {
+function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
   if (usesHeygenLegacyV2VideoLook(lookBody)) {
     return {
       videoApi: 'v2',
@@ -223,16 +265,21 @@ function resolveVideoPlanForLook(lookBody, requestedEngine) {
     }
   }
 
-  const defaultAvatarEngine = v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)
-    ? HEYGEN_AVATAR_ENGINES.IV
-    : v3Engines[0] || DEFAULT_HEYGEN_AVATAR_ENGINE;
+  const coercedEngine = coerceEngineForAvatarType(engine, avatarType);
+  const typeCoerced = coercedEngine !== engine;
+
+  const defaultAvatarEngine = isStudioOrDigitalTwinAvatarType(avatarType)
+    ? HEYGEN_AVATAR_ENGINES.V
+    : v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)
+      ? HEYGEN_AVATAR_ENGINES.IV
+      : v3Engines[0] || DEFAULT_HEYGEN_AVATAR_ENGINE;
 
   return {
     videoApi: 'v3',
-    engine,
+    engine: coercedEngine,
     supportedApiEngines: v3Engines,
     defaultAvatarEngine,
-    engineCoerced,
+    engineCoerced: engineCoerced || typeCoerced,
   };
 }
 
@@ -257,7 +304,8 @@ function resolveAvatarEngineForLook(lookBody, requestedEngine) {
 
 function enrichLookWithEngineHints(look) {
   if (!look || typeof look !== 'object' || Array.isArray(look)) return look;
-  const plan = resolveVideoPlanForLook(look, null);
+  const avatarType = look.avatar_type ?? look.avatarType ?? null;
+  const plan = resolveVideoPlanForLook(look, null, avatarType);
   return {
     ...look,
     supportedApiEngines: plan.supportedApiEngines,
@@ -278,6 +326,9 @@ module.exports = {
   isNonGeneratableLook,
   extractLookIdFromLookBody,
   buildHeygenVideoEnginePayload,
+  isStudioOrDigitalTwinAvatarType,
+  coerceEngineForAvatarType,
+  extractRawSupportedApiEnginesFromLook,
   extractSupportedApiEnginesFromLook,
   getEffectiveSupportedApiEnginesFromLook,
   getLookSupportedVideoEngines,

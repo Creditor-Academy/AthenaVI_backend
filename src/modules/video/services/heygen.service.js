@@ -21,6 +21,7 @@ const {
   buildHeygenVideoEnginePayload,
   extractSupportedApiEnginesFromLook,
   resolveVideoPlanForLook,
+  isStudioOrDigitalTwinAvatarType,
 } = require('../../../shared/constants/heygen');
 const creditLedger = require('../../credit/creditLedger.service');
 const heygenAccess = require('../../heygen/heygenAccess.service');
@@ -185,10 +186,10 @@ function buildHeyGenV2VideoPayload(body) {
   };
 }
 
-async function resolveVideoEngineForAvatar(avatarId, avatarEngine) {
+async function resolveVideoEngineForAvatar(avatarId, avatarEngine, avatarType) {
   try {
     const lookBody = await heygenV3Service.getAvatarLook(avatarId);
-    const plan = resolveVideoPlanForLook(lookBody, avatarEngine);
+    const plan = resolveVideoPlanForLook(lookBody, avatarEngine, avatarType);
     if (plan.videoApi === 'v2') {
       return { engine: HEYGEN_AVATAR_ENGINES.IV, useLegacyV2: true, plan };
     }
@@ -200,11 +201,13 @@ async function resolveVideoEngineForAvatar(avatarId, avatarEngine) {
     if (err instanceof AppError) throw err;
     const requested = normalizeHeygenAvatarEngine(avatarEngine);
     const useLegacyV2 = usesHeygenLegacyV2VideoApi(avatarId);
+    // Preserve requested engine; studio/digital-twin still prefer Avatar V when look fetch fails.
+    let engine = requested;
+    if (!useLegacyV2 && isStudioOrDigitalTwinAvatarType(avatarType)) {
+      engine = HEYGEN_AVATAR_ENGINES.V;
+    }
     return {
-      engine:
-        !useLegacyV2 && requested === HEYGEN_AVATAR_ENGINES.V
-          ? HEYGEN_AVATAR_ENGINES.IV
-          : requested,
+      engine,
       useLegacyV2,
       plan: null,
     };
@@ -320,7 +323,11 @@ const generateAvatarVideo = async (input) => {
   const project = await getProjectInWorkspace(workspaceId, projectId);
   const sceneName = resolveSceneNameFromProjectData(project.data, sceneId);
   const normalizedOutputFormat = normalizeHeygenOutputFormat(outputFormat);
-  const { engine, useLegacyV2, plan } = await resolveVideoEngineForAvatar(avatarId, avatarEngine);
+  const { engine, useLegacyV2, plan } = await resolveVideoEngineForAvatar(
+    avatarId,
+    avatarEngine,
+    avatarType
+  );
   const hashEngine = useLegacyV2 ? 'legacy_v2' : engine;
 
   if (normalizedOutputFormat === 'webm' && useLegacyV2) {
@@ -415,18 +422,32 @@ const generateAvatarVideo = async (input) => {
     const supportsV = supported.includes(HEYGEN_AVATAR_ENGINES.V);
     let fallbackEngine = null;
 
-    if (engine === HEYGEN_AVATAR_ENGINES.V && /avatar v/i.test(msg) && supportsIv) {
+    // Never invent IV fallback for studio/digital-twin — HeyGen rejects Avatar IV for those.
+    if (
+      engine === HEYGEN_AVATAR_ENGINES.V &&
+      /avatar v/i.test(msg) &&
+      supportsIv &&
+      !isStudioOrDigitalTwinAvatarType(avatarType)
+    ) {
       fallbackEngine = HEYGEN_AVATAR_ENGINES.IV;
-    } else if (engine === HEYGEN_AVATAR_ENGINES.IV && /avatar iv/i.test(msg) && supportsV) {
-      fallbackEngine = HEYGEN_AVATAR_ENGINES.V;
     } else if (
       engine === HEYGEN_AVATAR_ENGINES.IV &&
       /avatar iv/i.test(msg) &&
-      !usesHeygenLegacyV2VideoApi(avatarId)
+      (supportsV || isStudioOrDigitalTwinAvatarType(avatarType))
     ) {
+      fallbackEngine = HEYGEN_AVATAR_ENGINES.V;
+    }
+
+    // Avatar III / unknown-engine studio looks: retry via legacy v2 when v3 engines fail.
+    const shouldTryLegacyV2 =
+      !useLegacyV2 &&
+      (/avatar iv/i.test(msg) || /avatar v/i.test(msg)) &&
+      !usesHeygenLegacyV2VideoApi(avatarId);
+
+    if (shouldTryLegacyV2 && (!fallbackEngine || fallbackEngine === engine)) {
       try {
         const lookBody = await heygenV3Service.getAvatarLook(avatarId);
-        if (usesHeygenLegacyV2VideoLook(lookBody)) {
+        if (usesHeygenLegacyV2VideoLook(lookBody) || isStudioOrDigitalTwinAvatarType(avatarType)) {
           const legacyHash = generateHeygenRequestHash({
             workspaceId,
             projectId,
@@ -463,6 +484,7 @@ const generateAvatarVideo = async (input) => {
               projectName: project.name,
               sceneName,
               estimatedCredits: estimate.athenaCredits,
+              outputFormat: normalizedOutputFormat,
             },
           });
         }
