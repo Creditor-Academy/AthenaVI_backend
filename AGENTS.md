@@ -114,7 +114,7 @@ src/modules/<feature>/
 ### Route registration
 
 - **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`.
-- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
+- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
 
@@ -224,6 +224,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
+| **Presentations (AI PPT)** | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |

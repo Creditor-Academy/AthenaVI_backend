@@ -366,11 +366,19 @@ const createProjectSchema = Joi.object({
     status: Joi.string()
       .valid(...PROJECT_STATUSES)
       .optional(),
+    templateId: Joi.string().trim().min(1).optional(),
   })
     .or('name', 'title')
     .custom((value, helpers) => {
       if (value.projectState && value.data) {
         return helpers.message('Provide either data or projectState, not both');
+      }
+      const scenes =
+        value.projectState?.scenes || value.data?.scenes || [];
+      if (value.templateId && Array.isArray(scenes) && scenes.length > 0) {
+        return helpers.message(
+          'Cannot use templateId together with a non-empty data.scenes / projectState.scenes'
+        );
       }
       const aspect = value.aspectRatio || value.canvasSize;
       if (aspect === 'custom') {

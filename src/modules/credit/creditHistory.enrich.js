@@ -9,6 +9,12 @@ const FEATURE_LABELS = Object.freeze({
   [FEATURE.VOICE_DESIGN]: 'Voice design',
   [FEATURE.AVATAR_CREATE]: 'Avatar creation',
   [FEATURE.VOICE_PREVIEW]: 'Speech preview',
+  ppt_outline: 'Presentation outline',
+  ppt_slide_content: 'Presentation slide content',
+  ppt_image_path_a: 'Presentation image',
+  ppt_image_path_b: 'Presentation diagram',
+  ppt_export: 'Presentation export',
+  ppt_image_cache_hit: 'Presentation image (cached)',
 });
 
 function truncateText(value, max = 120) {

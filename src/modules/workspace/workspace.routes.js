@@ -31,12 +31,35 @@ const renderValidations = require('../render/render.validation');
 const speechRoutes = require('../speech/speech.routes');
 const commentRoutes = require('../comment/comment.routes');
 const heygenShareRoutes = require('../heygen/heygenShare.routes');
+const presentationRoutes = require('../presentation/presentation.routes');
+const videoTemplateController = require('../project/videoTemplate.controller');
+const videoTemplateValidations = require('../validations/videoTemplate.validations');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
+router.use(
+  '/:workspaceId/presentations',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  presentationRoutes
+);
+router.get(
+  '/:workspaceId/video-templates',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(videoTemplateValidations.listWorkspaceVideoTemplatesSchema),
+  videoTemplateController.listVideoTemplates
+);
+router.get(
+  '/:workspaceId/video-templates/:templateId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(videoTemplateValidations.workspaceVideoTemplateByIdSchema),
+  videoTemplateController.getVideoTemplate
+);
 router.use(
   '/:workspaceId/heygen',
   authMiddleware,

@@ -1,0 +1,192 @@
+[
+  {
+    "id": "midnight_blue",
+    "name": "Midnight Blue",
+    "themeTokens": {
+      "palette": {
+        "bg": "#0B1220",
+        "surface": "#121A2B",
+        "primary": "#3B82F6",
+        "secondary": "#22D3EE",
+        "text": "#F8FAFC",
+        "muted": "#94A3B8"
+      },
+      "fontPairingId": "inter_space",
+      "typeScale": { "title": 44, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "clean corporate photo, soft lighting, no text overlay",
+      "colorTreatment": "cool blue accents"
+    }
+  },
+  {
+    "id": "clean_light",
+    "name": "Clean Light",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FFFFFF",
+        "surface": "#F8FAFC",
+        "primary": "#2563EB",
+        "secondary": "#0EA5E9",
+        "text": "#0F172A",
+        "muted": "#64748B"
+      },
+      "fontPairingId": "inter_source",
+      "typeScale": { "title": 42, "subtitle": 26, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "bright minimal product photography, airy whitespace",
+      "colorTreatment": "crisp blue on white"
+    }
+  },
+  {
+    "id": "forest_slate",
+    "name": "Forest Slate",
+    "themeTokens": {
+      "palette": {
+        "bg": "#0F1A14",
+        "surface": "#16241C",
+        "primary": "#34D399",
+        "secondary": "#A3E635",
+        "text": "#ECFDF5",
+        "muted": "#86A899"
+      },
+      "fontPairingId": "dm_sans_serif",
+      "typeScale": { "title": 44, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "nature-adjacent workplace, soft green depth, no text overlay",
+      "colorTreatment": "emerald and lime accents on dark slate"
+    }
+  },
+  {
+    "id": "warm_sand",
+    "name": "Warm Sand",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FFFBF5",
+        "surface": "#FFF7ED",
+        "primary": "#C2410C",
+        "secondary": "#D97706",
+        "text": "#1C1917",
+        "muted": "#78716C"
+      },
+      "fontPairingId": "fraunces_inter",
+      "typeScale": { "title": 44, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "warm editorial lifestyle photo, natural light",
+      "colorTreatment": "terracotta and amber on sand"
+    }
+  },
+  {
+    "id": "charcoal_gold",
+    "name": "Charcoal Gold",
+    "themeTokens": {
+      "palette": {
+        "bg": "#111111",
+        "surface": "#1A1A1A",
+        "primary": "#D4AF37",
+        "secondary": "#F5E6C8",
+        "text": "#FAFAFA",
+        "muted": "#A3A3A3"
+      },
+      "fontPairingId": "playfair_lato",
+      "typeScale": { "title": 46, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 28 },
+      "imageStyle": "luxury brand still life, low-key lighting, no text overlay",
+      "colorTreatment": "gold accents on charcoal"
+    }
+  },
+  {
+    "id": "ocean_mist",
+    "name": "Ocean Mist",
+    "themeTokens": {
+      "palette": {
+        "bg": "#F0F9FF",
+        "surface": "#E0F2FE",
+        "primary": "#0369A1",
+        "secondary": "#0284C7",
+        "text": "#0C4A6E",
+        "muted": "#64748B"
+      },
+      "fontPairingId": "nunito_inter",
+      "typeScale": { "title": 42, "subtitle": 26, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "calm coastal / tech workspace, soft blue haze",
+      "colorTreatment": "sky blue mist with deep ocean text"
+    }
+  },
+  {
+    "id": "violet_noir",
+    "name": "Violet Noir",
+    "themeTokens": {
+      "palette": {
+        "bg": "#0C0A14",
+        "surface": "#161225",
+        "primary": "#A78BFA",
+        "secondary": "#F472B6",
+        "text": "#F5F3FF",
+        "muted": "#A5A0B8"
+      },
+      "fontPairingId": "space_grotesk",
+      "typeScale": { "title": 44, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "moody abstract tech, subtle neon edges, no text overlay",
+      "colorTreatment": "violet and pink on near-black"
+    }
+  },
+  {
+    "id": "paper_ink",
+    "name": "Paper Ink",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FAFAF9",
+        "surface": "#F5F5F4",
+        "primary": "#18181B",
+        "secondary": "#52525B",
+        "text": "#09090B",
+        "muted": "#71717A"
+      },
+      "fontPairingId": "libre_ibm",
+      "typeScale": { "title": 44, "subtitle": 26, "body": 17 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "high-contrast documentary photo, matte print feel",
+      "colorTreatment": "monochrome ink on paper"
+    }
+  },
+  {
+    "id": "sunset_coral",
+    "name": "Sunset Coral",
+    "themeTokens": {
+      "palette": {
+        "bg": "#1A0F12",
+        "surface": "#2A151C",
+        "primary": "#FB7185",
+        "secondary": "#FDBA74",
+        "text": "#FFF1F2",
+        "muted": "#C4A4AB"
+      },
+      "fontPairingId": "outfit_source",
+      "typeScale": { "title": 44, "subtitle": 28, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "warm dusk lifestyle photography, soft gradient light",
+      "colorTreatment": "coral and peach on dusk"
+    }
+  },
+  {
+    "id": "mint_clinic",
+    "name": "Mint Clinic",
+    "themeTokens": {
+      "palette": {
+        "bg": "#F7FFFB",
+        "surface": "#ECFDF5",
+        "primary": "#059669",
+        "secondary": "#14B8A6",
+        "text": "#064E3B",
+        "muted": "#6B7280"
+      },
+      "fontPairingId": "manrope_inter",
+      "typeScale": { "title": 42, "subtitle": 26, "body": 18 },
+      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "imageStyle": "clean healthcare / wellness interiors, bright daylight",
+      "colorTreatment": "mint and teal on soft white"
+    }
+  }
+]

@@ -62,6 +62,10 @@ enum InboxNotificationType {
   PROJECT_COMMENT_ADDED
   PROJECT_COMMENT_MENTION
   PLATFORM_EARLY_ACCESS_REQUEST
+  PRESENTATION_EXPORT_COMPLETED
+  PRESENTATION_EXPORT_FAILED
+  PRESENTATION_GENERATION_COMPLETED
+  PRESENTATION_GENERATION_FAILED
 }
 
 enum EarlyAccessRequestStatus {
@@ -70,6 +74,16 @@ enum EarlyAccessRequestStatus {
   IN_DISCUSSION
   APPROVED
   REJECTED
+}
+
+enum ProjectType {
+  VIDEO
+  PRESENTATION
+}
+
+enum TemplateType {
+  VIDEO_SCENE
+  DECK_LAYOUT
 }
 
 enum StorageUpgradeRequestStatus {
@@ -414,6 +428,7 @@ model Project {
   createdBy   String
   updatedBy   String?
 
+  type          ProjectType @default(VIDEO)
   data          Json // 🔥 whole editor state (autosave)
   thumbnail     String? // preview image
   duration      Int? // optional
@@ -430,8 +445,10 @@ model Project {
   projectRenders     ProjectRender[]
   sceneRenderCaches  SceneRenderCache[]
   comments           ProjectComment[]
+  deck               Deck?
 
   @@index([updatedBy])
+  @@index([type])
 }
 
 model ProjectComment {
@@ -675,6 +692,119 @@ model EarlyAccessRequest {
 
   @@index([status, createdAt])
   @@map("early_access_requests")
+}
+
+model Deck {
+  id                  String   @id @default(cuid())
+  projectId           String   @unique
+  themeTokens         Json
+  outline             Json?
+  status              String   @default("DRAFT") // DRAFT | GENERATING | READY | FAILED
+  aspectRatio         String   @default("16:9")
+  locale              String   @default("en")
+  promptBundleVersion String?
+  generationMetrics   Json?
+  partial             Boolean  @default(false)
+  creditsChargedSoFar Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slides  Slide[]
+  exports DeckExport[]
+
+  @@index([status])
+  @@map("decks")
+}
+
+model Slide {
+  id             String   @id @default(cuid())
+  deckId         String
+  order          Int
+  contentType    String?
+  layoutId       String?
+  content        Json?
+  imageRef       Json?
+  status         String   @default("PENDING") // PENDING | GENERATING | READY | FAILED
+  manuallyEdited Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  deck Deck                 @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  jobs SlideGenerationJob[]
+
+  @@index([deckId, order])
+  @@map("slides")
+}
+
+model Template {
+  id          String       @id @default(cuid())
+  type        TemplateType
+  name        String
+  contentType String?
+  variant     String?
+  schema      Json
+  version     Int          @default(1)
+  isActive    Boolean      @default(true)
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([type, contentType, isActive])
+  @@map("templates")
+}
+
+model SlideGenerationJob {
+  id            String   @id @default(cuid())
+  slideId       String
+  jobType       String // CONTENT | IMAGE_PATH_A | IMAGE_PATH_B | VALIDATION | CLASSIFY | IMAGE_BRIEF
+  status        String   @default("PENDING") // PENDING | RUNNING | SUCCEEDED | FAILED
+  requestHash   String
+  promptVersion String?
+  model         String?
+  usage         Json?
+  visionScore   Float?
+  error         String?
+  creditCharged Boolean  @default(false)
+  latencyMs     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  slide Slide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+
+  @@unique([requestHash])
+  @@index([slideId, jobType])
+  @@map("slide_generation_jobs")
+}
+
+model DeckExport {
+  id            String   @id @default(cuid())
+  deckId        String
+  format        String // PPTX | PDF
+  status        String   @default("QUEUED") // QUEUED | RENDERING | READY | FAILED
+  s3Key         String?
+  error         String?
+  creditCharged Boolean  @default(false)
+  creditsCharged Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId, status])
+  @@map("deck_exports")
+}
+
+model PresentationImageCache {
+  id        String   @id @default(cuid())
+  briefHash String   @unique
+  s3Key     String
+  url       String?
+  source    String // stock | ai_gen | path_b
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("presentation_image_cache")
 }
 
 model ProductEmailBroadcast {

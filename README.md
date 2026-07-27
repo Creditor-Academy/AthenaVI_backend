@@ -25,6 +25,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Project comments | [docs/api/PROJECT_COMMENTS_API.md](docs/api/PROJECT_COMMENTS_API.md) |
 | Settings & account security | [docs/api/USER_SETTINGS_API.md](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [docs/api/WORKSPACE_API.md](docs/api/WORKSPACE_API.md) |
+| AI presentations (PPT) | [docs/api/PRESENTATION_API.md](docs/api/PRESENTATION_API.md) |
 | Assets | [docs/api/ASSETS_API.md](docs/api/ASSETS_API.md) |
 | Credits | [docs/api/CREDITS_API.md](docs/api/CREDITS_API.md) |
 | Platform superadmin | [docs/api/SUPERADMIN_API.md](docs/api/SUPERADMIN_API.md) |
@@ -39,6 +40,8 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
+| [docs/PRESENTATION_CREDITS_FRONTEND.md](docs/PRESENTATION_CREDITS_FRONTEND.md) | AI PPT credits (`ppt_*`, separate from HeyGen) |
+| [docs/PRESENTATION_PROMPTS.md](docs/PRESENTATION_PROMPTS.md) | Presentation prompt bundle versioning |
 | [docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md](docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md) | Notifications settings, inbox bell, project comments |
 | [docs/SUPERADMIN_FRONTEND_INTEGRATION.md](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) | Admin portal login, capabilities, credit admin |
 
@@ -72,6 +75,9 @@ Default port: **9000** (`http://localhost:9000/api`).
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier |
 | `npm run prisma:studio:development` | Prisma Studio |
+| `npm run seed:presentation-templates` | Seed DECK_LAYOUT templates |
+| `npm run seed:video-templates` | Seed VIDEO_SCENE templates (video editor only) |
+| `npm run eval:presentation` | Offline presentation eval harness |
 
 ---
 

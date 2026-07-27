@@ -13,6 +13,7 @@ function baseProjectFields(project) {
   return {
     id: project.id,
     name: project.name,
+    type: project.type || 'VIDEO',
     workspaceId: project.workspaceId,
     folderId: project.folderId,
     createdBy: project.createdBy,

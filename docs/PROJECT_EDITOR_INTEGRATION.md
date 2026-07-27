@@ -102,6 +102,9 @@ sequenceDiagram
 | **Save editor state** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/data` |
 | Move folder | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` |
 | Delete project | `DELETE` | `/api/workspaces/:workspaceId/projects/:projectId` |
+| List video scene templates | `GET` | `/api/workspaces/:workspaceId/video-templates` |
+| Get video scene template | `GET` | `/api/workspaces/:workspaceId/video-templates/:templateId` |
+| Append scene from template | `POST` | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` |
 
 ### Create project (wizard)
 
@@ -112,13 +115,38 @@ POST /api/workspaces/:workspaceId/projects
   "title": "Untitled Video",
   "folderId": "folder-uuid",
   "aspectRatio": "16:9",
-  "tags": ["Presentation"]
+  "tags": ["Professional"]
 }
 ```
 
-Response `201`: `data.project.id` → store as **`projectId`**.
+Response `201`: `data.project.id` → store as **`projectId`**. Project `type` is **`VIDEO`**.
 
 Optional: send initial `data` or `projectState` with `videoSettings` and `scenes: []`.
+
+Optional **video scene template** (VIDEO editor only — not PPT):
+
+```json
+{
+  "title": "From template",
+  "folderId": "folder-uuid",
+  "aspectRatio": "16:9",
+  "templateId": "cuid-of-VIDEO_SCENE-template"
+}
+```
+
+- Do **not** send non-empty `data.scenes` together with `templateId` (400).
+- Applied scene includes `templateId` stamp for traceability.
+- Presentation decks use `/presentations` + `DECK_LAYOUT` — never these video template APIs.
+
+### Append scene from video template
+
+```json
+POST /api/workspaces/:workspaceId/projects/:projectId/scenes/from-template
+
+{ "templateId": "cuid-of-VIDEO_SCENE-template" }
+```
+
+Rejects `Project.type === PRESENTATION` (400). Free to apply (no `ppt_*` credits).
 
 ### Update metadata only
 

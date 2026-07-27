@@ -50,11 +50,26 @@
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
-| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create project |
+| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`Project.type` PRESENTATION) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/status` | Bearer + member | Generation progress |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/credit-estimate` | Bearer + member | Outline/generate/export AC estimate |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Generate outline (prompt/outline/document) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Update outline JSON |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/theme` | Bearer + member | Set theme |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/generate` | Bearer + member | Start deck generation (202) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Patch slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF export (202) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
+| GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE templates (video editor only) |
+| GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one VIDEO_SCENE template |
+| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId`) |
 | GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId` optional) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` | Bearer + member | Append scene from VIDEO_SCENE template |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |
 | DELETE | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Delete project and related assets |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | List project comments |

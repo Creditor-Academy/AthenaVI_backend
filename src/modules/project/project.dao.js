@@ -7,6 +7,7 @@ const projectListSelect = {
   folderId: true,
   createdBy: true,
   updatedBy: true,
+  type: true,
   thumbnail: true,
   duration: true,
   status: true,

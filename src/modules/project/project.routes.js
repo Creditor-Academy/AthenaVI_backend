@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const projectController = require('./project.controller');
+const videoTemplateController = require('./videoTemplate.controller');
 const projectValidations = require('../validations/project.validations');
+const videoTemplateValidations = require('../validations/videoTemplate.validations');
 const validate = require('../../middlewares/validate.middleware');
 
 router.get('/', validate(projectValidations.listProjectsSchema), projectController.listProjects);
@@ -20,6 +22,12 @@ router.patch(
   '/:projectId/data',
   validate(projectValidations.saveProjectDataSchema),
   projectController.saveProjectData
+);
+
+router.post(
+  '/:projectId/scenes/from-template',
+  validate(videoTemplateValidations.appendSceneFromTemplateSchema),
+  videoTemplateController.appendSceneFromTemplate
 );
 
 router.patch(

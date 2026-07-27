@@ -3,7 +3,9 @@ const validate = require('../../middlewares/validate.middleware');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const { requirePlatformSuperadmin } = require('../../middlewares/requirePlatformSuperadmin');
 const superadminController = require('./superadmin.controller');
+const templateAdminController = require('../templates/templateAdmin.controller');
 const superadminValidation = require('../validations/superadmin.validations');
+const videoTemplateValidation = require('../validations/videoTemplate.validations');
 
 const router = express.Router();
 
@@ -187,6 +189,30 @@ router.post(
   '/broadcasts/product-email',
   validate(superadminValidation.productEmailBroadcastBodySchema),
   superadminController.sendProductEmailBroadcast
+);
+
+router.get(
+  '/templates',
+  validate(videoTemplateValidation.listTemplatesAdminSchema),
+  templateAdminController.listTemplates
+);
+
+router.post(
+  '/templates',
+  validate(videoTemplateValidation.createTemplateAdminBodySchema),
+  templateAdminController.createTemplate
+);
+
+router.get(
+  '/templates/:templateId',
+  validate(videoTemplateValidation.templateIdAdminParamsSchema),
+  templateAdminController.getTemplate
+);
+
+router.patch(
+  '/templates/:templateId',
+  validate(videoTemplateValidation.updateTemplateAdminSchema),
+  templateAdminController.updateTemplate
 );
 
 module.exports = router;

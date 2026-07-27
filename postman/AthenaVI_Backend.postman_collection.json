@@ -6,26 +6,98 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:9000" },
-    { "key": "accessToken", "value": "" },
-    { "key": "workspaceId", "value": "00000000-0000-4000-8000-000000000001" },
-    { "key": "folderId", "value": "00000000-0000-4000-8000-000000000002" },
-    { "key": "assetId", "value": "00000000-0000-4000-8000-000000000003" },
-    { "key": "invitationId", "value": "00000000-0000-4000-8000-000000000004" },
-    { "key": "invitationToken", "value": "00000000-0000-4000-8000-000000000099" },
-    { "key": "memberId", "value": "00000000-0000-4000-8000-000000000005" },
-    { "key": "groupId", "value": "replace-with-heygen-group-id" },
-    { "key": "avatarLookId", "value": "replace-with-heygen-look-id" },
-    { "key": "voiceId", "value": "replace-with-voice-id-or-clone-job-id" },
-    { "key": "projectId", "value": "00000000-0000-4000-8000-000000000010" },
-    { "key": "commentId", "value": "00000000-0000-4000-8000-000000000013" },
-    { "key": "renderId", "value": "00000000-0000-4000-8000-000000000011" },
-    { "key": "heygenVideoId", "value": "00000000-0000-4000-8000-000000000012" },
-    { "key": "avatarEngine", "value": "avatar_iv" },
-    { "key": "stockExternalId", "value": "replace-with-pexels-photo-id" },
-    { "key": "storageUserId", "value": "00000000-0000-4000-8000-000000000099" },
-    { "key": "storageTierId", "value": "plus_10gb" },
-    { "key": "additionalStorageBytes", "value": "107374182400" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:9000"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "workspaceId",
+      "value": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "key": "folderId",
+      "value": "00000000-0000-4000-8000-000000000002"
+    },
+    {
+      "key": "assetId",
+      "value": "00000000-0000-4000-8000-000000000003"
+    },
+    {
+      "key": "invitationId",
+      "value": "00000000-0000-4000-8000-000000000004"
+    },
+    {
+      "key": "invitationToken",
+      "value": "00000000-0000-4000-8000-000000000099"
+    },
+    {
+      "key": "memberId",
+      "value": "00000000-0000-4000-8000-000000000005"
+    },
+    {
+      "key": "groupId",
+      "value": "replace-with-heygen-group-id"
+    },
+    {
+      "key": "avatarLookId",
+      "value": "replace-with-heygen-look-id"
+    },
+    {
+      "key": "voiceId",
+      "value": "replace-with-voice-id-or-clone-job-id"
+    },
+    {
+      "key": "projectId",
+      "value": "00000000-0000-4000-8000-000000000010"
+    },
+    {
+      "key": "commentId",
+      "value": "00000000-0000-4000-8000-000000000013"
+    },
+    {
+      "key": "renderId",
+      "value": "00000000-0000-4000-8000-000000000011"
+    },
+    {
+      "key": "heygenVideoId",
+      "value": "00000000-0000-4000-8000-000000000012"
+    },
+    {
+      "key": "avatarEngine",
+      "value": "avatar_iv"
+    },
+    {
+      "key": "stockExternalId",
+      "value": "replace-with-pexels-photo-id"
+    },
+    {
+      "key": "storageUserId",
+      "value": "00000000-0000-4000-8000-000000000099"
+    },
+    {
+      "key": "storageTierId",
+      "value": "plus_10gb"
+    },
+    {
+      "key": "additionalStorageBytes",
+      "value": "107374182400"
+    },
+    {
+      "key": "presentationId",
+      "value": ""
+    },
+    {
+      "key": "exportId",
+      "value": ""
+    },
+    {
+      "key": "videoTemplateId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -48,11 +120,20 @@
           "name": "Submit early access request",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@company.com\",\n  \"company\": \"Acme Corp\",\n  \"role\": \"L&D Manager\",\n  \"useCase\": \"Corporate Training\",\n  \"message\": \"We want to use Athena VI for employee onboarding at scale.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/early-access/request"
           }
@@ -66,11 +147,20 @@
           "name": "Generate OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/otp/generate"
           }
@@ -79,11 +169,20 @@
           "name": "Resend OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/otp/resend"
           }
@@ -108,11 +207,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"otp\": 123456\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/register"
           }
@@ -137,11 +245,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/login"
           }
@@ -168,7 +285,13 @@
           "request": {
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
             },
             "method": "POST",
             "header": [],
@@ -179,11 +302,20 @@
           "name": "Forget password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/forget-password"
           }
@@ -192,11 +324,20 @@
           "name": "Reset password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"newpassword123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/auth/reset-password"
           }
@@ -224,7 +365,13 @@
       "name": "User",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
@@ -239,11 +386,20 @@
           "name": "Update profile",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Name\",\n  \"phoneNumber\": \"+15551234567\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/user/profile"
           }
@@ -290,11 +446,20 @@
               "name": "Update appearance settings",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"interfaceMode\": \"light\",\n  \"themePalette\": \"sapphire\",\n  \"customAccentColor\": \"#2563EB\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/user/settings/appearance",
                 "description": "Partial update; send at least one of interfaceMode, themePalette, customAccentColor. Creates the user_settings row on first save."
@@ -313,11 +478,20 @@
               "name": "Update notification settings",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"pushNotifications\": true,\n  \"commentsAndMentions\": true,\n  \"weeklyDigestEmail\": false,\n  \"productEmails\": false\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/user/settings/notifications",
                 "description": "Partial update; send at least one boolean field. Merges into the same user_settings row as appearance."
@@ -336,11 +510,20 @@
               "name": "Change password",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"new-password123\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/user/settings/security/password",
                 "description": "Email/password accounts only. Requires currentPassword and newPassword (min 6 chars)."
@@ -350,11 +533,20 @@
               "name": "Delete account (schedule)",
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"confirmation\": \"delete\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/user/settings/security/delete-account",
                 "description": "Two-step delete: confirmation must be exactly delete. Schedules permanent deletion in 7 days, logs out all devices. Sign in again within 7 days to recover."
@@ -368,18 +560,33 @@
       "name": "Workspaces",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
           "name": "Create workspace",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"My Team Workspace\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/"
           }
@@ -420,11 +627,20 @@
           "name": "Invite member",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"MEMBER\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/invite"
           }
@@ -448,11 +664,20 @@
           "name": "Accept invitation",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"invitation-jwt-or-token\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/invitations/accept"
           }
@@ -469,11 +694,20 @@
           "name": "Change member role",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"role\": \"ADMIN\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/role"
           }
@@ -491,11 +725,20 @@
           "name": "Folders — Create",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"New Folder\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
           }
@@ -513,11 +756,20 @@
           "name": "Folders — Rename",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Renamed Folder\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
           }
@@ -553,11 +805,20 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"title\": \"Untitled Video\",\n  \"folderId\": \"{{folderId}}\",\n  \"aspectRatio\": \"16:9\",\n  \"tags\": [\"Professional\", \"Presentation\"]\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
                 "description": "Create Video wizard: canvas (aspectRatio) + details (title, tags, folderId). Workspace is :workspaceId in the URL. List folders: GET .../folders."
@@ -582,11 +843,20 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"My Video Project\",\n  \"folderId\": \"{{folderId}}\",\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": []\n  },\n  \"status\": \"draft\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects",
                 "description": "Optional: explicit data / projectState with videoSettings and pre-built scenes (advanced / editor import)."
@@ -614,11 +884,20 @@
               "name": "Update project metadata",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"name\": \"Updated Project Name\",\n  \"thumbnail\": \"https://example.com/updated-project-preview.png\",\n  \"status\": \"draft\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
               }
@@ -627,11 +906,20 @@
               "name": "Save project data",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"data\": {\n    \"videoSettings\": {\n      \"width\": 1920,\n      \"height\": 1080,\n      \"fps\": 30,\n      \"backgroundColor\": \"#000000\"\n    },\n    \"scenes\": [\n      {\n        \"sceneId\": \"scene_001\",\n        \"name\": \"Intro Scene\",\n        \"durationInFrames\": 150,\n        \"background\": {\n          \"type\": \"color\",\n          \"value\": \"#101828\"\n        },\n        \"transition\": {\n          \"in\": {\n            \"type\": \"fade\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeOut\"\n          },\n          \"out\": {\n            \"type\": \"slide-left\",\n            \"durationInFrames\": 12,\n            \"easing\": \"easeInOut\"\n          }\n        },\n        \"elements\": [\n          {\n            \"id\": \"text_001\",\n            \"type\": \"text\",\n            \"layer\": 20,\n            \"startFrame\": 0,\n            \"durationInFrames\": 120,\n            \"placement\": {\n              \"x\": 120,\n              \"y\": 120,\n              \"width\": 760,\n              \"height\": 180,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"text\": \"Welcome\",\n              \"fontFamily\": \"Inter\",\n              \"fontSize\": 64,\n              \"fontWeight\": 700,\n              \"color\": \"#FFFFFF\",\n              \"textAlign\": \"left\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"slide-up\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"distance\": 40,\n                \"easing\": \"easeOut\"\n              },\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 8,\n                \"durationInFrames\": 18,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"avatar_001\",\n            \"type\": \"avatar\",\n            \"layer\": 10,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 1180,\n              \"y\": 180,\n              \"width\": 520,\n              \"height\": 820,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"provider\": \"heygen\",\n              \"sceneId\": \"scene_001\",\n              \"avatarId\": \"{{avatarLookId}}\",\n              \"voiceId\": \"{{voiceId}}\",\n              \"script\": \"Welcome to our platform.\",\n              \"heygenVideoId\": \"{{heygenVideoId}}\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"fade-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 10,\n                \"easing\": \"easeOut\"\n              }\n            ]\n          },\n          {\n            \"id\": \"image_001\",\n            \"type\": \"image\",\n            \"layer\": 5,\n            \"startFrame\": 0,\n            \"durationInFrames\": 150,\n            \"placement\": {\n              \"x\": 0,\n              \"y\": 0,\n              \"width\": 1920,\n              \"height\": 1080,\n              \"rotation\": 0,\n              \"scale\": 1,\n              \"opacity\": 1\n            },\n            \"content\": {\n              \"assetId\": \"{{assetId}}\",\n              \"fit\": \"cover\"\n            },\n            \"animations\": [\n              {\n                \"type\": \"zoom-in\",\n                \"startFrame\": 0,\n                \"durationInFrames\": 150,\n                \"fromScale\": 1,\n                \"toScale\": 1.08,\n                \"easing\": \"linear\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/data",
                 "description": "PATCH full V2 editor `data`: scene `presenter` / `generation`, element `style`, `filters`, `timing` or flat `startFrame`, `clips` alias for `elements`. Server keeps all fields (no strip). HeyGen: `generation.heygenVideoId` + `presenter.script` / `avatarId` / `voiceId`. Do not persist `blob:` or `generatedVideoUrl` for playback. Sample body uses legacy flat shape; frontend may send richer V2 per README."
@@ -641,11 +929,20 @@
               "name": "Move project to folder",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"folderId\": \"{{folderId}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/move-folder",
                 "description": "Moves the project and migrates folder-aware S3 keys for HeyGen scene clips, cached scene renders, and final exports."
@@ -681,11 +978,20 @@
                   ],
                   "request": {
                     "method": "POST",
-                    "header": [{ "key": "Content-Type", "value": "application/json" }],
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
                     "body": {
                       "mode": "raw",
                       "raw": "{\n  \"forceRebuild\": false\n}",
-                      "options": { "raw": { "language": "json" } }
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
                     },
                     "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders",
                     "description": "Queues a background Remotion render. The backend resolves assetId references, checks HeyGen avatar clips, reuses scene cache when possible, and writes the final MP4 to S3."
@@ -743,11 +1049,20 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"sceneId\": \"scene_001\",\n  \"avatarId\": \"{{avatarLookId}}\",\n  \"avatarEngine\": \"{{avatarEngine}}\",\n  \"avatarType\": \"studio_avatar\",\n  \"title\": \"Scene 1 take\",\n  \"resolution\": \"1080p\",\n  \"aspectRatio\": \"16:9\",\n  \"backgroundColor\": \"#008000\",\n  \"voiceId\": \"{{voiceId}}\",\n  \"script\": \"Welcome to our platform.\",\n  \"voiceSettings\": {\n    \"speed\": 1,\n    \"pitch\": 0,\n    \"locale\": \"en-US\"\n  },\n  \"removeBackground\": false,\n  \"outputFormat\": \"mp4\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos",
                 "description": "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). **`avatarId`** = look id (`avatarLookId`). **`avatarEngine`**: `avatar_iv` (default) or `avatar_v` — must match look `supported_api_engines`. Set **`avatarType`** from the look row. **`expressiveness`**: Avatar IV + `photo_avatar` only. Call **Get HeyGen video** to sync S3. Match `sceneId` / `script` with **Save project data**."
@@ -793,7 +1108,13 @@
               "request": {
                 "auth": {
                   "type": "bearer",
-                  "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "method": "GET",
                 "header": [],
@@ -826,11 +1147,20 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"sceneId\": \"scene_001\",\n  \"voiceId\": \"{{voiceId}}\",\n  \"script\": \"Welcome to our audio lesson.\",\n  \"inputType\": \"text\",\n  \"speed\": 1,\n  \"locale\": \"en-US\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech",
                 "description": "201 — Synchronous TTS; returns completed row with `s3Key`. Idempotent on scene + voice + script."
@@ -865,7 +1195,13 @@
               "request": {
                 "auth": {
                   "type": "bearer",
-                  "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
                 },
                 "method": "GET",
                 "header": [],
@@ -911,7 +1247,12 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"body\": \"Looks great — please review the intro.\",\n  \"mentionedUserIds\": []\n}"
@@ -923,7 +1264,12 @@
               "name": "Update comment",
               "request": {
                 "method": "PATCH",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"body\": \"Updated comment text.\",\n  \"mentionedUserIds\": []\n}"
@@ -947,7 +1293,13 @@
       "name": "Credits",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
@@ -980,7 +1332,13 @@
       "name": "Assets",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
@@ -990,7 +1348,13 @@
             "header": [],
             "body": {
               "mode": "formdata",
-              "formdata": [{ "key": "file", "type": "file", "src": [] }]
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
             },
             "url": "{{baseUrl}}/api/assets/{{workspaceId}}/upload"
           }
@@ -1016,11 +1380,20 @@
           "name": "Rename asset",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"new-asset-name.pdf\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}/rename"
           }
@@ -1040,7 +1413,13 @@
       "description": "Stock library: Pexels (photos + videos), Unsplash (photos), Pixabay (photos + videos). Requires at least one of `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY` on the server.\n\n**Flow:** (1) **Search stock** — default `provider=all` merges all photo providers; videos merge Pexels + Pixabay; (2) **Import stock into workspace** — downloads from provider, copies to S3, creates workspace `Asset`; (3) reference `asset.id` in project JSON as `content.assetId`.",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
@@ -1050,14 +1429,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=pexels&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "office" },
-                { "key": "type", "value": "photo" },
-                { "key": "provider", "value": "pexels" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "office"
+                },
+                {
+                  "key": "type",
+                  "value": "photo"
+                },
+                {
+                  "key": "provider",
+                  "value": "pexels"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1069,14 +1469,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=pexels&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "nature" },
-                { "key": "type", "value": "video" },
-                { "key": "provider", "value": "pexels" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "nature"
+                },
+                {
+                  "key": "type",
+                  "value": "video"
+                },
+                {
+                  "key": "provider",
+                  "value": "pexels"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1088,14 +1509,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=all&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "office" },
-                { "key": "type", "value": "photo" },
-                { "key": "provider", "value": "all" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "office"
+                },
+                {
+                  "key": "type",
+                  "value": "photo"
+                },
+                {
+                  "key": "provider",
+                  "value": "all"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1107,14 +1549,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=unsplash&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "office" },
-                { "key": "type", "value": "photo" },
-                { "key": "provider", "value": "unsplash" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "office"
+                },
+                {
+                  "key": "type",
+                  "value": "photo"
+                },
+                {
+                  "key": "provider",
+                  "value": "unsplash"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1126,14 +1589,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=office&type=photo&provider=pixabay&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "office" },
-                { "key": "type", "value": "photo" },
-                { "key": "provider", "value": "pixabay" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "office"
+                },
+                {
+                  "key": "type",
+                  "value": "photo"
+                },
+                {
+                  "key": "provider",
+                  "value": "pixabay"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1145,14 +1629,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=all&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "nature" },
-                { "key": "type", "value": "video" },
-                { "key": "provider", "value": "all" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "nature"
+                },
+                {
+                  "key": "type",
+                  "value": "video"
+                },
+                {
+                  "key": "provider",
+                  "value": "all"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1164,14 +1669,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=pixabay&page=1&perPage=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "stock", "search"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stock",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "nature" },
-                { "key": "type", "value": "video" },
-                { "key": "provider", "value": "pixabay" },
-                { "key": "page", "value": "1" },
-                { "key": "perPage", "value": "20" }
+                {
+                  "key": "q",
+                  "value": "nature"
+                },
+                {
+                  "key": "type",
+                  "value": "video"
+                },
+                {
+                  "key": "provider",
+                  "value": "pixabay"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "perPage",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -1199,11 +1725,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"provider\": \"pexels\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Stock photo\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import",
             "description": "Set `stockExternalId` from a search result `externalId`, or replace manually. Saves `assetId` on success."
@@ -1232,11 +1767,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"provider\": \"unsplash\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Unsplash photo\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
           }
@@ -1245,11 +1789,20 @@
           "name": "Import Pixabay photo into workspace",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"provider\": \"pixabay\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"photo\",\n  \"name\": \"Pixabay photo\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
           }
@@ -1258,11 +1811,20 @@
           "name": "Import Pixabay video into workspace",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"provider\": \"pixabay\",\n  \"externalId\": \"{{stockExternalId}}\",\n  \"mediaType\": \"video\",\n  \"name\": \"Pixabay video\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
           }
@@ -1274,7 +1836,13 @@
       "description": "HeyGen v3 proxy (`/api/heygen`). One shared HeyGen API key: **`ownership=private`** (avatars) and **`type=private`** (voices) trigger **server-side filtering** of the HeyGen JSON so each JWT user only sees rows recorded for them in **`heygen_avatars`** / **`heygen_voices`**, plus optional **`workspace_id`** to merge assets **shared to a workspace** (`heygen_workspace_shares`). Public lists are unchanged passthrough.\n\n**403** (`You do not have access to this HeyGen resource`) — avatar consent for another user's group, GET voice by id for another user's **stored** private clone, private looks with another user's `group_id`, or scene video create with unshared private avatar/voice.",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{accessToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
@@ -1442,11 +2010,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"type\": \"prompt\",\n  \"name\": \"My Avatar\",\n  \"prompt\": \"A professional instructor in a studio\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/avatars",
             "description": "Registers the returned avatar group for your user (for private list filtering). Test script saves `groupId` when HeyGen returns an id."
@@ -1492,9 +2069,21 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "type", "value": "photo", "type": "text" },
-                { "key": "name", "value": "My photo avatar", "type": "text" },
-                { "key": "file", "type": "file", "src": [] }
+                {
+                  "key": "type",
+                  "value": "photo",
+                  "type": "text"
+                },
+                {
+                  "key": "name",
+                  "value": "My photo avatar",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
               ]
             },
             "url": "{{baseUrl}}/api/heygen/avatars",
@@ -1505,11 +2094,20 @@
           "name": "Create avatar consent",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reroute_url\": \"https://example.com/after-consent\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent",
             "description": "Only allowed if `groupId` was recorded for your user (e.g. after Create avatar). **403** otherwise."
@@ -1522,10 +2120,21 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/heygen/avatars/{{groupId}}?voice_id={{voiceId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "heygen", "avatars", "{{groupId}}"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "heygen",
+                "avatars",
+                "{{groupId}}"
+              ],
               "query": [
-                { "key": "voice_id", "value": "{{voiceId}}", "description": "Optional paired clone from digital twin flow" }
+                {
+                  "key": "voice_id",
+                  "value": "{{voiceId}}",
+                  "description": "Optional paired clone from digital twin flow"
+                }
               ]
             },
             "description": "Deletes custom avatar group on HeyGen and locally. Optional `voice_id` deletes paired cloned voice. **403** if group not owned."
@@ -1628,11 +2237,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"prompt\": \"Warm, confident female narrator for e-learning\",\n  \"gender\": \"female\",\n  \"seed\": 0\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/voices",
             "description": "HeyGen `POST /v3/voices` — up to 3 suggested voices. Server records returned voice ids (matches nested HeyGen shapes: `voices`, `suggestions`, `data`, …). Same path as list voices; method is POST. Test script saves first resolved `voiceId`."
@@ -1642,11 +2260,20 @@
           "name": "Select voice (persist to my voices)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"voiceId\": \"{{voiceId}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/voices/select",
             "description": "Call this when user clicks Select in UI. It records the chosen voiceId for the current user so it shows up in `GET /api/heygen/voices?type=private`."
@@ -1680,11 +2307,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"voice_name\": \"My cloned voice\",\n  \"audio\": {\n    \"type\": \"asset_id\",\n    \"asset_id\": \"REPLACE_WITH_ASSET_ID_FROM_UPLOAD\"\n  },\n  \"remove_background_noise\": true\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/voices/clone",
             "description": "HeyGen `POST /v3/voices/clone`. Records clone voice id for your user. Poll **Get voice by id** until complete. Test script saves `voiceId` when present."
@@ -1757,11 +2393,20 @@
           "name": "Preview speech",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"text\": \"Hello from AthenaVI.\",\n  \"voice_id\": \"{{voiceId}}\",\n  \"input_type\": \"text\",\n  \"speed\": 1\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/heygen/voices/preview-speech"
           }
@@ -1803,12 +2448,21 @@
           "name": "Request storage upgrade",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Emails platform superadmin. requestedAdditionalBytes must equal requestedAdditionalGb × 1024³. Does not change quota until admin grants.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"requestedAdditionalGb\": 10,\n  \"requestedAdditionalBytes\": 10737418240,\n  \"reason\": \"Need more space for 4K campaign assets and weekly exports.\",\n  \"urgency\": \"flexible\",\n  \"currentUsedBytes\": 536870912,\n  \"currentLimitBytes\": 1073741824,\n  \"tierId\": \"free\",\n  \"tierLabel\": \"Free\",\n  \"workspaceId\": \"{{workspaceId}}\",\n  \"workspaceName\": \"Personal\",\n  \"workspaceFootprintBytes\": 536870912\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/user/storage/request"
           }
@@ -1851,12 +2505,21 @@
           "name": "Superadmin - grant storage (tier)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Sets absolute limit to tier: free | plus_10gb | pro_50gb. Approves latest pending upgrade request if any.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"tierId\": \"{{storageTierId}}\",\n  \"reason\": \"Manual tier upgrade\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/grant"
           }
@@ -1865,12 +2528,21 @@
           "name": "Superadmin - grant storage (additional bytes)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Increments storageLimit by additionalBytes (any positive integer). Example body adds 100 GiB.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"additionalBytes\": {{additionalStorageBytes}},\n  \"reason\": \"Custom enterprise allocation\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/grant"
           }
@@ -1879,12 +2551,21 @@
           "name": "Superadmin - revoke storage bytes",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Subtracts amountBytes from storageLimit. 400 if new limit would be below storageUsed.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amountBytes\": 1073741824,\n  \"reason\": \"Plan downgrade\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/revoke"
           }
@@ -1893,12 +2574,21 @@
           "name": "Superadmin - product email broadcast",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Sends to users with productEmails: true. Requires confirm: send. Returns broadcastId for history.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"subject\": \"New Athena VI features\",\n  \"html\": \"<p>We shipped improvements to the editor this week.</p>\",\n  \"confirm\": \"send\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/superadmin/broadcasts/product-email"
           }
@@ -1961,14 +2651,410 @@
           "name": "Superadmin - update early access request status",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "description": "Status: under_review | in_discussion | approved | rejected. Emails applicant.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"under_review\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{baseUrl}}/api/superadmin/early-access/requests/{{earlyAccessRequestId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Presentations (AI PPT)",
+      "description": "Isolated presentation module under /api/workspaces/:workspaceId/presentations. Separate OpenAI credits from HeyGen/video.",
+      "item": [
+        {
+          "name": "Create presentation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Q3 Pitch\",\n  \"folderId\": \"{{folderId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generate outline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"prompt\",\n  \"prompt\": \"Pitch deck for Athena VI\",\n  \"slideCount\": 10,\n  \"density\": \"balanced\",\n  \"locale\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "outline"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Set theme",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"themeId\": \"midnight_blue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/theme",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "theme"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Generate deck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"density\": \"balanced\",\n  \"overwriteManualEdits\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get presentation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Credit estimate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/credit-estimate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "credit-estimate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export PPTX",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"PPTX\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "export"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get export",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export/{{exportId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "presentations",
+                "{{presentationId}}",
+                "export",
+                "{{exportId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Video templates",
+      "description": "VIDEO_SCENE templates for the video editor only. Isolated from Presentations (AI PPT) / DECK_LAYOUT.",
+      "item": [
+        {
+          "name": "List video templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/video-templates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "video-templates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get video template",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/video-templates/{{videoTemplateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "video-templates",
+                "{{videoTemplateId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create project from template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"From video template\",\n  \"folderId\": \"{{folderId}}\",\n  \"aspectRatio\": \"16:9\",\n  \"templateId\": \"{{videoTemplateId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/projects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "projects"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Append scene from template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateId\": \"{{videoTemplateId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/projects/{{projectId}}/scenes/from-template",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workspaces",
+                "{{workspaceId}}",
+                "projects",
+                "{{projectId}}",
+                "scenes",
+                "from-template"
+              ]
+            }
           }
         }
       ]

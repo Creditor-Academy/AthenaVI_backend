@@ -28,6 +28,7 @@ const createProject = asyncHandler(async (req, res) => {
     customWidth,
     customHeight,
     tags,
+    templateId,
   } = req.body;
 
   const project = await projectService.createProject(workspaceId, userId, {
@@ -42,6 +43,7 @@ const createProject = asyncHandler(async (req, res) => {
     customWidth,
     customHeight,
     tags,
+    templateId,
   });
 
   return successResponse(req, res, { project }, 201, messages.PROJECT_CREATED);

@@ -38,6 +38,19 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/reports/credits/platform-actions` | Platform grant/revoke audit |
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
+| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE`) |
+| `POST` | `/api/superadmin/templates` | Create template; `VIDEO_SCENE` schema validated separately from deck layouts |
+| `GET` | `/api/superadmin/templates/:templateId` | Get template |
+| `PATCH` | `/api/superadmin/templates/:templateId` | Update name/schema/`isActive` (schema revalidated by type) |
+
+**Template types (do not mix products):**
+
+| `type` | Product | Schema |
+|--------|---------|--------|
+| `DECK_LAYOUT` | AI PPT / presentations | Grid + slots (deck) |
+| `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
+
+Workspace apply for video: `GET .../video-templates`, create project `templateId`, `POST .../scenes/from-template`. PPT uses `/presentations` only.
 
 ---
 

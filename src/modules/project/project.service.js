@@ -19,6 +19,7 @@ const {
   buildProjectSceneCacheKey,
 } = require('../../shared/utils/videoStorageKeys');
 const storageAccounting = require('../storage/storageAccounting.service');
+const videoTemplateService = require('./videoTemplate.service');
 
 function buildDefaultProjectData() {
   return {
@@ -180,17 +181,40 @@ const createProject = async (workspaceId, userId, input) => {
     customWidth,
     customHeight,
     tags,
+    templateId,
   } = input;
 
   await assertFolderInWorkspace(folderId, workspaceId);
-  const normalizedState = buildCreateProjectEditorState({
-    editorState,
-    aspectRatio,
-    canvasSize,
-    customWidth,
-    customHeight,
-    tags,
-  });
+
+  const incomingScenes = Array.isArray(editorState?.scenes) ? editorState.scenes : [];
+  if (templateId && incomingScenes.length > 0) {
+    throw new AppError(messages.VIDEO_TEMPLATE_CONFLICTS_WITH_SCENES, 400);
+  }
+
+  let normalizedState;
+  if (templateId) {
+    const template = await videoTemplateService.getActiveVideoSceneTemplate(templateId);
+    normalizedState = videoTemplateService.applyTemplateToNewProjectState({
+      template,
+      aspectRatio,
+      canvasSize,
+      customWidth,
+      customHeight,
+      tags,
+      resolveVideoSettingsFromCanvas,
+      buildProjectMeta,
+      normalizeProjectState,
+    });
+  } else {
+    normalizedState = buildCreateProjectEditorState({
+      editorState,
+      aspectRatio,
+      canvasSize,
+      customWidth,
+      customHeight,
+      tags,
+    });
+  }
 
   const project = await projectDao.createProject({
     name,
@@ -198,6 +222,7 @@ const createProject = async (workspaceId, userId, input) => {
     folderId,
     createdBy: userId,
     updatedBy: userId,
+    type: 'VIDEO',
     data: normalizedState,
     thumbnail,
     duration: duration ?? estimateProjectDuration(normalizedState),
@@ -207,6 +232,45 @@ const createProject = async (workspaceId, userId, input) => {
   await projectStorageService.recalculateProjectStorage(project.id);
   const refreshed = await projectDao.findProjectById(workspaceId, project.id);
   return enrichProject(refreshed);
+};
+
+const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, templateId) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  if (project.type === 'PRESENTATION') {
+    throw new AppError(messages.VIDEO_TEMPLATE_NOT_FOR_PRESENTATION, 400);
+  }
+
+  const template = await videoTemplateService.getActiveVideoSceneTemplate(templateId);
+  const currentData =
+    project.data && typeof project.data === 'object'
+      ? project.data
+      : buildDefaultProjectData();
+  const scenes = Array.isArray(currentData.scenes) ? [...currentData.scenes] : [];
+  const nextOrder =
+    scenes.reduce((max, s) => Math.max(max, Number(s.order) || 0), -1) + 1;
+
+  let schema;
+  try {
+    schema = require('../validations/videoTemplate.validations').assertVideoSceneTemplateSchema(
+      template.schema
+    );
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid VIDEO_SCENE template schema', 400);
+  }
+
+  const scene = videoTemplateService.schemaToScene(schema, {
+    templateId: template.id,
+    order: nextOrder,
+  });
+  scenes.push(scene);
+
+  const nextData = normalizeProjectState({
+    ...currentData,
+    scenes,
+  });
+
+  return saveProjectData(workspaceId, projectId, userId, nextData);
 };
 
 const listProjects = async (workspaceId, folderId) => {
@@ -522,4 +586,5 @@ module.exports = {
   moveProjectToFolder,
   deleteProject,
   buildDefaultProjectData,
+  appendSceneFromVideoTemplate,
 };
