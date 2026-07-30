@@ -39,18 +39,40 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
 | `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE`) |
-| `POST` | `/api/superadmin/templates` | Create template; `VIDEO_SCENE` schema validated separately from deck layouts |
+| `POST` | `/api/superadmin/templates` | Create template — **`type` required**; schema validated by type |
 | `GET` | `/api/superadmin/templates/:templateId` | Get template |
-| `PATCH` | `/api/superadmin/templates/:templateId` | Update name/schema/`isActive` (schema revalidated by type) |
+| `PATCH` | `/api/superadmin/templates/:templateId` | Update `name` / `schema` / `isActive` / `contentType` / `variant` |
 
 **Template types (do not mix products):**
 
 | `type` | Product | Schema |
 |--------|---------|--------|
-| `DECK_LAYOUT` | AI PPT / presentations | Grid + slots (deck) |
+| `DECK_LAYOUT` | AI PPT / presentations | Requires `layout_id`, `content_type`, `grid`, `slots[]` (`id` + `region`). No `scene` / `videoSettings`. |
 | `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
 
-Workspace apply for video: `GET .../video-templates`, create project `templateId`, `POST .../scenes/from-template`. PPT uses `/presentations` only.
+**Create `DECK_LAYOUT` example**
+
+```json
+{
+  "type": "DECK_LAYOUT",
+  "name": "Title Centered",
+  "contentType": "title",
+  "variant": "v1",
+  "isActive": true,
+  "schema": {
+    "layout_id": "title_centered_v1",
+    "content_type": "title",
+    "grid": "12-col",
+    "slots": [
+      { "id": "title", "region": "cols 2-11, rows 4-7", "max_lines": 3 }
+    ]
+  }
+}
+```
+
+**Create `VIDEO_SCENE`:** same endpoint with `"type": "VIDEO_SCENE"` and video scene schema (see workspace video templates docs).
+
+Workspace: `GET .../presentation-templates`, `GET .../video-templates`. PPT apply via create `createMode: template` / `apply-layout`; video via project `templateId` / `scenes/from-template`.
 
 ---
 

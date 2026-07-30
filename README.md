@@ -39,6 +39,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Guide | Purpose |
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
+| [docs/PRESENTATION_FRONTEND_INTEGRATION.md](docs/PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + templates** — AI/blank/template, canvas, export, admin templates |
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
 | [docs/PRESENTATION_CREDITS_FRONTEND.md](docs/PRESENTATION_CREDITS_FRONTEND.md) | AI PPT credits (`ppt_*`, separate from HeyGen) |
 | [docs/PRESENTATION_PROMPTS.md](docs/PRESENTATION_PROMPTS.md) | Presentation prompt bundle versioning |

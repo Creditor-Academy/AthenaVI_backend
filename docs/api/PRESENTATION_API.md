@@ -40,7 +40,9 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
   "themeId": "midnight_blue",
   "themeTokens": null,
   "locale": "en",
-  "aspectRatio": "16:9"
+  "aspectRatio": "16:9",
+  "createMode": "blank",
+  "templateId": null
 }
 ```
 
@@ -48,8 +50,32 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 - **`folderId`** required (must belong to workspace).
 - **`themeId`** and/or **`themeTokens`** optional; tokens resolved from catalog when `themeId` is set.
 - **`aspectRatio`**: only `16:9` today.
+- **`createMode`**: `blank` (default, zero slides) | `template` (requires active `DECK_LAYOUT` **`templateId`**; creates one READY slide with freeform `elements`).
+- AI path: create blank → outline → theme → generate.
 
 **Response `data`:** `{ project, deck }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
+
+---
+
+## Caps
+
+| Limit | Value |
+|---|---|
+| AI outline / generate | **5–20** slides |
+| Deck total (manual add/duplicate) | **40** slides |
+| Elements per slide | **50** |
+
+After AI generates ≤20 slides, users may add more by hand until 40.
+
+---
+
+## Workspace pickers (not under `/presentations/:id`)
+
+| Method | Path | Returns |
+|---|---|---|
+| `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=` | Active `DECK_LAYOUT` templates |
+| `GET` | `/api/workspaces/:workspaceId/presentation-themes` | Curated theme catalog |
+| `GET` | `/api/workspaces/:workspaceId/presentation-elements` | Element library presets for the canvas palette |
 
 ---
 
@@ -64,7 +90,30 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 **Response `data`:** `{ project, deck, slides }`
 
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
-- `slides`: ordered slide rows (content, layoutId, imageRef, status, manuallyEdited, …)
+- `slides`: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …)
+
+### Freeform canvas shape (`slide.elements`)
+
+```json
+{
+  "version": 1,
+  "canvas": { "width": 1920, "height": 1080 },
+  "elements": [
+    {
+      "id": "el_…",
+      "type": "text",
+      "layer": 1,
+      "placement": { "x": 100, "y": 200, "width": 800, "height": 120, "rotation": 0, "opacity": 1 },
+      "content": { "text": "Hello", "fontSize": 42, "bold": true },
+      "role": "title"
+    }
+  ]
+}
+```
+
+Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table`. Drag/snap are frontend-only; backend stores absolute geometry.
+
+**Frontend outcome vs API:** A single mega JSON “final deck” blob is **not** accepted as one POST. Map UI prompt/vibe into outline/theme calls; store/edit via slide + canvas APIs.
 
 ---
 
@@ -227,6 +276,40 @@ Deck `status` values include `DRAFT`, `GENERATING`, `READY`, `FAILED` (and simil
 
 ## Slides
 
+Structural mutations return **409** while deck `status === GENERATING`.
+
+### Add slide
+
+`POST .../presentations/:presentationId/slides` → **201**
+
+```json
+{ "afterSlideId": optional, "templateId": optional, "layoutId": optional, "content": {} }
+```
+
+User-authored → `status: READY`, `manuallyEdited: true`. Rejects if deck already has **40** slides.
+
+### Delete / duplicate / reorder
+
+| Method | Path |
+|---|---|
+| `DELETE` | `.../slides/:slideId` |
+| `POST` | `.../slides/:slideId/duplicate` (rejects at 40) |
+| `PATCH` | `.../slides/reorder` body `{ "slideIds": ["…"] }` |
+
+### Apply layout
+
+`POST .../slides/:slideId/apply-layout` body `{ "templateId" }` — recompiles freeform `elements` from `DECK_LAYOUT` + existing content; sets `manuallyEdited: true`.
+
+### Canvas / elements
+
+| Method | Path |
+|---|---|
+| `PUT` | `.../slides/:slideId/canvas` — full `{ version, canvas, elements }` replace |
+| `POST` | `.../slides/:slideId/elements` — `{ presetId }` and/or `{ element }` |
+| `PATCH` | `.../slides/:slideId/elements/:elementId` |
+| `DELETE` | `.../slides/:slideId/elements/:elementId` |
+| `PATCH` | `.../slides/:slideId/elements/reorder` — `{ "elementIds": [] }` |
+
 ### Patch slide
 
 | | |
@@ -243,6 +326,7 @@ Deck `status` values include `DRAFT`, `GENERATING`, `READY`, `FAILED` (and simil
   "layoutId": "bullet_list_…",
   "contentType": "bullet_list",
   "imageRef": null,
+  "elements": { "version": 1, "canvas": { "width": 1920, "height": 1080 }, "elements": [] },
   "manuallyEdited": true
 }
 ```
@@ -266,6 +350,7 @@ Deck `status` values include `DRAFT`, `GENERATING`, `READY`, `FAILED` (and simil
 
 - `target`: `content` \| `image` \| `all` (default `all`)
 - Manual edits blocked unless `overwriteManualEdits` is true (**409**)
+- Successful regen rebuilds `elements` from layout + content
 
 Subject to regenerate rate limits. Charges on success for regenerated pieces.
 
@@ -281,9 +366,18 @@ Subject to regenerate rate limits. Charges on success for regenerated pieces.
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/export` |
 | **Status** | **202** |
 
-**Body:** `{ "format": "PPTX" }` or `"PDF"`
+**Body:**
 
-**Response `data`:** `{ exportId, format, status: "QUEUED", estimatedCredits }`
+```json
+{ "format": "PPTX", "slideId": optional }
+```
+
+- **`format`**: `PPTX` \| `PDF` \| `PNG` \| `JPEG`
+- Prefer freeform `elements` placement when present; legacy title/bullets/`imageRef` fallback otherwise
+- **PNG/JPEG**: single slide → one image; full deck → **ZIP** of slide images
+- Optional **`slideId`** to export one slide only
+
+**Response `data`:** `{ exportId, format, status: "QUEUED", estimatedCredits, slideId }`
 
 Charges **`ppt_export`** on successful export.
 
@@ -297,7 +391,7 @@ Charges **`ppt_export`** on successful export.
 
 Poll until `READY` / `FAILED`. Ready responses include download metadata (presigned URL / S3 key as implemented).
 
-Export statuses: `QUEUED`, `PROCESSING`, `READY`, `FAILED`.
+Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
 
 ---
 
@@ -306,6 +400,7 @@ Export statuses: `QUEUED`, `PROCESSING`, `READY`, `FAILED`.
 - Presentation routes are nested under workspaces (same pattern as projects/folders).
 - Credits are **presentation-specific feature keys** but use the **workspace** credit ledger (`SCOPE.WORKSPACE`).
 - Offline structural checks: `npm run eval:presentation` (see `scripts/presentation-eval/`).
+- Deferred (not this API surface): share links, brand kits, server version history, studio isolation.
 
 ---
 

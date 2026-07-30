@@ -85,6 +85,66 @@ router.post(
 );
 
 router.patch(
+  '/:presentationId/slides/reorder',
+  validate(presentationValidations.reorderSlidesSchema),
+  presentationController.reorderSlides
+);
+
+router.post(
+  '/:presentationId/slides',
+  validate(presentationValidations.addSlideSchema),
+  presentationController.addSlide
+);
+
+router.delete(
+  '/:presentationId/slides/:slideId',
+  validate(presentationValidations.slideByIdSchema),
+  presentationController.deleteSlide
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/duplicate',
+  validate(presentationValidations.slideByIdSchema),
+  presentationController.duplicateSlide
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/apply-layout',
+  validate(presentationValidations.applyLayoutSchema),
+  presentationController.applyLayout
+);
+
+router.put(
+  '/:presentationId/slides/:slideId/canvas',
+  validate(presentationValidations.putCanvasSchema),
+  presentationController.putCanvas
+);
+
+router.patch(
+  '/:presentationId/slides/:slideId/elements/reorder',
+  validate(presentationValidations.reorderElementsSchema),
+  presentationController.reorderElements
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/elements',
+  validate(presentationValidations.addElementSchema),
+  presentationController.addElement
+);
+
+router.patch(
+  '/:presentationId/slides/:slideId/elements/:elementId',
+  validate(presentationValidations.patchElementSchema),
+  presentationController.patchElement
+);
+
+router.delete(
+  '/:presentationId/slides/:slideId/elements/:elementId',
+  validate(presentationValidations.elementByIdSchema),
+  presentationController.deleteElement
+);
+
+router.patch(
   '/:presentationId/slides/:slideId',
   validate(presentationValidations.patchSlideSchema),
   presentationController.patchSlide

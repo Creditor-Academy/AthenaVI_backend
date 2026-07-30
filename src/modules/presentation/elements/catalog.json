@@ -1,0 +1,74 @@
+[
+  {
+    "presetId": "text_title",
+    "type": "text",
+    "label": "Title",
+    "defaultPlacement": { "x": 160, "y": 200, "width": 1600, "height": 140, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Title", "fontSize": 44, "bold": true, "align": "left" }
+  },
+  {
+    "presetId": "text_body",
+    "type": "text",
+    "label": "Body text",
+    "defaultPlacement": { "x": 160, "y": 400, "width": 1600, "height": 400, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Body text", "fontSize": 20, "bold": false, "align": "left" }
+  },
+  {
+    "presetId": "shape_rect",
+    "type": "shape",
+    "label": "Rectangle",
+    "defaultPlacement": { "x": 200, "y": 200, "width": 400, "height": 240, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "rect", "fill": "#0A84FF" }
+  },
+  {
+    "presetId": "shape_ellipse",
+    "type": "shape",
+    "label": "Ellipse",
+    "defaultPlacement": { "x": 300, "y": 300, "width": 320, "height": 320, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "ellipse", "fill": "#5E5CE6" }
+  },
+  {
+    "presetId": "shape_line",
+    "type": "shape",
+    "label": "Line",
+    "defaultPlacement": { "x": 200, "y": 540, "width": 1520, "height": 4, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "line", "line": "#E5E5E5" }
+  },
+  {
+    "presetId": "image_frame",
+    "type": "image",
+    "label": "Image frame",
+    "defaultPlacement": { "x": 960, "y": 180, "width": 800, "height": 720, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "url": null, "fit": "cover", "alt": "" }
+  },
+  {
+    "presetId": "icon_star",
+    "type": "icon",
+    "label": "Icon",
+    "defaultPlacement": { "x": 200, "y": 200, "width": 96, "height": 96, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "icon": "star", "url": null }
+  },
+  {
+    "presetId": "chart_bar",
+    "type": "chart",
+    "label": "Bar chart",
+    "defaultPlacement": { "x": 200, "y": 200, "width": 1200, "height": 600, "rotation": 0, "opacity": 1 },
+    "defaultContent": {
+      "chartType": "bar",
+      "labels": ["A", "B", "C"],
+      "series": [{ "name": "Series 1", "values": [3, 5, 2] }]
+    }
+  },
+  {
+    "presetId": "table_basic",
+    "type": "table",
+    "label": "Table",
+    "defaultPlacement": { "x": 200, "y": 240, "width": 1520, "height": 480, "rotation": 0, "opacity": 1 },
+    "defaultContent": {
+      "rows": [
+        ["Header 1", "Header 2"],
+        ["Cell", "Cell"]
+      ]
+    }
+  }
+]

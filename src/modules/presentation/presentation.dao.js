@@ -93,6 +93,7 @@ async function createSlides(deckId, slidesData) {
       layoutId: slide.layoutId ?? null,
       content: slide.content ?? null,
       imageRef: slide.imageRef ?? null,
+      elements: slide.elements ?? null,
       status: slide.status || 'PENDING',
       manuallyEdited: slide.manuallyEdited === true,
     })),
@@ -101,6 +102,22 @@ async function createSlides(deckId, slidesData) {
   return prisma.slide.findMany({
     where: { deckId },
     orderBy: { order: 'asc' },
+  });
+}
+
+async function createOneSlide(slide) {
+  return prisma.slide.create({
+    data: {
+      deckId: slide.deckId,
+      order: slide.order,
+      contentType: slide.contentType ?? null,
+      layoutId: slide.layoutId ?? null,
+      content: slide.content ?? null,
+      imageRef: slide.imageRef ?? null,
+      elements: slide.elements ?? null,
+      status: slide.status || 'READY',
+      manuallyEdited: slide.manuallyEdited === true,
+    },
   });
 }
 
@@ -117,9 +134,63 @@ async function findSlideById(slideId) {
   });
 }
 
+async function deleteSlideById(slideId) {
+  return prisma.slide.delete({
+    where: { id: slideId },
+  });
+}
+
 async function deleteSlidesByDeckId(deckId) {
   return prisma.slide.deleteMany({
     where: { deckId },
+  });
+}
+
+/**
+ * Increment order for all slides with order >= fromOrder by delta.
+ */
+async function shiftSlideOrders(deckId, fromOrder, delta) {
+  const slides = await prisma.slide.findMany({
+    where: { deckId, order: { gte: fromOrder } },
+    orderBy: { order: delta > 0 ? 'desc' : 'asc' },
+  });
+  for (const s of slides) {
+    await prisma.slide.update({
+      where: { id: s.id },
+      data: { order: s.order + delta },
+    });
+  }
+}
+
+async function resequenceSlideOrders(deckId) {
+  const slides = await prisma.slide.findMany({
+    where: { deckId },
+    orderBy: { order: 'asc' },
+  });
+  let order = 1;
+  for (const s of slides) {
+    if (s.order !== order) {
+      await prisma.slide.update({ where: { id: s.id }, data: { order } });
+    }
+    order += 1;
+  }
+}
+
+async function reorderSlides(deckId, slideIds) {
+  return prisma.$transaction(async (tx) => {
+    // Temporary high orders to avoid unique conflicts if any composite unique existed
+    for (let i = 0; i < slideIds.length; i += 1) {
+      await tx.slide.update({
+        where: { id: slideIds[i] },
+        data: { order: 10_000 + i },
+      });
+    }
+    for (let i = 0; i < slideIds.length; i += 1) {
+      await tx.slide.update({
+        where: { id: slideIds[i] },
+        data: { order: i + 1 },
+      });
+    }
   });
 }
 
@@ -272,9 +343,14 @@ module.exports = {
   findDeckById,
   updateDeck,
   createSlides,
+  createOneSlide,
   updateSlide,
   findSlideById,
+  deleteSlideById,
   deleteSlidesByDeckId,
+  shiftSlideOrders,
+  resequenceSlideOrders,
+  reorderSlides,
   createJob,
   updateJob,
   findJobByRequestHash,

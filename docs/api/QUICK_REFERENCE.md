@@ -50,7 +50,10 @@
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
-| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`Project.type` PRESENTATION) |
+| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template`) |
+| GET | `/api/workspaces/:workspaceId/presentation-templates` | Bearer + member | List DECK_LAYOUT templates |
+| GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
+| GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/status` | Bearer + member | Generation progress |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/credit-estimate` | Bearer + member | Outline/generate/export AC estimate |
@@ -58,9 +61,16 @@
 | PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Update outline JSON |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/theme` | Bearer + member | Set theme |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/generate` | Bearer + member | Start deck generation (202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides` | Bearer + member | Add slide (deck max 40) |
+| DELETE | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Delete slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/duplicate` | Bearer + member | Duplicate slide |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/reorder` | Bearer + member | Reorder slides |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/apply-layout` | Bearer + member | Apply DECK_LAYOUT |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/canvas` | Bearer + member | Save freeform canvas |
+| POST/PATCH/DELETE | `.../slides/:slideId/elements...` | Bearer + member | Element CRUD / reorder |
 | PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Patch slide |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (202) |
-| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF export (202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
 | GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE templates (video editor only) |
 | GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one VIDEO_SCENE template |

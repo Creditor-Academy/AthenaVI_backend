@@ -160,7 +160,7 @@ const updateVideoTemplateAdminSchema = Joi.object({
     .required(),
 });
 
-/** Superadmin create: type discriminator; schema validated in service by type. */
+/** Superadmin create: type required; schema validated in service by type. */
 const createTemplateAdminBodySchema = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({}).unknown(false),
@@ -169,7 +169,7 @@ const createTemplateAdminBodySchema = Joi.object({
     contentType: Joi.string().trim().max(64).allow(null, '').optional(),
     variant: Joi.string().trim().max(64).allow(null, '').optional(),
     schema: Joi.object().unknown(true).required(),
-    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE').default('DECK_LAYOUT'),
+    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE').required(),
     isActive: Joi.boolean().default(true),
     version: Joi.number().integer().min(1).default(1),
   }).required(),
@@ -202,6 +202,8 @@ const updateTemplateAdminSchema = Joi.object({
     name: Joi.string().trim().min(1).max(255).optional(),
     schema: Joi.object().unknown(true).optional(),
     isActive: Joi.boolean().optional(),
+    contentType: Joi.string().trim().max(64).allow(null, '').optional(),
+    variant: Joi.string().trim().max(64).allow(null, '').optional(),
   })
     .min(1)
     .required(),

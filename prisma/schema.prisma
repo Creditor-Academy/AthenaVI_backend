@@ -725,6 +725,8 @@ model Slide {
   layoutId       String?
   content        Json?
   imageRef       Json?
+  /// Freeform canvas: { version, canvas: { width, height }, elements: [...] }
+  elements       Json?
   status         String   @default("PENDING") // PENDING | GENERATING | READY | FAILED
   manuallyEdited Boolean  @default(false)
   createdAt      DateTime @default(now())

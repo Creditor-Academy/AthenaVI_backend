@@ -2,18 +2,14 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const prisma = require('../../shared/config/prismaClient');
 const { assertVideoSceneTemplateSchema } = require('../validations/videoTemplate.validations');
+const { assertDeckLayoutTemplateSchema } = require('../validations/presentation.validations');
 
 function assertDeckLayoutSchema(schema) {
-  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
-    throw new AppError('DECK_LAYOUT schema must be an object', 400);
+  try {
+    return assertDeckLayoutTemplateSchema(schema);
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid DECK_LAYOUT schema', 400);
   }
-  if (schema.scene && schema.videoSettings) {
-    throw new AppError(
-      'DECK_LAYOUT schema must not use VIDEO_SCENE shape (scene/videoSettings). Use type VIDEO_SCENE instead.',
-      400
-    );
-  }
-  return schema;
 }
 
 async function listTemplates({ type, contentType, isActive } = {}) {
@@ -46,10 +42,14 @@ async function createTemplate({
   variant,
   schema,
   createdBy,
-  type = 'DECK_LAYOUT',
+  type,
   isActive = true,
   version = 1,
 }) {
+  if (!type || !['DECK_LAYOUT', 'VIDEO_SCENE'].includes(type)) {
+    throw new AppError('type is required and must be DECK_LAYOUT or VIDEO_SCENE', 400);
+  }
+
   let validatedSchema = schema;
   if (type === 'VIDEO_SCENE') {
     try {
@@ -57,10 +57,8 @@ async function createTemplate({
     } catch (err) {
       throw new AppError(err.message || 'Invalid VIDEO_SCENE schema', 400);
     }
-  } else if (type === 'DECK_LAYOUT') {
-    validatedSchema = assertDeckLayoutSchema(schema);
   } else {
-    throw new AppError('Invalid template type', 400);
+    validatedSchema = assertDeckLayoutSchema(schema);
   }
 
   return prisma.template.create({
@@ -77,12 +75,14 @@ async function createTemplate({
   });
 }
 
-async function updateTemplate({ id, name, schema, isActive }) {
+async function updateTemplate({ id, name, schema, isActive, contentType, variant }) {
   const existing = await getTemplate(id);
   const data = {};
 
   if (name !== undefined) data.name = name;
   if (isActive !== undefined) data.isActive = isActive;
+  if (contentType !== undefined) data.contentType = contentType;
+  if (variant !== undefined) data.variant = variant;
   if (schema !== undefined) {
     if (existing.type === 'VIDEO_SCENE') {
       try {

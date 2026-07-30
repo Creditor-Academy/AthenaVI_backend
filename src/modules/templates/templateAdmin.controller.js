@@ -30,12 +30,14 @@ const createTemplate = asyncHandler(async (req, res) => {
 });
 
 const updateTemplate = asyncHandler(async (req, res) => {
-  const { name, schema, isActive } = req.body;
+  const { name, schema, isActive, contentType, variant } = req.body;
   const template = await templateAdminService.updateTemplate({
     id: req.params.templateId,
     name,
     schema,
     isActive,
+    contentType,
+    variant,
   });
   return successResponse(req, res, { template }, 200, messages.TEMPLATE_UPDATED);
 });

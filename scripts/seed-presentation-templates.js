@@ -6,12 +6,17 @@
  */
 const prisma = require('../src/shared/config/prismaClient');
 const presentationDao = require('../src/modules/presentation/presentation.dao');
+const { assertDeckLayoutSchema } = require('../src/modules/templates/templateAdmin.service');
 const seedLayouts = require('../src/modules/presentation/templates/seed-layouts.json');
 
 const SYSTEM_SEED = 'system-seed';
 
 async function main() {
   const layouts = Array.isArray(seedLayouts) ? seedLayouts : [];
+
+  for (const layout of layouts) {
+    assertDeckLayoutSchema(layout.schema);
+  }
 
   const deleted = await prisma.template.deleteMany({
     where: {

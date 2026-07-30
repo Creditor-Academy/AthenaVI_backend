@@ -32,6 +32,8 @@ const speechRoutes = require('../speech/speech.routes');
 const commentRoutes = require('../comment/comment.routes');
 const heygenShareRoutes = require('../heygen/heygenShare.routes');
 const presentationRoutes = require('../presentation/presentation.routes');
+const presentationController = require('../presentation/presentation.controller');
+const presentationValidations = require('../validations/presentation.validations');
 const videoTemplateController = require('../project/videoTemplate.controller');
 const videoTemplateValidations = require('../validations/videoTemplate.validations');
 
@@ -40,6 +42,27 @@ const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
+router.get(
+  '/:workspaceId/presentation-templates',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationTemplatesSchema),
+  presentationController.listPresentationTemplates
+);
+router.get(
+  '/:workspaceId/presentation-themes',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationThemesSchema),
+  presentationController.listPresentationThemes
+);
+router.get(
+  '/:workspaceId/presentation-elements',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationElementsSchema),
+  presentationController.listPresentationElements
+);
 router.use(
   '/:workspaceId/presentations',
   authMiddleware,

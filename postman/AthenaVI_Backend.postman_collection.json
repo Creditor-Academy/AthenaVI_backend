@@ -91,6 +91,10 @@
       "value": ""
     },
     {
+      "key": "slideId",
+      "value": ""
+    },
+    {
       "key": "exportId",
       "value": ""
     },
@@ -2692,7 +2696,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Q3 Pitch\",\n  \"folderId\": \"{{folderId}}\"\n}"
+              "raw": "{\n  \"title\": \"Q3 Pitch\",\n  \"folderId\": \"{{folderId}}\",\n  \"createMode\": \"blank\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations",
@@ -2704,6 +2708,95 @@
                 "{{workspaceId}}",
                 "presentations"
               ]
+            }
+          }
+        },
+        {
+          "name": "List presentation templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentation-templates"]
+            }
+          }
+        },
+        {
+          "name": "List presentation themes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-themes",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentation-themes"]
+            }
+          }
+        },
+        {
+          "name": "List presentation elements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-elements",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentation-elements"]
+            }
+          }
+        },
+        {
+          "name": "Add slide",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": { \"title\": \"New slide\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "slides"]
+            }
+          }
+        },
+        {
+          "name": "Put slide canvas",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 1,\n  \"canvas\": { \"width\": 1920, \"height\": 1080 },\n  \"elements\": [\n    {\n      \"id\": \"el_title\",\n      \"type\": \"text\",\n      \"layer\": 1,\n      \"placement\": { \"x\": 160, \"y\": 200, \"width\": 1600, \"height\": 120, \"rotation\": 0, \"opacity\": 1 },\n      \"content\": { \"text\": \"Hello\", \"fontSize\": 44, \"bold\": true },\n      \"role\": \"title\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/canvas",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "slides", "{{slideId}}", "canvas"]
             }
           }
         },
@@ -2910,6 +3003,31 @@
                 "{{presentationId}}",
                 "export"
               ]
+            }
+          }
+        },
+        {
+          "name": "Export PNG",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"PNG\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "export"]
             }
           }
         },

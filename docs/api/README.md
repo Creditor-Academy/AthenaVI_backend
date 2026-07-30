@@ -35,6 +35,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 
 | Doc | Use when |
 |-----|----------|
+| [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + templates** — create AI/blank/template, canvas, export, admin templates |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
 | [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |

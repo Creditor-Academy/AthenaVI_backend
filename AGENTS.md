@@ -224,7 +224,8 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
-| **Presentations (AI PPT)** | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
+| Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
+| **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |
@@ -318,6 +319,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `docs/api/README.md` | API documentation index |
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
+| `docs/PRESENTATION_FRONTEND_INTEGRATION.md` | Frontend PPT/canvas + templates integration (UI flows) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
 | `docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md` | Frontend notifications guide (settings, inbox, comments) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |

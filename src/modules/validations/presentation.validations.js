@@ -1,13 +1,22 @@
 const Joi = require('joi');
+const {
+  AI_SLIDE_MAX,
+  MAX_ELEMENTS_PER_SLIDE,
+  ELEMENT_TYPES,
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+} = require('../presentation/presentation.constants');
 
 const presentationIdParam = Joi.string().required();
 const workspaceIdParam = Joi.string().uuid().required();
 const slideIdParam = Joi.string().required();
 const exportIdParam = Joi.string().required();
+const elementIdParam = Joi.string().required();
+const templateIdField = Joi.string().trim().min(1);
 
 const densityField = Joi.string().valid('concise', 'balanced', 'detailed').default('balanced');
 const localeField = Joi.string().trim().min(2).max(16).default('en');
-const slideCountField = Joi.number().integer().min(5).max(20);
+const slideCountField = Joi.number().integer().min(5).max(AI_SLIDE_MAX);
 
 const outlineSlideSchema = Joi.object({
   order: Joi.number().integer().min(1).required(),
@@ -21,7 +30,7 @@ const outlineObjectSchema = Joi.object({
   slideCount: slideCountField.required(),
   density: densityField,
   locale: localeField.optional(),
-  slides: Joi.array().items(outlineSlideSchema).min(1).max(20).required(),
+  slides: Joi.array().items(outlineSlideSchema).min(1).max(AI_SLIDE_MAX).required(),
 }).unknown(true);
 
 const themeTokensSchema = Joi.object({
@@ -42,6 +51,37 @@ const themeTokensSchema = Joi.object({
   colorTreatment: Joi.string().allow('', null).optional(),
 }).unknown(true);
 
+const placementSchema = Joi.object({
+  x: Joi.number().required(),
+  y: Joi.number().required(),
+  width: Joi.number().positive().required(),
+  height: Joi.number().positive().required(),
+  rotation: Joi.number().optional(),
+  opacity: Joi.number().min(0).max(1).optional(),
+}).unknown(true);
+
+const canvasElementSchema = Joi.object({
+  id: Joi.string().trim().required(),
+  type: Joi.string()
+    .valid(...ELEMENT_TYPES)
+    .required(),
+  layer: Joi.number().integer().min(1).optional(),
+  placement: placementSchema.required(),
+  content: Joi.object().unknown(true).optional(),
+  role: Joi.string().trim().allow('', null).optional(),
+}).unknown(true);
+
+const canvasDocSchema = Joi.object({
+  version: Joi.number().integer().min(1).default(1),
+  canvas: Joi.object({
+    width: Joi.number().integer().min(1).default(CANVAS_WIDTH),
+    height: Joi.number().integer().min(1).default(CANVAS_HEIGHT),
+  })
+    .default({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT })
+    .unknown(true),
+  elements: Joi.array().items(canvasElementSchema).max(MAX_ELEMENTS_PER_SLIDE).required(),
+}).unknown(true);
+
 const createPresentationSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -54,6 +94,12 @@ const createPresentationSchema = Joi.object({
     themeTokens: themeTokensSchema.allow(null).optional(),
     locale: localeField.optional(),
     aspectRatio: Joi.string().valid('16:9').default('16:9'),
+    createMode: Joi.string().valid('blank', 'template').default('blank'),
+    templateId: templateIdField.when('createMode', {
+      is: 'template',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(null, ''),
+    }),
   })
     .or('title', 'name')
     .required(),
@@ -84,7 +130,6 @@ const generateOutlineSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional().allow('', null),
     }),
-    // document: multipart file handled by multer; optional text fields still allowed
     documentText: Joi.string().trim().min(1).max(100_000).optional(),
     slideCount: slideCountField.default(12),
     density: densityField,
@@ -152,10 +197,129 @@ const patchSlideSchema = Joi.object({
     layoutId: Joi.string().trim().max(128).allow(null).optional(),
     contentType: Joi.string().trim().max(64).allow(null).optional(),
     imageRef: Joi.object().unknown(true).allow(null).optional(),
+    elements: canvasDocSchema.optional(),
     manuallyEdited: Joi.boolean().optional(),
   })
     .min(1)
     .required(),
+});
+
+const addSlideSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    afterSlideId: Joi.string().trim().optional(),
+    templateId: templateIdField.optional(),
+    layoutId: Joi.string().trim().max(128).optional(),
+    content: slideContentSchema.optional(),
+  })
+    .default({})
+    .optional(),
+});
+
+const slideByIdSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+});
+
+const reorderSlidesSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    slideIds: Joi.array().items(Joi.string().required()).min(1).required(),
+  }).required(),
+});
+
+const applyLayoutSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    templateId: templateIdField.required(),
+  }).required(),
+});
+
+const putCanvasSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: canvasDocSchema.required(),
+});
+
+const addElementSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    presetId: Joi.string().trim().optional(),
+    element: Joi.object({
+      type: Joi.string()
+        .valid(...ELEMENT_TYPES)
+        .optional(),
+      placement: placementSchema.optional(),
+      content: Joi.object().unknown(true).optional(),
+      role: Joi.string().optional(),
+      layer: Joi.number().integer().optional(),
+    })
+      .unknown(true)
+      .optional(),
+  })
+    .or('presetId', 'element')
+    .required(),
+});
+
+const patchElementSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+    elementId: elementIdParam,
+  }),
+  body: Joi.object({
+    type: Joi.string()
+      .valid(...ELEMENT_TYPES)
+      .optional(),
+    placement: placementSchema.optional(),
+    content: Joi.object().unknown(true).optional(),
+    role: Joi.string().optional(),
+    layer: Joi.number().integer().optional(),
+  })
+    .min(1)
+    .unknown(true)
+    .required(),
+});
+
+const elementByIdSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+    elementId: elementIdParam,
+  }),
+});
+
+const reorderElementsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    elementIds: Joi.array().items(Joi.string().required()).min(1).required(),
+  }).required(),
 });
 
 const regenerateSlideSchema = Joi.object({
@@ -178,7 +342,8 @@ const exportDeckSchema = Joi.object({
     presentationId: presentationIdParam,
   }),
   body: Joi.object({
-    format: Joi.string().valid('PPTX', 'PDF').required(),
+    format: Joi.string().valid('PPTX', 'PDF', 'PNG', 'JPEG').required(),
+    slideId: Joi.string().trim().optional(),
   }).required(),
 });
 
@@ -200,6 +365,71 @@ const creditEstimateSchema = Joi.object({
   }).default({}),
 });
 
+const listWorkspacePresentationTemplatesSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  query: Joi.object({
+    contentType: Joi.string().trim().max(64).optional(),
+  }).default({}),
+  body: Joi.object({}).unknown(false),
+});
+
+const listWorkspacePresentationThemesSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const listWorkspacePresentationElementsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+/** Strict DECK_LAYOUT schema for superadmin / seed */
+const deckLayoutSlotSchema = Joi.object({
+  id: Joi.string().trim().required(),
+  region: Joi.string().trim().required(),
+  max_lines: Joi.number().integer().min(1).optional(),
+  max_words: Joi.number().integer().min(1).optional(),
+  max_items: Joi.number().integer().min(1).optional(),
+  fit: Joi.string().trim().optional(),
+  crop: Joi.string().trim().optional(),
+}).unknown(true);
+
+const deckLayoutTemplateSchemaObject = Joi.object({
+  layout_id: Joi.string().trim().required(),
+  content_type: Joi.string().trim().required(),
+  grid: Joi.string().trim().required(),
+  slots: Joi.array().items(deckLayoutSlotSchema).min(1).required(),
+  scene: Joi.forbidden(),
+  videoSettings: Joi.forbidden(),
+  elements: Joi.forbidden(),
+  clips: Joi.forbidden(),
+})
+  .unknown(true)
+  .required();
+
+function assertDeckLayoutTemplateSchema(schema) {
+  const { error, value } = deckLayoutTemplateSchemaObject.validate(schema, {
+    abortEarly: false,
+    stripUnknown: false,
+  });
+  if (error) {
+    const details = error.details.map((d) => d.message.replace(/"/g, '')).join('; ');
+    const err = new Error(details);
+    err.isJoi = true;
+    err.statusCode = 400;
+    throw err;
+  }
+  return value;
+}
+
 const templateIdParam = Joi.string().trim().min(1).required();
 
 const createPresentationTemplateSchema = Joi.object({
@@ -209,7 +439,7 @@ const createPresentationTemplateSchema = Joi.object({
     name: Joi.string().trim().min(1).max(255).required(),
     contentType: Joi.string().trim().max(64).allow(null, '').optional(),
     variant: Joi.string().trim().max(64).allow(null, '').optional(),
-    schema: Joi.object().unknown(true).required(),
+    schema: deckLayoutTemplateSchemaObject.required(),
     type: Joi.string().valid('DECK_LAYOUT').default('DECK_LAYOUT'),
     isActive: Joi.boolean().default(true),
     version: Joi.number().integer().min(1).default(1),
@@ -241,7 +471,7 @@ const updatePresentationTemplateSchema = Joi.object({
   query: Joi.object({}).unknown(false),
   body: Joi.object({
     name: Joi.string().trim().min(1).max(255).optional(),
-    schema: Joi.object().unknown(true).optional(),
+    schema: deckLayoutTemplateSchemaObject.optional(),
     isActive: Joi.boolean().optional(),
   })
     .min(1)
@@ -249,6 +479,7 @@ const updatePresentationTemplateSchema = Joi.object({
 });
 
 module.exports = {
+  AI_SLIDE_MAX,
   createPresentationSchema,
   presentationByIdSchema,
   generateOutlineSchema,
@@ -256,6 +487,15 @@ module.exports = {
   setThemeSchema,
   generateDeckSchema,
   patchSlideSchema,
+  addSlideSchema,
+  slideByIdSchema,
+  reorderSlidesSchema,
+  applyLayoutSchema,
+  putCanvasSchema,
+  addElementSchema,
+  patchElementSchema,
+  elementByIdSchema,
+  reorderElementsSchema,
   regenerateSlideSchema,
   exportDeckSchema,
   exportByIdSchema,
@@ -266,4 +506,10 @@ module.exports = {
   presentationTemplateIdParamsSchema,
   createPresentationTemplateSchema,
   updatePresentationTemplateSchema,
+  listWorkspacePresentationTemplatesSchema,
+  listWorkspacePresentationThemesSchema,
+  listWorkspacePresentationElementsSchema,
+  deckLayoutTemplateSchemaObject,
+  assertDeckLayoutTemplateSchema,
+  canvasDocSchema,
 };

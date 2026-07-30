@@ -6,6 +6,8 @@ const presentationCredit = require('./presentationCredit.service');
 const themeService = require('./theme.service');
 const deckGeneration = require('./deckGeneration.service');
 const exportService = require('./export.service');
+const slideEditor = require('./slideEditor.service');
+const { layoutSlotsToElements, blankCanvas } = require('./layoutToElements');
 
 async function createPresentation({
   workspaceId,
@@ -17,6 +19,8 @@ async function createPresentation({
   themeTokens,
   locale = 'en',
   aspectRatio = '16:9',
+  createMode = 'blank',
+  templateId = null,
 }) {
   const folder = await prisma.folder.findFirst({
     where: { id: folderId, workspaceId },
@@ -24,6 +28,19 @@ async function createPresentation({
   });
   if (!folder) {
     throw new AppError(messages.FOLDER_NOT_FOUND, 404);
+  }
+
+  const mode = createMode === 'template' ? 'template' : 'blank';
+  if (mode === 'template' && !templateId) {
+    throw new AppError('templateId is required when createMode is template', 400);
+  }
+
+  let template = null;
+  if (mode === 'template') {
+    template = await presentationDao.findTemplateById(templateId);
+    if (!template || template.type !== 'DECK_LAYOUT' || !template.isActive) {
+      throw new AppError(messages.PRESENTATION_TEMPLATE_NOT_FOUND, 404);
+    }
   }
 
   const resolvedTokens = themeService.resolveThemeTokens({ themeId, themeTokens });
@@ -39,7 +56,25 @@ async function createPresentation({
     locale,
   });
 
-  return { project, deck };
+  let slides = deck.slides || [];
+  if (mode === 'template' && template) {
+    const elementsDoc = layoutSlotsToElements(template.schema, { title: displayName }, null);
+    const slide = await presentationDao.createOneSlide({
+      deckId: deck.id,
+      order: 1,
+      contentType: template.contentType || template.schema?.content_type || null,
+      layoutId: template.schema?.layout_id || template.id,
+      content: { title: displayName },
+      imageRef: null,
+      elements: elementsDoc,
+      status: 'READY',
+      manuallyEdited: true,
+    });
+    slides = [slide];
+  }
+
+  const refreshed = await presentationDao.findDeckById(deck.id);
+  return { project, deck: refreshed || { ...deck, slides } };
 }
 
 async function getPresentation(workspaceId, presentationId) {
@@ -107,7 +142,6 @@ module.exports = {
   createPresentation,
   getPresentation,
   creditEstimate,
-  // Generation
   generateOutline: deckGeneration.generateOutline,
   updateOutline: deckGeneration.updateOutline,
   setTheme: deckGeneration.setTheme,
@@ -115,8 +149,9 @@ module.exports = {
   getStatus: deckGeneration.getStatus,
   regenerateSlide: deckGeneration.regenerateSlide,
   patchSlide: deckGeneration.patchSlide,
-  // Export
   queueExport: exportService.queueExport,
   getExport: exportService.getExport,
   listThemes: themeService.listThemes,
+  ...slideEditor,
+  blankCanvas,
 };

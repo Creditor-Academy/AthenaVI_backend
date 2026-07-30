@@ -34,6 +34,8 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
+const { layoutSlotsToElements } = require('./layoutToElements');
+const { AI_SLIDE_MAX } = require('./presentation.constants');
 
 const CONTENT_TIMEOUT_MS =
   Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS) > 0
@@ -236,16 +238,21 @@ async function notifyGenerationFinished({
 
 function normalizeOutline(data, { slideCount, density, locale }) {
   const slides = Array.isArray(data?.slides) ? data.slides : [];
-  const normalizedSlides = slides.map((s, idx) => ({
-    order: Number(s.order) > 0 ? Number(s.order) : idx + 1,
-    title: String(s.title || `Slide ${idx + 1}`).trim(),
-    summary: s.summary != null ? String(s.summary) : '',
-    suggestedContentType: s.suggestedContentType || s.content_type || null,
-  }));
+  const normalizedSlides = slides
+    .map((s, idx) => ({
+      order: Number(s.order) > 0 ? Number(s.order) : idx + 1,
+      title: String(s.title || `Slide ${idx + 1}`).trim(),
+      summary: s.summary != null ? String(s.summary) : '',
+      suggestedContentType: s.suggestedContentType || s.content_type || null,
+    }))
+    .slice(0, AI_SLIDE_MAX);
+
+  const requested =
+    slideCount != null ? Math.min(AI_SLIDE_MAX, Math.max(1, Number(slideCount) || 12)) : null;
 
   return {
     title: String(data?.title || 'Untitled presentation').trim(),
-    slideCount: slideCount || normalizedSlides.length || 12,
+    slideCount: requested || Math.min(AI_SLIDE_MAX, normalizedSlides.length || 12),
     density: density || 'balanced',
     locale: locale || 'en',
     slides: normalizedSlides,
@@ -840,12 +847,19 @@ async function processSlide(ctx, slide) {
       imageRef = { source: 'none', error: imgErr.message, brief };
     }
 
+    const elementsDoc = layoutSlotsToElements(
+      template?.schema || { slots: [] },
+      content,
+      imageRef
+    );
+
     const updated = await presentationDao.updateSlide(slide.id, {
       status: 'READY',
       contentType: contentType || null,
       layoutId: layoutId || null,
       content,
       imageRef,
+      elements: elementsDoc,
     });
 
     return {
@@ -1359,6 +1373,7 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
   if (patch.layoutId !== undefined) data.layoutId = patch.layoutId;
   if (patch.contentType !== undefined) data.contentType = patch.contentType;
   if (patch.imageRef !== undefined) data.imageRef = patch.imageRef;
+  if (patch.elements !== undefined) data.elements = patch.elements;
 
   const updated = await presentationDao.updateSlide(slideId, data);
   return { slide: updated };
