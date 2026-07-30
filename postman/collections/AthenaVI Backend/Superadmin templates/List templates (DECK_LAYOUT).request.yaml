@@ -1,6 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/superadmin/templates?type=DECK_LAYOUT"
 method: GET
+queryParams:
+  type: DECK_LAYOUT
 headers:
   Authorization: Bearer {{accessToken}}
 scripts:

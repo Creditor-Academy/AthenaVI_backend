@@ -2,6 +2,9 @@ $kind: http-request
 description: Filtered to looks whose avatar **group_id** belongs to you. Test script saves first look `id` to `avatarLookId`. Omit `group_id` for all your looks; add `group_id` + private only for **your** group — otherwise **403**.
 url: "{{baseUrl}}/api/heygen/avatars/looks?ownership=private&limit=20"
 method: GET
+queryParams:
+  ownership: private
+  limit: "20"
 scripts:
   - type: afterResponse
     code: |-

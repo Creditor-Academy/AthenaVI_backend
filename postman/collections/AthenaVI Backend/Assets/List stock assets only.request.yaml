@@ -1,4 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0&source=stock"
 method: GET
+queryParams:
+  take: "20"
+  skip: "0"
+  source: stock
 order: 3000

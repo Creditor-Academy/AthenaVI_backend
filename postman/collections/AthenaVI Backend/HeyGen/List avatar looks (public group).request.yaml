@@ -2,6 +2,10 @@ $kind: http-request
 description: Requires `groupId` from **List avatar groups (public)**. Test script saves first look `id` to **`avatarLookId`** — pass that as `avatarId` on **Create avatar video** (HeyGen look id, not group id).
 url: "{{baseUrl}}/api/heygen/avatars/looks?group_id={{groupId}}&avatar_type=studio_avatar&limit=20"
 method: GET
+queryParams:
+  group_id: "{{groupId}}"
+  avatar_type: studio_avatar
+  limit: "20"
 scripts:
   - type: afterResponse
     code: |-

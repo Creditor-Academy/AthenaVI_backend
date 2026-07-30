@@ -1,4 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos?status=completed&take=20&skip=0"
 method: GET
+queryParams:
+  status: completed
+  take: "20"
+  skip: "0"
 order: 6000

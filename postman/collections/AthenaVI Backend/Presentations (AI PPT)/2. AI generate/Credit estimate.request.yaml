@@ -1,6 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/credit-estimate?slideCount=10"
 method: GET
+queryParams:
+  slideCount: "10"
 headers:
   Authorization: Bearer {{accessToken}}
 order: 1000

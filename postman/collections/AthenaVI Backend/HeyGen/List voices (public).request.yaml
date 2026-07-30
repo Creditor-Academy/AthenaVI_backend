@@ -2,6 +2,9 @@ $kind: http-request
 description: HeyGen public voice catalog (not user-filtered). Test script saves first voice id to `voiceId` for **Create avatar video**.
 url: "{{baseUrl}}/api/heygen/voices?type=public&limit=50"
 method: GET
+queryParams:
+  type: public
+  limit: "50"
 scripts:
   - type: afterResponse
     code: |-

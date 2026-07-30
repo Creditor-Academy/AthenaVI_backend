@@ -2,4 +2,8 @@ $kind: http-request
 description: "Optional query `source`: `upload` | `stock` | `all` (default all)."
 url: "{{baseUrl}}/api/assets/{{workspaceId}}?take=20&skip=0&source=all"
 method: GET
+queryParams:
+  take: "20"
+  skip: "0"
+  source: all
 order: 2000

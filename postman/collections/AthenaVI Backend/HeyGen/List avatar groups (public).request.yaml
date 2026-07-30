@@ -2,6 +2,9 @@ $kind: http-request
 description: Forwarded to HeyGen; full public catalog (not user-filtered). Test script saves first group `id` to `groupId` — use with **List avatar looks**, not as `avatarId` on video create.
 url: "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20"
 method: GET
+queryParams:
+  ownership: public
+  limit: "20"
 scripts:
   - type: afterResponse
     code: |-

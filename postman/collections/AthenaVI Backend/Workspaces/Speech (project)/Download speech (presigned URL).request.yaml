@@ -1,4 +1,6 @@
 $kind: http-request
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}/download?expiresIn=300"
 method: GET
+queryParams:
+  expiresIn: "300"
 order: 4000

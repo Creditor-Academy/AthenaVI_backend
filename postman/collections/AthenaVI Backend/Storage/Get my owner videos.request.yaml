@@ -1,4 +1,8 @@
 $kind: http-request
 url: "{{baseUrl}}/api/user/videos?status=completed&take=20&skip=0"
 method: GET
+queryParams:
+  status: completed
+  take: "20"
+  skip: "0"
 order: 7000

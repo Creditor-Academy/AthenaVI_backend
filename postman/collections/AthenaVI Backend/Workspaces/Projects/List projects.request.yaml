@@ -2,4 +2,6 @@ $kind: http-request
 description: Summary cards only (no `data`). Includes owner, lastModifiedAt/By, storageBytes. Optional folderId query.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}"
 method: GET
+queryParams:
+  folderId: "{{folderId}}"
 order: 3000

@@ -2,4 +2,8 @@ $kind: http-request
 description: "Your private groups plus avatar groups shared to `workspaceId`. Shared rows include `shared: true`. Use in TEAM editor picker."
 url: "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&workspace_id={{workspaceId}}&limit=20"
 method: GET
+queryParams:
+  ownership: private
+  workspace_id: "{{workspaceId}}"
+  limit: "20"
 order: 3000

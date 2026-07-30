@@ -1,4 +1,7 @@
 $kind: http-request
 url: "{{baseUrl}}/api/auth/google/callback?code=&state="
 method: GET
+queryParams:
+  code: ""
+  state: ""
 order: 11000
