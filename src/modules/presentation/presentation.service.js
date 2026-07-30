@@ -138,6 +138,54 @@ async function creditEstimate({ workspaceId, presentationId, slideCount }) {
   };
 }
 
+async function addSlide({
+  workspaceId,
+  presentationId,
+  userId,
+  afterSlideId,
+  templateId,
+  layoutId,
+  content,
+  generate = false,
+  prompt = null,
+  target = 'all',
+}) {
+  const created = await slideEditor.addSlide({
+    workspaceId,
+    presentationId,
+    afterSlideId,
+    templateId,
+    layoutId,
+    content,
+  });
+
+  if (!generate) {
+    return created;
+  }
+
+  const promptText =
+    (prompt != null && String(prompt).trim()) ||
+    (content && content.title && String(content.title).trim()) ||
+    null;
+
+  const regen = await deckGeneration.regenerateSlide({
+    workspaceId,
+    presentationId,
+    slideId: created.slide.id,
+    userId,
+    target: target || 'all',
+    overwriteManualEdits: true,
+    prompt: promptText,
+  });
+
+  return {
+    ...created,
+    status: regen.status,
+    target: regen.target,
+    estimatedCredits: regen.estimatedCredits,
+  };
+}
+
 module.exports = {
   createPresentation,
   getPresentation,
@@ -153,5 +201,6 @@ module.exports = {
   getExport: exportService.getExport,
   listThemes: themeService.listThemes,
   ...slideEditor,
+  addSlide,
   blankCanvas,
 };

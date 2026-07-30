@@ -1,0 +1,26 @@
+$kind: http-request
+description: "One-call add + regenerate. Requires prompt or content.title. Response includes status GENERATING + estimatedCredits. Deck max 40."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "generate": true,
+      "prompt": "Competitive landscape for Athena VI vs Loom",
+      "target": "all",
+      "templateId": "{{deckTemplateId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.slide && j.data.slide.id;
+        if (id) pm.collectionVariables.set("slideId", id);
+      }
+    language: text/javascript
+order: 1500

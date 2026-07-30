@@ -56,9 +56,27 @@ After AI fills ≤20 slides, user can still **add more manually** up to 40.
 ### B — Create blank (Canva-style)
 
 1. `POST .../presentations` `{ title, folderId, createMode: "blank" }`  
-2. `POST .../slides` to add slides  
+2. `POST .../slides` to add slides (manual), or with AI:
+
+```json
+{
+  "generate": true,
+  "prompt": "Competitive landscape for Athena VI",
+  "target": "all"
+}
+```
+
 3. Insert elements from palette / drag on canvas → `PUT .../canvas` or element CRUD  
-4. Export when ready
+4. On an existing slide, rewrite with AI:
+
+```json
+POST .../slides/:slideId/regenerate
+{ "target": "content", "prompt": "…", "overwriteManualEdits": true }
+```
+
+5. Export when ready
+
+Poll `GET .../status` (or refetch the presentation) while a slide is `GENERATING`.
 
 ### C — Create from layout template
 
@@ -140,13 +158,13 @@ Base: `/api/workspaces/:workspaceId/presentations/:presentationId`
 
 | Action | Method | Path | Notes |
 |--------|--------|------|-------|
-| Add slide | `POST` | `/slides` | Optional `afterSlideId`, `templateId`, `content` |
+| Add slide | `POST` | `/slides` | Optional `afterSlideId`, `templateId`, `content`; set `generate: true` + `prompt` (or `content.title`) for add+AI |
 | Delete | `DELETE` | `/slides/:slideId` | |
 | Duplicate | `POST` | `/slides/:slideId/duplicate` | Fails at deck cap 40 |
 | Reorder | `PATCH` | `/slides/reorder` | `{ "slideIds": ["…"] }` all ids once |
 | Apply layout | `POST` | `/slides/:slideId/apply-layout` | `{ "templateId" }` rebuilds `elements` |
 | Patch fields | `PATCH` | `/slides/:slideId` | `content`, `layoutId`, `imageRef`, `elements`, … |
-| AI regen one slide | `POST` | `/slides/:slideId/regenerate` | `{ target, overwriteManualEdits }` |
+| AI regen one slide | `POST` | `/slides/:slideId/regenerate` | `{ target, overwriteManualEdits, prompt? }` |
 
 While `deck.status === "GENERATING"`, structure/canvas mutations → **409**. Show a blocking “Generating…” state.
 
@@ -166,6 +184,8 @@ Slide statuses: `PENDING` | `GENERATING` | `READY` | `FAILED`
 Deck: `DRAFT` | `GENERATING` | `READY` | `FAILED`
 
 Regenerate respects `manuallyEdited` unless `overwriteManualEdits: true` (**409** otherwise). Confirm in UI before overwrite.
+
+On blank decks (no outline), pass **`prompt`** on regenerate (or set `content.title` first) so the content LLM has context.
 
 ---
 
@@ -281,7 +301,8 @@ Docs: [`WORKSPACE_API.md`](api/WORKSPACE_API.md) · [`PROJECT_EDITOR_INTEGRATION
 - [ ] AI: outline review → generate progress bar (`status`)  
 - [ ] Canvas: 1920×1080 stage, palette from `presentation-elements`, autosave canvas  
 - [ ] Slide rail: add / delete / duplicate / reorder; disable add at 40  
-- [ ] Per-slide “Regenerate” with overwrite confirm if `manuallyEdited`  
+- [ ] Per-slide “Regenerate” with `prompt` (blank decks) + overwrite confirm if `manuallyEdited`  
+- [ ] “Add slide with AI” → `POST .../slides` `{ generate: true, prompt }` then poll status  
 - [ ] Export menu: PPTX, PDF, PNG, JPEG; poll + download  
 - [ ] Credit estimate before AI generate / export; handle 402  
 - [ ] Folder list: badge/filter by `project.type`  

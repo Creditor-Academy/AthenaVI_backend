@@ -626,14 +626,22 @@ async function processSlide(ctx, slide) {
 
     // 1) Content LLM
     const contentPrompt = getSlideContentPrompt();
+    const resolvedTitle =
+      outlineSlide.title ||
+      (slide.content && slide.content.title) ||
+      ctx.userPrompt ||
+      '';
+    const resolvedSummary = outlineSlide.summary || ctx.userPrompt || '';
+
     const contentHash = hashPayload([
       'CONTENT',
       slide.id,
       PROMPT_BUNDLE_VERSION,
       ctx.density,
-      outlineSlide.title,
-      outlineSlide.summary,
+      resolvedTitle,
+      resolvedSummary,
       outlineSlide.suggestedContentType,
+      ctx.userPrompt || '',
     ]);
     const contentJob = await beginJob({
       slideId: slide.id,
@@ -656,8 +664,8 @@ async function processSlide(ctx, slide) {
               density: ctx.density || 'balanced',
               slideOrder: slide.order,
               slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
-              title: outlineSlide.title || content?.title,
-              summary: outlineSlide.summary || '',
+              title: resolvedTitle || content?.title,
+              summary: resolvedSummary,
               suggestedContentType: outlineSlide.suggestedContentType || slide.contentType,
               previousSlideTitle: prev?.title,
               nextSlideTitle: next?.title,
@@ -700,7 +708,7 @@ async function processSlide(ctx, slide) {
       }
     } else if (!content) {
       content = {
-        title: outlineSlide.title || `Slide ${slide.order}`,
+        title: resolvedTitle || outlineSlide.title || `Slide ${slide.order}`,
         bullets: [],
         notes: '',
       };
@@ -1226,6 +1234,13 @@ async function getStatus(presentationId, workspaceId) {
   };
 }
 
+function seedTitleFromPrompt(prompt) {
+  const text = String(prompt || '').trim();
+  if (!text) return '';
+  const firstLine = text.split(/\r?\n/)[0].trim();
+  return firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine;
+}
+
 async function regenerateSlide({
   workspaceId,
   presentationId,
@@ -1233,6 +1248,7 @@ async function regenerateSlide({
   userId,
   target = 'all',
   overwriteManualEdits = true,
+  prompt = null,
 }) {
   const { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
@@ -1243,6 +1259,20 @@ async function regenerateSlide({
   }
   if (slide.manuallyEdited && !overwriteManualEdits) {
     throw new AppError('Slide has manual edits; set overwriteManualEdits to regenerate', 409);
+  }
+
+  const userPrompt = prompt != null && String(prompt).trim() ? String(prompt).trim() : null;
+  const outlineSlideMatch =
+    (deck.outline?.slides || []).find((s) => Number(s.order) === Number(slide.order)) ||
+    (deck.outline?.slides || [])[slide.order - 1] ||
+    null;
+  const existingTitle =
+    (slide.content && slide.content.title && String(slide.content.title).trim()) ||
+    (outlineSlideMatch && outlineSlideMatch.title && String(outlineSlideMatch.title).trim()) ||
+    '';
+
+  if ((target === 'content' || target === 'all') && !userPrompt && !existingTitle) {
+    throw new AppError('Provide prompt or slide title to regenerate content', 400);
   }
 
   await presentationRateLimit.assertRegenerateAllowed(userId, workspaceId);
@@ -1256,10 +1286,14 @@ async function regenerateSlide({
     await presentationCredit.assertAfford(workspaceId, userId, estimatedAc);
   }
 
-  // Reset fields based on target
+  // Reset fields based on target; keep prompt/title seed for content LLM context
   const reset = { status: 'PENDING' };
   if (target === 'all' || target === 'content') {
-    reset.content = null;
+    reset.content = userPrompt
+      ? { title: seedTitleFromPrompt(userPrompt), summary: userPrompt }
+      : existingTitle
+        ? { title: existingTitle }
+        : null;
     reset.layoutId = null;
   }
   if (target === 'all' || target === 'image') {
@@ -1279,6 +1313,7 @@ async function regenerateSlide({
     projectId: project.id,
     previousLayoutId: null,
     regenerateTarget: target,
+    userPrompt: userPrompt || existingTitle || null,
   };
 
   // For image-only, keep content and skip content LLM by marking duplicate-like path:

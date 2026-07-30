@@ -204,6 +204,8 @@ const patchSlideSchema = Joi.object({
     .required(),
 });
 
+const slideAiPromptField = Joi.string().trim().min(1).max(2000);
+
 const addSlideSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -214,7 +216,19 @@ const addSlideSchema = Joi.object({
     templateId: templateIdField.optional(),
     layoutId: Joi.string().trim().max(128).optional(),
     content: slideContentSchema.optional(),
+    generate: Joi.boolean().default(false),
+    prompt: slideAiPromptField.optional(),
+    target: Joi.string().valid('content', 'image', 'all').default('all'),
   })
+    .custom((value, helpers) => {
+      if (!value || !value.generate) return value;
+      const hasPrompt = Boolean(value.prompt && String(value.prompt).trim());
+      const hasTitle = Boolean(value.content && value.content.title && String(value.content.title).trim());
+      if (!hasPrompt && !hasTitle) {
+        return helpers.message('When generate is true, provide prompt or content.title');
+      }
+      return value;
+    })
     .default({})
     .optional(),
 });
@@ -331,6 +345,7 @@ const regenerateSlideSchema = Joi.object({
   body: Joi.object({
     target: Joi.string().valid('content', 'image', 'all').default('all'),
     overwriteManualEdits: Joi.boolean().default(true),
+    prompt: slideAiPromptField.optional(),
   })
     .default({})
     .optional(),

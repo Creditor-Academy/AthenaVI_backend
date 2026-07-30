@@ -61,7 +61,7 @@
 | PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Update outline JSON |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/theme` | Bearer + member | Set theme |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/generate` | Bearer + member | Start deck generation (202) |
-| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides` | Bearer + member | Add slide (deck max 40) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides` | Bearer + member | Add slide; optional `generate`+`prompt` for add+AI (deck max 40) |
 | DELETE | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Delete slide |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/duplicate` | Bearer + member | Duplicate slide |
 | PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/reorder` | Bearer + member | Reorder slides |
@@ -69,7 +69,7 @@
 | PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/canvas` | Bearer + member | Save freeform canvas |
 | POST/PATCH/DELETE | `.../slides/:slideId/elements...` | Bearer + member | Element CRUD / reorder |
 | PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Patch slide |
-| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
 | GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE templates (video editor only) |

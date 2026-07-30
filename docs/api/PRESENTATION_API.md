@@ -283,10 +283,20 @@ Structural mutations return **409** while deck `status === GENERATING`.
 `POST .../presentations/:presentationId/slides` → **201**
 
 ```json
-{ "afterSlideId": optional, "templateId": optional, "layoutId": optional, "content": {} }
+{
+  "afterSlideId": optional,
+  "templateId": optional,
+  "layoutId": optional,
+  "content": {},
+  "generate": false,
+  "prompt": "optional AI brief (max 2000)",
+  "target": "all"
+}
 ```
 
-User-authored → `status: READY`, `manuallyEdited: true`. Rejects if deck already has **40** slides.
+- Manual (default): user-authored → `status: READY`, `manuallyEdited: true`. Response `{ slide, deckId }`.
+- **`generate: true`**: creates the slide then starts AI regenerate (same billing as regenerate). Requires **`prompt`** or **`content.title`**. Response includes `{ slide, deckId, status: "GENERATING", target, estimatedCredits }`. Poll `GET .../status` until the slide is `READY`.
+- Rejects if deck already has **40** slides.
 
 ### Delete / duplicate / reorder
 
@@ -344,15 +354,16 @@ User-authored → `status: READY`, `manuallyEdited: true`. Rejects if deck alrea
 ```json
 {
   "target": "all",
-  "overwriteManualEdits": true
+  "overwriteManualEdits": true,
+  "prompt": "Competitive landscape for Athena VI vs Loom"
 }
 ```
 
 - `target`: `content` \| `image` \| `all` (default `all`)
+- `prompt`: optional (max 2000). Used as LLM title/summary seed — especially useful on blank decks with no outline. For `content` / `all`, you must provide **`prompt`**, an existing slide **`content.title`**, or a matching outline title (**400** otherwise).
 - Manual edits blocked unless `overwriteManualEdits` is true (**409**)
 - Successful regen rebuilds `elements` from layout + content
-
-Subject to regenerate rate limits. Charges on success for regenerated pieces.
+- Subject to regenerate rate limits. Charges on success for regenerated pieces.
 
 ---
 

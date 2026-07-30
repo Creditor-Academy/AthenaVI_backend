@@ -1,4 +1,5 @@
 $kind: http-request
+description: Optional prompt seeds AI when deck has no outline. content/all require prompt or existing title.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/regenerate"
 method: POST
 headers:
@@ -9,6 +10,7 @@ body:
   content: |-
     {
       "target": "all",
-      "overwriteManualEdits": true
+      "overwriteManualEdits": true,
+      "prompt": "Rewrite this slide as a competitive landscape for Athena VI"
     }
 order: 7000
