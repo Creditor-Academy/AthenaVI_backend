@@ -101,6 +101,22 @@
     {
       "key": "videoTemplateId",
       "value": ""
+    },
+    {
+      "key": "slideId2",
+      "value": ""
+    },
+    {
+      "key": "elementId",
+      "value": ""
+    },
+    {
+      "key": "elementId2",
+      "value": ""
+    },
+    {
+      "key": "deckTemplateId",
+      "value": ""
     }
   ],
   "item": [
@@ -2678,10 +2694,905 @@
     },
     {
       "name": "Presentations (AI PPT)",
-      "description": "Isolated presentation module under /api/workspaces/:workspaceId/presentations. Separate OpenAI credits from HeyGen/video.",
+      "description": "AI PPT / canvas editor. presentationId = project id (type PRESENTATION). Caps: AI 5-20 slides, deck max 40, 50 elements/slide. See docs/PRESENTATION_FRONTEND_INTEGRATION.md. URLs use /api prefix.",
       "item": [
         {
-          "name": "Create presentation",
+          "name": "0. Pickers",
+          "item": [
+            {
+              "name": "List presentation templates",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentation-templates",
+                "description": ""
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const j = pm.response.json();",
+                      "  const t = j && j.data && j.data.templates && j.data.templates[0];",
+                      "  if (t && t.id) pm.collectionVariables.set(\"deckTemplateId\", t.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List presentation themes",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentation-themes",
+                "description": ""
+              }
+            },
+            {
+              "name": "List presentation elements",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentation-elements",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. Create",
+          "item": [
+            {
+              "name": "Create presentation (blank)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations",
+                "description": "Saves presentationId from data.project.id",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Q3 Pitch\",\n  \"folderId\": \"{{folderId}}\",\n  \"createMode\": \"blank\",\n  \"themeId\": \"midnight_blue\",\n  \"locale\": \"en\",\n  \"aspectRatio\": \"16:9\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const j = pm.response.json();",
+                      "  const id = j && j.data && j.data.project && j.data.project.id;",
+                      "  if (id) pm.collectionVariables.set(\"presentationId\", id);",
+                      "  const slides = j && j.data && j.data.deck && j.data.deck.slides;",
+                      "  if (Array.isArray(slides) && slides[0]) pm.collectionVariables.set(\"slideId\", slides[0].id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create presentation (from template)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations",
+                "description": "Requires deckTemplateId from List presentation templates",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"From layout\",\n  \"folderId\": \"{{folderId}}\",\n  \"createMode\": \"template\",\n  \"templateId\": \"{{deckTemplateId}}\",\n  \"themeId\": \"midnight_blue\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const j = pm.response.json();",
+                      "  const id = j && j.data && j.data.project && j.data.project.id;",
+                      "  if (id) pm.collectionVariables.set(\"presentationId\", id);",
+                      "  const slides = j && j.data && j.data.deck && j.data.deck.slides;",
+                      "  if (Array.isArray(slides) && slides[0]) pm.collectionVariables.set(\"slideId\", slides[0].id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2. AI generate",
+          "item": [
+            {
+              "name": "Credit estimate",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/credit-estimate?slideCount=10",
+                "description": ""
+              }
+            },
+            {
+              "name": "Generate outline (prompt)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source\": \"prompt\",\n  \"prompt\": \"Pitch deck for Athena VI virtual instructor SaaS\",\n  \"slideCount\": 10,\n  \"density\": \"balanced\",\n  \"locale\": \"en\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Patch outline",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Athena VI Pitch\",\n  \"slideCount\": 2,\n  \"density\": \"balanced\",\n  \"locale\": \"en\",\n  \"slides\": [\n    {\n      \"order\": 1,\n      \"title\": \"Title\",\n      \"summary\": \"Intro\",\n      \"suggestedContentType\": \"title\"\n    },\n    {\n      \"order\": 2,\n      \"title\": \"Problem\",\n      \"summary\": \"Pain points\",\n      \"suggestedContentType\": \"bullet_list\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Set theme",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/theme",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"themeId\": \"midnight_blue\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Generate deck",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/generate",
+                "description": "Returns 202 — poll Get status",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"density\": \"balanced\",\n  \"overwriteManualEdits\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Get status",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/status",
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Load",
+          "item": [
+            {
+              "name": "Get presentation",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}",
+                "description": ""
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const j = pm.response.json();",
+                      "  const slides = j && j.data && j.data.slides;",
+                      "  if (Array.isArray(slides) && slides[0]) {",
+                      "    pm.collectionVariables.set(\"slideId\", slides[0].id);",
+                      "    if (slides[1]) pm.collectionVariables.set(\"slideId2\", slides[1].id);",
+                      "    const els = slides[0].elements && slides[0].elements.elements;",
+                      "    if (Array.isArray(els) && els[0]) {",
+                      "      pm.collectionVariables.set(\"elementId\", els[0].id);",
+                      "      if (els[1]) pm.collectionVariables.set(\"elementId2\", els[1].id);",
+                      "    }",
+                      "  }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "4. Slides",
+          "item": [
+            {
+              "name": "Add slide",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides",
+                "description": "Optional templateId / afterSlideId. Deck max 40.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": {\n    \"title\": \"New slide\"\n  },\n  \"templateId\": \"{{deckTemplateId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const j = pm.response.json();",
+                      "  const id = j && j.data && j.data.slide && j.data.slide.id;",
+                      "  if (id) pm.collectionVariables.set(\"slideId\", id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete slide",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}",
+                "description": ""
+              }
+            },
+            {
+              "name": "Duplicate slide",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/duplicate",
+                "description": ""
+              }
+            },
+            {
+              "name": "Reorder slides",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/reorder",
+                "description": "Must include every slide id exactly once",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slideIds\": [\n    \"{{slideId}}\",\n    \"{{slideId2}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Apply layout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/apply-layout",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"templateId\": \"{{deckTemplateId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Patch slide",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": {\n    \"title\": \"Updated\",\n    \"notes\": \"Speaker notes\"\n  },\n  \"manuallyEdited\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Regenerate slide",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/regenerate",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target\": \"all\",\n  \"overwriteManualEdits\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Canvas / elements",
+          "item": [
+            {
+              "name": "Put slide canvas",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/canvas",
+                "description": "Autosave full freeform canvas (max 50 elements)",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"version\": 1,\n  \"canvas\": {\n    \"width\": 1920,\n    \"height\": 1080\n  },\n  \"elements\": [\n    {\n      \"id\": \"el_title\",\n      \"type\": \"text\",\n      \"layer\": 1,\n      \"placement\": {\n        \"x\": 160,\n        \"y\": 200,\n        \"width\": 1600,\n        \"height\": 120,\n        \"rotation\": 0,\n        \"opacity\": 1\n      },\n      \"content\": {\n        \"text\": \"Hello\",\n        \"fontSize\": 44,\n        \"bold\": true\n      },\n      \"role\": \"title\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Add element (preset)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"presetId\": \"text_body\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "  const j = pm.response.json();",
+                      "  const id = j && j.data && j.data.element && j.data.element.id;",
+                      "  if (id) pm.collectionVariables.set(\"elementId\", id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Add element (custom)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"element\": {\n    \"type\": \"shape\",\n    \"placement\": {\n      \"x\": 200,\n      \"y\": 200,\n      \"width\": 400,\n      \"height\": 240,\n      \"rotation\": 0,\n      \"opacity\": 1\n    },\n    \"content\": {\n      \"shape\": \"rect\",\n      \"fill\": \"#0A84FF\"\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Patch element",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements/{{elementId}}",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"placement\": {\n    \"x\": 220,\n    \"y\": 220,\n    \"width\": 400,\n    \"height\": 240\n  },\n  \"content\": {\n    \"text\": \"Edited\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Delete element",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements/{{elementId}}",
+                "description": ""
+              }
+            },
+            {
+              "name": "Reorder elements",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements/reorder",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"elementIds\": [\n    \"{{elementId}}\",\n    \"{{elementId2}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Export",
+          "item": [
+            {
+              "name": "Export PPTX",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"format\": \"PPTX\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 202) {",
+                      "  const j = pm.response.json();",
+                      "  const id = j && j.data && j.data.exportId;",
+                      "  if (id) pm.collectionVariables.set(\"exportId\", id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Export PDF",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"format\": \"PDF\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Export PNG (deck or zip)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"format\": \"PNG\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Export JPEG (single slide)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"format\": \"JPEG\",\n  \"slideId\": \"{{slideId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Get export",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export/{{exportId}}",
+                "description": "Poll until READY for presignedUrl"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Superadmin templates",
+      "description": "Platform superadmin only. Shared CRUD for DECK_LAYOUT (PPT) and VIDEO_SCENE (video). type is required on create.",
+      "item": [
+        {
+          "name": "List templates (DECK_LAYOUT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/superadmin/templates?type=DECK_LAYOUT",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  const t = j && j.data && j.data.templates && j.data.templates[0];",
+                  "  if (t && t.id) pm.collectionVariables.set(\"deckTemplateId\", t.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List templates (VIDEO_SCENE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/superadmin/templates?type=VIDEO_SCENE",
+            "description": ""
+          }
+        },
+        {
+          "name": "Get template",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/superadmin/templates/{{deckTemplateId}}",
+            "description": ""
+          }
+        },
+        {
+          "name": "Create DECK_LAYOUT template",
           "request": {
             "method": "POST",
             "header": [
@@ -2694,116 +3605,38 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/superadmin/templates",
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Q3 Pitch\",\n  \"folderId\": \"{{folderId}}\",\n  \"createMode\": \"blank\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations"
-              ]
-            }
-          }
-        },
-        {
-          "name": "List presentation templates",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+              "raw": "{\n  \"type\": \"DECK_LAYOUT\",\n  \"name\": \"Title Centered Custom\",\n  \"contentType\": \"title\",\n  \"variant\": \"v1\",\n  \"isActive\": true,\n  \"schema\": {\n    \"layout_id\": \"title_centered_custom_v1\",\n    \"content_type\": \"title\",\n    \"grid\": \"12-col\",\n    \"slots\": [\n      {\n        \"id\": \"title\",\n        \"region\": \"cols 2-11, rows 4-7\",\n        \"max_lines\": 3\n      },\n      {\n        \"id\": \"subtitle\",\n        \"region\": \"cols 3-10, rows 8-9\",\n        \"max_lines\": 2\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-templates",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentation-templates"]
             }
-          }
-        },
-        {
-          "name": "List presentation themes",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  const id = j && j.data && j.data.template && j.data.template.id;",
+                  "  if (id) pm.collectionVariables.set(\"deckTemplateId\", id);",
+                  "}"
+                ]
               }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-themes",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentation-themes"]
             }
-          }
+          ]
         },
         {
-          "name": "List presentation elements",
+          "name": "Patch template",
           "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentation-elements",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentation-elements"]
-            }
-          }
-        },
-        {
-          "name": "Add slide",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": { \"title\": \"New slide\" }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "slides"]
-            }
-          }
-        },
-        {
-          "name": "Put slide canvas",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"version\": 1,\n  \"canvas\": { \"width\": 1920, \"height\": 1080 },\n  \"elements\": [\n    {\n      \"id\": \"el_title\",\n      \"type\": \"text\",\n      \"layer\": 1,\n      \"placement\": { \"x\": 160, \"y\": 200, \"width\": 1600, \"height\": 120, \"rotation\": 0, \"opacity\": 1 },\n      \"content\": { \"text\": \"Hello\", \"fontSize\": 44, \"bold\": true },\n      \"role\": \"title\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/canvas",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "slides", "{{slideId}}", "canvas"]
-            }
-          }
-        },
-        {
-          "name": "Generate outline",
-          "request": {
-            "method": "POST",
+            "method": "PATCH",
             "header": [
               {
                 "key": "Authorization",
@@ -2814,246 +3647,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/superadmin/templates/{{deckTemplateId}}",
+            "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source\": \"prompt\",\n  \"prompt\": \"Pitch deck for Athena VI\",\n  \"slideCount\": 10,\n  \"density\": \"balanced\",\n  \"locale\": \"en\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "outline"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Set theme",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+              "raw": "{\n  \"name\": \"Title Centered Custom (updated)\",\n  \"isActive\": true,\n  \"contentType\": \"title\",\n  \"variant\": \"v2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"themeId\": \"midnight_blue\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/theme",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "theme"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Generate deck",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"density\": \"balanced\",\n  \"overwriteManualEdits\": false\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/generate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "generate"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get status",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "status"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get presentation",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Credit estimate",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/credit-estimate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "credit-estimate"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Export PPTX",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"format\": \"PPTX\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "export"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Export PNG",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"format\": \"PNG\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export",
-              "host": ["{{baseUrl}}"],
-              "path": ["workspaces", "{{workspaceId}}", "presentations", "{{presentationId}}", "export"]
-            }
-          }
-        },
-        {
-          "name": "Get export",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export/{{exportId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "workspaces",
-                "{{workspaceId}}",
-                "presentations",
-                "{{presentationId}}",
-                "export",
-                "{{exportId}}"
-              ]
             }
           }
         }

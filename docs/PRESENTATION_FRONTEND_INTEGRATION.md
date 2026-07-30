@@ -322,4 +322,8 @@ POST   .../export
 GET    .../export/:exportId
 ```
 
-Postman: folder **Presentations (AI PPT)** in `postman/AthenaVI_Backend.postman_collection.json`.
+Postman collection `postman/AthenaVI_Backend.postman_collection.json`:
+
+- Folder **Presentations (AI PPT)** — subfolders `0. Pickers` … `6. Export` (URLs use `/api/...`)
+- Folder **Superadmin templates** — `DECK_LAYOUT` / `VIDEO_SCENE` admin CRUD
+- Folder **Video templates** — video editor only (do not use for PPT)
