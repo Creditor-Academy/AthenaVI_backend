@@ -136,7 +136,9 @@ Default canvas: **1920 × 1080** (16:9).
 | `type` | Typical `content` |
 |--------|-------------------|
 | `text` | `text`, `fontSize`, `bold`, `italic`, `color`, `align` |
-| `image` / `icon` | `url`, `fit`, `alt` / `icon` |
+| `image` / `icon` | `url` (presigned S3 GET, ~1h TTL — refetch presentation if expired), `fit`, `alt` / `icon` |
+
+**Images / “Visual failed”:** After generate, refetch `GET .../presentations/:id`. Render canvas `type: "image"` via `content.url`, or `slide.imageRef.url`. If `imageRef.source === "none"` and `imageRef.error` is set, that slide’s visual failed on the server (content timeout or image provider). Many slides legitimately have no image (`source: "none"` without `error`) when the classifier picks text/chart layouts.
 | `shape` | `shape`: `rect` \| `ellipse` \| `line`, `fill`, `line` |
 | `chart` | `chartType`, `labels`, `series` |
 | `table` | `rows`: string[][] |

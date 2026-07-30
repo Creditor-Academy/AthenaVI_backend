@@ -40,7 +40,7 @@ const { AI_SLIDE_MAX } = require('./presentation.constants');
 const CONTENT_TIMEOUT_MS =
   Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS) > 0
     ? Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS)
-    : 6000;
+    : 45000;
 
 const PPT_SLIDE_CONCURRENCY =
   Number(process.env.PPT_SLIDE_CONCURRENCY) > 0
@@ -1365,9 +1365,40 @@ async function regenerateSlide({
             brief,
             pathBSpec: content?.pathBSpec,
           });
+          const imageRef = imageResult.imageRef;
+          let elementsDoc = fresh.elements;
+          if (
+            elementsDoc &&
+            typeof elementsDoc === 'object' &&
+            Array.isArray(elementsDoc.elements)
+          ) {
+            elementsDoc = {
+              ...elementsDoc,
+              elements: elementsDoc.elements.map((el) => {
+                if (!el || el.type !== 'image') return el;
+                return {
+                  ...el,
+                  content: {
+                    ...(el.content || {}),
+                    url: imageRef?.url || null,
+                  },
+                };
+              }),
+            };
+          } else {
+            const seed = (SEED_LAYOUTS || []).find(
+              (l) => l.layout_id === fresh.layoutId || l.id === fresh.layoutId
+            );
+            elementsDoc = layoutSlotsToElements(
+              seed || { slots: [] },
+              content,
+              imageRef
+            );
+          }
           await presentationDao.updateSlide(slideId, {
             status: 'READY',
-            imageRef: imageResult.imageRef,
+            imageRef,
+            elements: elementsDoc,
           });
         } catch (err) {
           await presentationDao.updateSlide(slideId, {

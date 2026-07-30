@@ -6,8 +6,31 @@ const presentationCredit = require('./presentationCredit.service');
 const themeService = require('./theme.service');
 const deckGeneration = require('./deckGeneration.service');
 const exportService = require('./export.service');
-const slideEditor = require('./slideEditor.service');
+const slideEditorRaw = require('./slideEditor.service');
 const { layoutSlotsToElements, blankCanvas } = require('./layoutToElements');
+const {
+  attachPresignedMediaToSlides,
+  presignPresentationPayload,
+} = require('./presignSlideMedia');
+
+const SLIDE_EDITOR_PASSTHROUGH = new Set([
+  'listElementCatalog',
+  'listDeckLayouts',
+  'normalizeCanvasPayload',
+  'getElementsDoc',
+]);
+
+const slideEditor = Object.fromEntries(
+  Object.entries(slideEditorRaw).map(([key, value]) => {
+    if (typeof value !== 'function' || SLIDE_EDITOR_PASSTHROUGH.has(key)) {
+      return [key, value];
+    }
+    return [
+      key,
+      async (...args) => presignPresentationPayload(await value(...args)),
+    ];
+  })
+);
 
 async function createPresentation({
   workspaceId,
@@ -74,7 +97,13 @@ async function createPresentation({
   }
 
   const refreshed = await presentationDao.findDeckById(deck.id);
-  return { project, deck: refreshed || { ...deck, slides } };
+  const outDeck = refreshed || { ...deck, slides };
+  const signedSlides = await attachPresignedMediaToSlides(outDeck.slides || slides);
+  return {
+    project,
+    deck: { ...outDeck, slides: signedSlides },
+    slides: signedSlides,
+  };
 }
 
 async function getPresentation(workspaceId, presentationId) {
@@ -106,7 +135,7 @@ async function getPresentation(workspaceId, presentationId) {
       createdAt: deck.createdAt,
       updatedAt: deck.updatedAt,
     },
-    slides: deck.slides || [],
+    slides: await attachPresignedMediaToSlides(deck.slides || []),
   };
 }
 
@@ -196,7 +225,8 @@ module.exports = {
   startGenerate: deckGeneration.startGenerate,
   getStatus: deckGeneration.getStatus,
   regenerateSlide: deckGeneration.regenerateSlide,
-  patchSlide: deckGeneration.patchSlide,
+  patchSlide: async (...args) =>
+    presignPresentationPayload(await deckGeneration.patchSlide(...args)),
   queueExport: exportService.queueExport,
   getExport: exportService.getExport,
   listThemes: themeService.listThemes,
