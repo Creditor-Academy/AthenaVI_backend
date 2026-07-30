@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Status: under_review | in_discussion | approved | rejected. Emails applicant."
+url: "{{baseUrl}}/api/superadmin/early-access/requests/{{earlyAccessRequestId}}/status"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "under_review"
+    }
+order: 20000

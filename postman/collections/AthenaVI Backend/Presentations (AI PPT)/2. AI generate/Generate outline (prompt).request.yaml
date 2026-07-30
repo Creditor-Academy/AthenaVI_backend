@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "source": "prompt",
+      "prompt": "Pitch deck for Athena VI virtual instructor SaaS",
+      "slideCount": 10,
+      "density": "balanced",
+      "locale": "en"
+    }
+order: 2000

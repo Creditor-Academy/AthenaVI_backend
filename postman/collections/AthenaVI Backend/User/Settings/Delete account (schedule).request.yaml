@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Two-step delete: confirmation must be exactly delete. Schedules permanent deletion in 7 days, logs out all devices. Sign in again within 7 days to recover."
+url: "{{baseUrl}}/api/user/settings/security/delete-account"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "confirmation": "delete"
+    }
+order: 7000

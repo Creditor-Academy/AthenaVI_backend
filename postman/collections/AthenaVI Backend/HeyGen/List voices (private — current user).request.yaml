@@ -1,0 +1,5 @@
+$kind: http-request
+description: Only voices recorded when **you** called POST `/voices` (design) or POST `/voices/clone`. Backend filters HeyGen's JSON locally (`voices`, `suggestions`, nested `data`, etc.).
+url: "{{baseUrl}}/api/heygen/voices?type=private&limit=50"
+method: GET
+order: 13000

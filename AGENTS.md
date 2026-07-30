@@ -298,7 +298,7 @@ There is **no** `npm test` script in `package.json` today. If you add tests, doc
 5. Add **controller** handlers using `asyncHandler` + `successResponse`.
 6. Wire **routes**; mount in `app.js` or under `workspace.routes.js` as appropriate.
 7. Document the contract in the relevant **`docs/api/*.md`** file (same PR).
-8. Update **`postman/AthenaVI_Backend.postman_collection.json`** when routes, bodies, or variables change.
+8. Update the Postman v3 collection under **`postman/collections/AthenaVI Backend/`** (and environments under **`postman/environments/*.environment.yaml`**) when routes, bodies, or variables change.
 9. Run **`graphify update .`** (or rely on the **stop** hook below).
 
 ---

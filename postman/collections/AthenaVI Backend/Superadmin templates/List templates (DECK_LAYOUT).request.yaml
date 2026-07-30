@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates?type=DECK_LAYOUT"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const t = j && j.data && j.data.templates && j.data.templates[0];
+        if (t && t.id) pm.collectionVariables.set("deckTemplateId", t.id);
+      }
+    language: text/javascript
+order: 1000

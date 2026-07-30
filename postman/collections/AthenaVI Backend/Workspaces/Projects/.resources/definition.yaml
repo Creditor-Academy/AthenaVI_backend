@@ -1,0 +1,3 @@
+$kind: collection
+description: Project CRUD, editor state save, folder move, and final Remotion render APIs. List responses omit `data` and include owner, lastModifiedAt/By, storageBytes. **Get project** returns full `data`. **Get project** and **Save project data** rehydrate missing `content.heygenVideoId` on avatar elements from persisted HeyGen clips (by scene + request hash). Start render saves `renderId`. Run `npm run backfill:project-storage` after migration for existing rows.
+order: 17000

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments/mentionable-users?q="
+method: GET
+order: 2000

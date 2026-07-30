@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/assets/{{workspaceId}}/upload"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: file
+      src: []
+order: 1000

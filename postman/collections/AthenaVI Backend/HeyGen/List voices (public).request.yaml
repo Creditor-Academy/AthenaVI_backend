@@ -1,0 +1,32 @@
+$kind: http-request
+description: HeyGen public voice catalog (not user-filtered). Test script saves first voice id to `voiceId` for **Create avatar video**.
+url: "{{baseUrl}}/api/heygen/voices?type=public&limit=50"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      function firstVoiceId(root) {
+        const KEYS = ['voices','suggestions','list','items','data'];
+        function vid(it) {
+          if (!it || typeof it !== 'object') return null;
+          const v = it.voice_id || it.voiceId || it.id;
+          return v != null && String(v).trim() ? String(v).trim() : null;
+        }
+        function walk(n, d) {
+          if (d > 10 || n == null) return null;
+          if (Array.isArray(n)) { for (const it of n) { const x = vid(it); if (x) return x; } return null; }
+          if (typeof n !== 'object') return null;
+          for (const k of KEYS) { if (Array.isArray(n[k]) && n[k][0]) { const x = vid(n[k][0]); if (x) return x; } }
+          if (n.data) { const x = walk(n.data, d + 1); if (x) return x; }
+          for (const k of KEYS) { if (n[k]) { const x = walk(n[k], d + 1); if (x) return x; } }
+          return null;
+        }
+        return walk(root, 0);
+      }
+      try {
+        const j = pm.response.json();
+        const v = firstVoiceId(j.data);
+        if (v) pm.collectionVariables.set('voiceId', v);
+      } catch (e) {}
+    language: text/javascript
+order: 12000

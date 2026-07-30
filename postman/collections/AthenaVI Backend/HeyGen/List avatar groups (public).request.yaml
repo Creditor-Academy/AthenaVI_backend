@@ -1,0 +1,27 @@
+$kind: http-request
+description: Forwarded to HeyGen; full public catalog (not user-filtered). Test script saves first group `id` to `groupId` — use with **List avatar looks**, not as `avatarId` on video create.
+url: "{{baseUrl}}/api/heygen/avatars/groups?ownership=public&limit=20"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      function firstGroupId(root) {
+        const KEYS = ['avatar_group_list','avatar_groups','groups','avatars','list','items','data'];
+        function walk(n, d) {
+          if (d > 10 || n == null) return null;
+          if (Array.isArray(n)) { for (const it of n) { if (it && it.id) return String(it.id); } return null; }
+          if (typeof n !== 'object') return null;
+          for (const k of KEYS) { if (Array.isArray(n[k]) && n[k][0] && n[k][0].id) return String(n[k][0].id); }
+          if (n.data) { const x = walk(n.data, d + 1); if (x) return x; }
+          for (const k of KEYS) { if (n[k]) { const x = walk(n[k], d + 1); if (x) return x; } }
+          return null;
+        }
+        return walk(root, 0);
+      }
+      try {
+        const j = pm.response.json();
+        const gid = firstGroupId(j.data);
+        if (gid) pm.collectionVariables.set('groupId', gid);
+      } catch (e) {}
+    language: text/javascript
+order: 1000

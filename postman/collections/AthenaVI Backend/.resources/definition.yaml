@@ -1,0 +1,57 @@
+$kind: collection
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+description: |-
+  API collection for AthenaVI_backend.
+
+  **Environments** (`postman/environments/*.environment.yaml`):
+  - **Development (Local)** — `http://localhost:9000`
+  - **Development (Render)** — `https://athenavi-backend-jzns.onrender.com` (deployed test backend)
+
+  Select an environment in Postman before sending requests. Default collection `baseUrl` is local if no environment is selected.
+
+  **Auth:** Protected routes use `Authorization: Bearer {{accessToken}}`. Run **Login** or **Register** first; the test script saves `accessToken` to collection variables.
+
+  **Refresh / Logout:** These use the `refreshToken` **httpOnly** cookie. In Postman, enable the cookie jar (default on) and run Login so cookies are stored for `baseUrl`.
+
+  **Multipart:** Workspace asset upload and profile image use `form-data` with the field names shown on each request.
+
+  **User settings** under **User → Settings**: appearance, notification, and security preferences (`/api/user/settings/...`). Bearer required. Delete account requires body `{ "confirmation": "delete" }`.
+
+  **Projects and renders** live under **Workspaces → Projects**. Use **Create project** first to save `projectId`, then **Save project data**, generate scene-level HeyGen clips if needed, and finally use **Renders** to start/export the final project video. **Start render** saves `renderId` to collection variables.
+
+  **HeyGen avatar videos (recommended order):** (1) **HeyGen → List avatar groups (public)** → saves `groupId`; (2) **List avatar looks (public group)** → saves `avatarLookId` (this is the **look** id, not the group id); (3) **List voices (public)** or design/clone → `voiceId`; (4) **HeyGen videos → Create avatar video** → saves `heygenVideoId` (starts HeyGen job only — `s3Key` is null until sync); (5) **Get HeyGen video** or **Download** (polls HeyGen, uploads MP4 to S3); (6) **Save project data** with `content.heygenVideoId` on avatar elements. **Get project** and **Save project data** also **rehydrate** missing `heygenVideoId` from `heygen_responses` when clips exist in S3.
+
+  **HeyGen (v3 proxy)** under **HeyGen**: with **`ownership=private`** / **`type=private`**, the backend filters HeyGen list responses **after** the upstream call. Only rows tied to **your** user in `heygen_avatars` / `heygen_voices` are returned. For video create, pass **`avatarLookId`** as `avatarId` (HeyGen look id, e.g. `lk_…`), not `groupId` (`ag_…`).
+
+  **Stock (Pexels)** under **Stock**: search then **Import stock into workspace** before using media in a project. Import returns a workspace `assetId` — use that in `project.data` elements (`content.assetId`), not Pexels CDN URLs. Requires server `PEXELS_API_KEY`.
+
+  **Storage** under **Storage**: user quota (`GET /api/user/storage`), upgrade requests, workspace footprint, and superadmin grant/revoke (`/api/superadmin/users/:userId/storage/*`). Byte fields are binary (1 GiB = `1073741824`). Grant with `tierId` (preset) or `additionalBytes` (increment any positive amount). See `docs/api/STORAGE_API.md` and `docs/api/SUPERADMIN_API.md`.
+variables:
+  baseUrl: http://localhost:9000
+  accessToken: ""
+  workspaceId: 00000000-0000-4000-8000-000000000001
+  folderId: 00000000-0000-4000-8000-000000000002
+  assetId: 00000000-0000-4000-8000-000000000003
+  invitationId: 00000000-0000-4000-8000-000000000004
+  invitationToken: 00000000-0000-4000-8000-000000000099
+  memberId: 00000000-0000-4000-8000-000000000005
+  groupId: replace-with-heygen-group-id
+  avatarLookId: replace-with-heygen-look-id
+  voiceId: replace-with-voice-id-or-clone-job-id
+  projectId: 00000000-0000-4000-8000-000000000010
+  commentId: 00000000-0000-4000-8000-000000000013
+  renderId: 00000000-0000-4000-8000-000000000011
+  heygenVideoId: 00000000-0000-4000-8000-000000000012
+  avatarEngine: avatar_iv
+  stockExternalId: replace-with-pexels-photo-id
+  storageUserId: 00000000-0000-4000-8000-000000000099
+  storageTierId: plus_10gb
+  additionalStorageBytes: "107374182400"
+  presentationId: ""
+  slideId: ""
+  exportId: ""
+  videoTemplateId: ""
+  slideId2: ""
+  elementId: ""
+  elementId2: ""
+  deckTemplateId: ""

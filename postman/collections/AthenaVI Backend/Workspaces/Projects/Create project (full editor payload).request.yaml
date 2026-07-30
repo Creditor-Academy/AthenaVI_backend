@@ -1,0 +1,33 @@
+$kind: http-request
+description: "Optional: explicit data / projectState with videoSettings and pre-built scenes (advanced / editor import)."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "My Video Project",
+      "folderId": "{{folderId}}",
+      "data": {
+        "videoSettings": {
+          "width": 1920,
+          "height": 1080,
+          "fps": 30,
+          "backgroundColor": "#000000"
+        },
+        "scenes": []
+      },
+      "status": "draft"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.project && j.data.project.id;
+        if (id) { pm.collectionVariables.set('projectId', id); }
+      } catch (e) {}
+    language: text/javascript
+order: 2000

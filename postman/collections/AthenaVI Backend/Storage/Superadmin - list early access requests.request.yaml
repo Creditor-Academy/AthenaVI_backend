@@ -1,0 +1,5 @@
+$kind: http-request
+description: Early access queue. Optional status=pending|approved|rejected.
+url: "{{baseUrl}}/api/superadmin/early-access/requests?page=1&limit=20&status=pending"
+method: GET
+order: 16000

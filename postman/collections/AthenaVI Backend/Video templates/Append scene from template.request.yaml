@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/workspaces/{{workspaceId}}/projects/{{projectId}}/scenes/from-template"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "templateId": "{{videoTemplateId}}"
+    }
+order: 4000

@@ -322,7 +322,7 @@ POST   .../export
 GET    .../export/:exportId
 ```
 
-Postman collection `postman/AthenaVI_Backend.postman_collection.json`:
+Postman collection `postman/collections/AthenaVI Backend/` (v3 YAML):
 
 - Folder **Presentations (AI PPT)** — subfolders `0. Pickers` … `6. Export` (URLs use `/api/...`)
 - Folder **Superadmin templates** — `DECK_LAYOUT` / `VIDEO_SCENE` admin CRUD

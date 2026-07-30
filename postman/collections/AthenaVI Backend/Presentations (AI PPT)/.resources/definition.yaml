@@ -1,0 +1,3 @@
+$kind: collection
+description: "AI PPT / canvas editor. presentationId = project id (type PRESENTATION). Caps: AI 5-20 slides, deck max 40, 50 elements/slide. See docs/PRESENTATION_FRONTEND_INTEGRATION.md. URLs use /api prefix."
+order: 11000

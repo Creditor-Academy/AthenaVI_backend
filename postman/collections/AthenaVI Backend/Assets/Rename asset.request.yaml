@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/assets/{{workspaceId}}/{{assetId}}/rename"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "new-asset-name.pdf"
+    }
+order: 4000

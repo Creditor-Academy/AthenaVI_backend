@@ -1,0 +1,22 @@
+$kind: http-request
+description: Queues a background Remotion render. The backend resolves assetId references, checks HeyGen avatar clips, reuses scene cache when possible, and writes the final MP4 to S3.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "forceRebuild": false
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.render && j.data.render.id;
+        if (id) { pm.collectionVariables.set('renderId', id); }
+      } catch (e) {}
+    language: text/javascript
+order: 1000

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/apply-layout"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "templateId": "{{deckTemplateId}}"
+    }
+order: 5000

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "content": {
+        "title": "Updated",
+        "notes": "Speaker notes"
+      },
+      "manuallyEdited": true
+    }
+order: 6000

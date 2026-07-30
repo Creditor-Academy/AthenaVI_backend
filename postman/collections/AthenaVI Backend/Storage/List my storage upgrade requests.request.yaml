@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Upgrade request history. Optional query: page, limit, status (pending | approved | rejected)."
+url: "{{baseUrl}}/api/user/storage/requests?page=1&limit=20"
+method: GET
+order: 3000

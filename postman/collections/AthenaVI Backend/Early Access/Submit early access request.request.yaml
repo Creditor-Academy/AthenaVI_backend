@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/early-access/request"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Jane Doe",
+      "email": "jane@company.com",
+      "company": "Acme Corp",
+      "role": "L&D Manager",
+      "useCase": "Corporate Training",
+      "message": "We want to use Athena VI for employee onboarding at scale."
+    }
+order: 1000

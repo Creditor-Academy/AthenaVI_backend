@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/heygen/voices/preview-speech"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "text": "Hello from AthenaVI.",
+      "voice_id": "{{voiceId}}",
+      "input_type": "text",
+      "speed": 1
+    }
+order: 19000

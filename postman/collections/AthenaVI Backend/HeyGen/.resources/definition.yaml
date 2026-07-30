@@ -1,0 +1,12 @@
+$kind: collection
+description: |-
+  HeyGen v3 proxy (`/api/heygen`). One shared HeyGen API key: **`ownership=private`** (avatars) and **`type=private`** (voices) trigger **server-side filtering** of the HeyGen JSON so each JWT user only sees rows recorded for them in **`heygen_avatars`** / **`heygen_voices`**, plus optional **`workspace_id`** to merge assets **shared to a workspace** (`heygen_workspace_shares`). Public lists are unchanged passthrough.
+
+  **403** (`You do not have access to this HeyGen resource`) — avatar consent for another user's group, GET voice by id for another user's **stored** private clone, private looks with another user's `group_id`, or scene video create with unshared private avatar/voice.
+auth:
+  - id: a72d70b0-9d58-4187-82ba-a5eb82fe218c
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 9000

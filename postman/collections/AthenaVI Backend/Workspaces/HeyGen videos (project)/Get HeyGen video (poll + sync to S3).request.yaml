@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Default sync on: polls HeyGen (bounded ~50s), downloads MP4 to S3 when `completed`, updates `s3Key` / `status`. Repeat if still `processing`. Response `data.heygenVideo` includes `id`, `status`, `s3Key`."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}"
+method: GET
+order: 3000

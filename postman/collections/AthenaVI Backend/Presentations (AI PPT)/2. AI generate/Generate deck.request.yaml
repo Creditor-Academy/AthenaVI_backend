@@ -1,0 +1,15 @@
+$kind: http-request
+description: Returns 202 — poll Get status
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/generate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "density": "balanced",
+      "overwriteManualEdits": false
+    }
+order: 5000

@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "provider": "unsplash",
+      "externalId": "{{stockExternalId}}",
+      "mediaType": "photo",
+      "name": "Unsplash photo"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        if (j.data && j.data.asset && j.data.asset.id) {
+          pm.collectionVariables.set('assetId', j.data.asset.id);
+        }
+        if (j.data && j.data.asset && j.data.asset.stockExternalId) {
+          pm.collectionVariables.set('stockExternalId', j.data.asset.stockExternalId);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 9000

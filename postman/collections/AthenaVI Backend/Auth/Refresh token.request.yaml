@@ -1,0 +1,5 @@
+$kind: http-request
+description: Sends `refreshToken` cookie from prior Login/Register.
+url: "{{baseUrl}}/api/auth/refresh"
+method: POST
+order: 5000

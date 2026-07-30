@@ -1,0 +1,5 @@
+$kind: http-request
+description: Route in app is registered as `/:id/members/:memberId`. If validation fails unexpectedly, check that `workspaceId` matches the path param name your server expects.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}"
+method: DELETE
+order: 12000

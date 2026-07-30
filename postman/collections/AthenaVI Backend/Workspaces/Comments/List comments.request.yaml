@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments"
+method: GET
+order: 1000

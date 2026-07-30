@@ -1,0 +1,6 @@
+$kind: http-request
+name: Get S3 location (IAM / Remotion worker)
+description: Returns `bucket`, `key`, `region`, `objectArn` for `GetObject` with IAM. No secrets. 409 until file is in S3.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/s3-location"
+method: GET
+order: 4000

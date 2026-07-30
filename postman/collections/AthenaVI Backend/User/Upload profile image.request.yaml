@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/upload/profile-image"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: file
+      key: profileImage
+      src: []
+order: 3000

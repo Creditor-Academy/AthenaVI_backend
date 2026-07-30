@@ -1,0 +1,14 @@
+$kind: http-request
+description: Subtracts amountBytes from storageLimit. 400 if new limit would be below storageUsed.
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/revoke"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amountBytes": 1073741824,
+      "reason": "Plan downgrade"
+    }
+order: 11000

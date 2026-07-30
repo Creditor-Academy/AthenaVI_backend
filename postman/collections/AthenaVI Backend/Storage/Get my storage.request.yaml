@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Current user quota: limitBytes, usedBytes, availableBytes, percentUsed, tier, activeUpgradeRequest."
+url: "{{baseUrl}}/api/user/storage"
+method: GET
+order: 1000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: Per-user delivery log. Optional status=SENT or FAILED.
+url: "{{baseUrl}}/api/superadmin/broadcasts/product-email/{{broadcastId}}/recipients?page=1&limit=50"
+method: GET
+order: 15000

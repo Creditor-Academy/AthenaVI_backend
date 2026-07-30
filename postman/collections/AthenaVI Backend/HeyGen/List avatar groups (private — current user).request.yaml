@@ -1,0 +1,5 @@
+$kind: http-request
+description: Only avatar groups recorded when **you** called POST `/avatars` (same Bearer user). The backend filters HeyGen's payload locally (including nested `data` / `avatar_group_list`-style lists). Assets created before ownership tracking or outside this API are omitted.
+url: "{{baseUrl}}/api/heygen/avatars/groups?ownership=private&limit=20"
+method: GET
+order: 2000

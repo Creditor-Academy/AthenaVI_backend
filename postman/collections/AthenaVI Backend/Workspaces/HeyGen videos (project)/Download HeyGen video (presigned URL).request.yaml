@@ -1,0 +1,5 @@
+$kind: http-request
+description: "409 if not ready. `presignedUrl` in response is short-lived; call again to refresh. Optional query `expiresIn` seconds: **60–3600** (server default **300** if omitted)."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/download?expiresIn=300"
+method: GET
+order: 5000

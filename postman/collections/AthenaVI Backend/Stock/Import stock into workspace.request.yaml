@@ -1,0 +1,29 @@
+$kind: http-request
+description: Set `stockExternalId` from a search result `externalId`, or replace manually. Saves `assetId` on success.
+url: "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "provider": "pexels",
+      "externalId": "{{stockExternalId}}",
+      "mediaType": "photo",
+      "name": "Stock photo"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        if (j.data && j.data.asset && j.data.asset.id) {
+          pm.collectionVariables.set('assetId', j.data.asset.id);
+        }
+        if (j.data && j.data.asset && j.data.asset.stockExternalId) {
+          pm.collectionVariables.set('stockExternalId', j.data.asset.stockExternalId);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 8000

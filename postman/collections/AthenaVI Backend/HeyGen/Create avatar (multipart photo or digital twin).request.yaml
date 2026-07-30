@@ -1,0 +1,43 @@
+$kind: http-request
+description: Use **photo** + image file (JPEG/PNG/WebP), or **digital_twin** + image or MP4/WebM. Field name must be **file**. Same nested-response `groupId` test script as JSON Create avatar. Max 32 MB.
+url: "{{baseUrl}}/api/heygen/avatars"
+method: POST
+body:
+  type: formdata
+  content:
+    - type: text
+      key: type
+      value: photo
+    - type: text
+      key: name
+      value: My photo avatar
+    - type: file
+      key: file
+      src: []
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const outer = j.data;
+        const chain = [];
+        let cur = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;
+        for (let i = 0; i < 6 && cur && typeof cur === 'object' && !Array.isArray(cur); i++) {
+          chain.push(cur);
+          const next = cur.data;
+          if (next && typeof next === 'object' && !Array.isArray(next)) cur = next;
+          else break;
+        }
+        function gidFrom(o) {
+          if (!o || typeof o !== 'object') return null;
+          const ag = o.avatar_group;
+          return (o.avatar_group_id || o.group_id || o.avatarGroupId || o.groupId ||
+            (ag && typeof ag === 'object' && (ag.avatar_group_id || ag.group_id || ag.id)) || null);
+        }
+        let gid = null;
+        for (const n of chain) { gid = gidFrom(n); if (gid) break; }
+        if (!gid) for (const n of chain) { if (n.id) { gid = n.id; break; } }
+        if (gid) pm.collectionVariables.set('groupId', String(gid));
+      } catch (e) {}
+    language: text/javascript
+order: 7000

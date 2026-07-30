@@ -1,0 +1,9 @@
+$kind: http-request
+description: Pipes S3 through API; same path does not expire like presigned URLs. Use `fetch` + blob `src` for `<video>` (native `src` cannot send Bearer). Optional `Range` header for seeking.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/stream"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 6000

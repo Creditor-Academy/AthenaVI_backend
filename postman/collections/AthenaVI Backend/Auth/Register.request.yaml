@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Test User",
+      "email": "user@example.com",
+      "password": "password123",
+      "otp": 123456
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        if (j.data && j.data.accessToken) {
+          pm.collectionVariables.set('accessToken', j.data.accessToken);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 3000

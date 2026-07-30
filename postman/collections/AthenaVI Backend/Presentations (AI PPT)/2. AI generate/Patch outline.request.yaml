@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Athena VI Pitch",
+      "slideCount": 2,
+      "density": "balanced",
+      "locale": "en",
+      "slides": [
+        {
+          "order": 1,
+          "title": "Title",
+          "summary": "Intro",
+          "suggestedContentType": "title"
+        },
+        {
+          "order": 2,
+          "title": "Problem",
+          "summary": "Pain points",
+          "suggestedContentType": "bullet_list"
+        }
+      ]
+    }
+order: 3000

@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "element": {
+        "type": "shape",
+        "placement": {
+          "x": 200,
+          "y": 200,
+          "width": 400,
+          "height": 240,
+          "rotation": 0,
+          "opacity": 1
+        },
+        "content": {
+          "shape": "rect",
+          "fill": "#0A84FF"
+        }
+      }
+    }
+order: 3000

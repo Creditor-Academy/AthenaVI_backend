@@ -1,0 +1,12 @@
+$kind: collection
+description: |-
+  Stock library: Pexels (photos + videos), Unsplash (photos), Pixabay (photos + videos). Requires at least one of `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY` on the server.
+
+  **Flow:** (1) **Search stock** — default `provider=all` merges all photo providers; videos merge Pexels + Pixabay; (2) **Import stock into workspace** — downloads from provider, copies to S3, creates workspace `Asset`; (3) reference `asset.id` in project JSON as `content.assetId`.
+auth:
+  - id: 9b9bb81e-934d-4d0e-ae77-ab996a5f30ad
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 8000

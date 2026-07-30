@@ -1,0 +1,35 @@
+id: a1b2c3d4-e5f6-7890-abcd-ef1234567890a
+name: Development (Local)
+values:
+  - key: baseUrl
+    value: http://localhost:9000
+    type: default
+    enabled: true
+  - key: accessToken
+    value: ''
+    type: secret
+    enabled: true
+  - key: workspaceId
+    value: ''
+    type: default
+    enabled: true
+  - key: folderId
+    value: ''
+    type: default
+    enabled: true
+  - key: projectId
+    value: ''
+    type: default
+    enabled: true
+  - key: assetId
+    value: ''
+    type: default
+    enabled: true
+  - key: renderId
+    value: ''
+    type: default
+    enabled: true
+  - key: heygenVideoId
+    value: ''
+    type: default
+    enabled: true

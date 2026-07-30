@@ -1,0 +1,38 @@
+$kind: http-request
+description: "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). **`avatarId`** = look id (`avatarLookId`). **`avatarEngine`**: `avatar_iv` (default) or `avatar_v` — must match look `supported_api_engines`. Set **`avatarType`** from the look row. **`expressiveness`**: Avatar IV + `photo_avatar` only. Call **Get HeyGen video** to sync S3. Match `sceneId` / `script` with **Save project data**."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "sceneId": "scene_001",
+      "avatarId": "{{avatarLookId}}",
+      "avatarEngine": "{{avatarEngine}}",
+      "avatarType": "studio_avatar",
+      "title": "Scene 1 take",
+      "resolution": "1080p",
+      "aspectRatio": "16:9",
+      "backgroundColor": "#008000",
+      "voiceId": "{{voiceId}}",
+      "script": "Welcome to our platform.",
+      "voiceSettings": {
+        "speed": 1,
+        "pitch": 0,
+        "locale": "en-US"
+      },
+      "removeBackground": false,
+      "outputFormat": "mp4"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.heygenVideo && j.data.heygenVideo.id;
+        if (id) { pm.collectionVariables.set('heygenVideoId', id); }
+      } catch (e) {}
+    language: text/javascript
+order: 1000

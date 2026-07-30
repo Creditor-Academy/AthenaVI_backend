@@ -1,0 +1,3 @@
+$kind: collection
+description: Audio-only TTS per scene via HeyGen Starfish. MP3 stored at `workspaces/…/scenes/{sceneId}/speech/{speechId}.mp3`. Workspace-scoped credits (`speech_generation`).
+order: 19000

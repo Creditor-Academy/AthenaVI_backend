@@ -1,0 +1,43 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "type": "DECK_LAYOUT",
+      "name": "Title Centered Custom",
+      "contentType": "title",
+      "variant": "v1",
+      "isActive": true,
+      "schema": {
+        "layout_id": "title_centered_custom_v1",
+        "content_type": "title",
+        "grid": "12-col",
+        "slots": [
+          {
+            "id": "title",
+            "region": "cols 2-11, rows 4-7",
+            "max_lines": 3
+          },
+          {
+            "id": "subtitle",
+            "region": "cols 3-10, rows 8-9",
+            "max_lines": 2
+          }
+        ]
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.template && j.data.template.id;
+        if (id) pm.collectionVariables.set("deckTemplateId", id);
+      }
+    language: text/javascript
+order: 4000

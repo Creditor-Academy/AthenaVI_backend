@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Renamed Folder"
+    }
+order: 15000

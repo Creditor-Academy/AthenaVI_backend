@@ -1,0 +1,3 @@
+$kind: collection
+description: Platform superadmin only. Shared CRUD for DECK_LAYOUT (PPT) and VIDEO_SCENE (video). type is required on create.
+order: 12000

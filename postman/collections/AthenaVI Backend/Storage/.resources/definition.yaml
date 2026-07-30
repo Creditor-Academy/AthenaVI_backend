@@ -1,0 +1,3 @@
+$kind: collection
+description: "User storage quota, ledger, upgrade requests, workspace footprint, and superadmin grant/revoke. All `*Bytes` fields are binary bytes (1024³ per GiB). Superadmin grant: `tierId` sets absolute preset (`free`, `plus_10gb`, `pro_50gb`) or `additionalBytes` increments limit by any positive amount."
+order: 10000

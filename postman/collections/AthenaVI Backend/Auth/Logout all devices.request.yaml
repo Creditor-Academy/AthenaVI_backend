@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/logout-all"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 7000

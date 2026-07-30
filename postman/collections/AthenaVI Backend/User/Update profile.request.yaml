@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/profile"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Updated Name",
+      "phoneNumber": "+15551234567"
+    }
+order: 2000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Returns pushNotifications, commentsAndMentions, weeklyDigestEmail, productEmails (booleans). Defaults: first two true, last two false."
+url: "{{baseUrl}}/api/user/settings/notifications"
+method: GET
+order: 3000

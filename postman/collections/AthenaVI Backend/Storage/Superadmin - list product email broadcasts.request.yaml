@@ -1,0 +1,5 @@
+$kind: http-request
+description: Paginated broadcast history (subject, counts, sentBy, htmlBody).
+url: "{{baseUrl}}/api/superadmin/broadcasts/product-email?page=1&limit=20"
+method: GET
+order: 13000

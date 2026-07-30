@@ -3,7 +3,7 @@
 This guide is for the **scene-based video editor** (React/Vite). It explains how to integrate with Athena VI backend project APIs, HeyGen avatar clips, save/load round-trips, and common pitfalls seen in production.
 
 **Canonical HTTP contracts** (every path, status code, field): [`docs/api/README.md`](api/README.md) · [Workspace / projects](api/WORKSPACE_API.md) · [HeyGen project videos](api/HEYGEN_PROJECT_VIDEOS_API.md) · [Credits (billing UX)](./CREDITS_FRONTEND_INTEGRATION.md)  
-**Postman examples**: [`postman/AthenaVI_Backend.postman_collection.json`](../postman/AthenaVI_Backend.postman_collection.json)
+**Postman examples**: [`postman/collections/AthenaVI Backend/`](../postman/collections/AthenaVI%20Backend/) (v3 YAML Local Mode)
 
 ---
 

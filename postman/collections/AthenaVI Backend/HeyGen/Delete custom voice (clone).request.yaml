@@ -1,0 +1,5 @@
+$kind: http-request
+description: Deletes cloned voice only (`POST .../voices/clone`). **400** for selected catalog voices. **403** if not yours. Does not delete avatar.
+url: "{{baseUrl}}/api/heygen/voices/{{voiceId}}"
+method: DELETE
+order: 11000

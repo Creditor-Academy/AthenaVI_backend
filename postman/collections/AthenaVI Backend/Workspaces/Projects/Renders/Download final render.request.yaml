@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns a fresh presigned URL for the final MP4. This succeeds only when render status is `completed`.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}/download"
+method: GET
+order: 4000

@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates?type=VIDEO_SCENE"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 2000

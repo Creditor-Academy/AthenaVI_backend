@@ -1,0 +1,16 @@
+$kind: http-request
+description: Partial update; send at least one boolean field. Merges into the same user_settings row as appearance.
+url: "{{baseUrl}}/api/user/settings/notifications"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "pushNotifications": true,
+      "commentsAndMentions": true,
+      "weeklyDigestEmail": false,
+      "productEmails": false
+    }
+order: 4000

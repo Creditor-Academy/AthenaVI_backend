@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements/reorder"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "elementIds": [
+        "{{elementId}}",
+        "{{elementId2}}"
+      ]
+    }
+order: 6000

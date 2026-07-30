@@ -1,6 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
+// Collection is Postman v3 YAML under postman/collections/AthenaVI Backend/.
+// This script still targets the legacy single-file JSON format and needs a rewrite.
+throw new Error(
+  'update-postman-presentations.js is outdated: edit YAML under postman/collections/AthenaVI Backend/Presentations (AI PPT)/ instead'
+);
+
 const collectionPath = path.join(__dirname, '../postman/AthenaVI_Backend.postman_collection.json');
 const col = JSON.parse(fs.readFileSync(collectionPath, 'utf8'));
 

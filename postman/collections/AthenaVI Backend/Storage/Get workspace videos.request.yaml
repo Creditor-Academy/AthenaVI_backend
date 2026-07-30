@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/videos?status=completed&take=20&skip=0"
+method: GET
+order: 6000

@@ -1,0 +1,13 @@
+$kind: http-request
+description: Moves the project and migrates folder-aware S3 keys for HeyGen scene clips, cached scene renders, and final exports.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/move-folder"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "folderId": "{{folderId}}"
+    }
+order: 7000

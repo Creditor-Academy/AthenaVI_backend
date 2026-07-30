@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Updated Project Name",
+      "thumbnail": "https://example.com/updated-project-preview.png",
+      "status": "draft"
+    }
+order: 5000

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/early-access/requests/{{earlyAccessRequestId}}/approve"
+method: POST
+order: 18000

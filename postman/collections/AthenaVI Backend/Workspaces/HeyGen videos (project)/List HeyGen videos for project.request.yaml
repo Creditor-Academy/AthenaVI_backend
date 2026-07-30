@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos"
+method: GET
+order: 2000

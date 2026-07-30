@@ -1,0 +1,13 @@
+$kind: http-request
+description: Only allowed if `groupId` was recorded for your user (e.g. after Create avatar). **403** otherwise.
+url: "{{baseUrl}}/api/heygen/avatars/{{groupId}}/consent"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reroute_url": "https://example.com/after-consent"
+    }
+order: 8000

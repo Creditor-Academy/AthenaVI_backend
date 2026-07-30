@@ -1,0 +1,5 @@
+$kind: http-request
+description: Deletes one look. If last look in group, cascades to full group delete (+ paired voice). Uses `avatarLookId` from List avatar looks.
+url: "{{baseUrl}}/api/heygen/avatars/looks/{{avatarLookId}}"
+method: DELETE
+order: 10000

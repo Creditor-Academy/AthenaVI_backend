@@ -1,0 +1,27 @@
+$kind: http-request
+description: Filtered to looks whose avatar **group_id** belongs to you. Test script saves first look `id` to `avatarLookId`. Omit `group_id` for all your looks; add `group_id` + private only for **your** group — otherwise **403**.
+url: "{{baseUrl}}/api/heygen/avatars/looks?ownership=private&limit=20"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      function firstLookId(root) {
+        const KEYS = ['looks','avatar_looks','avatars','list','items','data'];
+        function walk(n, d) {
+          if (d > 10 || n == null) return null;
+          if (Array.isArray(n)) { for (const it of n) { if (it && it.id) return String(it.id); } return null; }
+          if (typeof n !== 'object') return null;
+          for (const k of KEYS) { if (Array.isArray(n[k]) && n[k][0] && n[k][0].id) return String(n[k][0].id); }
+          if (n.data) { const x = walk(n.data, d + 1); if (x) return x; }
+          for (const k of KEYS) { if (n[k]) { const x = walk(n[k], d + 1); if (x) return x; } }
+          return null;
+        }
+        return walk(root, 0);
+      }
+      try {
+        const j = pm.response.json();
+        const lid = firstLookId(j.data);
+        if (lid) pm.collectionVariables.set('avatarLookId', lid);
+      } catch (e) {}
+    language: text/javascript
+order: 5000
