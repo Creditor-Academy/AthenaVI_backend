@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "social",
+      "modelId": "gpt-image-1-hd",
+      "formatId": "instagram_post",
+      "style": "corporate",
+      "prompt": "Product launch promo for Athena VI virtual instructor",
+      "headline": "Create courses faster",
+      "subheadline": "AI-powered instructor studio",
+      "brandPalette": ["#0B1F3A", "#3DDC97"]
+    }
+order: 3100

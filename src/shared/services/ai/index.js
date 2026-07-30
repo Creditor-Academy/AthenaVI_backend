@@ -5,7 +5,7 @@ const {
   DEFAULT_OUTLINE_MODEL,
   DEFAULT_SLIDE_MODEL,
 } = require('./llm.service');
-const { generateImage, DEFAULT_IMAGE_MODEL } = require('./image.service');
+const { generateImage, editImage, DEFAULT_IMAGE_MODEL } = require('./image.service');
 const { checkImageRelevance } = require('./vision.service');
 
 module.exports = {
@@ -15,6 +15,7 @@ module.exports = {
   DEFAULT_OUTLINE_MODEL,
   DEFAULT_SLIDE_MODEL,
   generateImage,
+  editImage,
   DEFAULT_IMAGE_MODEL,
   checkImageRelevance,
 };

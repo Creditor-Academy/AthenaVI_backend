@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}/tweak"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "instruction": "Make the background darker and leave more space on the left for text"
+    }
+order: 5100

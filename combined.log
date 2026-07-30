@@ -3608,3 +3608,7 @@
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-07-27T09:56:16.205Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-07-27T10:56:14.190Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-07-27T11:56:14.979Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-07-30T10:22:43.459Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-30T10:22:43.462Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-30T10:22:43.491Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-30T10:22:43.491Z"}

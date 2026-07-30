@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}/regenerate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "prompt": "Same scene but warmer golden-hour lighting"
+    }
+order: 5000

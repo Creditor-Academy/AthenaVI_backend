@@ -137,6 +137,34 @@ async function getPresignedGetUrl(key, expiresInSeconds = 300, options = {}) {
   return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
 }
 
+async function getObjectBuffer(key) {
+  if (!BUCKET) {
+    throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
+  }
+
+  const out = await s3.send(
+    new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    })
+  );
+
+  const body = out.Body;
+  if (!body) {
+    throw new AppError(messages.NOT_FOUND, 404);
+  }
+
+  if (typeof body.transformToByteArray === 'function') {
+    return Buffer.from(await body.transformToByteArray());
+  }
+
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 async function downloadObjectToFile(key, destPath) {
   if (!BUCKET) {
     throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
@@ -332,6 +360,7 @@ module.exports = {
   copyFile,
   moveFile,
   getPresignedGetUrl,
+  getObjectBuffer,
   downloadObjectToFile,
   streamObjectToResponse,
   streamRemoteUrlToResponse,

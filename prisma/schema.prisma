@@ -124,6 +124,7 @@ model User {
   creditTransactions  CreditTransaction[]
   storageTransactions StorageTransaction[]
   uploadedAssets      Asset[]              @relation("AssetUploader")
+  imageGenerations    ImageGeneration[]
 
   ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
@@ -194,6 +195,7 @@ model Workspace {
   sceneRenderCaches  SceneRenderCache[]
   heygenWorkspaceShares HeygenWorkspaceShare[]
   projectComments    ProjectComment[]
+  imageGenerations   ImageGeneration[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -484,7 +486,7 @@ model Asset {
   url String
   key String
 
-  source          String @default("upload") // upload | stock
+  source          String @default("upload") // upload | stock | ai_gen
   stockProvider   String?
   stockExternalId String?
   stockMetadata   Json?
@@ -492,11 +494,49 @@ model Asset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  uploader  User      @relation("AssetUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader         User              @relation("AssetUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  imageGenerations ImageGeneration[]
 
   @@unique([workspaceId, stockProvider, stockExternalId])
   @@index([workspaceId, uploadedBy])
+}
+
+model ImageGeneration {
+  id             String  @id @default(uuid())
+  workspaceId    String  @map("workspace_id")
+  userId         String  @map("user_id")
+  mode           String
+  modelId        String  @map("model_id")
+  formatId       String? @map("format_id")
+  styleId        String? @map("style_id")
+  prompt         String  @db.Text
+  revisedPrompt  String? @map("revised_prompt") @db.Text
+  request        Json?
+  parentId       String? @map("parent_id")
+  rootId         String? @map("root_id")
+  action         String
+  assetId        String? @map("asset_id")
+  s3Key          String  @map("s3_key")
+  url            String
+  openaiSize     String? @map("openai_size")
+  exportWidth    Int?    @map("export_width")
+  exportHeight   Int?    @map("export_height")
+  creditsCharged Int     @default(0) @map("credits_charged")
+  status         String  @default("SUCCEEDED")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     Asset?           @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  parent    ImageGeneration? @relation("ImageGenChain", fields: [parentId], references: [id], onDelete: SetNull)
+  children  ImageGeneration[] @relation("ImageGenChain")
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, userId])
+  @@index([rootId])
+  @@index([assetId])
+  @@map("image_generations")
 }
 
 model HeygenResponse {

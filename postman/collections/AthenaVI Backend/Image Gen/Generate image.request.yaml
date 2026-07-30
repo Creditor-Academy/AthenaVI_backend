@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "image",
+      "modelId": "gpt-image-1",
+      "formatId": "square",
+      "style": "cinematic",
+      "prompt": "A serene mountain lake at dawn with mist over the water"
+    }
+order: 3000

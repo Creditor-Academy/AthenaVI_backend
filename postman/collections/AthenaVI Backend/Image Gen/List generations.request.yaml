@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations"
+method: GET
+queryParams:
+  take: "20"
+  skip: "0"
+order: 4000

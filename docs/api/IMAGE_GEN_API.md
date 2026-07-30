@@ -1,0 +1,192 @@
+# Image Gen API
+
+Base path: **`/api/image-gen`**
+
+OpenAI-only workspace image studio: general images, infographics, and social creatives (LinkedIn, Instagram, Facebook, X, YouTube). Results are saved as workspace **Assets** (`source: "ai_gen"`) and downloadable as PNG / JPG / JPEG / PDF.
+
+**Auth:** `Authorization: Bearer <access_token>` on all routes.  
+**Workspace routes:** `checkWorkspaceAccess` (PRIVATE = owner; TEAM = any member).
+
+**Credits:** charged **on success only** from the workspace billing pool (PRIVATE → owner personal; TEAM → workspace). Insufficient → **402**. Downloads are free. Rate limits → **429**.
+
+---
+
+## Catalogs
+
+### Models
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/models` |
+
+**Response (200)** – `data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `supportsEdit`, `creditEstimate`.
+
+| `id` | OpenAI | Notes |
+|------|--------|--------|
+| `gpt-image-1` | `gpt-image-1` medium | Default |
+| `gpt-image-1-hd` | `gpt-image-1` high | HD |
+| `dall-e-3` | `dall-e-3` | Image/social; tweaks use GPT Image edit |
+
+### Formats
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/formats` |
+
+**Response (200)** – `data.formats[]`: `id`, `name`, `category` (`generic`|`social`), `width`, `height`, `safeZone`.
+
+Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `instagram_story`, `instagram_landscape`, `facebook_post`, `facebook_cover`, `x_post`, `x_header`, `youtube_thumbnail`. Generic: `square`, `landscape`, `portrait`.
+
+### Styles
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/styles` |
+
+**Response (200)** – `data.styles[]`: `id`, `name` (vibe presets).
+
+---
+
+## Credit estimate
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/estimate` |
+| **Query** | `modelId`, `mode` (`image`\|`infographic`\|`social`), `tweak` (`true`/`false`) |
+
+**Response (200)** – `data`: `{ athenaCredits, breakdown }`.
+
+---
+
+## Generate
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generate` |
+| **Status** | **201** (synchronous — allow long client timeout) |
+
+**Body**
+
+```json
+{
+  "mode": "image",
+  "modelId": "gpt-image-1",
+  "formatId": "instagram_post",
+  "style": "cinematic",
+  "prompt": "Product launch visual for Athena VI",
+  "headline": "Create faster",
+  "subheadline": "AI instructor studio",
+  "brandPalette": ["#0B1F3A", "#3DDC97"],
+  "infographic": {
+    "layout": "process",
+    "title": "Onboarding",
+    "sections": [{ "title": "Sign up", "bullets": ["Email", "Verify"] }]
+  },
+  "name": "launch.png"
+}
+```
+
+| Field | Rules |
+|-------|--------|
+| `mode` | `image` \| `infographic` \| `social` (default `image`) |
+| `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). |
+| `prompt` | Required unless `infographic.sections` provided |
+| `style` / `styleId` | Optional vibe from `/styles` |
+
+**Response `data`:** `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`.
+
+Master file is always **PNG** on S3.
+
+---
+
+## List / get generations
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generations` |
+| **Query** | `take` (1–100), `skip` |
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` |
+
+PRIVATE workspaces only return the current user’s generations.
+
+---
+
+## Regenerate
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` |
+| **Status** | **201** |
+
+Body fields optional — omitted fields reuse the parent generation’s request. Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+
+---
+
+## Tweak
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` |
+| **Status** | **201** |
+
+```json
+{ "instruction": "Make the background darker and move the logo left" }
+```
+
+Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge).
+
+---
+
+## Download
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` |
+| **Query** | `format=png` \| `jpg` \| `jpeg` \| `pdf` (default **png**) |
+
+Returns file attachment (`Content-Disposition: attachment`). **No credit charge.**
+
+| format | Content-Type |
+|--------|----------------|
+| `png` | `image/png` |
+| `jpg` / `jpeg` | `image/jpeg` |
+| `pdf` | `application/pdf` (single page) |
+
+---
+
+## Credits (defaults)
+
+| Feature | Default AC | Env override |
+|---------|------------|--------------|
+| `image_gen_gpt_image` | 6 | `IMAGE_GEN_GPT_IMAGE_AC` |
+| `image_gen_gpt_image_hd` | 12 | `IMAGE_GEN_GPT_IMAGE_HD_AC` |
+| `image_gen_dall_e_3` | 8 | `IMAGE_GEN_DALL_E_3_AC` |
+| Infographic surcharge | +2 | `IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC` |
+| Social surcharge | +1 | `IMAGE_GEN_SOCIAL_SURCHARGE_AC` |
+
+Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`.
+
+Requires **`OPENAI_API_KEY`**.
+
+---
+
+## Assets library
+
+AI outputs appear in `GET /api/assets/:workspaceId?source=ai_gen` with `stockMetadata.generationId` for linking back to studio history.
+
+---
+
+**[← API index](README.md)** · Frontend: [`IMAGE_GEN_FRONTEND_INTEGRATION.md`](../IMAGE_GEN_FRONTEND_INTEGRATION.md)

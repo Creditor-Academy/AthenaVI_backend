@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "infographic",
+      "modelId": "gpt-image-1",
+      "style": "flat_illustration",
+      "prompt": "Customer onboarding funnel",
+      "brandPalette": ["#0B1F3A", "#3DDC97"],
+      "infographic": {
+        "layout": "process",
+        "title": "Onboarding",
+        "sections": [
+          { "title": "Sign up", "bullets": ["Create account", "Verify email"] },
+          { "title": "Setup", "bullets": ["Pick workspace", "Invite team"] },
+          { "title": "Create", "bullets": ["First project", "Publish"] }
+        ]
+      }
+    }
+order: 3200

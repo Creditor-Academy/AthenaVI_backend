@@ -31,7 +31,9 @@ const findAssets = ({ workspaceId, userId, isPrivate, source, take, skip }) => {
       ? { source: 'upload' }
       : source === 'stock'
         ? { source: 'stock' }
-        : {};
+        : source === 'ai_gen'
+          ? { source: 'ai_gen' }
+          : {};
 
   return prisma.asset.findMany({
     where: {

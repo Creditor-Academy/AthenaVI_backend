@@ -160,7 +160,10 @@ const uploadAsset = async ({ userId, workspace, file, name }) => {
 
 const getAssets = async (userId, workspace, query) => {
   const isPrivate = workspace.type === 'PRIVATE';
-  const source = query.source === 'upload' || query.source === 'stock' ? query.source : undefined;
+  const source =
+    query.source === 'upload' || query.source === 'stock' || query.source === 'ai_gen'
+      ? query.source
+      : undefined;
 
   const assets = await assetDao.findAssets({
     workspaceId: workspace.id,

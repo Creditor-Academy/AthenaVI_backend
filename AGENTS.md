@@ -113,7 +113,7 @@ src/modules/<feature>/
 
 ### Route registration
 
-- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`.
+- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/image-gen`.
 - **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
@@ -226,6 +226,8 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
 | Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
 | **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |
+| Image Gen (AI studio) | [`docs/api/IMAGE_GEN_API.md`](docs/api/IMAGE_GEN_API.md) |
+| **Image Gen (frontend)** | [`docs/IMAGE_GEN_FRONTEND_INTEGRATION.md`](docs/IMAGE_GEN_FRONTEND_INTEGRATION.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |
@@ -320,6 +322,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
 | `docs/PRESENTATION_FRONTEND_INTEGRATION.md` | Frontend PPT/canvas + templates integration (UI flows) |
+| `docs/IMAGE_GEN_FRONTEND_INTEGRATION.md` | Frontend AI image studio (models, social, regen/tweak, download) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
 | `docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md` | Frontend notifications guide (settings, inbox, comments) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |

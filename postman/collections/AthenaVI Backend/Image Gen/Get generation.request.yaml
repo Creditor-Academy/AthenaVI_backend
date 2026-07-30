@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}"
+method: GET
+order: 4100

@@ -1,52 +1,78 @@
 const AppError = require('../../utils/AppError');
 const { getOpenAI } = require('./openai.client');
+const { toFile } = require('openai');
 
 const DEFAULT_IMAGE_MODEL = process.env.PPT_IMAGE_MODEL || 'gpt-image-1';
 
 /**
  * Map public quality knobs to OpenAI image quality values.
- * @param {'standard'|'hd'|string} quality
+ * @param {'standard'|'hd'|'low'|'medium'|'high'|string} quality
+ * @param {string} model
  */
-function mapQuality(quality) {
-  if (quality === 'hd') return 'high';
-  if (quality === 'standard') return 'medium';
-  return quality || 'medium';
+function mapQuality(quality, model) {
+  const isGptImage = String(model || '').startsWith('gpt-image');
+  if (isGptImage) {
+    if (quality === 'hd' || quality === 'high') return 'high';
+    if (quality === 'standard' || quality === 'medium') return 'medium';
+    if (quality === 'low') return 'low';
+    return quality || 'medium';
+  }
+  // dall-e-3
+  if (quality === 'hd' || quality === 'high') return 'hd';
+  return 'standard';
+}
+
+function extractB64(response) {
+  const image = response?.data?.[0];
+  const b64 = image?.b64_json;
+  if (!b64) {
+    throw new AppError('OpenAI image response missing b64_json', 502);
+  }
+  return {
+    b64,
+    buffer: Buffer.from(b64, 'base64'),
+    revised_prompt: image?.revised_prompt || null,
+  };
 }
 
 /**
  * Generate an image via OpenAI Images API (b64_json).
- * @param {{ prompt: string, quality?: 'standard'|'hd' }} opts
- * @returns {Promise<{ b64: string, buffer: Buffer, revised_prompt: string|null, usage: object|null, latencyMs: number }>}
+ * @param {{ prompt: string, quality?: string, model?: string, size?: string }} opts
  */
-async function generateImage({ prompt, quality = 'standard' } = {}) {
+async function generateImage({
+  prompt,
+  quality = 'standard',
+  model = DEFAULT_IMAGE_MODEL,
+  size,
+} = {}) {
   const openai = getOpenAI();
-  const model = DEFAULT_IMAGE_MODEL;
+  const resolvedModel = model || DEFAULT_IMAGE_MODEL;
 
   if (!prompt || !String(prompt).trim()) {
     throw new AppError('Image prompt is required', 400);
+  }
+
+  const params = {
+    model: resolvedModel,
+    prompt: String(prompt),
+    quality: mapQuality(quality, resolvedModel),
+    n: 1,
+  };
+  if (size) {
+    params.size = size;
   }
 
   const started = Date.now();
   let response;
   try {
     response = await openai.images.generate({
-      model,
-      prompt: String(prompt),
-      quality: mapQuality(quality),
-      // GPT image models return b64 by default; set explicitly for dall-e fallbacks.
+      ...params,
       response_format: 'b64_json',
-      n: 1,
     });
   } catch (err) {
-    // Some GPT image models reject response_format — retry without it.
     if (err?.message && /response_format/i.test(err.message)) {
       try {
-        response = await openai.images.generate({
-          model,
-          prompt: String(prompt),
-          quality: mapQuality(quality),
-          n: 1,
-        });
+        response = await openai.images.generate(params);
       } catch (retryErr) {
         const msg = retryErr?.message || 'OpenAI image generation failed';
         const status = retryErr?.status >= 400 && retryErr?.status < 600 ? retryErr.status : 502;
@@ -59,24 +85,87 @@ async function generateImage({ prompt, quality = 'standard' } = {}) {
     }
   }
 
-  const latencyMs = Date.now() - started;
-  const image = response?.data?.[0];
-  const b64 = image?.b64_json;
+  const extracted = extractB64(response);
+  return {
+    ...extracted,
+    usage: response?.usage || null,
+    latencyMs: Date.now() - started,
+    model: resolvedModel,
+  };
+}
 
-  if (!b64) {
-    throw new AppError('OpenAI image response missing b64_json', 502);
+/**
+ * Edit an existing image via OpenAI Images Edit API.
+ * Uses gpt-image models (dall-e-3 does not support edit).
+ * @param {{ imageBuffer: Buffer, instruction: string, model?: string, size?: string, quality?: string }} opts
+ */
+async function editImage({
+  imageBuffer,
+  instruction,
+  model = 'gpt-image-1',
+  size,
+  quality = 'standard',
+} = {}) {
+  const openai = getOpenAI();
+  let resolvedModel = model || 'gpt-image-1';
+  if (!String(resolvedModel).startsWith('gpt-image')) {
+    resolvedModel = 'gpt-image-1';
   }
 
+  if (!imageBuffer || !Buffer.isBuffer(imageBuffer)) {
+    throw new AppError('Image buffer is required for edit', 400);
+  }
+  if (!instruction || !String(instruction).trim()) {
+    throw new AppError('Tweak instruction is required', 400);
+  }
+
+  const file = await toFile(imageBuffer, 'source.png', { type: 'image/png' });
+  const params = {
+    model: resolvedModel,
+    image: file,
+    prompt: String(instruction).trim(),
+    quality: mapQuality(quality, resolvedModel),
+    n: 1,
+  };
+  if (size) {
+    params.size = size;
+  }
+
+  const started = Date.now();
+  let response;
+  try {
+    response = await openai.images.edit({
+      ...params,
+      response_format: 'b64_json',
+    });
+  } catch (err) {
+    if (err?.message && /response_format/i.test(err.message)) {
+      try {
+        response = await openai.images.edit(params);
+      } catch (retryErr) {
+        const msg = retryErr?.message || 'OpenAI image edit failed';
+        const status = retryErr?.status >= 400 && retryErr?.status < 600 ? retryErr.status : 502;
+        throw new AppError(msg, status);
+      }
+    } else {
+      const msg = err?.message || 'OpenAI image edit failed';
+      const status = err?.status >= 400 && err?.status < 600 ? err.status : 502;
+      throw new AppError(msg, status);
+    }
+  }
+
+  const extracted = extractB64(response);
   return {
-    b64,
-    buffer: Buffer.from(b64, 'base64'),
-    revised_prompt: image?.revised_prompt || null,
+    ...extracted,
     usage: response?.usage || null,
-    latencyMs,
+    latencyMs: Date.now() - started,
+    model: resolvedModel,
   };
 }
 
 module.exports = {
   generateImage,
+  editImage,
+  mapQuality,
   DEFAULT_IMAGE_MODEL,
 };

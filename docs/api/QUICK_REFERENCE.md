@@ -95,11 +95,21 @@
 | GET | `/api/workspaces/:workspaceId/storage` | Bearer + member | Workspace footprint + owner quota |
 | GET | `/api/workspaces/:workspaceId/videos` | Bearer + member | Workspace video library across projects |
 | POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
-| GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|all`) |
+| GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|ai_gen\|all`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |
 | DELETE | `/api/assets/:workspaceId/:assetId` | Bearer + workspace access | Delete asset |
 | GET | `/api/stock/search` | Bearer | Search stock (`q`, `type=photo\|video`, `provider=pexels\|unsplash\|pixabay\|all`, `page`, `perPage`) |
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
+| GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog |
+| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (social + generic) |
+| GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
+| GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
+| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image generations |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |
+| POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
+| POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` | Bearer + workspace access | Download `png`\|`jpg`\|`jpeg`\|`pdf` |
 | GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |

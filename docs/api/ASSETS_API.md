@@ -41,7 +41,7 @@ Allowed MIME types: **`image/jpeg`**, **`image/png`**, **`image/webp`**, **`imag
 
 - `take` – page size, **1–100** (default **20** when omitted).
 - `skip` – offset, default **0**.
-- `source` – `upload` \| `stock` \| `all` (default **all** when omitted).
+- `source` – `upload` \| `stock` \| `ai_gen` \| `all` (default **all** when omitted).
 
 For **PRIVATE** workspaces, only assets **uploaded by the current user** are returned. For **TEAM** workspaces, assets for the whole workspace are listed.
 

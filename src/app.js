@@ -57,6 +57,7 @@ const heygenRoutes = require('./modules/heygen/heygen.routes');
 const superadminRoutes = require('./modules/superadmin/superadmin.routes');
 const stockRoutes = require('./modules/stock/stock.routes');
 const earlyAccessRoutes = require('./modules/earlyAccess/earlyAccess.routes');
+const imageGenRoutes = require('./modules/imageGen/imageGen.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -65,6 +66,7 @@ app.use('/api/credits', creditRoutes);
 app.use("/api/assets", assetRoutes);
 app.use('/api/heygen', heygenRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/image-gen', imageGenRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/early-access', earlyAccessRoutes);
 app.use(errorHandler);
