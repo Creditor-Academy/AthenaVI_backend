@@ -8,6 +8,7 @@ function buildSystem() {
   return [
     'You are a presentation strategist. Build a clear narrative outline for a slide deck.',
     'Do NOT write full slide body copy. Do NOT invent layout or design.',
+    'Also invent a concise presentation title from the source meaning — not a truncated copy of the prompt.',
     'Return JSON only matching the schema.',
   ].join(' ');
 }
@@ -42,15 +43,20 @@ function buildUser(vars = {}) {
     'Rules:',
     '- Strong narrative arc (hook → problem → solution → proof → close)',
     '- One idea per slide',
-    '- Titles ≤ 8 words; summary ≤ 25 words',
+    '- Slide titles ≤ 8 words; summary ≤ 25 words',
+    '- Deck `title`: concise natural title (prefer 3–10 words, max 255 chars).',
+    '  Derive it from the meaning of the full source. Do NOT paste or truncate the prompt.',
+    '  Example good: "AI in Modern Healthcare". Example bad: "Create a presentation about…"',
     '- suggestedContentType from:',
     '  title|agenda|bullet_list|comparison|stat|quote|image+text|',
     '  timeline|team|chart|closing|section_divider',
+    '- Prefer image+text (or title/agenda/closing variants with imagery) for most slides so each slide can carry a visual.',
+    '- Use chart only when the slide is primarily quantitative.',
     '',
     'Output JSON schema:',
     JSON.stringify(
       {
-        title: '...',
+        title: 'AI in Modern Healthcare',
         slides: [
           {
             order: 1,

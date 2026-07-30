@@ -44,18 +44,19 @@ After AI fills ≤20 slides, user can still **add more manually** up to 40.
 
 ### A — Create with AI
 
-1. `POST .../presentations` `{ title, folderId, themeId?, createMode: "blank" }`  
+1. `POST .../presentations` `{ folderId, themeId?, createMode: "blank" }` — **title optional** (defaults to `Untitled Presentation`)  
 2. Optional: show credit estimate `GET .../credit-estimate`  
 3. `POST .../outline` `{ source: "prompt", prompt: "<flattened string>", slideCount, density }`  
    - Flatten voice/tone/audience into the **string** `prompt` (no nested prompt object).  
-4. Optional: `PATCH .../outline` if user edits outline cards  
+   - Response includes **`presentation.title`** (generated from the prompt) and `outline`. Persist/use that title in the UI.  
+4. Optional: `PATCH .../outline` if user edits outline cards (also updates presentation title when `outline.title` changes)  
 5. `POST .../theme` `{ themeId }` and/or `themeTokens`  
 6. `POST .../generate` → **202** → poll `GET .../status` until `READY` / `FAILED`  
 7. Open canvas editor on `GET .../presentations/:id` (slides include `elements`)
 
 ### B — Create blank (Canva-style)
 
-1. `POST .../presentations` `{ title, folderId, createMode: "blank" }`  
+1. `POST .../presentations` `{ title?, folderId, createMode: "blank" }`  
 2. `POST .../slides` to add slides (manual), or with AI:
 
 ```json
@@ -108,6 +109,23 @@ On insert: `POST .../slides/:slideId/elements` with `{ "presetId": "text_title" 
 ## Canvas data (render & save)
 
 Default canvas: **1920 × 1080** (16:9).
+
+### Visuals / images
+
+AI generate **prefers a supporting image on nearly every slide** (stock → AI Path A) unless the outline/prompt opts out (`text-only` / `no images`) or the slide is a chart/path_b diagram.
+
+After generate, each slide should include either:
+
+- `elements.elements[]` item with `type: "image"` and `content.url` (presigned), or
+- `imageRef: { source: "ai_gen"|"stock"|"path_b", url, s3Key, status: "ready" }`
+
+| `imageRef.status` | Meaning |
+|-------------------|---------|
+| `ready` | Image URL available |
+| `failed` | Image generation/upload failed — see `imageRef.error` (slide content may still be READY) |
+| `skipped` | No image required for this slide (`visual_need` chart/none/etc.) |
+
+FE: show “No visuals” only when `status === "skipped"` or there is no image element. For `failed`, show the error / retry (`POST .../regenerate` with `target: "image"`).
 
 ```json
 {

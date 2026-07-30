@@ -35,7 +35,6 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 
 ```json
 {
-  "title": "My deck",
   "folderId": "<uuid>",
   "themeId": "midnight_blue",
   "themeTokens": null,
@@ -46,14 +45,14 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 }
 ```
 
-- Provide **`title`** and/or **`name`** (at least one required).
+- **`title`** / **`name`** optional. If omitted, project is created as **`Untitled Presentation`** (AI flow fills a real title on outline).
 - **`folderId`** required (must belong to workspace).
 - **`themeId`** and/or **`themeTokens`** optional; tokens resolved from catalog when `themeId` is set.
 - **`aspectRatio`**: only `16:9` today.
 - **`createMode`**: `blank` (default, zero slides) | `template` (requires active `DECK_LAYOUT` **`templateId`**; creates one READY slide with freeform `elements`).
-- AI path: create blank → outline → theme → generate.
+- AI path: create blank (no title needed) → outline (generates title) → theme → generate.
 
-**Response `data`:** `{ project, deck }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
+**Response `data`:** `{ project, deck, slides }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
 
 ---
 
@@ -90,7 +89,9 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 **Response `data`:** `{ project, deck, slides }`
 
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
-- `slides`: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …)
+- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …)
+- `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
+- Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` for canvas render.
 
 ### Freeform canvas shape (`slide.elements`)
 
@@ -173,6 +174,36 @@ Estimate only — does not charge. Generate estimate assumes Path A image cost p
 
 Optional: `slideCount` (default 12, range 5–20), `density` (`concise` \| `balanced` \| `detailed`), `locale`.
 
+The outline LLM also returns a **deck title** derived from the full prompt (concise, natural; not a truncated prompt). That title is:
+1. Stored on `outline.title`
+2. Saved as **`project.name`** before the response is returned
+3. Returned as `data.presentation`
+
+Fallback title if generation/sanitization fails: **`Untitled Presentation`**.
+
+**Response `data` (typical):**
+
+```json
+{
+  "presentation": {
+    "id": "<projectId>",
+    "title": "AI in Modern Healthcare"
+  },
+  "outline": {
+    "title": "AI in Modern Healthcare",
+    "slideCount": 10,
+    "density": "balanced",
+    "locale": "en",
+    "slides": [
+      { "order": 1, "title": "…", "summary": "…", "suggestedContentType": "title" }
+    ]
+  },
+  "deckId": "…",
+  "promptBundleVersion": "…",
+  "creditsCharged": 0
+}
+```
+
 Charges **`ppt_outline`** on success (token reconcile; see credits guide).
 
 ### Patch outline
@@ -197,7 +228,7 @@ Charges **`ppt_outline`** on success (token reconcile; see credits guide).
 }
 ```
 
-No LLM charge for manual patch.
+No LLM charge for manual patch. If `title` is present, it is also saved to **`project.name`**. Response includes `presentation: { id, title }` plus `outline`.
 
 ---
 

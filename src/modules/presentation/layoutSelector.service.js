@@ -56,7 +56,15 @@ function layoutCapacity(template) {
   return { maxItems, maxWordsHint, hasDenseVariant, slotCount: slots.length };
 }
 
-function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId) {
+function templateHasImageSlot(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.some((slot) => {
+    const id = String(slot?.id || '').toLowerCase();
+    return id.includes('image') || id === 'hero' || slot?.fit === 'cover';
+  });
+}
+
+function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId, preferImageSlot) {
   const layoutId =
     template?.schema?.layout_id || template?.id || `${template?.contentType}_${template?.variant}`;
   const capacity = layoutCapacity(template);
@@ -64,6 +72,11 @@ function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId) {
 
   if (previousLayoutId && String(layoutId) === String(previousLayoutId)) {
     score -= 100;
+  }
+
+  if (preferImageSlot) {
+    if (templateHasImageSlot(template)) score += 50;
+    else score -= 40;
   }
 
   if (bulletCount >= 7) {
@@ -95,7 +108,7 @@ function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId) {
  * Rule-based layout pick: match contentType, prefer by density, avoid previousLayoutId.
  * @returns {{ layoutId: string, template: object|null }}
  */
-function selectLayout({ contentType, content, previousLayoutId, templates }) {
+function selectLayout({ contentType, content, previousLayoutId, templates, preferImageSlot = false }) {
   const list = Array.isArray(templates) ? templates : [];
   const type = contentType != null ? String(contentType) : null;
 
@@ -103,14 +116,23 @@ function selectLayout({ contentType, content, previousLayoutId, templates }) {
     ? list.filter((t) => String(t.contentType || t.schema?.content_type || '') === type)
     : list.slice();
 
-  const pool = matched.length > 0 ? matched : list;
+  let pool = matched.length > 0 ? matched : list;
+
+  // If we need an image slot and this content type has none, fall back to image+text templates
+  if (preferImageSlot && pool.length > 0 && !pool.some(templateHasImageSlot)) {
+    const imageText = list.filter(
+      (t) => String(t.contentType || t.schema?.content_type || '') === 'image+text'
+    );
+    if (imageText.length) pool = imageText;
+  }
+
   if (pool.length === 0) {
     return { layoutId: null, template: null };
   }
 
   const density = contentDensity(content);
   const scored = pool
-    .map((template) => scoreTemplate(template, density, previousLayoutId))
+    .map((template) => scoreTemplate(template, density, previousLayoutId, preferImageSlot))
     .sort((a, b) => b.score - a.score || String(a.layoutId).localeCompare(String(b.layoutId)));
 
   // Prefer non-previous when available even if scores close
@@ -128,4 +150,5 @@ module.exports = {
   selectLayout,
   contentDensity,
   countWords,
+  templateHasImageSlot,
 };

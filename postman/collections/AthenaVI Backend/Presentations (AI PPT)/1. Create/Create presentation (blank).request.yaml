@@ -1,5 +1,5 @@
 $kind: http-request
-description: Saves presentationId from data.project.id
+description: Title optional for AI create — omit title and let outline generate it. Saves presentationId from data.project.id
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations"
 method: POST
 headers:
@@ -9,7 +9,6 @@ body:
   type: json
   content: |-
     {
-      "title": "Q3 Pitch",
       "folderId": "{{folderId}}",
       "createMode": "blank",
       "themeId": "midnight_blue",

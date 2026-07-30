@@ -87,8 +87,8 @@ const createPresentationSchema = Joi.object({
     workspaceId: workspaceIdParam,
   }),
   body: Joi.object({
-    title: Joi.string().trim().min(1).max(255),
-    name: Joi.string().trim().min(1).max(255),
+    title: Joi.string().trim().min(1).max(255).optional().allow(null, ''),
+    name: Joi.string().trim().min(1).max(255).optional().allow(null, ''),
     folderId: Joi.string().uuid().required(),
     themeId: Joi.string().trim().max(64).allow(null).optional(),
     themeTokens: themeTokensSchema.allow(null).optional(),
@@ -100,9 +100,7 @@ const createPresentationSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional().allow(null, ''),
     }),
-  })
-    .or('title', 'name')
-    .required(),
+  }).required(),
   query: Joi.object({}).unknown(false),
 });
 

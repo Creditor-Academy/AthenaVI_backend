@@ -67,7 +67,7 @@ async function createPresentation({
   }
 
   const resolvedTokens = themeService.resolveThemeTokens({ themeId, themeTokens });
-  const displayName = String(name || title || 'Untitled presentation').trim();
+  const displayName = String(name || title || 'Untitled Presentation').trim() || 'Untitled Presentation';
 
   const { project, deck } = await presentationDao.createPresentationProject({
     workspaceId,
