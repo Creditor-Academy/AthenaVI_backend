@@ -84,6 +84,8 @@ Use blob download with filename from `Content-Disposition`. No credits.
 | 429 | Rate limited — show retry |
 | 502/503 | OpenAI failure / not configured |
 
+Successful charges appear in workspace credit history with `metadata.feature` like `image_gen_gpt_image` / `image_gen_tweak`; UI should show `usageDetail.label` (e.g. “AI image generation”).
+
 ---
 
 ## Caps / UX hints

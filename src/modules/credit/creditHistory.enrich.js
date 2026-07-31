@@ -1,5 +1,6 @@
 const prisma = require('../../shared/config/prismaClient');
 const { FEATURE } = require('../../shared/config/creditPricing');
+const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
 
 const FEATURE_LABELS = Object.freeze({
   [FEATURE.HEYGEN_VIDEO]: 'Scene avatar video',
@@ -15,6 +16,12 @@ const FEATURE_LABELS = Object.freeze({
   ppt_image_path_b: 'Presentation diagram',
   ppt_export: 'Presentation export',
   ppt_image_cache_hit: 'Presentation image (cached)',
+  [IMAGE_GEN_FEATURE.GPT_IMAGE]: 'AI image generation',
+  [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 'AI image generation (HD)',
+  [IMAGE_GEN_FEATURE.DALL_E_3]: 'AI image generation (DALL·E 3)',
+  [IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE]: 'AI infographic surcharge',
+  [IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE]: 'AI social image surcharge',
+  [IMAGE_GEN_FEATURE.TWEAK]: 'AI image tweak',
 });
 
 function truncateText(value, max = 120) {

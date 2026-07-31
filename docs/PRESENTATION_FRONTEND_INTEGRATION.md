@@ -110,7 +110,7 @@ On insert: `POST .../slides/:slideId/elements` with `{ "presetId": "text_title" 
 
 ## Canvas data (render & save)
 
-Default canvas: **1920 × 1080** (16:9).
+Default canvas: **1920 × 1080** (16:9). Create/generate also accept **`4:3`** (1600 × 1200) and **`9:16`** (1080 × 1920) via `aspectRatio` / `generationFlow.selections.canvasSize`.
 
 ### Visuals / images
 

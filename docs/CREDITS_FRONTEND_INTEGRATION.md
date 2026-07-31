@@ -579,7 +579,8 @@ Display:
 - `amount` — positive = credit in, negative = usage out
 - `type` — see table in §7.6
 - `createdAt`
-- `metadata.feature` when present (e.g. `heygen_video`, `remotion_export`)
+- `metadata.feature` when present (e.g. `heygen_video`, `remotion_export`, `ppt_*`, `image_gen_*`)
+- Prefer **`usageDetail.label`** / **`usageDetail.displayName`** when present (server maps features to readable names, including presentation and image-gen)
 
 ---
 

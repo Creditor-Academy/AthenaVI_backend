@@ -48,7 +48,7 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 - **`title`** / **`name`** optional. If omitted, project is created as **`Untitled Presentation`** (AI flow fills a real title on outline).
 - **`folderId`** required (must belong to workspace).
 - **`themeId`** and/or **`themeTokens`** optional; tokens resolved from catalog when `themeId` is set.
-- **`aspectRatio`**: only `16:9` today.
+- **`aspectRatio`**: `16:9` (default) \| `4:3` \| `9:16`. Can also be set later via `generationFlow.selections.canvasSize` on generate.
 - **`createMode`**: `blank` (default, zero slides) | `template` (requires active `DECK_LAYOUT` **`templateId`**; creates one READY slide with freeform `elements`).
 - AI path: create blank (no title needed) → outline (generates title) → theme → generate.
 
