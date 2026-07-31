@@ -88,7 +88,7 @@ const setTheme = asyncHandler(async (req, res) => {
 const startGenerate = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const userId = req.user.id;
-  const { density, overwriteManualEdits, requestHash } = req.body || {};
+  const { density, overwriteManualEdits, requestHash, generationFlow } = req.body || {};
 
   const data = await presentationService.startGenerate({
     workspaceId,
@@ -97,6 +97,7 @@ const startGenerate = asyncHandler(async (req, res) => {
     density,
     overwriteManualEdits,
     requestHash,
+    generationFlow,
   });
 
   return successResponse(req, res, data, 202, messages.PRESENTATION_GENERATION_STARTED);

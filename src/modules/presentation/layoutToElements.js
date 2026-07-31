@@ -49,7 +49,14 @@ function textForSlot(slotId, content = {}) {
       : [];
     return bullets.map((b) => `• ${b}`).join('\n');
   }
-  if (id.includes('body') || id.includes('text')) return content.body || '';
+  if (id.includes('body') || id.includes('text')) {
+    if (content.body) return content.body;
+    const bullets = Array.isArray(content.bullets)
+      ? content.bullets.map((b) => (typeof b === 'string' ? b : b?.text || '')).filter(Boolean)
+      : [];
+    if (bullets.length) return bullets.map((b) => `• ${b}`).join('\n');
+    return '';
+  }
   if (id === 'accent') return '';
   return content.body || content.title || '';
 }
@@ -173,6 +180,35 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
 
   if (content.notes) {
     // notes stay on slide.content; no canvas element
+  }
+
+  // If we have an image URL but the layout had no image slot, still place a side visual
+  const hasImageEl = elements.some((e) => e.type === 'image');
+  const imageUrl =
+    imageRef?.url ||
+    imageRef?.s3Url ||
+    (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
+    null;
+  if (imageUrl && !hasImageEl) {
+    elements.push({
+      id: newElementId('img'),
+      type: 'image',
+      layer: layer++,
+      placement: {
+        x: Math.round(canvas.width * 0.55),
+        y: Math.round(canvas.height * 0.13),
+        width: Math.round(canvas.width * 0.38),
+        height: Math.round(canvas.height * 0.74),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        url: imageUrl,
+        fit: 'cover',
+        alt: content.title || '',
+      },
+      role: 'image',
+    });
   }
 
   return {

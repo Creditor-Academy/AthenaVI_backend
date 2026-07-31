@@ -1,4 +1,5 @@
 $kind: http-request
+description: Generates outline + concise presentation title from prompt. Response data.presentation.title is saved on the project.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/outline"
 method: POST
 headers:
@@ -9,7 +10,7 @@ body:
   content: |-
     {
       "source": "prompt",
-      "prompt": "Pitch deck for Athena VI virtual instructor SaaS",
+      "prompt": "Create a presentation about AI in modern healthcare for hospital leaders",
       "slideCount": 10,
       "density": "balanced",
       "locale": "en"

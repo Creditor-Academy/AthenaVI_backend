@@ -50,6 +50,7 @@ function buildUser(vars = {}) {
     `Suggested type: ${vars.suggestedContentType || 'bullet_list'}`,
     `Previous slide title: ${vars.previousSlideTitle || '(none)'}`,
     `Next slide title: ${vars.nextSlideTitle || '(none)'}`,
+    vars.wizardBrief ? `\nWizard brief (honor voice, audience, purpose):\n${vars.wizardBrief}` : '',
     '',
     'Output JSON schema (fill relevant slots; unused fields null or empty):',
     JSON.stringify(
@@ -74,7 +75,9 @@ function buildUser(vars = {}) {
       null,
       2
     ),
-  ].join('\n');
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
 }
 
 module.exports = {

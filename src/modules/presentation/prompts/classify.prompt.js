@@ -4,6 +4,9 @@ function buildSystem() {
     'Also set visual_need: none|photo|illustration|icon|chart|diagram_template|path_b.',
     'Prefer Path A templates (visual_need != path_b) whenever content fits an existing layout.',
     'Use path_b only for bespoke multi-panel architecture/ERD/process infographics that cannot be templated.',
+    'DEFAULT: prefer visual_need "photo" or "illustration" for nearly every content slide so the deck has real imagery.',
+    'Use visual_need "none" only for pure section dividers with no figurative need.',
+    'Use visual_need "chart" only when the slide is primarily a data chart (content_type chart).',
     'Return JSON only.',
   ].join(' ');
 }
@@ -13,6 +16,7 @@ function buildSystem() {
  *   slideContent?: object|string,
  *   suggestedContentType?: string,
  *   title?: string,
+ *   preferVisuals?: boolean,
  * }} vars
  */
 function buildUser(vars = {}) {
@@ -21,9 +25,13 @@ function buildUser(vars = {}) {
       ? vars.slideContent
       : JSON.stringify(vars.slideContent || {}, null, 2);
 
+  const preferVisuals = vars.preferVisuals !== false;
+
   return [
     `Suggested type (from outline, may override): ${vars.suggestedContentType || '(none)'}`,
     `Title: ${vars.title || ''}`,
+    `Prefer visuals on this deck: ${preferVisuals ? 'yes — avoid visual_need none unless truly text-only' : 'no'}`,
+    vars.wizardBrief ? `Wizard brief:\n${vars.wizardBrief}` : '',
     '',
     'Slide content JSON:',
     content,
@@ -34,14 +42,18 @@ function buildUser(vars = {}) {
     'Output JSON schema:',
     JSON.stringify(
       {
-        content_type: 'comparison',
-        visual_need: 'none',
-        reason: 'two-column comparison fits template',
+        content_type: preferVisuals ? 'image+text' : 'bullet_list',
+        visual_need: preferVisuals ? 'photo' : 'none',
+        reason: preferVisuals
+          ? 'executive slide benefits from a supporting photograph'
+          : 'text-focused slide',
       },
       null,
       2
     ),
-  ].join('\n');
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
 }
 
 module.exports = {

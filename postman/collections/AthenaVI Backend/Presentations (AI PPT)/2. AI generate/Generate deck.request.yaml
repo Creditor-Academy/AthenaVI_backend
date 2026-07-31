@@ -1,5 +1,5 @@
 $kind: http-request
-description: Returns 202 — poll Get status
+description: Returns 202 — poll Get status. Optional generationFlow applies wizard theme/image/canvas/copy brief.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/generate"
 method: POST
 headers:
@@ -9,7 +9,32 @@ body:
   type: json
   content: |-
     {
-      "density": "balanced",
-      "overwriteManualEdits": false
+      "density": "concise",
+      "overwriteManualEdits": false,
+      "generationFlow": {
+        "version": 1,
+        "source": "ai_ppt_wizard",
+        "selections": {
+          "prompt": "Pitch deck for Athena VI virtual instructor SaaS",
+          "title": "Athena VI Investor Pitch",
+          "outlineNotes": "Focus on product and market",
+          "voiceAndTone": "Professional",
+          "audience": "Investors",
+          "purpose": "Persuade",
+          "style": "Modern",
+          "color": "Blue",
+          "industries": ["Technology", "Education"],
+          "baseTemplate": "corp-pitch",
+          "colorTheme": "modern-professional",
+          "canvasSize": "16:9",
+          "imageType": "ai",
+          "imageStyle": "photo",
+          "imageStyleFilter": "Suggested",
+          "textContent": "Concise",
+          "density": "concise",
+          "slideCount": 10,
+          "locale": "en"
+        }
+      }
     }
 order: 5000

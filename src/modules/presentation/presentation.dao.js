@@ -76,6 +76,14 @@ async function updateDeck(deckId, data) {
   });
 }
 
+async function updateProjectName(projectId, name) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { name },
+    select: { id: true, name: true, type: true, folderId: true, workspaceId: true },
+  });
+}
+
 /**
  * @param {string} deckId
  * @param {Array<object>} slidesData
@@ -342,6 +350,7 @@ module.exports = {
   findDeckByProjectId,
   findDeckById,
   updateDeck,
+  updateProjectName,
   createSlides,
   createOneSlide,
   updateSlide,

@@ -36,6 +36,7 @@ function buildUser(vars = {}) {
     `Slide title: ${vars.slideTitle || ''}`,
     `Theme image_style (for downstream Path A lock, do not invent layout): ${vars.themeImageStyle || ''}`,
     `Theme color_treatment: ${vars.themeColorTreatment || ''}`,
+    vars.wizardBrief ? `Wizard brief:\n${vars.wizardBrief}` : '',
     '',
     'Slide content:',
     content,
@@ -53,7 +54,9 @@ function buildUser(vars = {}) {
       null,
       2
     ),
-  ].join('\n');
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
 }
 
 module.exports = {

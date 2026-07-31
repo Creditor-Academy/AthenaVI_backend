@@ -13,7 +13,9 @@ const {
   CANVAS_HEIGHT,
   PPTX_WIDTH_IN,
   PPTX_HEIGHT_IN,
+  resolveAspectCanvas,
 } = require('./presentation.constants');
+const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 
@@ -65,9 +67,13 @@ function bulletsFromContent(content) {
   return [];
 }
 
-async function fetchImageAsBase64(url) {
-  if (!url || !/^https?:\/\//i.test(String(url))) return null;
+async function fetchImageAsBase64(url, s3Key) {
   try {
+    if (s3Key) {
+      const buffer = await s3Service.getObjectBuffer(s3Key);
+      return buffer.toString('base64');
+    }
+    if (!url || !/^https?:\/\//i.test(String(url))) return null;
     const buffer = await downloadRemote(url, { maxBytes: 12 * 1024 * 1024 });
     return buffer.toString('base64');
   } catch {
@@ -145,7 +151,8 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
       });
     } else if (el.type === 'image' || el.type === 'icon') {
       const url = content.url || content.src;
-      const b64 = url ? await fetchImageAsBase64(url) : null;
+      const key = content.s3Key || slide.imageRef?.s3Key || null;
+      const b64 = await fetchImageAsBase64(url, key);
       if (b64) {
         s.addImage({
           data: b64,
@@ -320,8 +327,9 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
   }
 
   const imageUrl = slide.imageRef?.url;
-  if (imageUrl) {
-    const b64 = await fetchImageAsBase64(imageUrl);
+  const imageKey = slide.imageRef?.s3Key;
+  if (imageUrl || imageKey) {
+    const b64 = await fetchImageAsBase64(imageUrl, imageKey);
     if (b64) {
       s.addImage({
         data: b64,
@@ -339,8 +347,14 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
 async function buildPptxBuffer(deck, { slideId } = {}) {
   const PptxGenJS = require('pptxgenjs');
   const pptx = new PptxGenJS();
-  pptx.defineLayout({ name: 'LAYOUT_16x9', width: PPTX_WIDTH_IN, height: PPTX_HEIGHT_IN });
-  pptx.layout = 'LAYOUT_16x9';
+  const aspect = resolveAspectCanvas(deck.aspectRatio);
+  const layoutName = `LAYOUT_${String(deck.aspectRatio || '16:9').replace(':', 'x')}`;
+  pptx.defineLayout({
+    name: layoutName,
+    width: aspect.pptxWidthIn || PPTX_WIDTH_IN,
+    height: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
+  });
+  pptx.layout = layoutName;
 
   const palette = deck.themeTokens?.palette || {};
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
@@ -436,11 +450,12 @@ function buildSlideHtmlPage(slide, palette) {
     </section>`;
 }
 
-function buildDeckHtml(deck, { slideId } = {}) {
+async function buildDeckHtml(deck, { slideId } = {}) {
   const palette = deck.themeTokens?.palette || {};
   const text = palette.text || '#111111';
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (slideId) slides = slides.filter((s) => s.id === slideId);
+  slides = await attachPresignedMediaToSlides(slides);
 
   const pages = slides.map((slide) => buildSlideHtmlPage(slide, palette)).join('\n');
 
@@ -493,7 +508,7 @@ async function withBrowserPage(fn) {
 async function buildPdfBuffer(deck, opts = {}) {
   return withBrowserPage(async (page) => {
     await page.setViewport({ width: 1920, height: 1080 });
-    await page.setContent(buildDeckHtml(deck, opts), {
+    await page.setContent(await buildDeckHtml(deck, opts), {
       waitUntil: 'networkidle0',
       timeout: 60000,
     });
@@ -599,7 +614,7 @@ async function buildRasterExport(deck, { format, slideId } = {}) {
       const canvasW = slide.elements?.canvas?.width || CANVAS_WIDTH;
       const canvasH = slide.elements?.canvas?.height || CANVAS_HEIGHT;
       await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
-      await page.setContent(buildDeckHtml({ ...deck, slides: [slide] }), {
+      await page.setContent(await buildDeckHtml({ ...deck, slides: [slide] }), {
         waitUntil: 'networkidle0',
         timeout: 60000,
       });
