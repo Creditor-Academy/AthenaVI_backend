@@ -13,6 +13,16 @@ const PPTX_HEIGHT_IN = 7.5;
 
 const ELEMENT_TYPES = ['text', 'image', 'shape', 'icon', 'chart', 'table'];
 
+const ASPECT_CANVAS = {
+  '16:9': { width: 1920, height: 1080, pptxWidthIn: 13.333, pptxHeightIn: 7.5 },
+  '4:3': { width: 1600, height: 1200, pptxWidthIn: 10, pptxHeightIn: 7.5 },
+  '9:16': { width: 1080, height: 1920, pptxWidthIn: 7.5, pptxHeightIn: 13.333 },
+};
+
+function resolveAspectCanvas(aspectRatio) {
+  return ASPECT_CANVAS[String(aspectRatio || '16:9')] || ASPECT_CANVAS['16:9'];
+}
+
 module.exports = {
   AI_SLIDE_MAX,
   DECK_SLIDE_MAX,
@@ -22,4 +32,6 @@ module.exports = {
   PPTX_WIDTH_IN,
   PPTX_HEIGHT_IN,
   ELEMENT_TYPES,
+  ASPECT_CANVAS,
+  resolveAspectCanvas,
 };

@@ -51,8 +51,10 @@ After AI fills ≤20 slides, user can still **add more manually** up to 40.
    - Response includes **`presentation.title`** (generated from the prompt) and `outline`. Persist/use that title in the UI.  
 4. Optional: `PATCH .../outline` if user edits outline cards (also updates presentation title when `outline.title` changes)  
 5. `POST .../theme` `{ themeId }` and/or `themeTokens`  
-6. `POST .../generate` → **202** → poll `GET .../status` until `READY` / `FAILED`  
+6. `POST .../generate` → **202** → optionally include **`generationFlow`** (wizard selections: tone, colorTheme, imageType, canvasSize, …) → poll `GET .../status` until `READY` / `FAILED`  
 7. Open canvas editor on `GET .../presentations/:id` (slides include `elements`)
+
+`generationFlow` is additive. Without it, generate behaves as before. With it, backend persists the flow and applies theme / image mode / canvas / copy brief. `selections.slideCount` does not resize the deck.
 
 ### B — Create blank (Canva-style)
 

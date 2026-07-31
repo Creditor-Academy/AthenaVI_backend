@@ -265,13 +265,53 @@ No LLM charge for manual patch. If `title` is present, it is also saved to **`pr
 
 ```json
 {
-  "density": "balanced",
+  "density": "concise",
   "overwriteManualEdits": false,
-  "requestHash": "optional-idempotency-hint"
+  "generationFlow": {
+    "version": 1,
+    "source": "ai_ppt_wizard",
+    "selections": {
+      "prompt": "Create an investor pitch for our new health app",
+      "title": "Investor Pitch — Health App",
+      "outlineNotes": "Focus on traction and market size",
+      "voiceAndTone": "Professional",
+      "audience": "Investors",
+      "purpose": "Persuade",
+      "style": "Modern",
+      "color": "Blue",
+      "industries": ["Healthcare", "Technology"],
+      "baseTemplate": "corp-pitch",
+      "colorTheme": "modern-professional",
+      "canvasSize": "16:9",
+      "imageType": "ai",
+      "imageStyle": "photo",
+      "imageStyleFilter": "Suggested",
+      "textContent": "Concise",
+      "density": "concise",
+      "slideCount": 10,
+      "locale": "en"
+    },
+    "availableOptions": {}
+  }
 }
 ```
 
-Starts async slide generation. Poll **status**. Pre-checks affordability; charges per slide/image **on success** (`ppt_slide_content`, `ppt_image_path_a` / `ppt_image_path_b`, cache hits free).
+- Top-level `density` / `overwriteManualEdits` remain supported (backwards compatible).
+- **`generationFlow`** (optional): full AI PPT wizard snapshot. Persisted on `deck.generationMetrics.generationFlow` and applied to generation.
+- **`selections.slideCount`**: metadata only — does **not** resize the deck (outline slides are the source of truth).
+- **`selections.locale`**: updates `deck.locale` when present.
+- **`selections.title`**: updates `project.name` when present.
+- **`selections.colorTheme`**: kebab-case wizard theme id → `themeTokens` (overrides prior theme for this generate).
+- **`selections.canvasSize`**: `16:9` | `4:3` | `9:16` → `deck.aspectRatio` + canvas pixel size.
+- **`selections.imageType`**:
+  - `ai` — AI-first image generation (stock fallback)
+  - `stock` / `web` — stock providers only
+  - `placeholders` — shared system placeholder image (no AI/stock charge)
+  - `none` — no images (`imageRef.status: skipped`)
+- Voice/audience/purpose/style/industries/outlineNotes feed slide + image brief prompts.
+- Per-slide regenerate reuses saved `generationFlow` from metrics.
+
+Starts async slide generation. Poll **status**. Pre-checks affordability; charges per slide/image **on success** (`ppt_slide_content`, `ppt_image_path_a` / `ppt_image_path_b`, cache hits free). Placeholder / `none` image modes do not charge image features.
 
 **Response `data` (typical):** `{ deckId, status, slideCount, estimatedCredits }`
 

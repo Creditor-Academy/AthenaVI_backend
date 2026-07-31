@@ -93,7 +93,7 @@ const createPresentationSchema = Joi.object({
     themeId: Joi.string().trim().max(64).allow(null).optional(),
     themeTokens: themeTokensSchema.allow(null).optional(),
     locale: localeField.optional(),
-    aspectRatio: Joi.string().valid('16:9').default('16:9'),
+    aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
     createMode: Joi.string().valid('blank', 'template').default('blank'),
     templateId: templateIdField.when('createMode', {
       is: 'template',
@@ -156,15 +156,48 @@ const setThemeSchema = Joi.object({
     .required(),
 });
 
+const generationFlowSelectionsSchema = Joi.object({
+  prompt: Joi.string().trim().max(8000).allow('', null).optional(),
+  title: Joi.string().trim().max(255).allow('', null).optional(),
+  outlineNotes: Joi.string().trim().max(4000).allow('', null).optional(),
+  voiceAndTone: Joi.string().trim().max(64).allow('', null).optional(),
+  audience: Joi.string().trim().max(64).allow('', null).optional(),
+  purpose: Joi.string().trim().max(64).allow('', null).optional(),
+  style: Joi.string().trim().max(128).allow('', null).optional(),
+  color: Joi.string().trim().max(64).allow('', null).optional(),
+  industries: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
+  baseTemplate: Joi.string().trim().max(64).allow('', null).optional(),
+  colorTheme: Joi.string().trim().max(64).allow('', null).optional(),
+  canvasSize: Joi.string().valid('16:9', '4:3', '9:16').allow('', null).optional(),
+  imageType: Joi.string()
+    .valid('ai', 'web', 'stock', 'placeholders', 'none')
+    .allow('', null)
+    .optional(),
+  imageStyle: Joi.string().trim().max(64).allow('', null).optional(),
+  imageStyleFilter: Joi.string().trim().max(64).allow('', null).optional(),
+  textContent: Joi.string().trim().max(64).allow('', null).optional(),
+  density: Joi.string().valid('concise', 'balanced', 'detailed').allow('', null).optional(),
+  slideCount: Joi.number().integer().min(5).max(AI_SLIDE_MAX).optional(),
+  locale: Joi.string().trim().min(2).max(16).allow('', null).optional(),
+}).unknown(true);
+
+const generationFlowSchema = Joi.object({
+  version: Joi.number().integer().min(1).default(1),
+  source: Joi.string().trim().max(64).allow('', null).optional(),
+  selections: generationFlowSelectionsSchema.default({}),
+  availableOptions: Joi.object().unknown(true).optional(),
+}).unknown(true);
+
 const generateDeckSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
     presentationId: presentationIdParam,
   }),
   body: Joi.object({
-    density: densityField,
+    density: Joi.string().valid('concise', 'balanced', 'detailed').optional(),
     overwriteManualEdits: Joi.boolean().default(false),
     requestHash: Joi.string().trim().max(128).optional(),
+    generationFlow: generationFlowSchema.optional(),
   })
     .default({})
     .optional(),

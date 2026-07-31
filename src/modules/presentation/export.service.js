@@ -13,6 +13,7 @@ const {
   CANVAS_HEIGHT,
   PPTX_WIDTH_IN,
   PPTX_HEIGHT_IN,
+  resolveAspectCanvas,
 } = require('./presentation.constants');
 const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
 
@@ -346,8 +347,14 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
 async function buildPptxBuffer(deck, { slideId } = {}) {
   const PptxGenJS = require('pptxgenjs');
   const pptx = new PptxGenJS();
-  pptx.defineLayout({ name: 'LAYOUT_16x9', width: PPTX_WIDTH_IN, height: PPTX_HEIGHT_IN });
-  pptx.layout = 'LAYOUT_16x9';
+  const aspect = resolveAspectCanvas(deck.aspectRatio);
+  const layoutName = `LAYOUT_${String(deck.aspectRatio || '16:9').replace(':', 'x')}`;
+  pptx.defineLayout({
+    name: layoutName,
+    width: aspect.pptxWidthIn || PPTX_WIDTH_IN,
+    height: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
+  });
+  pptx.layout = layoutName;
 
   const palette = deck.themeTokens?.palette || {};
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);

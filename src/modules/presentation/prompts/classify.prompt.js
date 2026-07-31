@@ -31,6 +31,7 @@ function buildUser(vars = {}) {
     `Suggested type (from outline, may override): ${vars.suggestedContentType || '(none)'}`,
     `Title: ${vars.title || ''}`,
     `Prefer visuals on this deck: ${preferVisuals ? 'yes — avoid visual_need none unless truly text-only' : 'no'}`,
+    vars.wizardBrief ? `Wizard brief:\n${vars.wizardBrief}` : '',
     '',
     'Slide content JSON:',
     content,
@@ -50,7 +51,9 @@ function buildUser(vars = {}) {
       null,
       2
     ),
-  ].join('\n');
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
 }
 
 module.exports = {
