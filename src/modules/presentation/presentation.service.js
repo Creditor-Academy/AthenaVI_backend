@@ -7,11 +7,13 @@ const themeService = require('./theme.service');
 const deckGeneration = require('./deckGeneration.service');
 const exportService = require('./export.service');
 const slideEditorRaw = require('./slideEditor.service');
-const { layoutSlotsToElements, blankCanvas } = require('./layoutToElements');
+const { layoutSlotsToElements, blankCanvas, injectBrandLogo } = require('./layoutToElements');
+const brandKitService = require('../brandKit/brandKit.service');
 const {
   attachPresignedMediaToSlides,
   presignPresentationPayload,
 } = require('./presignSlideMedia');
+const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
 
 const SLIDE_EDITOR_PASSTHROUGH = new Set([
   'listElementCatalog',
@@ -32,6 +34,26 @@ const slideEditor = Object.fromEntries(
   })
 );
 
+async function resolveCreateThemeTokens({
+  workspaceId,
+  themeId,
+  themeTokens,
+  brandKitId,
+  packThemeId,
+}) {
+  if (brandKitId) {
+    return brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
+  }
+  return themeService.resolveThemeTokens({
+    themeId: themeId || packThemeId || null,
+    themeTokens,
+  });
+}
+
+function canvasForAspect(aspectRatio) {
+  return CANVAS_BY_ASPECT[aspectRatio] || CANVAS_BY_ASPECT['16:9'];
+}
+
 async function createPresentation({
   workspaceId,
   userId,
@@ -44,6 +66,8 @@ async function createPresentation({
   aspectRatio = '16:9',
   createMode = 'blank',
   templateId = null,
+  packId = null,
+  brandKitId = null,
 }) {
   const folder = await prisma.folder.findFirst({
     where: { id: folderId, workspaceId },
@@ -53,20 +77,38 @@ async function createPresentation({
     throw new AppError(messages.FOLDER_NOT_FOUND, 404);
   }
 
-  const mode = createMode === 'template' ? 'template' : 'blank';
+  const mode =
+    createMode === 'template' ? 'template' : createMode === 'pack' ? 'pack' : 'blank';
   if (mode === 'template' && !templateId) {
     throw new AppError('templateId is required when createMode is template', 400);
   }
+  if (mode === 'pack' && !packId) {
+    throw new AppError('packId is required when createMode is pack', 400);
+  }
 
   let template = null;
+  let pack = null;
   if (mode === 'template') {
     template = await presentationDao.findTemplateById(templateId);
     if (!template || template.type !== 'DECK_LAYOUT' || !template.isActive) {
       throw new AppError(messages.PRESENTATION_TEMPLATE_NOT_FOUND, 404);
     }
   }
+  if (mode === 'pack') {
+    pack = await presentationDao.findTemplateById(packId);
+    if (!pack || pack.type !== 'DECK_PACK' || !pack.isActive) {
+      throw new AppError(messages.PRESENTATION_DECK_PACK_NOT_FOUND, 404);
+    }
+  }
 
-  const resolvedTokens = themeService.resolveThemeTokens({ themeId, themeTokens });
+  const packAspect = pack?.schema?.aspectRatio || aspectRatio;
+  const resolvedTokens = await resolveCreateThemeTokens({
+    workspaceId,
+    themeId,
+    themeTokens,
+    brandKitId,
+    packThemeId: pack?.schema?.themeId || null,
+  });
   const displayName = String(name || title || 'Untitled Presentation').trim() || 'Untitled Presentation';
 
   const { project, deck } = await presentationDao.createPresentationProject({
@@ -75,13 +117,42 @@ async function createPresentation({
     name: displayName,
     createdBy: userId,
     themeTokens: resolvedTokens,
-    aspectRatio,
+    aspectRatio: packAspect || aspectRatio,
     locale,
   });
 
+  const metricsBase = {
+    ...(deck.generationMetrics && typeof deck.generationMetrics === 'object'
+      ? deck.generationMetrics
+      : {}),
+  };
+  if (pack) {
+    metricsBase.deckPack = {
+      packId: pack.id,
+      pack_id: pack.schema?.pack_id || null,
+      brandKitId: brandKitId || null,
+    };
+  } else if (brandKitId) {
+    metricsBase.deckPack = { packId: null, brandKitId };
+  }
+  if (Object.keys(metricsBase).length) {
+    await presentationDao.updateDeck(deck.id, { generationMetrics: metricsBase });
+  }
+
   let slides = deck.slides || [];
+  const canvasSize = canvasForAspect(packAspect || aspectRatio);
+  const logo = brandKitService.pickLogoForBackground(resolvedTokens);
+
   if (mode === 'template' && template) {
-    const elementsDoc = layoutSlotsToElements(template.schema, { title: displayName }, null);
+    let elementsDoc = layoutSlotsToElements(
+      template.schema,
+      { title: displayName },
+      null,
+      canvasSize
+    );
+    elementsDoc = injectBrandLogo(elementsDoc, logo, {
+      contentType: template.contentType || template.schema?.content_type,
+    });
     const slide = await presentationDao.createOneSlide({
       deckId: deck.id,
       order: 1,
@@ -96,6 +167,49 @@ async function createPresentation({
     slides = [slide];
   }
 
+  if (mode === 'pack' && pack) {
+    const packSlides = Array.isArray(pack.schema?.slides) ? pack.schema.slides : [];
+    const layoutIds = packSlides.map((s) => s.layout_id);
+    const layouts = await presentationDao.findLayoutsByLayoutIds(layoutIds);
+    const byLayoutId = new Map(layouts.map((l) => [l.schema?.layout_id, l]));
+
+    const slidePayloads = packSlides.map((ps) => {
+      const layout = byLayoutId.get(ps.layout_id);
+      if (!layout) {
+        throw new AppError(
+          `Pack references missing layout_id: ${ps.layout_id}`,
+          400
+        );
+      }
+      const placeholder = {
+        title: displayName,
+        ...(ps.placeholder && typeof ps.placeholder === 'object' ? ps.placeholder : {}),
+      };
+      if (!placeholder.title) placeholder.title = displayName;
+      let elementsDoc = layoutSlotsToElements(
+        layout.schema,
+        placeholder,
+        null,
+        canvasSize
+      );
+      elementsDoc = injectBrandLogo(elementsDoc, logo, {
+        contentType: ps.contentType || layout.contentType,
+      });
+      return {
+        order: ps.order,
+        contentType: ps.contentType || layout.contentType || null,
+        layoutId: layout.schema?.layout_id || layout.id,
+        content: placeholder,
+        imageRef: null,
+        elements: elementsDoc,
+        status: 'READY',
+        manuallyEdited: true,
+      };
+    });
+
+    slides = await presentationDao.createSlides(deck.id, slidePayloads);
+  }
+
   const refreshed = await presentationDao.findDeckById(deck.id);
   const outDeck = refreshed || { ...deck, slides };
   const signedSlides = await attachPresignedMediaToSlides(outDeck.slides || slides);
@@ -103,6 +217,70 @@ async function createPresentation({
     project,
     deck: { ...outDeck, slides: signedSlides },
     slides: signedSlides,
+  };
+}
+
+async function listPresentationDeckPacks() {
+  const packs = await presentationDao.findActiveDeckPacks();
+  return packs.map((p) => ({
+    id: p.id,
+    name: p.name,
+    packId: p.schema?.pack_id || p.id,
+    themeId: p.schema?.themeId || null,
+    aspectRatio: p.schema?.aspectRatio || '16:9',
+    slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
+    preview: p.schema?.preview || null,
+    generationDefaults: p.schema?.generationDefaults || null,
+    variant: p.variant,
+    version: p.version,
+  }));
+}
+
+async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
+  const { deck } = await deckGeneration.loadPresentationDeck(presentationId, {
+    requireWorkspaceId: workspaceId,
+  });
+  if (deck.status === 'GENERATING') {
+    throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
+  }
+
+  const themeTokens = await brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
+  const logo = brandKitService.pickLogoForBackground(themeTokens);
+  const metrics = {
+    ...(deck.generationMetrics && typeof deck.generationMetrics === 'object'
+      ? deck.generationMetrics
+      : {}),
+    deckPack: {
+      ...((deck.generationMetrics && deck.generationMetrics.deckPack) || {}),
+      brandKitId,
+    },
+  };
+
+  const updatedSlides = [];
+  for (const slide of deck.slides || []) {
+    const elements = injectBrandLogo(slide.elements, logo, {
+      contentType: slide.contentType,
+      force: Boolean(slide.elements?.elements?.some((e) => e?.role === 'logo')),
+    });
+    const updated = await presentationDao.updateSlide(slide.id, { elements });
+    updatedSlides.push(updated);
+  }
+
+  const updatedDeck = await presentationDao.updateDeck(deck.id, {
+    themeTokens,
+    generationMetrics: metrics,
+  });
+
+  return {
+    deck: {
+      id: updatedDeck.id,
+      projectId: updatedDeck.projectId,
+      themeTokens: updatedDeck.themeTokens,
+      generationMetrics: updatedDeck.generationMetrics,
+      status: updatedDeck.status,
+      aspectRatio: updatedDeck.aspectRatio,
+    },
+    slides: await attachPresignedMediaToSlides(updatedSlides),
   };
 }
 
@@ -219,6 +397,8 @@ module.exports = {
   createPresentation,
   getPresentation,
   creditEstimate,
+  listPresentationDeckPacks,
+  applyBrandKit,
   generateOutline: deckGeneration.generateOutline,
   updateOutline: deckGeneration.updateOutline,
   setTheme: deckGeneration.setTheme,

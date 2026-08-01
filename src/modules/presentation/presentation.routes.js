@@ -79,6 +79,12 @@ router.post(
 );
 
 router.post(
+  '/:presentationId/apply-brand-kit',
+  validate(presentationValidations.applyBrandKitSchema),
+  presentationController.applyBrandKit
+);
+
+router.post(
   '/:presentationId/generate',
   validate(presentationValidations.generateDeckSchema),
   presentationController.startGenerate

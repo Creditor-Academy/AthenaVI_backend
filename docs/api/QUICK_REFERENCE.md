@@ -50,8 +50,16 @@
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
-| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template`) |
+| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template` \| `pack`) |
 | GET | `/api/workspaces/:workspaceId/presentation-templates` | Bearer + member | List DECK_LAYOUT templates |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs` | Bearer + member | List DECK_PACK multi-slide packs |
+| GET | `/api/workspaces/:workspaceId/brand-kits` | Bearer + member | List workspace Brand Kits |
+| POST | `/api/workspaces/:workspaceId/brand-kits` | Bearer + OWNER/ADMIN | Create Brand Kit |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + member | Get Brand Kit |
+| PATCH | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Update Brand Kit |
+| DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Delete Brand Kit |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/apply-brand-kit` | Bearer + member | Apply Brand Kit to deck |
 | GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
 | GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |

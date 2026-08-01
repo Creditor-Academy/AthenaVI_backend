@@ -34,9 +34,10 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { layoutSlotsToElements } = require('./layoutToElements');
+const { layoutSlotsToElements, injectBrandLogo } = require('./layoutToElements');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
+const brandKitService = require('../brandKit/brandKit.service');
 
 const CONTENT_TIMEOUT_MS =
   Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS) > 0
@@ -81,7 +82,7 @@ function loadSeedTemplates(contentType) {
     }));
 }
 
-async function resolveLayoutTemplates(contentType) {
+async function resolveLayoutTemplates(contentType, { layoutIdWhitelist = null } = {}) {
   let templates = await presentationDao.findActiveTemplatesByContentType(contentType);
   if (!templates || templates.length === 0) {
     templates = loadSeedTemplates(contentType);
@@ -92,7 +93,110 @@ async function resolveLayoutTemplates(contentType) {
       templates = loadSeedTemplates(null);
     }
   }
+
+  const allow = Array.isArray(layoutIdWhitelist) ? new Set(layoutIdWhitelist.filter(Boolean)) : null;
+  if (allow && allow.size > 0) {
+    const filtered = (templates || []).filter((t) => allow.has(t.schema?.layout_id || t.id));
+    if (filtered.length > 0) return filtered;
+    // Fallback: load whitelist layouts by id even if contentType mismatch
+    const byIds = await presentationDao.findLayoutsByLayoutIds([...allow]);
+    if (byIds.length) return byIds;
+  }
+
   return templates || [];
+}
+
+function scoreBrandPhoto(photo, searchQuery) {
+  const hay = `${photo.name || ''} ${photo.role || ''}`.toLowerCase();
+  const tokens = String(searchQuery || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2);
+  if (!tokens.length) return 0;
+  return tokens.reduce((score, t) => (hay.includes(t) ? score + 1 : score), 0);
+}
+
+function pickBrandPhoto(themeTokens, searchQuery) {
+  const photos = themeTokens?.brand?.photos;
+  if (!Array.isArray(photos) || photos.length === 0) return null;
+  let best = photos[0];
+  let bestScore = -1;
+  for (const photo of photos) {
+    if (!photo?.url && !photo?.s3Key) continue;
+    const score = scoreBrandPhoto(photo, searchQuery);
+    if (score > bestScore) {
+      bestScore = score;
+      best = photo;
+    }
+  }
+  return best || null;
+}
+
+async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
+  const metricsPack =
+    deck.generationMetrics && typeof deck.generationMetrics === 'object'
+      ? deck.generationMetrics.deckPack
+      : null;
+
+  const packId = flowCtx.packId || metricsPack?.packId || null;
+  const brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
+
+  let pack = null;
+  let layoutIdWhitelist = null;
+  let packDefaults = null;
+
+  if (packId) {
+    pack = await presentationDao.findTemplateById(packId);
+    if (pack && pack.type === 'DECK_PACK' && pack.isActive) {
+      layoutIdWhitelist = (pack.schema?.slides || []).map((s) => s.layout_id).filter(Boolean);
+      packDefaults = pack.schema?.generationDefaults || null;
+      if (!flowCtx.baseTemplateBias && packDefaults?.baseTemplate) {
+        flowCtx.baseTemplateBias = generationFlowService.baseTemplateBias(
+          packDefaults.baseTemplate
+        );
+      }
+      if (packDefaults?.preferVisuals != null && flowCtx.preferVisuals == null) {
+        flowCtx.preferVisuals = Boolean(packDefaults.preferVisuals);
+      }
+      if (packDefaults?.imageStyle && !flowCtx.imageStylePhrase) {
+        flowCtx.imageStylePhrase = generationFlowService.resolveImageStylePhrase(
+          packDefaults.imageStyle,
+          null
+        );
+      }
+      if (!flowCtx.themeTokens && pack.schema?.themeId) {
+        try {
+          flowCtx.themeTokens = themeService.resolveThemeTokens({
+            themeId: pack.schema.themeId,
+          });
+        } catch {
+          // keep existing
+        }
+      }
+    } else {
+      pack = null;
+    }
+  }
+
+  if (brandKitId) {
+    try {
+      const kitTokens = await brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
+      flowCtx.themeTokens = kitTokens;
+      const voiceBrief = brandKitService.buildBrandVoiceBrief(kitTokens);
+      if (voiceBrief) {
+        flowCtx.wizardBrief = [flowCtx.wizardBrief, voiceBrief].filter(Boolean).join('\n');
+      }
+    } catch (err) {
+      logger.warn('Brand kit resolve failed during generate', { brandKitId, error: err.message });
+    }
+  }
+
+  return {
+    pack,
+    packId: pack?.id || null,
+    brandKitId,
+    layoutIdWhitelist,
+  };
 }
 
 async function loadPresentationDeck(presentationId, { requireWorkspaceId } = {}) {
@@ -605,9 +709,40 @@ async function resolveSlideImage({
     }
   }
 
-  // photo / illustration / default → stock then Path A
+  // photo / illustration / default → brand photos then stock then Path A
   const searchQuery =
     brief?.search_query || brief?.searchQuery || brief?.subject || content?.title || 'presentation visual';
+
+  const brandPhoto = pickBrandPhoto(ctx.themeTokens, searchQuery);
+  if (brandPhoto && (brandPhoto.url || brandPhoto.s3Key)) {
+    let url = brandPhoto.url || null;
+    if (!url && brandPhoto.s3Key) {
+      try {
+        url = await s3Service.getPresignedGetUrl(brandPhoto.s3Key, 3600);
+      } catch {
+        url = s3Service.buildPublicUrl(brandPhoto.s3Key);
+      }
+    }
+    if (url) {
+      return {
+        imageRef: withImageStatus(
+          {
+            source: 'brand_kit',
+            url,
+            s3Key: brandPhoto.s3Key || null,
+            mediaId: brandPhoto.id || null,
+            brief: brief || null,
+            visual_need: visualNeed || 'photo',
+          },
+          'ready'
+        ),
+        chargedFeature: null,
+        cacheHit: false,
+        visionScore: null,
+      };
+    }
+  }
+
   const briefHash = imageCache.hashBrief({
     searchQuery,
     imageStyle: ctx.themeTokens?.imageStyle,
@@ -979,14 +1114,31 @@ async function processSlide(ctx, slide) {
     }
 
     // 3) Layout select + QA
-    const templates = await resolveLayoutTemplates(policy.layoutContentType);
-    const { layoutId, template } = selectLayout({
-      contentType: policy.layoutContentType,
-      content,
-      previousLayoutId: ctx.previousLayoutId || null,
-      templates,
-      preferImageSlot: policy.preferImageSlot,
-    });
+    let layoutId = null;
+    let template = null;
+    const existingLayoutId = slide.layoutId || null;
+    if (
+      ctx.preferExistingPackLayout &&
+      existingLayoutId &&
+      Array.isArray(ctx.layoutIdWhitelist) &&
+      ctx.layoutIdWhitelist.includes(existingLayoutId)
+    ) {
+      const existingLayouts = await presentationDao.findLayoutsByLayoutIds([existingLayoutId]);
+      template = existingLayouts[0] || null;
+      layoutId = existingLayoutId;
+    }
+    if (!template) {
+      const templates = await resolveLayoutTemplates(policy.layoutContentType, {
+        layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+      });
+      ({ layoutId, template } = selectLayout({
+        contentType: policy.layoutContentType,
+        content,
+        previousLayoutId: ctx.previousLayoutId || null,
+        templates,
+        preferImageSlot: policy.preferImageSlot,
+      }));
+    }
     ctx.previousLayoutId = layoutId;
 
     const qa = validateSlide({
@@ -1085,12 +1237,14 @@ async function processSlide(ctx, slide) {
     }
 
     const canvasSize = ctx.canvasSize || {};
-    const elementsDoc = layoutSlotsToElements(
+    let elementsDoc = layoutSlotsToElements(
       template?.schema || { slots: [] },
       content,
       imageRef,
       { width: canvasSize.width, height: canvasSize.height }
     );
+    const logo = brandKitService.pickLogoForBackground(ctx.themeTokens);
+    elementsDoc = injectBrandLogo(elementsDoc, logo, { contentType });
 
     const updated = await presentationDao.updateSlide(slide.id, {
       status: 'READY',
@@ -1146,6 +1300,12 @@ async function processDeckGeneration({
           ? Boolean(deck.outline.preferVisuals)
           : detectPreferVisuals(deck.outline?.sourcePrompt);
 
+    const packBrand = await loadPackAndBrandForGenerate({
+      workspaceId,
+      deck,
+      flowCtx: resolvedFlow,
+    });
+
     const ctx = {
       workspaceId,
       deckId,
@@ -1164,7 +1324,14 @@ async function processDeckGeneration({
       imageStylePhrase: resolvedFlow.imageStylePhrase || null,
       canvasSize: resolvedFlow.canvas || generationFlowService.resolveCanvas(deck.aspectRatio),
       baseTemplateBias: resolvedFlow.baseTemplateBias || null,
+      layoutIdWhitelist: packBrand.layoutIdWhitelist || resolvedFlow.layoutIdWhitelist || null,
+      preferExistingPackLayout: Boolean(packBrand.packId || resolvedFlow.packId),
     };
+
+    if (resolvedFlow.themeTokens) {
+      await presentationDao.updateDeck(deckId, { themeTokens: resolvedFlow.themeTokens });
+      ctx.themeTokens = resolvedFlow.themeTokens;
+    }
 
     const pending = (deck.slides || []).filter(
       (s) => s.status === 'PENDING' || s.status === 'GENERATING'
@@ -1425,6 +1592,12 @@ async function startGenerate({
   const flowCtx = generationFlowService.resolveFlowToGenerateCtx(generationFlow, {
     topLevelDensity: density || null,
   });
+  const packBrand = await loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx });
+  flowCtx.layoutIdWhitelist = packBrand.layoutIdWhitelist;
+  flowCtx.packId = packBrand.packId;
+  flowCtx.brandKitId = packBrand.brandKitId;
+  flowCtx.preferExistingPackLayout = Boolean(packBrand.packId);
+
   const resolvedDensity =
     flowCtx.density || density || deck.outline?.density || 'balanced';
 
@@ -1509,12 +1682,18 @@ async function startGenerate({
       density: resolvedDensity,
       estimatedCredits: estimate.athenaCredits,
       generationFlow: flowCtx.generationFlow,
+      deckPack: {
+        packId: flowCtx.packId || null,
+        brandKitId: flowCtx.brandKitId || null,
+      },
       resolved: {
         imageSource: flowCtx.imageSource,
         canvas: flowCtx.canvas,
         locale: flowCtx.locale,
         slideCountMeta: flowCtx.slideCountMeta,
         colorTheme: flowCtx.generationFlow?.selections?.colorTheme || null,
+        packId: flowCtx.packId || null,
+        brandKitId: flowCtx.brandKitId || null,
       },
     },
     promptBundleVersion: PROMPT_BUNDLE_VERSION,
@@ -1644,6 +1823,7 @@ async function regenerateSlide({
     deck.generationMetrics?.generationFlow,
     { topLevelDensity: deck.outline?.density || null }
   );
+  const packBrand = await loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx });
 
   const preferVisuals =
     flowCtx.preferVisuals != null
@@ -1671,6 +1851,8 @@ async function regenerateSlide({
     imageStylePhrase: flowCtx.imageStylePhrase || null,
     canvasSize: flowCtx.canvas || generationFlowService.resolveCanvas(deck.aspectRatio),
     baseTemplateBias: flowCtx.baseTemplateBias || null,
+    layoutIdWhitelist: packBrand.layoutIdWhitelist || null,
+    preferExistingPackLayout: Boolean(packBrand.packId) && target === 'image',
   };
 
   // For image-only, keep content and skip content LLM by marking duplicate-like path:

@@ -12,6 +12,8 @@ All workspace routes require **`Authorization: Bearer <access_token>`**. Some ro
 
 **Folders** for a workspace are documented under **`/api/workspaces/:workspaceId/folders`** (see **Folders** below in this section).
 
+**Brand Kits** (Canva-style workspace branding) live under **`/api/workspaces/:workspaceId/brand-kits`** — see [BRAND_KIT_API.md](BRAND_KIT_API.md). Presentation deck packs: `GET .../presentation-deck-packs` in [PRESENTATION_API.md](PRESENTATION_API.md).
+
 Each user has exactly one **private** workspace (created on registration). Users can create additional **team** workspaces.
 
 ---

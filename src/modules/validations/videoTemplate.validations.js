@@ -169,7 +169,7 @@ const createTemplateAdminBodySchema = Joi.object({
     contentType: Joi.string().trim().max(64).allow(null, '').optional(),
     variant: Joi.string().trim().max(64).allow(null, '').optional(),
     schema: Joi.object().unknown(true).required(),
-    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE').required(),
+    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE', 'DECK_PACK').required(),
     isActive: Joi.boolean().default(true),
     version: Joi.number().integer().min(1).default(1),
   }).required(),
@@ -178,7 +178,7 @@ const createTemplateAdminBodySchema = Joi.object({
 const listTemplatesAdminSchema = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({
-    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE').optional(),
+    type: Joi.string().valid('DECK_LAYOUT', 'VIDEO_SCENE', 'DECK_PACK').optional(),
     contentType: Joi.string().trim().max(64).optional(),
     isActive: Joi.boolean().optional(),
   }).default({}),

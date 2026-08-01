@@ -18,3 +18,23 @@ Maps each `content_type` to seed `layout_id` values from `seed-layouts.json`.
 | section_divider | `section_divider_centered_v1`, `section_divider_numbered_v2`, `section_divider_band_v3` |
 
 **Totals:** 12 content types × 3 variants = **36** layouts.
+
+## Deck packs (`DECK_PACK`)
+
+Seeded via `npm run seed:presentation-deck-packs` (requires layouts first).
+
+Every pack ships designed placeholder copy (stats, milestones, team, comparison columns,
+tables, chart data), so a cloned pack looks finished before the user edits a word.
+
+| pack_id | themeId | slides | use case |
+|---|---|---|---|
+| `corp_pitch_midnight` | `midnight_blue` | 5 — title, agenda, stat, image+text, closing | short pitch |
+| `marketing_clean_light` | `clean_light` | 5 — title, comparison, stat, quote, closing | campaign story |
+| `portfolio_forest` | `forest_slate` | 5 — title, timeline, team, image+text, closing | studio portfolio |
+| `consulting_report_paper` | `paper_ink` | 8 — title, agenda, divider, bullets, chart, table, stat, closing | text-first consulting report (`preferVisuals: false`) |
+| `investor_deck_violet` | `violet_noir` | 8 — title, cards, image+text, stat, chart, comparison, team, closing | fundraising deck |
+| `product_launch_ocean` | `ocean_mist` | 8 — title, divider, overlay, cards, timeline, stat, quote, closing | launch announcement |
+| `executive_review_charcoal` | `charcoal_gold` | 8 — title, agenda, stat, chart, pros/cons, timeline, divider, closing | QBR / board review (`preferVisuals: false`) |
+| `brand_story_sand` | `warm_sand` | 8 — title, quote, image+text, timeline, stat, team, overlay, closing | brand / editorial story |
+
+**Totals:** 8 packs, 55 slides.

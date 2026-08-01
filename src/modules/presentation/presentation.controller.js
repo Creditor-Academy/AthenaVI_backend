@@ -16,6 +16,8 @@ const createPresentation = asyncHandler(async (req, res) => {
     aspectRatio,
     createMode,
     templateId,
+    packId,
+    brandKitId,
   } = req.body;
 
   const data = await presentationService.createPresentation({
@@ -30,6 +32,8 @@ const createPresentation = asyncHandler(async (req, res) => {
     aspectRatio,
     createMode,
     templateId,
+    packId,
+    brandKitId,
   });
 
   return successResponse(req, res, data, 201, messages.PRESENTATION_CREATED);
@@ -300,6 +304,20 @@ const listPresentationElements = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENTS_CATALOG);
 });
 
+const listPresentationDeckPacks = asyncHandler(async (req, res) => {
+  const data = await presentationService.listPresentationDeckPacks();
+  return successResponse(req, res, { packs: data }, 200, messages.PRESENTATION_DECK_PACKS_FETCHED);
+});
+
+const applyBrandKit = asyncHandler(async (req, res) => {
+  const data = await presentationService.applyBrandKit({
+    workspaceId: req.params.workspaceId,
+    presentationId: req.params.presentationId,
+    brandKitId: req.body.brandKitId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_BRAND_KIT_APPLIED);
+});
+
 module.exports = {
   createPresentation,
   getPresentation,
@@ -326,4 +344,6 @@ module.exports = {
   listPresentationTemplates,
   listPresentationThemes,
   listPresentationElements,
+  listPresentationDeckPacks,
+  applyBrandKit,
 };

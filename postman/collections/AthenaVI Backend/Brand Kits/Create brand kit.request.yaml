@@ -1,0 +1,51 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Acme Brand",
+      "isDefault": true,
+      "data": {
+        "colors": [
+          { "id": "c1", "name": "Navy", "hex": "#0B1220" },
+          { "id": "c2", "name": "Blue", "hex": "#3B82F6" },
+          { "id": "c3", "name": "White", "hex": "#F8FAFC" },
+          { "id": "c4", "name": "Muted", "hex": "#94A3B8" }
+        ],
+        "colorRoles": {
+          "bg": "c1",
+          "text": "c3",
+          "primary": "c2",
+          "secondary": "c2",
+          "muted": "c4"
+        },
+        "fonts": {
+          "heading": { "fontPairingId": "inter_space", "family": "Inter" },
+          "body": { "fontPairingId": "inter_space", "family": "Inter" }
+        },
+        "voice": {
+          "tone": "Professional, confident",
+          "audience": "Enterprise buyers",
+          "dos": ["Keep copy concise"],
+          "donts": ["No slang"],
+          "vocabulary": ["Athena VI"]
+        },
+        "chartStyles": { "colorIds": ["c2", "c4"] },
+        "imageStyle": "clean product photography, brand-safe"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.brandKit && j.data.brandKit.id;
+        if (id) pm.collectionVariables.set("brandKitId", id);
+      }
+    language: text/javascript
+order: 1100

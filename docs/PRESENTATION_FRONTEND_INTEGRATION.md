@@ -83,11 +83,19 @@ Poll `GET .../status` (or refetch the presentation) while a slide is `GENERATING
 
 ### C — Create from layout template
 
-1. `GET .../presentation-templates` → picker  
-2. `POST .../presentations` `{ title, folderId, createMode: "template", templateId }`  
+1. `GET .../presentation-templates` → picker
+2. `POST .../presentations` `{ title, folderId, createMode: "template", templateId }`
 3. Edit the first slide’s canvas; add more slides as needed
 
-All three paths share the **same editor** surface.
+### D — Create from deck pack (Canva-style) + Brand Kit
+
+1. Settings: create Brand Kit via `/brand-kits` (colors, fonts, logos, photos, voice) — see [`docs/api/BRAND_KIT_API.md`](api/BRAND_KIT_API.md)
+2. `GET .../presentation-deck-packs` → pack picker
+3. `POST .../presentations` `{ folderId, createMode: "pack", packId, brandKitId? }`
+4. Edit canvas; optional `POST .../apply-brand-kit` later
+5. For AI: outline → generate with `generationFlow.selections.packId` + `brandKitId` (content + images fill the branded layouts; brand photos preferred)
+
+All paths share the **same editor** surface.
 
 ---
 
@@ -98,6 +106,8 @@ Base: `/api/workspaces/:workspaceId`
 | UI | Method | Path |
 |----|--------|------|
 | Layout / template gallery | `GET` | `/presentation-templates?contentType=` |
+| Deck packs (multi-slide) | `GET` | `/presentation-deck-packs` |
+| Brand Kits | `GET` | `/brand-kits` |
 | Theme picker | `GET` | `/presentation-themes` |
 | Insert palette | `GET` | `/presentation-elements` |
 
@@ -252,17 +262,19 @@ Open presentations in the PPT editor; video projects in the video editor.
 
 ## Templates: PPT vs video (do not mix)
 
-| | PPT (`DECK_LAYOUT`) | Video (`VIDEO_SCENE`) |
-|--|---------------------|------------------------|
-| Workspace list | `GET .../presentation-templates` | `GET .../video-templates` |
-| Apply | `createMode: "template"` / `apply-layout` | Create project `templateId` / `scenes/from-template` |
-| Schema | `layout_id`, `grid`, `slots[]` | `scene.elements` with frames |
+| | PPT layout (`DECK_LAYOUT`) | PPT pack (`DECK_PACK`) | Video (`VIDEO_SCENE`) |
+|--|----------------------------|------------------------|------------------------|
+| Workspace list | `GET .../presentation-templates` | `GET .../presentation-deck-packs` | `GET .../video-templates` |
+| Apply | `createMode: "template"` / `apply-layout` | `createMode: "pack"` + AI whitelist | Create project `templateId` / `scenes/from-template` |
+| Schema | `layout_id`, `grid`, `slots[]` | `pack_id`, `slides[]`, `themeId` | `scene.elements` with frames |
+
+Brand Kit is separate (workspace-owned look). Docs: [`BRAND_KIT_API.md`](api/BRAND_KIT_API.md).
 
 ### Superadmin template CRUD (admin portal)
 
 `/api/superadmin/templates` — platform superadmin only.
 
-- **`type` required** on create: `DECK_LAYOUT` | `VIDEO_SCENE`  
+- **`type` required** on create: `DECK_LAYOUT` | `DECK_PACK` | `VIDEO_SCENE`  
 - Activate: `PATCH { "isActive": true|false }`  
 - Can update `contentType`, `variant`, `name`, `schema`  
 

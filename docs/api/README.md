@@ -21,7 +21,8 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |
 | [USER_SETTINGS_API.md](USER_SETTINGS_API.md) | `/api/user/settings` | Appearance, notifications, security, account deletion |
 | [WORKSPACE_API.md](WORKSPACE_API.md) | `/api/workspaces` | Workspaces, members, invitations, folders, projects, Remotion renders |
-| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations` | AI PPT: create, outline, theme, generate, status, slides, export, credit-estimate |
+| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations` | AI PPT: create, outline, theme, generate, packs, brand apply, slides, export |
+| [BRAND_KIT_API.md](BRAND_KIT_API.md) | `.../brand-kits` | Workspace Brand Kits (colors, fonts, logos, photos, voice) |
 | [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |
 | [STOCK_API.md](STOCK_API.md) | `/api/stock` | Stock library search (Pexels, Unsplash, Pixabay) and import |
@@ -36,7 +37,8 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 
 | Doc | Use when |
 |-----|----------|
-| [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + templates** — create AI/blank/template, canvas, export, admin templates |
+| [FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md](../FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) | **All-in-one** — PPT + Image Gen + Brand Kit (superadmin → user, APIs, flows; self-contained) |
+| [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + packs + Brand Kit** — AI/blank/pack/template, canvas, export, admin |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
 | [IMAGE_GEN_FRONTEND_INTEGRATION.md](../IMAGE_GEN_FRONTEND_INTEGRATION.md) | AI image studio (models, social formats, regen/tweak, download) |

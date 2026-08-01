@@ -94,12 +94,18 @@ const createPresentationSchema = Joi.object({
     themeTokens: themeTokensSchema.allow(null).optional(),
     locale: localeField.optional(),
     aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
-    createMode: Joi.string().valid('blank', 'template').default('blank'),
+    createMode: Joi.string().valid('blank', 'template', 'pack').default('blank'),
     templateId: templateIdField.when('createMode', {
       is: 'template',
       then: Joi.required(),
       otherwise: Joi.optional().allow(null, ''),
     }),
+    packId: templateIdField.when('createMode', {
+      is: 'pack',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(null, ''),
+    }),
+    brandKitId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
   }).required(),
   query: Joi.object({}).unknown(false),
 });
@@ -179,6 +185,8 @@ const generationFlowSelectionsSchema = Joi.object({
   density: Joi.string().valid('concise', 'balanced', 'detailed').allow('', null).optional(),
   slideCount: Joi.number().integer().min(5).max(AI_SLIDE_MAX).optional(),
   locale: Joi.string().trim().min(2).max(16).allow('', null).optional(),
+  packId: Joi.string().trim().min(1).max(64).allow('', null).optional(),
+  brandKitId: Joi.string().trim().min(1).max(64).allow('', null).optional(),
 }).unknown(true);
 
 const generationFlowSchema = Joi.object({
@@ -437,6 +445,25 @@ const listWorkspacePresentationElementsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const listWorkspacePresentationDeckPacksSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const applyBrandKitSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    brandKitId: Joi.string().trim().min(1).max(64).required(),
+  }).required(),
+  query: Joi.object({}).unknown(false),
+});
+
 /** Strict DECK_LAYOUT schema for superadmin / seed */
 const deckLayoutSlotSchema = Joi.object({
   id: Joi.string().trim().required(),
@@ -463,6 +490,51 @@ const deckLayoutTemplateSchemaObject = Joi.object({
 
 function assertDeckLayoutTemplateSchema(schema) {
   const { error, value } = deckLayoutTemplateSchemaObject.validate(schema, {
+    abortEarly: false,
+    stripUnknown: false,
+  });
+  if (error) {
+    const details = error.details.map((d) => d.message.replace(/"/g, '')).join('; ');
+    const err = new Error(details);
+    err.isJoi = true;
+    err.statusCode = 400;
+    throw err;
+  }
+  return value;
+}
+
+const deckPackSlideSchema = Joi.object({
+  order: Joi.number().integer().min(1).required(),
+  layout_id: Joi.string().trim().required(),
+  contentType: Joi.string().trim().max(64).required(),
+  placeholder: Joi.object().unknown(true).default({}),
+}).unknown(true);
+
+const deckPackTemplateSchemaObject = Joi.object({
+  pack_id: Joi.string().trim().required(),
+  themeId: Joi.string().trim().max(64).allow(null, '').optional(),
+  aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
+  slides: Joi.array().items(deckPackSlideSchema).min(1).max(40).required(),
+  generationDefaults: Joi.object({
+    baseTemplate: Joi.string().trim().max(64).optional(),
+    imageStyle: Joi.string().trim().max(64).optional(),
+    preferVisuals: Joi.boolean().optional(),
+  })
+    .unknown(true)
+    .optional(),
+  preview: Joi.object({
+    label: Joi.string().trim().max(255).optional(),
+  })
+    .unknown(true)
+    .optional(),
+  scene: Joi.forbidden(),
+  videoSettings: Joi.forbidden(),
+})
+  .unknown(true)
+  .required();
+
+function assertDeckPackTemplateSchema(schema) {
+  const { error, value } = deckPackTemplateSchemaObject.validate(schema, {
     abortEarly: false,
     stripUnknown: false,
   });
@@ -555,7 +627,11 @@ module.exports = {
   listWorkspacePresentationTemplatesSchema,
   listWorkspacePresentationThemesSchema,
   listWorkspacePresentationElementsSchema,
+  listWorkspacePresentationDeckPacksSchema,
+  applyBrandKitSchema,
   deckLayoutTemplateSchemaObject,
   assertDeckLayoutTemplateSchema,
+  deckPackTemplateSchemaObject,
+  assertDeckPackTemplateSchema,
   canvasDocSchema,
 };

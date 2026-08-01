@@ -38,7 +38,7 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/reports/credits/platform-actions` | Platform grant/revoke audit |
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
-| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE`) |
+| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE` \| `DECK_PACK`) |
 | `POST` | `/api/superadmin/templates` | Create template — **`type` required**; schema validated by type |
 | `GET` | `/api/superadmin/templates/:templateId` | Get template |
 | `PATCH` | `/api/superadmin/templates/:templateId` | Update `name` / `schema` / `isActive` / `contentType` / `variant` |
@@ -48,6 +48,7 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `type` | Product | Schema |
 |--------|---------|--------|
 | `DECK_LAYOUT` | AI PPT / presentations | Requires `layout_id`, `content_type`, `grid`, `slots[]` (`id` + `region`). No `scene` / `videoSettings`. |
+| `DECK_PACK` | AI PPT branded multi-slide pack | `{ pack_id, themeId?, aspectRatio, slides[{ order, layout_id, contentType, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
 | `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
 
 **Create `DECK_LAYOUT` example**
@@ -72,7 +73,7 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 
 **Create `VIDEO_SCENE`:** same endpoint with `"type": "VIDEO_SCENE"` and video scene schema (see workspace video templates docs).
 
-Workspace: `GET .../presentation-templates`, `GET .../video-templates`. PPT apply via create `createMode: template` / `apply-layout`; video via project `templateId` / `scenes/from-template`.
+Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates`. PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` / `scenes/from-template`. Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
 
 ---
 

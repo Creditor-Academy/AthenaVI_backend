@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const kits = j && j.data && j.data.brandKits;
+        if (Array.isArray(kits) && kits[0]) pm.collectionVariables.set("brandKitId", kits[0].id);
+      }
+    language: text/javascript
+order: 1000

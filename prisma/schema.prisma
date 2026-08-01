@@ -84,6 +84,7 @@ enum ProjectType {
 enum TemplateType {
   VIDEO_SCENE
   DECK_LAYOUT
+  DECK_PACK
 }
 
 enum StorageUpgradeRequestStatus {
@@ -196,6 +197,7 @@ model Workspace {
   heygenWorkspaceShares HeygenWorkspaceShare[]
   projectComments    ProjectComment[]
   imageGenerations   ImageGeneration[]
+  brandKits          WorkspaceBrandKit[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -794,6 +796,41 @@ model Template {
 
   @@index([type, contentType, isActive])
   @@map("templates")
+}
+
+model WorkspaceBrandKit {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  isDefault   Boolean  @default(false) @map("is_default")
+  data        Json
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  media     BrandKitMedia[]
+
+  @@index([workspaceId, isDefault])
+  @@map("workspace_brand_kits")
+}
+
+model BrandKitMedia {
+  id         String   @id @default(cuid())
+  brandKitId String   @map("brand_kit_id")
+  kind       String // logo | photo | graphic
+  role       String? // logos: primary|secondary|icon|light|dark
+  name       String?
+  assetId    String?  @map("asset_id")
+  s3Key      String   @map("s3_key")
+  mimeType   String?  @map("mime_type")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  brandKit WorkspaceBrandKit @relation(fields: [brandKitId], references: [id], onDelete: Cascade)
+
+  @@index([brandKitId, kind])
+  @@map("brand_kit_media")
 }
 
 model SlideGenerationJob {

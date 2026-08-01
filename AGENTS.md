@@ -114,7 +114,7 @@ src/modules/<feature>/
 ### Route registration
 
 - **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/image-gen`.
-- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
+- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/brand-kits`, `/:workspaceId/presentation-deck-packs`, `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
 
@@ -226,8 +226,10 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
 | Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
 | **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |
+| **PPT + Image Gen + Brand Kit (A→Z, self-contained)** | [`docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md`](docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) |
 | Image Gen (AI studio) | [`docs/api/IMAGE_GEN_API.md`](docs/api/IMAGE_GEN_API.md) |
 | **Image Gen (frontend)** | [`docs/IMAGE_GEN_FRONTEND_INTEGRATION.md`](docs/IMAGE_GEN_FRONTEND_INTEGRATION.md) |
+| Brand Kits | [`docs/api/BRAND_KIT_API.md`](docs/api/BRAND_KIT_API.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |

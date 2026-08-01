@@ -260,6 +260,8 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
       userPrompt: null,
       baseTemplateBias: null,
       slideCountMeta: null,
+      packId: null,
+      brandKitId: null,
     };
   }
 
@@ -296,6 +298,8 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
     baseTemplateBias: bias,
     slideCountMeta: s.slideCount != null ? Number(s.slideCount) : null,
     outlineNotes: s.outlineNotes ? String(s.outlineNotes).trim() : null,
+    packId: s.packId ? String(s.packId).trim() : null,
+    brandKitId: s.brandKitId ? String(s.brandKitId).trim() : null,
   };
 }
 

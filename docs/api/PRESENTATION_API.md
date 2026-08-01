@@ -41,16 +41,22 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
   "locale": "en",
   "aspectRatio": "16:9",
   "createMode": "blank",
-  "templateId": null
+  "templateId": null,
+  "packId": null,
+  "brandKitId": null
 }
 ```
 
 - **`title`** / **`name`** optional. If omitted, project is created as **`Untitled Presentation`** (AI flow fills a real title on outline).
 - **`folderId`** required (must belong to workspace).
 - **`themeId`** and/or **`themeTokens`** optional; tokens resolved from catalog when `themeId` is set.
+- **`brandKitId`** optional — workspace Brand Kit overrides theme (see [BRAND_KIT_API.md](BRAND_KIT_API.md)).
 - **`aspectRatio`**: `16:9` (default) \| `4:3` \| `9:16`. Can also be set later via `generationFlow.selections.canvasSize` on generate.
-- **`createMode`**: `blank` (default, zero slides) | `template` (requires active `DECK_LAYOUT` **`templateId`**; creates one READY slide with freeform `elements`).
-- AI path: create blank (no title needed) → outline (generates title) → theme → generate.
+- **`createMode`**:
+  - `blank` (default, zero slides)
+  - `template` — requires active `DECK_LAYOUT` **`templateId`**; one READY slide
+  - `pack` — requires active `DECK_PACK` **`packId`**; clones multi-slide branded skeleton
+- AI path: create blank (or with `packId`/`brandKitId`) → outline → generate with optional `generationFlow.selections.packId` / `brandKitId`.
 
 **Response `data`:** `{ project, deck, slides }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
 
@@ -73,8 +79,26 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=` | Active `DECK_LAYOUT` templates |
+| `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs` | Active `DECK_PACK` multi-slide packs |
 | `GET` | `/api/workspaces/:workspaceId/presentation-themes` | Curated theme catalog |
 | `GET` | `/api/workspaces/:workspaceId/presentation-elements` | Element library presets for the canvas palette |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits` | Workspace Brand Kits (see [BRAND_KIT_API.md](BRAND_KIT_API.md)) |
+
+### Seeded deck packs
+
+`npm run seed:presentation-deck-packs` installs 8 system packs. Each pack carries a `themeId`,
+designed placeholder copy per slide, and `generationDefaults` used by AI generate.
+
+| pack_id | Theme | Slides | Use case |
+|---|---|---|---|
+| `corp_pitch_midnight` | Midnight Blue | 5 | Short corporate pitch |
+| `marketing_clean_light` | Clean Light | 5 | Campaign story |
+| `portfolio_forest` | Forest Slate | 5 | Studio portfolio |
+| `consulting_report_paper` | Paper Ink | 8 | Text-first consulting report |
+| `investor_deck_violet` | Violet Noir | 8 | Fundraising deck |
+| `product_launch_ocean` | Ocean Mist | 8 | Product launch |
+| `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
+| `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 
 ---
 
@@ -253,6 +277,20 @@ No LLM charge for manual patch. If `title` is present, it is also saved to **`pr
 
 ---
 
+## Apply Brand Kit
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/apply-brand-kit` |
+| **Status** | **200** |
+
+**Body:** `{ "brandKitId": "<id>" }`
+
+Updates `deck.themeTokens` from the kit and injects/updates `role: logo` image elements. Does **not** wipe slide text content.
+
+---
+
 ## Generate deck
 
 | | |
@@ -289,7 +327,9 @@ No LLM charge for manual patch. If `title` is present, it is also saved to **`pr
       "textContent": "Concise",
       "density": "concise",
       "slideCount": 10,
-      "locale": "en"
+      "locale": "en",
+      "packId": optional,
+      "brandKitId": optional
     },
     "availableOptions": {}
   }
@@ -302,6 +342,8 @@ No LLM charge for manual patch. If `title` is present, it is also saved to **`pr
 - **`selections.locale`**: updates `deck.locale` when present.
 - **`selections.title`**: updates `project.name` when present.
 - **`selections.colorTheme`**: kebab-case wizard theme id → `themeTokens` (overrides prior theme for this generate).
+- **`selections.packId`**: active `DECK_PACK` id — layout whitelist + pack defaults for generation.
+- **`selections.brandKitId`**: workspace Brand Kit — overrides theme, injects voice into prompts, prefers brand photos for slide images.
 - **`selections.canvasSize`**: `16:9` | `4:3` | `9:16` → `deck.aspectRatio` + canvas pixel size.
 - **`selections.imageType`**:
   - `ai` — AI-first image generation (stock fallback)

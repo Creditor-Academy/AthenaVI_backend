@@ -34,6 +34,7 @@ const heygenShareRoutes = require('../heygen/heygenShare.routes');
 const presentationRoutes = require('../presentation/presentation.routes');
 const presentationController = require('../presentation/presentation.controller');
 const presentationValidations = require('../validations/presentation.validations');
+const brandKitRoutes = require('../brandKit/brandKit.routes');
 const videoTemplateController = require('../project/videoTemplate.controller');
 const videoTemplateValidations = require('../validations/videoTemplate.validations');
 
@@ -68,6 +69,14 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   presentationRoutes
+);
+router.use('/:workspaceId/brand-kits', authMiddleware, brandKitRoutes);
+router.get(
+  '/:workspaceId/presentation-deck-packs',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationDeckPacksSchema),
+  presentationController.listPresentationDeckPacks
 );
 router.get(
   '/:workspaceId/video-templates',

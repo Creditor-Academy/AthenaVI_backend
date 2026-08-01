@@ -2,13 +2,49 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const prisma = require('../../shared/config/prismaClient');
 const { assertVideoSceneTemplateSchema } = require('../validations/videoTemplate.validations');
-const { assertDeckLayoutTemplateSchema } = require('../validations/presentation.validations');
+const {
+  assertDeckLayoutTemplateSchema,
+  assertDeckPackTemplateSchema,
+} = require('../validations/presentation.validations');
 
 function assertDeckLayoutSchema(schema) {
   try {
     return assertDeckLayoutTemplateSchema(schema);
   } catch (err) {
     throw new AppError(err.message || 'Invalid DECK_LAYOUT schema', 400);
+  }
+}
+
+function assertDeckPackSchema(schema) {
+  try {
+    return assertDeckPackTemplateSchema(schema);
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid DECK_PACK schema', 400);
+  }
+}
+
+async function assertPackLayoutIdsExist(schema) {
+  const layoutIds = (schema.slides || []).map((s) => s.layout_id).filter(Boolean);
+  if (!layoutIds.length) return;
+  const layouts = await prisma.template.findMany({
+    where: {
+      type: 'DECK_LAYOUT',
+      isActive: true,
+      OR: layoutIds.map((layoutId) => ({
+        schema: { path: ['layout_id'], equals: layoutId },
+      })),
+    },
+    select: { id: true, schema: true },
+  });
+  const found = new Set(
+    layouts.map((l) => l.schema?.layout_id).filter(Boolean)
+  );
+  const missing = layoutIds.filter((id) => !found.has(id));
+  if (missing.length) {
+    throw new AppError(
+      `DECK_PACK references unknown or inactive layout_id(s): ${missing.join(', ')}`,
+      400
+    );
   }
 }
 
@@ -46,8 +82,11 @@ async function createTemplate({
   isActive = true,
   version = 1,
 }) {
-  if (!type || !['DECK_LAYOUT', 'VIDEO_SCENE'].includes(type)) {
-    throw new AppError('type is required and must be DECK_LAYOUT or VIDEO_SCENE', 400);
+  if (!type || !['DECK_LAYOUT', 'VIDEO_SCENE', 'DECK_PACK'].includes(type)) {
+    throw new AppError(
+      'type is required and must be DECK_LAYOUT, VIDEO_SCENE, or DECK_PACK',
+      400
+    );
   }
 
   let validatedSchema = schema;
@@ -57,6 +96,9 @@ async function createTemplate({
     } catch (err) {
       throw new AppError(err.message || 'Invalid VIDEO_SCENE schema', 400);
     }
+  } else if (type === 'DECK_PACK') {
+    validatedSchema = assertDeckPackSchema(schema);
+    await assertPackLayoutIdsExist(validatedSchema);
   } else {
     validatedSchema = assertDeckLayoutSchema(schema);
   }
@@ -92,6 +134,9 @@ async function updateTemplate({ id, name, schema, isActive, contentType, variant
       }
     } else if (existing.type === 'DECK_LAYOUT') {
       data.schema = assertDeckLayoutSchema(schema);
+    } else if (existing.type === 'DECK_PACK') {
+      data.schema = assertDeckPackSchema(schema);
+      await assertPackLayoutIdsExist(data.schema);
     } else {
       data.schema = schema;
     }
@@ -110,4 +155,5 @@ module.exports = {
   createTemplate,
   updateTemplate,
   assertDeckLayoutSchema,
+  assertDeckPackSchema,
 };

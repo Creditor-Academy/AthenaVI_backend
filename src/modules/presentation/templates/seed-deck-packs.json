@@ -1,0 +1,821 @@
+[
+  {
+    "name": "Corporate Pitch — Midnight",
+    "contentType": "pack",
+    "variant": "corp_pitch_midnight",
+    "schema": {
+      "pack_id": "corp_pitch_midnight",
+      "themeId": "midnight_blue",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_centered_v1",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Company Pitch",
+            "subtitle": "Investor overview · Q1 2026"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "agenda_numbered_v1",
+          "contentType": "agenda",
+          "placeholder": {
+            "title": "Agenda",
+            "bullets": [
+              "The problem we solve",
+              "Product and platform",
+              "Market opportunity",
+              "Traction to date",
+              "The ask"
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "stat_three_up_v2",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Key metrics",
+            "stats": [
+              { "value": "3.4x", "label": "Year-over-year revenue growth" },
+              { "value": "128%", "label": "Net revenue retention" },
+              { "value": "< 9 mo", "label": "Payback on acquisition cost" }
+            ]
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "image_text_split_v1",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "The product",
+            "bullets": [
+              "One workspace for the whole workflow",
+              "Enterprise controls from day one",
+              "Integrations with the tools teams already run"
+            ]
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "closing_centered_cta_v1",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Let's build this together",
+            "body": "We are raising to expand the platform team and open two new markets.",
+            "cta": "hello@company.com"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "corp-pitch",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Corporate Pitch — Midnight" }
+    }
+  },
+  {
+    "name": "Marketing Story — Clean Light",
+    "contentType": "pack",
+    "variant": "marketing_clean_light",
+    "schema": {
+      "pack_id": "marketing_clean_light",
+      "themeId": "clean_light",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_hero_image_v3",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Campaign story",
+            "subtitle": "How the brand shows up this season"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "comparison_side_by_side_v1",
+          "contentType": "comparison",
+          "placeholder": {
+            "title": "Before and after",
+            "left": {
+              "title": "Where we were",
+              "bullets": [
+                "Message changed by channel",
+                "Creative produced ad hoc",
+                "Spend spread thin"
+              ]
+            },
+            "right": {
+              "title": "Where we are going",
+              "bullets": [
+                "One promise, told consistently",
+                "A reusable creative system",
+                "Budget behind what converts"
+              ]
+            }
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "stat_big_number_v1",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Impact",
+            "stat": { "value": "42%", "label": "Lift in qualified pipeline after relaunch" }
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "quote_centered_v1",
+          "contentType": "quote",
+          "placeholder": {
+            "quote": "It finally feels like one brand talking, instead of five teams shouting.",
+            "attribution": "Head of Growth, customer"
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "closing_contact_v2",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Get started",
+            "body": "Pick the two channels with the clearest signal and run the new system for one quarter.",
+            "contact": ["marketing@company.com", "company.com/brand", "@company"]
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "marketing",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Marketing Story — Clean Light" }
+    }
+  },
+  {
+    "name": "Portfolio Showcase — Forest",
+    "contentType": "pack",
+    "variant": "portfolio_forest",
+    "schema": {
+      "pack_id": "portfolio_forest",
+      "themeId": "forest_slate",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_left_accent_v2",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Selected work",
+            "subtitle": "A short portfolio of recent projects"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "timeline_horizontal_v1",
+          "contentType": "timeline",
+          "placeholder": {
+            "title": "The journey",
+            "milestones": [
+              { "date": "2022", "title": "Studio founded", "text": "First three clients" },
+              { "date": "2023", "title": "First award", "text": "Recognised for craft" },
+              { "date": "2024", "title": "Team of twelve", "text": "Design and build in house" },
+              { "date": "2026", "title": "Global work", "text": "Projects in four markets" }
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "team_grid_four_v1",
+          "contentType": "team",
+          "placeholder": {
+            "title": "The team",
+            "team": [
+              { "name": "Full name", "role": "Creative Director" },
+              { "name": "Full name", "role": "Design Lead" },
+              { "name": "Full name", "role": "Engineering Lead" },
+              { "name": "Full name", "role": "Producer" }
+            ]
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "image_text_overlay_v3",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "Case study",
+            "body": "Challenge, approach and outcome in three lines — keep it short enough to read from the back of the room."
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "closing_thank_you_image_v3",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Thank you",
+            "subtitle": "Let's collaborate — studio@company.com"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "portfolio",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Portfolio Showcase — Forest" }
+    }
+  },
+  {
+    "name": "Consulting Report — Paper Ink",
+    "contentType": "pack",
+    "variant": "consulting_report_paper",
+    "schema": {
+      "pack_id": "consulting_report_paper",
+      "themeId": "paper_ink",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_left_accent_v2",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Operating Model Review",
+            "subtitle": "Prepared for the Executive Committee · March 2026"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "agenda_two_column_v2",
+          "contentType": "agenda",
+          "placeholder": {
+            "title": "Contents",
+            "bullets": [
+              "Mandate and scope",
+              "Where we are today",
+              "Root causes",
+              "Options considered",
+              "Recommendation",
+              "Next 90 days"
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "section_divider_numbered_v2",
+          "contentType": "section_divider",
+          "placeholder": {
+            "sectionNumber": "01",
+            "title": "Where we are today",
+            "subtitle": "Baseline diagnostic"
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "bullet_list_dense_v2",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "Executive summary",
+            "subtitle": "Three findings shape the recommendation",
+            "bullets": [
+              "Cost to serve is 22% above the peer benchmark, concentrated in two segments",
+              "Handoffs between sales and delivery add eleven days to every engagement",
+              "Two thirds of exceptions are created by four policy rules",
+              "Systems are adequate; the constraint is process ownership",
+              "A focused redesign returns the gap within four quarters"
+            ]
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "chart_with_callouts_v2",
+          "contentType": "chart",
+          "placeholder": {
+            "title": "Cost to serve by segment",
+            "chart": {
+              "type": "bar",
+              "labels": ["Enterprise", "Mid-market", "SMB", "Partner"],
+              "series": [{ "name": "Cost index", "values": [118, 104, 96, 88] }]
+            },
+            "bullets": [
+              "Enterprise carries the largest gap",
+              "Mid-market is at parity",
+              "Partner channel is the efficiency benchmark"
+            ]
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "comparison_table_v3",
+          "contentType": "comparison",
+          "placeholder": {
+            "title": "Option assessment",
+            "table": {
+              "headers": ["Option", "Cost impact", "Time to value", "Risk"],
+              "rows": [
+                ["A. Optimise in place", "Low", "1 quarter", "Low"],
+                ["B. Redesign core process", "High", "3 quarters", "Medium"],
+                ["C. Outsource tier one", "Medium", "2 quarters", "High"]
+              ]
+            }
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "stat_with_context_v3",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "The prize",
+            "stat": { "value": "$18M", "label": "Run-rate saving by FY28" },
+            "body": "Two thirds of the benefit comes from removing duplicated review steps. The remainder follows from renegotiating the two contracts that expire this year."
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "closing_contact_v2",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Recommended next steps",
+            "body": "Approve Option B, name a single process owner, and reconvene in six weeks with the detailed design.",
+            "contact": ["Project team", "reviews@company.com", "+1 555 0100"]
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "corp-pitch",
+        "preferVisuals": false
+      },
+      "preview": { "label": "Consulting Report — Paper Ink" }
+    }
+  },
+  {
+    "name": "Investor Deck — Violet Noir",
+    "contentType": "pack",
+    "variant": "investor_deck_violet",
+    "schema": {
+      "pack_id": "investor_deck_violet",
+      "themeId": "violet_noir",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_hero_image_v3",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Series A",
+            "subtitle": "Company name · One line on what you do"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "bullet_list_cards_v3",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "The problem",
+            "cards": [
+              {
+                "title": "Work is fragmented",
+                "text": "Teams stitch together four tools to finish one job."
+              },
+              {
+                "title": "Data never lands",
+                "text": "Every handoff loses context and creates rework."
+              },
+              {
+                "title": "Cost compounds",
+                "text": "The workaround becomes the process, and the process becomes headcount."
+              }
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "image_text_split_v2",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "Our solution",
+            "body": "One system of record for the whole workflow. Set up in a day, governed like an enterprise platform, and priced to expand with the team."
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "stat_three_up_v2",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Traction",
+            "stats": [
+              { "value": "$4.2M", "label": "Annual recurring revenue" },
+              { "value": "142%", "label": "Net revenue retention" },
+              { "value": "61", "label": "Enterprise logos" }
+            ]
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "chart_full_width_v1",
+          "contentType": "chart",
+          "placeholder": {
+            "title": "Revenue growth",
+            "chart": {
+              "type": "bar",
+              "labels": ["Q1", "Q2", "Q3", "Q4"],
+              "series": [{ "name": "ARR ($M)", "values": [1.4, 2.1, 3.2, 4.2] }]
+            },
+            "caption": "Quarterly ARR, last twelve months"
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "comparison_side_by_side_v1",
+          "contentType": "comparison",
+          "placeholder": {
+            "title": "Why we win",
+            "left": {
+              "title": "Incumbents",
+              "bullets": [
+                "Months to implement",
+                "Priced per seat, not per outcome",
+                "Closed data model"
+              ]
+            },
+            "right": {
+              "title": "Us",
+              "bullets": [
+                "Live in a day",
+                "Expansion follows usage",
+                "Open API from the first release"
+              ]
+            }
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "team_grid_four_v1",
+          "contentType": "team",
+          "placeholder": {
+            "title": "Team",
+            "team": [
+              { "name": "Full name", "role": "Co-founder & CEO" },
+              { "name": "Full name", "role": "Co-founder & CTO" },
+              { "name": "Full name", "role": "VP Product" },
+              { "name": "Full name", "role": "VP Revenue" }
+            ]
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "closing_centered_cta_v1",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "The ask",
+            "body": "$12M to double the engineering team, open EMEA, and reach $15M ARR within eight quarters.",
+            "cta": "founders@company.com"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "corp-pitch",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Investor Deck — Violet Noir" }
+    }
+  },
+  {
+    "name": "Product Launch — Ocean Mist",
+    "contentType": "pack",
+    "variant": "product_launch_ocean",
+    "schema": {
+      "pack_id": "product_launch_ocean",
+      "themeId": "ocean_mist",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_hero_image_v3",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Introducing the next release",
+            "subtitle": "Product launch · Spring 2026"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "section_divider_band_v3",
+          "contentType": "section_divider",
+          "placeholder": {
+            "title": "Why now",
+            "subtitle": "What changed for our customers this year"
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "image_text_overlay_v3",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "Built around one job",
+            "body": "Everything in the release serves the moment a customer has to decide and move on."
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "bullet_list_cards_v3",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "What's new",
+            "cards": [
+              {
+                "title": "Faster setup",
+                "text": "Guided onboarding replaces the configuration checklist."
+              },
+              {
+                "title": "Live collaboration",
+                "text": "Comments, presence and version history in every workspace."
+              },
+              {
+                "title": "Deeper insight",
+                "text": "Usage and outcome reporting available on day one."
+              }
+            ]
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "timeline_horizontal_v1",
+          "contentType": "timeline",
+          "placeholder": {
+            "title": "Rollout plan",
+            "milestones": [
+              { "date": "Week 1", "title": "Beta cohort", "text": "40 design partners" },
+              { "date": "Week 4", "title": "General availability", "text": "All plans" },
+              { "date": "Week 8", "title": "Migration", "text": "Legacy workspaces move" },
+              { "date": "Week 12", "title": "Review", "text": "Adoption and feedback readout" }
+            ]
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "stat_big_number_v1",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Early results",
+            "stat": { "value": "2.6x", "label": "Faster time to first value in the beta cohort" }
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "quote_portrait_v2",
+          "contentType": "quote",
+          "placeholder": {
+            "quote": "We replaced three tools and a spreadsheet in the first week, and nobody asked to go back.",
+            "attribution": "Operations Lead, beta customer"
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "closing_thank_you_image_v3",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Ship it",
+            "subtitle": "Launch questions: product@company.com"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "marketing",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Product Launch — Ocean Mist" }
+    }
+  },
+  {
+    "name": "Executive Review — Charcoal Gold",
+    "contentType": "pack",
+    "variant": "executive_review_charcoal",
+    "schema": {
+      "pack_id": "executive_review_charcoal",
+      "themeId": "charcoal_gold",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_centered_v1",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Quarterly Business Review",
+            "subtitle": "Q1 2026 · Leadership team"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "agenda_numbered_v1",
+          "contentType": "agenda",
+          "placeholder": {
+            "title": "Agenda",
+            "bullets": [
+              "Quarter at a glance",
+              "Performance against plan",
+              "What worked and what did not",
+              "Roadmap for next quarter",
+              "Decisions required"
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "stat_three_up_v2",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Quarter at a glance",
+            "stats": [
+              { "value": "104%", "label": "Of revenue plan" },
+              { "value": "+18", "label": "Net new enterprise accounts" },
+              { "value": "96.2%", "label": "Gross retention" }
+            ]
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "chart_compact_v3",
+          "contentType": "chart",
+          "placeholder": {
+            "title": "Performance against plan",
+            "body": "Revenue finished ahead of plan on the strength of expansion. New business trailed by six percent and is the focus for next quarter.",
+            "chart": {
+              "type": "bar",
+              "labels": ["Jan", "Feb", "Mar"],
+              "series": [
+                { "name": "Plan", "values": [82, 88, 95] },
+                { "name": "Actual", "values": [79, 92, 102] }
+              ]
+            }
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "comparison_pros_cons_v2",
+          "contentType": "comparison",
+          "placeholder": {
+            "title": "What worked, what did not",
+            "pros": [
+              "Expansion motion beat target for a third quarter",
+              "Support response time halved",
+              "Two strategic renewals closed early"
+            ],
+            "cons": [
+              "New business pipeline built too late in the quarter",
+              "Hiring slipped by five roles",
+              "Two launches moved out by a month"
+            ]
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "timeline_vertical_v2",
+          "contentType": "timeline",
+          "placeholder": {
+            "title": "Next quarter",
+            "milestones": [
+              { "date": "April", "title": "Pipeline reset", "text": "Rebuild coverage to 3.5x" },
+              { "date": "May", "title": "Platform release", "text": "Ship the reporting suite" },
+              { "date": "June", "title": "Renewal wave", "text": "Twelve strategic accounts" }
+            ]
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "section_divider_centered_v1",
+          "contentType": "section_divider",
+          "placeholder": {
+            "title": "Decisions required",
+            "subtitle": "Three items for this meeting"
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "closing_contact_v2",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Owners and follow-ups",
+            "body": "Approve the hiring plan, confirm the launch date, and sign off the pricing change before the end of the month.",
+            "contact": ["Chief of Staff", "reviews@company.com"]
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "corp-pitch",
+        "preferVisuals": false
+      },
+      "preview": { "label": "Executive Review — Charcoal Gold" }
+    }
+  },
+  {
+    "name": "Brand Story — Warm Sand",
+    "contentType": "pack",
+    "variant": "brand_story_sand",
+    "schema": {
+      "pack_id": "brand_story_sand",
+      "themeId": "warm_sand",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_hero_image_v3",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Our story",
+            "subtitle": "Why we started, and what we are building"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "quote_banner_v3",
+          "contentType": "quote",
+          "placeholder": {
+            "title": "Our promise",
+            "quote": "Make the useful thing beautiful, and the beautiful thing useful.",
+            "attribution": "Founding principle"
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "image_text_split_v1",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "Where it started",
+            "body": "A small team, one workshop, and a stubborn belief that the everyday deserves better craft."
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "timeline_alternating_v3",
+          "contentType": "timeline",
+          "placeholder": {
+            "title": "Milestones",
+            "milestones": [
+              { "date": "2019", "title": "First product", "text": "Made and sold by hand" },
+              { "date": "2021", "title": "First store", "text": "A place to meet customers" },
+              { "date": "2023", "title": "Going further", "text": "Materials fully traceable" },
+              { "date": "2026", "title": "Global", "text": "Serving four regions" }
+            ]
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "stat_with_context_v3",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Impact today",
+            "stat": { "value": "120k", "label": "Customers served" },
+            "body": "Nine in ten come back within a year, and a third arrive through someone who already trusts us."
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "team_featured_lead_v2",
+          "contentType": "team",
+          "placeholder": {
+            "title": "The people behind it",
+            "lead": {
+              "name": "Full name",
+              "role": "Founder",
+              "text": "Leads design and sets the standard for everything we make."
+            },
+            "team": [
+              { "name": "Full name", "role": "Head of Craft" },
+              { "name": "Full name", "role": "Head of Customer" }
+            ]
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "image_text_overlay_v3",
+          "contentType": "image+text",
+          "placeholder": {
+            "title": "What's next",
+            "body": "The same standard, in more places, with materials we can account for end to end."
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "closing_thank_you_image_v3",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Thank you",
+            "subtitle": "hello@company.com · company.com"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "portfolio",
+        "imageStyle": "photo",
+        "preferVisuals": true
+      },
+      "preview": { "label": "Brand Story — Warm Sand" }
+    }
+  }
+]

@@ -39,6 +39,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Guide | Purpose |
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
+| [docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md](docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) | **All-in-one** — PPT + Image Gen + Brand Kit (superadmin → user, self-contained) |
 | [docs/PRESENTATION_FRONTEND_INTEGRATION.md](docs/PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + templates** — AI/blank/template, canvas, export, admin templates |
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
 | [docs/PRESENTATION_CREDITS_FRONTEND.md](docs/PRESENTATION_CREDITS_FRONTEND.md) | AI PPT credits (`ppt_*`, separate from HeyGen) |
@@ -77,6 +78,7 @@ Default port: **9000** (`http://localhost:9000/api`).
 | `npm run format` | Prettier |
 | `npm run prisma:studio:development` | Prisma Studio |
 | `npm run seed:presentation-templates` | Seed DECK_LAYOUT templates |
+| `npm run seed:presentation-deck-packs` | Seed DECK_PACK multi-slide packs (after layouts) |
 | `npm run seed:video-templates` | Seed VIDEO_SCENE templates (video editor only) |
 | `npm run eval:presentation` | Offline presentation eval harness |
 

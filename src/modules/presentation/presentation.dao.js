@@ -251,6 +251,23 @@ async function findActiveTemplatesByContentType(contentType) {
   });
 }
 
+async function findActiveDeckPacks() {
+  return prisma.template.findMany({
+    where: { type: 'DECK_PACK', isActive: true },
+    orderBy: [{ name: 'asc' }, { version: 'desc' }],
+  });
+}
+
+async function findLayoutsByLayoutIds(layoutIds) {
+  const ids = Array.isArray(layoutIds) ? [...new Set(layoutIds.filter(Boolean))] : [];
+  if (!ids.length) return [];
+  const all = await prisma.template.findMany({
+    where: { type: 'DECK_LAYOUT', isActive: true },
+  });
+  const wanted = new Set(ids);
+  return all.filter((t) => wanted.has(t.schema?.layout_id));
+}
+
 async function findTemplateById(templateId) {
   return prisma.template.findUnique({
     where: { id: templateId },
@@ -367,6 +384,8 @@ module.exports = {
   createExport,
   updateExport,
   findActiveTemplatesByContentType,
+  findActiveDeckPacks,
+  findLayoutsByLayoutIds,
   findTemplateById,
   upsertTemplate,
   upsertTemplates,
