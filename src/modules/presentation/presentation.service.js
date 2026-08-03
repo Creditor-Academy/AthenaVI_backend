@@ -148,7 +148,8 @@ async function createPresentation({
       template.schema,
       { title: displayName },
       null,
-      canvasSize
+      canvasSize,
+      { themeTokens: resolvedTokens }
     );
     elementsDoc = injectBrandLogo(elementsDoc, logo, {
       contentType: template.contentType || template.schema?.content_type,
@@ -190,7 +191,11 @@ async function createPresentation({
         layout.schema,
         placeholder,
         null,
-        canvasSize
+        canvasSize,
+        {
+          themeTokens: resolvedTokens,
+          designTokens: ps.designTokens || null,
+        }
       );
       elementsDoc = injectBrandLogo(elementsDoc, logo, {
         contentType: ps.contentType || layout.contentType,
@@ -199,7 +204,12 @@ async function createPresentation({
         order: ps.order,
         contentType: ps.contentType || layout.contentType || null,
         layoutId: layout.schema?.layout_id || layout.id,
-        content: placeholder,
+        content: {
+          ...placeholder,
+          intent: ps.intent || null,
+          designTokens: ps.designTokens || null,
+          generationHints: ps.generationHints || null,
+        },
         imageRef: null,
         elements: elementsDoc,
         status: 'READY',
@@ -229,6 +239,8 @@ async function listPresentationDeckPacks() {
     themeId: p.schema?.themeId || null,
     aspectRatio: p.schema?.aspectRatio || '16:9',
     slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
+    meta: p.schema?.meta || null,
+    narrative: p.schema?.narrative || null,
     preview: p.schema?.preview || null,
     generationDefaults: p.schema?.generationDefaults || null,
     variant: p.variant,

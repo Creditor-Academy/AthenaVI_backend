@@ -215,7 +215,7 @@ function styleForSlot(slotId, layoutSchema) {
   if (id === 'section_number') return { fontSize: 54, bold: true, align: 'left' };
   if (/^(stat|metric)_\d+$/.test(id)) return { fontSize: 30, bold: true, align: 'left' };
   if (id === 'cta') return { fontSize: 22, bold: true, align: 'center' };
-  if (id === 'caption') return { fontSize: 14, bold: false, align: 'left' };
+  if (id === 'caption' || id === 'eyebrow') return { fontSize: 14, bold: false, align: 'left' };
   if (id === 'attribution') return { fontSize: 16, bold: false, align: centerable };
   if (id.includes('quote')) return { fontSize: 28, bold: false, align: centerable };
   if (id.includes('subtitle')) return { fontSize: 24, bold: false, align: centerable };
@@ -224,14 +224,256 @@ function styleForSlot(slotId, layoutSchema) {
   return { fontSize: 18, bold: false, align: 'left' };
 }
 
+const ROLE_TYPE_SCALE = {
+  heading: 'title',
+  subheading: 'subtitle',
+  body: 'body',
+  caption: 'caption',
+  eyebrow: 'caption',
+  stat: 'stat',
+  stat_label: 'caption',
+  quote: 'subtitle',
+  attribution: 'caption',
+  cta: 'subtitle',
+  contact: 'body',
+};
+
+function paletteColor(palette, role, fallback) {
+  if (!palette || !role) return fallback;
+  return palette[role] || fallback;
+}
+
+function resolveFill(shapeSpec, palette = {}) {
+  if (!shapeSpec) return { type: 'solid', colorRole: 'primary' };
+  if (typeof shapeSpec.fill === 'string') {
+    return { type: 'solid', colorRole: shapeSpec.fill };
+  }
+  if (shapeSpec.fill && typeof shapeSpec.fill === 'object') {
+    if (shapeSpec.fill.type === 'gradient') {
+      return {
+        type: 'gradient',
+        direction: shapeSpec.fill.direction || '135deg',
+        stops: (shapeSpec.fill.stops || []).map((stop) => ({
+          color: stop.color || paletteColor(palette, stop.colorRole, '#0B1220'),
+          colorRole: stop.colorRole || null,
+          position: stop.position != null ? stop.position : 0,
+        })),
+      };
+    }
+    return {
+      type: 'solid',
+      color:
+        shapeSpec.fill.color ||
+        paletteColor(palette, shapeSpec.fill.colorRole || shapeSpec.fillColorRole, null),
+      colorRole: shapeSpec.fill.colorRole || shapeSpec.fillColorRole || 'primary',
+    };
+  }
+  if (shapeSpec.fillColorRole) {
+    return {
+      type: 'solid',
+      color: paletteColor(palette, shapeSpec.fillColorRole, null),
+      colorRole: shapeSpec.fillColorRole,
+    };
+  }
+  return { type: 'solid', colorRole: 'primary' };
+}
+
+function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
+  const slotId = slot.id || '';
+  const role = String(slot.role || '').toLowerCase();
+  const ty = slot.typography || {};
+  const fallback = styleForSlot(slotId, layoutSchema);
+  const scale = themeTokens?.typeScale || {};
+  const palette = themeTokens?.palette || {};
+
+  let fontSize = ty.fontSize;
+  if (fontSize == null && role && ROLE_TYPE_SCALE[role] && scale[ROLE_TYPE_SCALE[role]] != null) {
+    fontSize = scale[ROLE_TYPE_SCALE[role]];
+  }
+  if (fontSize == null && role === 'heading' && scale.display != null) {
+    fontSize = scale.display;
+  }
+  if (fontSize == null) fontSize = fallback.fontSize;
+
+  const fontWeight = ty.fontWeight != null ? Number(ty.fontWeight) : fallback.bold ? 700 : 400;
+  const bold = fontWeight >= 600;
+  const align = ty.align || fallback.align || 'left';
+  let colorRole = ty.colorRole || null;
+  if (!colorRole) {
+    if (role === 'stat') colorRole = 'accent';
+    else if (
+      role === 'caption' ||
+      role === 'attribution' ||
+      role === 'eyebrow' ||
+      role === 'stat_label'
+    ) {
+      colorRole = 'muted';
+    } else if (role === 'cta') colorRole = 'primary';
+    else colorRole = 'text';
+  }
+  if (designTokens?.textContrast === 'high' && (colorRole === 'text' || colorRole === 'muted')) {
+    colorRole = 'text';
+  }
+
+  return {
+    fontSize,
+    bold,
+    fontWeight,
+    align,
+    colorRole,
+    color: paletteColor(palette, colorRole, null),
+    letterSpacing: ty.letterSpacing != null ? ty.letterSpacing : undefined,
+    lineHeight: ty.lineHeight != null ? ty.lineHeight : undefined,
+  };
+}
+
+function elementRoleFromSlot(slot, slotId) {
+  if (slot.role) return slot.role;
+  const lower = String(slotId || '').toLowerCase();
+  if (lower.includes('title') && !lower.includes('subtitle')) return 'title';
+  if (lower.includes('subtitle')) return 'subtitle';
+  if (lower.includes('bullet')) return 'body';
+  return slotId;
+}
+
+/**
+ * Apply pack/slide designTokens chrome (bg + accent bars) when layout has no background slot.
+ */
+function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
+  if (!designTokens || typeof designTokens !== 'object') return elementsDoc;
+  const doc = {
+    version: elementsDoc?.version || 1,
+    canvas: elementsDoc?.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
+    elements: Array.isArray(elementsDoc?.elements) ? [...elementsDoc.elements] : [],
+  };
+  const canvas = doc.canvas;
+  const palette = themeTokens.palette || {};
+  const hasBg = doc.elements.some(
+    (e) => e.role === 'background' || e.role === 'design_bg' || String(e.id || '').startsWith('bg_')
+  );
+
+  if (!hasBg && (designTokens.backgroundStyle === 'gradient' || designTokens.backgroundStyle === 'solid')) {
+    const fill =
+      designTokens.backgroundStyle === 'gradient'
+        ? {
+            type: 'gradient',
+            direction: '135deg',
+            stops: [
+              {
+                color: palette.gradientStart || palette.bg || '#0B1220',
+                colorRole: 'gradientStart',
+                position: 0,
+              },
+              {
+                color: palette.gradientEnd || palette.surface || '#121A2B',
+                colorRole: 'gradientEnd',
+                position: 100,
+              },
+            ],
+          }
+        : {
+            type: 'solid',
+            color: palette.bg || '#0B1220',
+            colorRole: 'bg',
+          };
+    doc.elements.unshift({
+      id: newElementId('bg'),
+      type: 'shape',
+      layer: 0,
+      placement: {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: { shape: 'rect', fill },
+      role: 'design_bg',
+    });
+  }
+
+  const accent = designTokens.accentPosition || 'none';
+  const accentColor = palette.accent || palette.primary || '#3B82F6';
+  const barBase = {
+    type: 'shape',
+    layer: 1,
+    content: {
+      shape: 'rect',
+      fill: { type: 'solid', color: accentColor, colorRole: 'accent' },
+    },
+    role: 'design_accent',
+  };
+  if (accent === 'left-bar') {
+    doc.elements.push({
+      ...barBase,
+      id: newElementId('acc'),
+      placement: { x: 0, y: 0, width: 8, height: canvas.height, rotation: 0, opacity: 1 },
+    });
+  } else if (accent === 'top-bar') {
+    doc.elements.push({
+      ...barBase,
+      id: newElementId('acc'),
+      placement: { x: 0, y: 0, width: canvas.width, height: 8, rotation: 0, opacity: 1 },
+    });
+  } else if (accent === 'bottom-bar') {
+    doc.elements.push({
+      ...barBase,
+      id: newElementId('acc'),
+      placement: {
+        x: 0,
+        y: canvas.height - 8,
+        width: canvas.width,
+        height: 8,
+        rotation: 0,
+        opacity: 1,
+      },
+    });
+  }
+
+  if (designTokens.overlayOpacity > 0 && designTokens.backgroundStyle === 'image') {
+    doc.elements.push({
+      id: newElementId('ovl'),
+      type: 'shape',
+      layer: 2,
+      placement: {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+        rotation: 0,
+        opacity: Number(designTokens.overlayOpacity),
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', color: '#000000', colorRole: 'bg' },
+      },
+      role: 'design_overlay',
+    });
+  }
+
+  return doc;
+}
+
 /**
  * Compile a DECK_LAYOUT schema + slide content into freeform canvas elements.
  * @param {object} layoutSchema
  * @param {object} content
  * @param {object|null} imageRef
  * @param {{ width?: number, height?: number }} canvasSize
+ * @param {{ themeTokens?: object, designTokens?: object }} opts
  */
-function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canvasSize = {}) {
+function layoutSlotsToElements(
+  layoutSchema,
+  content = {},
+  imageRef = null,
+  canvasSize = {},
+  opts = {}
+) {
+  const themeTokens = opts.themeTokens || content.themeTokens || null;
+  const designTokens = opts.designTokens || content.designTokens || null;
+  const palette = themeTokens?.palette || {};
+
   const canvas = {
     width: canvasSize.width || CANVAS_WIDTH,
     height: canvasSize.height || CANVAS_HEIGHT,
@@ -244,8 +486,31 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
     const slotId = slot.id || `slot_${layer}`;
     const placement = regionToPlacement(slot.region, canvas);
     const lower = String(slotId).toLowerCase();
+    const role = String(slot.role || '').toLowerCase();
+    const slotLayer = slot.layer != null ? Number(slot.layer) : layer++;
 
-    if (lower.includes('image') || lower === 'hero' || slot.fit === 'cover') {
+    if (role === 'background' || role === 'decoration' || role === 'divider' || slot.shape) {
+      const fill = resolveFill(
+        slot.shape || { fillColorRole: role === 'divider' ? 'accent' : 'primary' },
+        palette
+      );
+      elements.push({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: slotLayer,
+        placement,
+        content: {
+          shape: slot.shape?.type || 'rect',
+          fill,
+          borderRadius: slot.shape?.borderRadius,
+        },
+        role: role || (lower === 'accent' ? 'accent' : slotId),
+      });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+      continue;
+    }
+
+    if (lower.includes('image') || lower === 'hero' || slot.fit === 'cover' || role === 'image') {
       const url =
         imageRef?.url ||
         imageRef?.s3Url ||
@@ -254,15 +519,16 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
       elements.push({
         id: newElementId('img'),
         type: 'image',
-        layer: layer++,
+        layer: slotLayer,
         placement,
         content: {
           url,
           fit: slot.fit || 'cover',
           alt: content.title || '',
         },
-        role: lower.includes('image') ? 'image' : slotId,
+        role: 'image',
       });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
     }
 
@@ -270,34 +536,40 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
       elements.push({
         id: newElementId('shp'),
         type: 'shape',
-        layer: layer++,
+        layer: slotLayer,
         placement,
         content: {
           shape: 'rect',
-          fill: lower === 'axis' ? 'secondary' : 'primary',
+          fill: {
+            type: 'solid',
+            colorRole: lower === 'axis' ? 'secondary' : 'primary',
+            color: paletteColor(palette, lower === 'axis' ? 'secondary' : 'primary', null),
+          },
         },
         role: lower === 'accent' ? 'accent' : slotId,
       });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
     }
 
-    if (lower === 'table' && tableRowsOf(content).length) {
+    if ((lower === 'table' || role === 'table') && tableRowsOf(content).length) {
       elements.push({
         id: newElementId('tbl'),
         type: 'table',
-        layer: layer++,
+        layer: slotLayer,
         placement,
         content: { rows: tableRowsOf(content) },
         role: 'table',
       });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
     }
 
-    if (lower.includes('chart') || lower.includes('graph')) {
+    if (lower.includes('chart') || lower.includes('graph') || role === 'chart') {
       elements.push({
         id: newElementId('cht'),
         type: 'chart',
-        layer: layer++,
+        layer: slotLayer,
         placement,
         content: {
           chartType: content.chart?.type || 'bar',
@@ -306,29 +578,36 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
         },
         role: 'chart',
       });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
     }
 
     const text = textForSlot(slotId, content);
-    const isTitle = lower.includes('title') && !lower.includes('subtitle');
-    const isMainTitle = lower === 'title' || lower === 'headline';
-    const style = styleForSlot(slotId, layoutSchema);
+    const isMainTitle = lower === 'title' || lower === 'headline' || role === 'heading';
+    const style = resolveTextStyle(slot, layoutSchema, themeTokens, designTokens);
+    const textContent = {
+      text: text || (isMainTitle ? content.title || '' : '') || slot.placeholder_text || '',
+      fontSize: style.fontSize,
+      bold: style.bold,
+      fontWeight: style.fontWeight,
+      align: style.align,
+    };
+    if (style.color) textContent.color = style.color;
+    if (style.colorRole) textContent.colorRole = style.colorRole;
+    if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
+    if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
+
     elements.push({
       id: newElementId('txt'),
       type: 'text',
-      layer: layer++,
+      layer: slotLayer,
       placement,
-      content: {
-        text: text || (isMainTitle ? content.title || '' : ''),
-        fontSize: style.fontSize,
-        bold: style.bold,
-        align: style.align,
-      },
-      role: isTitle ? 'title' : lower.includes('subtitle') ? 'subtitle' : lower.includes('bullet') ? 'body' : slotId,
+      content: textContent,
+      role: elementRoleFromSlot(slot, slotId),
     });
+    if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
   }
 
-  // Ensure at least title if no slots
   if (elements.length === 0 && (content.title || content.body)) {
     elements.push({
       id: newElementId('txt'),
@@ -355,11 +634,6 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
     }
   }
 
-  if (content.notes) {
-    // notes stay on slide.content; no canvas element
-  }
-
-  // If we have an image URL but the layout had no image slot, still place a side visual
   const hasImageEl = elements.some((e) => e.type === 'image');
   const imageUrl =
     imageRef?.url ||
@@ -388,11 +662,9 @@ function layoutSlotsToElements(layoutSchema, content = {}, imageRef = null, canv
     });
   }
 
-  return {
-    version: 1,
-    canvas,
-    elements,
-  };
+  let doc = { version: 1, canvas, elements };
+  doc = applySlideDesignTokens(doc, designTokens, themeTokens);
+  return doc;
 }
 
 /**
@@ -482,6 +754,7 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
 module.exports = {
   regionToPlacement,
   layoutSlotsToElements,
+  applySlideDesignTokens,
   blankCanvas,
   newElementId,
   injectBrandLogo,

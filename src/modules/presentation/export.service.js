@@ -92,11 +92,44 @@ function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
 
 function resolveColor(value, palette, fallback = '111111') {
   if (!value) return String(fallback).replace(/^#/, '');
-  if (value === 'primary') return String(palette.primary || palette.text || fallback).replace(/^#/, '');
-  if (value === 'secondary') return String(palette.secondary || palette.primary || fallback).replace(/^#/, '');
-  if (value === 'text') return String(palette.text || fallback).replace(/^#/, '');
-  if (value === 'bg') return String(palette.bg || 'FFFFFF').replace(/^#/, '');
-  return String(value).replace(/^#/, '');
+  const key = String(value);
+  if (key === 'primary') return String(palette.primary || palette.text || fallback).replace(/^#/, '');
+  if (key === 'secondary') return String(palette.secondary || palette.primary || fallback).replace(/^#/, '');
+  if (key === 'accent') return String(palette.accent || palette.primary || fallback).replace(/^#/, '');
+  if (key === 'text') return String(palette.text || fallback).replace(/^#/, '');
+  if (key === 'muted') return String(palette.muted || palette.text || fallback).replace(/^#/, '');
+  if (key === 'bg') return String(palette.bg || 'FFFFFF').replace(/^#/, '');
+  if (key === 'surface') return String(palette.surface || palette.bg || 'FFFFFF').replace(/^#/, '');
+  if (key === 'divider') return String(palette.divider || palette.muted || 'CCCCCC').replace(/^#/, '');
+  if (key === 'cardBg') return String(palette.cardBg || palette.surface || 'F5F5F5').replace(/^#/, '');
+  if (key === 'gradientStart') return String(palette.gradientStart || palette.bg || fallback).replace(/^#/, '');
+  if (key === 'gradientEnd') return String(palette.gradientEnd || palette.surface || fallback).replace(/^#/, '');
+  // rgba(...) — pptxgenjs wants hex; fall back
+  if (key.startsWith('rgba') || key.startsWith('rgb')) {
+    return String(fallback).replace(/^#/, '');
+  }
+  return key.replace(/^#/, '');
+}
+
+function resolveFillForExport(fill, palette, fallback = '0A84FF') {
+  if (!fill) return { kind: 'solid', color: resolveColor(null, palette, fallback) };
+  if (typeof fill === 'string') {
+    return { kind: 'solid', color: resolveColor(fill, palette, fallback) };
+  }
+  if (fill.type === 'gradient' && Array.isArray(fill.stops) && fill.stops.length >= 2) {
+    const colors = fill.stops.map((s) =>
+      resolveColor(s.color || s.colorRole, palette, fallback)
+    );
+    return {
+      kind: 'gradient',
+      colors,
+      direction: fill.direction || '135deg',
+    };
+  }
+  return {
+    kind: 'solid',
+    color: resolveColor(fill.color || fill.colorRole, palette, fallback),
+  };
 }
 
 function slideHasElements(slide) {
@@ -136,19 +169,32 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
     const rotate = Number(el.placement?.rotation) || 0;
 
     if (el.type === 'text') {
-      s.addText(String(content.text || ''), {
+      const textColorResolved = resolveColor(
+        content.color || content.colorRole,
+        palette,
+        textColor
+      );
+      const textOpts = {
         x: box.x,
         y: box.y,
         w: box.w,
         h: box.h,
         fontSize: Number(content.fontSize) || 18,
-        bold: content.bold === true,
+        bold: content.bold === true || Number(content.fontWeight) >= 600,
         italic: content.italic === true,
-        color: resolveColor(content.color, palette, textColor),
+        color: textColorResolved,
         align: content.align || 'left',
         valign: 'top',
         rotate,
-      });
+      };
+      if (content.letterSpacing != null) {
+        // pptxgenjs: charSpacing roughly maps letter-spacing (em * fontSize)
+        textOpts.charSpacing = Math.round(Number(content.letterSpacing) * (Number(content.fontSize) || 18));
+      }
+      if (content.lineHeight != null) {
+        textOpts.lineSpacing = Math.round(Number(content.lineHeight) * (Number(content.fontSize) || 18));
+      }
+      s.addText(String(content.text || ''), textOpts);
     } else if (el.type === 'image' || el.type === 'icon') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
@@ -184,17 +230,30 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
       }
     } else if (el.type === 'shape') {
       const shape = shapeTypeForPptx(content.shape);
-      s.addShape(shape, {
+      const fillResolved = resolveFillForExport(content.fill, palette, '0A84FF');
+      const shapeOpts = {
         x: box.x,
         y: box.y,
         w: box.w,
         h: box.h,
-        fill: { color: resolveColor(content.fill, palette, '0A84FF') },
         line: content.line
           ? { color: resolveColor(content.line, palette, 'E5E5E5'), width: 1.5 }
-          : undefined,
+          : { type: 'none' },
         rotate,
-      });
+      };
+      if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
+        shapeOpts.fill = {
+          type: 'gradient',
+          color: fillResolved.colors[0],
+          color2: fillResolved.colors[fillResolved.colors.length - 1],
+          // 135deg ≈ diagonal
+          gradientType: 'linear',
+          angle: 135,
+        };
+      } else {
+        shapeOpts.fill = { color: fillResolved.color };
+      }
+      s.addShape(shape, shapeOpts);
     } else if (el.type === 'chart') {
       const labels = Array.isArray(content.labels) ? content.labels : [];
       const series = Array.isArray(content.series) ? content.series : [];
@@ -408,7 +467,11 @@ function buildSlideHtmlPage(slide, palette) {
         ].join(';');
 
         if (el.type === 'text') {
-          return `<div style="${style};color:${escapeHtml(c.color || text)};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap">${escapeHtml(c.text || '')}</div>`;
+          const color = c.color || (c.colorRole && palette[c.colorRole]) || text;
+          const ls =
+            c.letterSpacing != null ? `letter-spacing:${Number(c.letterSpacing)}em;` : '';
+          const lh = c.lineHeight != null ? `line-height:${Number(c.lineHeight)};` : '';
+          return `<div style="${style};color:${escapeHtml(color)};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};${ls}${lh}white-space:pre-wrap">${escapeHtml(c.text || '')}</div>`;
         }
         if (el.type === 'image' || el.type === 'icon') {
           if (c.url) {
@@ -417,9 +480,35 @@ function buildSlideHtmlPage(slide, palette) {
           return `<div style="${style};background:#ddd;display:flex;align-items:center;justify-content:center;color:#666;font-size:14px">${escapeHtml(el.type)}</div>`;
         }
         if (el.type === 'shape') {
-          const fill = c.fill === 'primary' ? palette.primary || '#0A84FF' : c.fill || '#0A84FF';
-          const radius = String(c.shape || '').toLowerCase() === 'ellipse' ? '50%' : '0';
-          return `<div style="${style};background:${escapeHtml(fill)};border-radius:${radius}"></div>`;
+          let bgCss = palette.primary || '#0A84FF';
+          if (typeof c.fill === 'string') {
+            bgCss =
+              c.fill === 'primary'
+                ? palette.primary || '#0A84FF'
+                : palette[c.fill] || c.fill || bgCss;
+          } else if (c.fill && c.fill.type === 'gradient' && Array.isArray(c.fill.stops)) {
+            const stops = c.fill.stops
+              .map((st) => {
+                const col = st.color || palette[st.colorRole] || '#0B1220';
+                const pos = st.position != null ? `${st.position}%` : '';
+                return `${col} ${pos}`.trim();
+              })
+              .join(', ');
+            bgCss = `linear-gradient(${c.fill.direction || '135deg'}, ${stops})`;
+          } else if (c.fill && typeof c.fill === 'object') {
+            bgCss =
+              c.fill.color ||
+              palette[c.fill.colorRole] ||
+              palette.primary ||
+              '#0A84FF';
+          }
+          const radius =
+            c.borderRadius != null
+              ? `${c.borderRadius}px`
+              : String(c.shape || '').toLowerCase() === 'ellipse'
+                ? '50%'
+                : '0';
+          return `<div style="${style};background:${escapeHtml(bgCss)};border-radius:${radius}"></div>`;
         }
         if (el.type === 'chart' || el.type === 'table') {
           return `<div style="${style};background:#f5f5f5;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;color:#666">${escapeHtml(el.type)}</div>`;

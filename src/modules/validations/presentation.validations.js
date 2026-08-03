@@ -464,10 +464,93 @@ const applyBrandKitSchema = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const slotRoleSchema = Joi.string()
+  .trim()
+  .valid(
+    'heading',
+    'subheading',
+    'body',
+    'caption',
+    'stat',
+    'stat_label',
+    'decoration',
+    'background',
+    'image',
+    'chart',
+    'table',
+    'quote',
+    'attribution',
+    'cta',
+    'contact',
+    'eyebrow',
+    'divider'
+  )
+  .optional();
+
+const colorRoleSchema = Joi.string()
+  .trim()
+  .valid(
+    'bg',
+    'surface',
+    'primary',
+    'secondary',
+    'text',
+    'muted',
+    'accent',
+    'divider',
+    'cardBg',
+    'gradientStart',
+    'gradientEnd'
+  )
+  .optional();
+
+const gradientFillSchema = Joi.object({
+  type: Joi.string().valid('gradient').required(),
+  direction: Joi.string().trim().max(32).optional(),
+  stops: Joi.array()
+    .items(
+      Joi.object({
+        color: Joi.string().trim().max(64).optional(),
+        colorRole: colorRoleSchema,
+        position: Joi.number().min(0).max(100).optional(),
+      }).unknown(true)
+    )
+    .min(2)
+    .max(8)
+    .required(),
+}).unknown(true);
+
+const solidFillSchema = Joi.object({
+  type: Joi.string().valid('solid').required(),
+  color: Joi.string().trim().max(64).optional(),
+  colorRole: colorRoleSchema,
+}).unknown(true);
+
+const slotShapeSchema = Joi.object({
+  type: Joi.string().trim().valid('rect', 'ellipse', 'line').default('rect'),
+  fillColorRole: colorRoleSchema,
+  fill: Joi.alternatives().try(gradientFillSchema, solidFillSchema, Joi.string().trim()).optional(),
+  borderRadius: Joi.number().min(0).max(200).optional(),
+}).unknown(true);
+
+const slotTypographySchema = Joi.object({
+  fontSize: Joi.number().integer().min(8).max(200).optional(),
+  fontWeight: Joi.number().integer().min(100).max(900).optional(),
+  letterSpacing: Joi.number().min(-0.2).max(0.5).optional(),
+  lineHeight: Joi.number().min(0.8).max(3).optional(),
+  align: Joi.string().valid('left', 'center', 'right').optional(),
+  colorRole: colorRoleSchema,
+}).unknown(true);
+
 /** Strict DECK_LAYOUT schema for superadmin / seed */
 const deckLayoutSlotSchema = Joi.object({
   id: Joi.string().trim().required(),
   region: Joi.string().trim().required(),
+  role: slotRoleSchema,
+  typography: slotTypographySchema.optional(),
+  shape: slotShapeSchema.optional(),
+  layer: Joi.number().integer().min(-10).max(100).optional(),
+  placeholder_text: Joi.string().trim().max(500).allow('', null).optional(),
   max_lines: Joi.number().integer().min(1).optional(),
   max_words: Joi.number().integer().min(1).optional(),
   max_items: Joi.number().integer().min(1).optional(),
@@ -476,6 +559,7 @@ const deckLayoutSlotSchema = Joi.object({
 }).unknown(true);
 
 const deckLayoutTemplateSchemaObject = Joi.object({
+  schemaVersion: Joi.number().integer().min(1).max(10).optional(),
   layout_id: Joi.string().trim().required(),
   content_type: Joi.string().trim().required(),
   grid: Joi.string().trim().required(),
@@ -503,27 +587,126 @@ function assertDeckLayoutTemplateSchema(schema) {
   return value;
 }
 
+const designTokensSchema = Joi.object({
+  backgroundStyle: Joi.string().valid('solid', 'gradient', 'image', 'split').optional(),
+  accentPosition: Joi.string()
+    .valid('none', 'left-bar', 'top-bar', 'bottom-bar', 'corner')
+    .optional(),
+  imagePosition: Joi.string()
+    .valid('none', 'left-half', 'right-half', 'full-bleed', 'top-third', 'avatar-grid')
+    .optional(),
+  overlayOpacity: Joi.number().min(0).max(1).optional(),
+  textContrast: Joi.string().valid('normal', 'high').optional(),
+})
+  .unknown(true)
+  .optional();
+
+const generationHintsSchema = Joi.object({
+  maxTitleWords: Joi.number().integer().min(1).max(40).optional(),
+  maxBodyWords: Joi.number().integer().min(1).max(200).optional(),
+  maxLines: Joi.number().integer().min(1).max(20).optional(),
+  itemCountMin: Joi.number().integer().min(1).max(20).optional(),
+  itemCountMax: Joi.number().integer().min(1).max(20).optional(),
+  titleLength: Joi.string().trim().max(256).optional(),
+  subtitleLength: Joi.string().trim().max(256).optional(),
+  bodyLength: Joi.string().trim().max(256).optional(),
+  itemCount: Joi.string().trim().max(64).optional(),
+  itemLength: Joi.string().trim().max(256).optional(),
+  avoidClichés: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
+  avoidCliches: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
+  statFormat: Joi.string().trim().max(256).optional(),
+  labelLength: Joi.string().trim().max(256).optional(),
+  calloutLength: Joi.string().trim().max(256).optional(),
+  titleTone: Joi.string().trim().max(256).optional(),
+  ctaFormat: Joi.string().trim().max(256).optional(),
+  imagePromptStyle: Joi.string().trim().max(256).optional(),
+  parallelStructure: Joi.string().trim().max(256).optional(),
+  pointCount: Joi.string().trim().max(64).optional(),
+  pointLength: Joi.string().trim().max(256).optional(),
+  bioLength: Joi.string().trim().max(256).optional(),
+  nameFormat: Joi.string().trim().max(256).optional(),
+  chartDataStyle: Joi.string().trim().max(256).optional(),
+  sourceNote: Joi.string().trim().max(256).optional(),
+})
+  .unknown(true)
+  .optional();
+
 const deckPackSlideSchema = Joi.object({
   order: Joi.number().integer().min(1).required(),
   layout_id: Joi.string().trim().required(),
   contentType: Joi.string().trim().max(64).required(),
+  intent: Joi.string().trim().max(280).allow('', null).optional(),
+  designTokens: designTokensSchema,
+  generationHints: generationHintsSchema,
   placeholder: Joi.object().unknown(true).default({}),
 }).unknown(true);
 
+const contentDistributionSchema = Joi.object({
+  maxConsecutiveBulletSlides: Joi.number().integer().min(0).max(10).optional(),
+  requireStatSlide: Joi.boolean().optional(),
+  requireImageSlide: Joi.boolean().optional(),
+  requireChartSlide: Joi.boolean().optional(),
+  requireComparisonSlide: Joi.boolean().optional(),
+})
+  .unknown(true)
+  .optional();
+
 const deckPackTemplateSchemaObject = Joi.object({
+  schemaVersion: Joi.number().integer().min(1).max(10).optional(),
   pack_id: Joi.string().trim().required(),
   themeId: Joi.string().trim().max(64).allow(null, '').optional(),
   aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
+  meta: Joi.object({
+    name: Joi.string().trim().max(255).optional(),
+    description: Joi.string().trim().max(2000).optional(),
+    useCase: Joi.string().trim().max(64).optional(),
+    audience: Joi.string().trim().max(128).optional(),
+    tone: Joi.string().trim().max(256).optional(),
+    industry: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
+  })
+    .unknown(true)
+    .optional(),
+  narrative: Joi.object({
+    arc: Joi.string().trim().max(128).optional(),
+    summary: Joi.string().trim().max(2000).optional(),
+  })
+    .unknown(true)
+    .optional(),
   slides: Joi.array().items(deckPackSlideSchema).min(1).max(40).required(),
   generationDefaults: Joi.object({
     baseTemplate: Joi.string().trim().max(64).optional(),
-    imageStyle: Joi.string().trim().max(64).optional(),
+    imageStyle: Joi.string().trim().max(128).optional(),
     preferVisuals: Joi.boolean().optional(),
+    density: Joi.string().valid('concise', 'balanced', 'detailed').optional(),
+    imageType: Joi.string().trim().max(32).optional(),
+    slideCount: Joi.number().integer().min(1).max(40).optional(),
+    locale: Joi.string().trim().max(16).optional(),
+    layoutWhitelist: Joi.array().items(Joi.string().trim().max(128)).max(40).optional(),
+    slideOrder: Joi.string().valid('fixed', 'flexible').optional(),
+    titleSlide: Joi.object({
+      layout_id: Joi.string().trim().optional(),
+      alwaysFirst: Joi.boolean().optional(),
+    })
+      .unknown(true)
+      .optional(),
+    closingSlide: Joi.object({
+      layout_id: Joi.string().trim().optional(),
+      alwaysLast: Joi.boolean().optional(),
+    })
+      .unknown(true)
+      .optional(),
+    contentDistribution: contentDistributionSchema,
   })
     .unknown(true)
     .optional(),
   preview: Joi.object({
     label: Joi.string().trim().max(255).optional(),
+    color: Joi.string().trim().max(32).optional(),
+    accentColor: Joi.string().trim().max(32).optional(),
+    description: Joi.string().trim().max(2000).optional(),
+    useCase: Joi.string().trim().max(64).optional(),
+    slideCount: Joi.number().integer().min(1).max(40).optional(),
+    tags: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
   })
     .unknown(true)
     .optional(),

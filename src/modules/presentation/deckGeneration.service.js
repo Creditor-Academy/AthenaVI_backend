@@ -148,8 +148,28 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   if (packId) {
     pack = await presentationDao.findTemplateById(packId);
     if (pack && pack.type === 'DECK_PACK' && pack.isActive) {
-      layoutIdWhitelist = (pack.schema?.slides || []).map((s) => s.layout_id).filter(Boolean);
-      packDefaults = pack.schema?.generationDefaults || null;
+      const defaults = pack.schema?.generationDefaults || {};
+      layoutIdWhitelist =
+        Array.isArray(defaults.layoutWhitelist) && defaults.layoutWhitelist.length
+          ? defaults.layoutWhitelist
+          : (pack.schema?.slides || []).map((s) => s.layout_id).filter(Boolean);
+      packDefaults = defaults;
+      if (pack.schema?.narrative?.summary || pack.schema?.narrative?.arc) {
+        const narr = [
+          pack.schema.narrative.arc ? `Deck narrative arc: ${pack.schema.narrative.arc}` : null,
+          pack.schema.narrative.summary
+            ? `Deck narrative: ${pack.schema.narrative.summary}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join('\n');
+        flowCtx.wizardBrief = [flowCtx.wizardBrief, narr].filter(Boolean).join('\n');
+        flowCtx.packNarrative = pack.schema.narrative;
+      }
+      if (defaults.contentDistribution) {
+        flowCtx.contentDistribution = defaults.contentDistribution;
+      }
+      flowCtx.packSlides = pack.schema?.slides || [];
       if (!flowCtx.baseTemplateBias && packDefaults?.baseTemplate) {
         flowCtx.baseTemplateBias = generationFlowService.baseTemplateBias(
           packDefaults.baseTemplate
@@ -939,6 +959,89 @@ async function resolveSlideImage({
   }
 }
 
+function wordCount(text) {
+  return String(text || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function truncateWords(text, max) {
+  if (!max || max < 1) return text;
+  const parts = String(text || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length <= max) return text;
+  return parts.slice(0, max).join(' ');
+}
+
+function applyGenerationHints(content, hints) {
+  if (!content || !hints) return content;
+  const next = { ...content };
+  if (hints.maxTitleWords && next.title) {
+    next.title = truncateWords(next.title, hints.maxTitleWords);
+  }
+  if (hints.maxBodyWords && next.body) {
+    next.body = truncateWords(next.body, hints.maxBodyWords);
+  }
+  if (hints.itemCountMax && Array.isArray(next.bullets) && next.bullets.length > hints.itemCountMax) {
+    next.bullets = next.bullets.slice(0, hints.itemCountMax);
+  }
+  if (hints.itemCountMax && Array.isArray(next.stats) && next.stats.length > hints.itemCountMax) {
+    next.stats = next.stats.slice(0, hints.itemCountMax);
+  }
+  return next;
+}
+
+function slotConstraintsFromLayout(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots
+    .filter((s) => {
+      const role = String(s.role || '').toLowerCase();
+      return !['decoration', 'background', 'image', 'chart', 'table', 'divider'].includes(role);
+    })
+    .map((s) => {
+      const ty = s.typography || {};
+      return {
+        id: s.id,
+        role: s.role || null,
+        max_lines: s.max_lines || null,
+        max_words: s.max_words || null,
+        fontHint: ty.fontSize
+          ? `~${ty.fontSize}px${ty.fontWeight ? ` weight ${ty.fontWeight}` : ''}`
+          : s.role
+            ? `role ${s.role}`
+            : null,
+      };
+    });
+}
+
+function applyContentDistribution(contentType, ctx) {
+  const dist = ctx.contentDistribution;
+  if (!dist || typeof dist !== 'object') return contentType;
+  let next = contentType;
+  const history = Array.isArray(ctx.contentTypeHistory) ? ctx.contentTypeHistory : [];
+  const maxBullet = dist.maxConsecutiveBulletSlides;
+  if (
+    maxBullet != null &&
+    String(next).toLowerCase() === 'bullet_list' &&
+    history.slice(-Number(maxBullet)).every((t) => String(t).toLowerCase() === 'bullet_list')
+  ) {
+    next = 'image+text';
+  }
+  return next;
+}
+
+function packSlideMeta(ctx, slideOrder) {
+  const slides = Array.isArray(ctx.packSlides) ? ctx.packSlides : [];
+  return (
+    slides.find((s) => Number(s.order) === Number(slideOrder)) ||
+    slides[Number(slideOrder) - 1] ||
+    null
+  );
+}
+
 async function processSlide(ctx, slide) {
   const startedAll = Date.now();
   await presentationDao.updateSlide(slide.id, { status: 'GENERATING' });
@@ -952,6 +1055,26 @@ async function processSlide(ctx, slide) {
     const neighbors = (ctx.outline?.slides || []).sort((a, b) => a.order - b.order);
     const prev = neighbors.find((s) => s.order === slide.order - 1);
     const next = neighbors.find((s) => s.order === slide.order + 1);
+    const packMeta = packSlideMeta(ctx, slide.order);
+    const slideIntent =
+      packMeta?.intent ||
+      (slide.content && slide.content.intent) ||
+      null;
+    const generationHints =
+      packMeta?.generationHints ||
+      (slide.content && slide.content.generationHints) ||
+      null;
+    const designTokens =
+      packMeta?.designTokens ||
+      (slide.content && slide.content.designTokens) ||
+      null;
+
+    // Prefer pack layout schema early for slot constraints when fixed pack layout
+    let earlyLayoutSchema = null;
+    if (packMeta?.layout_id) {
+      const early = await presentationDao.findLayoutsByLayoutIds([packMeta.layout_id]);
+      earlyLayoutSchema = early[0]?.schema || null;
+    }
 
     // 1) Content LLM
     const contentPrompt = getSlideContentPrompt();
@@ -971,6 +1094,7 @@ async function processSlide(ctx, slide) {
       resolvedSummary,
       outlineSlide.suggestedContentType,
       ctx.userPrompt || '',
+      slideIntent || '',
     ]);
     const contentJob = await beginJob({
       slideId: slide.id,
@@ -980,7 +1104,7 @@ async function processSlide(ctx, slide) {
       model: DEFAULT_SLIDE_MODEL,
     });
 
-    let content = slide.content && typeof slide.content === 'object' ? slide.content : null;
+    let content = slide.content && typeof slide.content === 'object' ? { ...slide.content } : null;
     if (!contentJob.duplicate) {
       const contentStarted = Date.now();
       try {
@@ -995,18 +1119,25 @@ async function processSlide(ctx, slide) {
               slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
               title: resolvedTitle || content?.title,
               summary: resolvedSummary,
-              suggestedContentType: outlineSlide.suggestedContentType || slide.contentType,
+              suggestedContentType:
+                packMeta?.contentType ||
+                outlineSlide.suggestedContentType ||
+                slide.contentType,
               previousSlideTitle: prev?.title,
               nextSlideTitle: next?.title,
               locale: ctx.locale || 'en',
               wizardBrief: ctx.wizardBrief || '',
+              intent: slideIntent,
+              generationHints,
+              slotConstraints: slotConstraintsFromLayout(earlyLayoutSchema),
             }),
             model: DEFAULT_SLIDE_MODEL,
           }),
           CONTENT_TIMEOUT_MS,
           'Slide content generation'
         );
-        content = llmResult.data;
+        content = { ...(content || {}), ...llmResult.data };
+        content = applyGenerationHints(content, generationHints);
         await trackCharge(
           ctx.deckId,
           await presentationCredit.chargeFlat({
@@ -1107,11 +1238,17 @@ async function processSlide(ctx, slide) {
       baseTemplateBias: ctx.baseTemplateBias || null,
     });
     visualNeed = policy.visualNeed;
-    contentType = policy.contentType;
+    contentType = applyContentDistribution(policy.contentType, ctx);
+    policy.layoutContentType = contentType;
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
       content.content_type = contentType;
+      if (slideIntent) content.intent = slideIntent;
+      if (designTokens) content.designTokens = designTokens;
+      if (generationHints) content.generationHints = generationHints;
     }
+    if (!Array.isArray(ctx.contentTypeHistory)) ctx.contentTypeHistory = [];
+    ctx.contentTypeHistory.push(contentType);
 
     // 3) Layout select + QA
     let layoutId = null;
@@ -1241,7 +1378,11 @@ async function processSlide(ctx, slide) {
       template?.schema || { slots: [] },
       content,
       imageRef,
-      { width: canvasSize.width, height: canvasSize.height }
+      { width: canvasSize.width, height: canvasSize.height },
+      {
+        themeTokens: ctx.themeTokens || null,
+        designTokens,
+      }
     );
     const logo = brandKitService.pickLogoForBackground(ctx.themeTokens);
     elementsDoc = injectBrandLogo(elementsDoc, logo, { contentType });
@@ -1943,7 +2084,9 @@ async function regenerateSlide({
               elementsDoc = layoutSlotsToElements(
                 { slots: [] },
                 content,
-                imageRef
+                imageRef,
+                {},
+                { themeTokens: ctx.themeTokens || null, designTokens: content?.designTokens || null }
               );
               // merge: keep prior text elements + appended image
               const prior = Array.isArray(fresh.elements?.elements) ? fresh.elements.elements : [];
@@ -1961,7 +2104,9 @@ async function regenerateSlide({
             elementsDoc = layoutSlotsToElements(
               seed || { slots: [] },
               content,
-              imageRef
+              imageRef,
+              {},
+              { themeTokens: ctx.themeTokens || null, designTokens: content?.designTokens || null }
             );
           }
           await presentationDao.updateSlide(slideId, {

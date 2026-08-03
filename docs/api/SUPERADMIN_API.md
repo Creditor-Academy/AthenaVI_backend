@@ -47,8 +47,8 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 
 | `type` | Product | Schema |
 |--------|---------|--------|
-| `DECK_LAYOUT` | AI PPT / presentations | Requires `layout_id`, `content_type`, `grid`, `slots[]` (`id` + `region`). No `scene` / `videoSettings`. |
-| `DECK_PACK` | AI PPT branded multi-slide pack | `{ pack_id, themeId?, aspectRatio, slides[{ order, layout_id, contentType, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
+| `DECK_LAYOUT` | AI PPT / presentations | `schemaVersion?`, `layout_id`, `content_type`, `grid`, `slots[]` (`id`, `region`, optional `role`, `typography`, `shape`, `layer`). No `scene` / `videoSettings`. |
+| `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id, contentType, intent?, designTokens?, generationHints?, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
 | `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
 
 **Create `DECK_LAYOUT` example**
@@ -61,11 +61,18 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
   "variant": "v1",
   "isActive": true,
   "schema": {
+    "schemaVersion": 2,
     "layout_id": "title_centered_v1",
     "content_type": "title",
     "grid": "12-col",
     "slots": [
-      { "id": "title", "region": "cols 2-11, rows 4-7", "max_lines": 3 }
+      {
+        "id": "title",
+        "region": "cols 2-11, rows 4-7",
+        "role": "heading",
+        "typography": { "fontSize": 64, "fontWeight": 800, "align": "center", "colorRole": "text" },
+        "max_lines": 3
+      }
     ]
   }
 }

@@ -90,6 +90,12 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
     secondary: resolveHex(map, roles.secondary || roles.primary, '#0EA5E9'),
     surface: resolveHex(map, roles.accent || roles.secondary || roles.bg, '#F8FAFC'),
     muted: resolveHex(map, roles.muted || roles.text, '#64748B'),
+    accent: resolveHex(map, roles.accent || roles.primary, '#3B82F6'),
+    divider: 'rgba(0,0,0,0.1)',
+    cardBg: 'rgba(0,0,0,0.04)',
+    gradientStart: resolveHex(map, roles.bg, '#FFFFFF'),
+    gradientEnd: resolveHex(map, roles.accent || roles.secondary || roles.bg, '#F8FAFC'),
+    shadow: 'rgba(0,0,0,0.12)',
   };
 
   themeService.assertContrast(palette);
@@ -132,8 +138,11 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
       heading: heading.family || null,
       body: body.family || null,
       tertiary: data.fonts?.tertiary?.family || null,
+      headingWeight: 700,
+      bodyWeight: 400,
     },
-    typeScale: { title: 44, subtitle: 28, body: 18 },
+    typeScale: { display: 56, title: 44, subtitle: 28, body: 18, caption: 14, stat: 64 },
+    scaleRatio: 1.333,
     spacingScale: { xs: 4, sm: 8, md: 16, lg: 24 },
     imageStyle: data.imageStyle || 'brand-safe professional photography, no text overlay',
     colorTreatment: `brand primary ${palette.primary}`,

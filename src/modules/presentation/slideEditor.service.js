@@ -83,7 +83,10 @@ async function addSlide({
 
   const slideContent = content && typeof content === 'object' ? content : {};
   const elementsDoc = layoutSchema
-    ? layoutSlotsToElements(layoutSchema, slideContent, null)
+    ? layoutSlotsToElements(layoutSchema, slideContent, null, {}, {
+        themeTokens: deck.themeTokens || null,
+        designTokens: slideContent.designTokens || null,
+      })
     : blankCanvas({ withDefaultText: true });
 
   // Shift orders for slides at/after insert position
@@ -182,7 +185,10 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
   }
 
   const content = slide.content && typeof slide.content === 'object' ? slide.content : {};
-  const elementsDoc = layoutSlotsToElements(template.schema, content, slide.imageRef);
+  const elementsDoc = layoutSlotsToElements(template.schema, content, slide.imageRef, {}, {
+    themeTokens: deck.themeTokens || null,
+    designTokens: content.designTokens || null,
+  });
 
   const updated = await presentationDao.updateSlide(slideId, {
     layoutId: template.schema?.layout_id || template.id,

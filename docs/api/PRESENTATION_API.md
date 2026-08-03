@@ -86,8 +86,9 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 
 ### Seeded deck packs
 
-`npm run seed:presentation-deck-packs` installs 8 system packs. Each pack carries a `themeId`,
-designed placeholder copy per slide, and `generationDefaults` used by AI generate.
+`npm run seed:presentation-deck-packs` installs 8 system packs (**schemaVersion 2**). Each pack carries `themeId`,
+`meta`, `narrative`, per-slide `intent` / `designTokens` / `generationHints`, designed placeholders,
+and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
 
 | pack_id | Theme | Slides | Use case |
 |---|---|---|---|
@@ -99,6 +100,12 @@ designed placeholder copy per slide, and `generationDefaults` used by AI generat
 | `product_launch_ocean` | Ocean Mist | 8 | Product launch |
 | `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
+
+List response includes `meta`, `narrative`, `preview`, `generationDefaults`.
+
+### Freeform canvas shape (`slide.elements`)
+
+Elements may include **gradient** shape fills and rich text (`fontWeight`, `letterSpacing`, `lineHeight`, `colorRole`). Pack clone and AI generate emit decoration backgrounds / accent bars. Frontend canvas should render `content.fill.type === "gradient"` as CSS `linear-gradient`.
 
 ---
 
@@ -117,26 +124,7 @@ designed placeholder copy per slide, and `generationDefaults` used by AI generat
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
 - Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` for canvas render.
 
-### Freeform canvas shape (`slide.elements`)
-
-```json
-{
-  "version": 1,
-  "canvas": { "width": 1920, "height": 1080 },
-  "elements": [
-    {
-      "id": "el_…",
-      "type": "text",
-      "layer": 1,
-      "placement": { "x": 100, "y": 200, "width": 800, "height": 120, "rotation": 0, "opacity": 1 },
-      "content": { "text": "Hello", "fontSize": 42, "bold": true },
-      "role": "title"
-    }
-  ]
-}
-```
-
-Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table`. Drag/snap are frontend-only; backend stores absolute geometry.
+Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table`. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`. Drag/snap are frontend-only; backend stores absolute geometry.
 
 **Frontend outcome vs API:** A single mega JSON “final deck” blob is **not** accepted as one POST. Map UI prompt/vibe into outline/theme calls; store/edit via slide + canvas APIs.
 

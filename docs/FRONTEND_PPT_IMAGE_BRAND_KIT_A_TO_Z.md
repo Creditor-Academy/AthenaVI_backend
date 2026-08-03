@@ -362,9 +362,9 @@ Theme catalog ids use **underscores** (e.g. `midnight_blue`), not kebab-case.
 
 ### Seeded deck packs (`DECK_PACK`)
 
-Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack has `themeId`, designed placeholder copy, and `generationDefaults`.
+Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is **schemaVersion 2** with `themeId`, `meta`, `narrative`, designed placeholders, per-slide `intent` / `designTokens` / `generationHints`, and `generationDefaults` (`layoutWhitelist`, `slideOrder: "fixed"`, `contentDistribution`).
 
-| pack_id | Theme | Slides | Use case |
+| pack_id | Theme | slides | Use case |
 |---------|-------|--------|----------|
 | `corp_pitch_midnight` | Midnight Blue | 5 | Short corporate pitch |
 | `marketing_clean_light` | Clean Light | 5 | Campaign story |
@@ -375,7 +375,18 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack ha
 | `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 
-**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid), not necessarily the string `pack_id` in schema — use whatever `id` the list endpoint returns for that pack. Display `name` / `schema.preview.label` / `schema.pack_id` in the picker UI.
+**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display `name` / `schema.preview` / `meta` / `schema.pack_id` in the picker. Response now includes `meta` and `narrative`.
+
+### Pack slide design contract
+
+| Field | Purpose |
+|-------|---------|
+| `intent` | Plain-English purpose — fed into AI slide prompts |
+| `designTokens` | Chrome only: `backgroundStyle` (`solid`\|`gradient`), `accentPosition` (`none`\|`left-bar`\|`top-bar`\|`bottom-bar`), `imagePosition` (hint), `overlayOpacity`, `textContrast` |
+| `generationHints` | `maxTitleWords`, `maxBodyWords`, `itemCountMin/Max`, plus prose hints |
+| `placeholder` | Structured object mapped to layout slots |
+
+`layout_id` owns geometry; `designTokens` do not re-layout image splits.
 
 ### Layout content types (36 layouts)
 
@@ -492,24 +503,39 @@ Image URLs are **presigned (~1h)**. Prefer `elements[].content.url` for canvas. 
   "elements": [
     {
       "id": "el_…",
-      "type": "text",
-      "layer": 1,
-      "placement": {
-        "x": 160,
-        "y": 200,
-        "width": 1600,
-        "height": 140,
-        "rotation": 0,
-        "opacity": 1
+      "type": "shape",
+      "layer": 0,
+      "placement": { "x": 0, "y": 0, "width": 1920, "height": 1080, "rotation": 0, "opacity": 1 },
+      "content": {
+        "shape": "rect",
+        "fill": {
+          "type": "gradient",
+          "direction": "135deg",
+          "stops": [
+            { "color": "#0B1220", "colorRole": "gradientStart", "position": 0 },
+            { "color": "#121A2B", "colorRole": "gradientEnd", "position": 100 }
+          ]
+        }
       },
+      "role": "background"
+    },
+    {
+      "id": "el_…",
+      "type": "text",
+      "layer": 2,
+      "placement": { "x": 160, "y": 200, "width": 1600, "height": 140, "rotation": 0, "opacity": 1 },
       "content": {
         "text": "Title",
-        "fontSize": 44,
+        "fontSize": 64,
         "bold": true,
-        "align": "left",
-        "color": "#F8FAFC"
+        "fontWeight": 800,
+        "align": "center",
+        "color": "#F8FAFC",
+        "colorRole": "text",
+        "letterSpacing": -0.03,
+        "lineHeight": 1.1
       },
-      "role": "title"
+      "role": "heading"
     }
   ]
 }
@@ -517,11 +543,13 @@ Image URLs are **presigned (~1h)**. Prefer `elements[].content.url` for canvas. 
 
 | `type` | Typical `content` |
 |--------|-------------------|
-| `text` | `text`, `fontSize`, `bold`, `italic`, `color`, `align` |
+| `text` | `text`, `fontSize`, `bold`, `fontWeight`, `italic`, `color`, `colorRole`, `align`, `letterSpacing`, `lineHeight` |
 | `image` / `icon` | `url`, `fit`, `alt` / `icon` |
-| `shape` | `shape`: `rect` \| `ellipse` \| `line`, `fill`, `line` |
+| `shape` | `shape`: `rect` \| `ellipse` \| `line`; `fill` string token **or** `{ type: "solid"\|"gradient", color?, colorRole?, stops? }`; optional `borderRadius` |
 | `chart` | `chartType`, `labels`, `series` |
 | `table` | `rows`: string[][] |
+
+**Frontend must render** gradient fills (`linear-gradient`), accent bars, and typography fields. Resolve `colorRole` / palette tokens from `deck.themeTokens.palette` (`bg`, `surface`, `primary`, `secondary`, `text`, `muted`, `accent`, `divider`, `cardBg`, `gradientStart`, `gradientEnd`).
 
 Sort draw order by `layer` ascending. Drag / resize / snap / guides are **frontend-only**; persist with canvas/element APIs.
 
@@ -1098,7 +1126,8 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 | `type` | Product | Schema requirements |
 |--------|---------|---------------------|
 | `DECK_LAYOUT` | AI PPT | `layout_id`, `content_type`, `grid`, `slots[]` (`id` + `region`). No `scene` / `videoSettings` |
-| `DECK_PACK` | AI PPT multi-slide | `pack_id`, `themeId?`, `aspectRatio`, `slides[{ order, layout_id, contentType, placeholder }]`, optional `generationDefaults`, `preview`. Every `layout_id` must exist as an active `DECK_LAYOUT` |
+| `DECK_LAYOUT` | AI PPT | `schemaVersion?`, `layout_id`, `content_type`, `grid`, `slots[]` with `id`, `region`, optional `role`, `typography`, `shape`, `layer`. No `scene` / `videoSettings` |
+| `DECK_PACK` | AI PPT multi-slide | `schemaVersion?`, `pack_id`, `themeId?`, `aspectRatio`, `meta?`, `narrative?` (`arc`, `summary`), `slides[{ order, layout_id, contentType, intent?, designTokens?, generationHints?, placeholder }]`, `generationDefaults?` (includes `layoutWhitelist`, `slideOrder`, `contentDistribution`), `preview?`. Every `layout_id` must exist as an active `DECK_LAYOUT` |
 | `VIDEO_SCENE` | Video editor only | Different product — do not use in PPT UI |
 
 ### Create `DECK_LAYOUT` example
