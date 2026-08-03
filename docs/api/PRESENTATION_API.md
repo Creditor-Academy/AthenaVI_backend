@@ -90,8 +90,10 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 `meta`, `narrative`, per-slide `intent` / `designTokens` / `generationHints`, designed placeholders,
 and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
 
-Visual slides may include `placeholder.imagePrompt` (persisted on pack clone). AI image brief prefers
-`content.imagePrompt` or `generationHints.imagePromptStyle` when set (prompt bundle **v1.5+**).
+Visual slides may include `placeholder.imagePrompt`. Seed also acquires **durable system photos** into
+`TemplateMedia` (stock-once → S3). **Pack clone** fills image element URLs from that media (no empty frames).
+List packs includes `previewImageUrl` + `media[]` (presigned). AI image brief prefers
+`content.imagePrompt` or `generationHints.imagePromptStyle` (prompt bundle **v1.5+**).
 
 | pack_id | Theme | Slides | Use case |
 |---|---|---|---|
@@ -105,7 +107,15 @@ Visual slides may include `placeholder.imagePrompt` (persisted on pack clone). A
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 | `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing image slots) |
 
-List response includes `meta`, `narrative`, `preview`, `generationDefaults`.
+List response includes `meta`, `narrative`, `preview`, `previewImageUrl`, `media`, `generationDefaults`.
+
+### Slide media (manual edit)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `.../presentations/:id/slides/:slideId/media` | Multipart `file` (+ optional `elementId`) — upload and attach to image element |
+| `POST` | `.../presentations/:id/slides/:slideId/attach-asset` | `{ assetId, elementId? }` — attach workspace Asset |
+| `POST` | `.../presentations/:id/slides/:slideId/insert-stock` | `{ query }` or `{ provider, externalId }` — stock → S3 → slide |
 
 ### Freeform canvas shape (`slide.elements`)
 

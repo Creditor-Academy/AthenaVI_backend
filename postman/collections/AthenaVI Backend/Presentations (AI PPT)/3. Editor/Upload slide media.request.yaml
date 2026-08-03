@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/media"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{slideMediaFile}}"
+    - key: elementId
+      value: ""
+order: 5500

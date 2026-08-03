@@ -362,7 +362,7 @@ Theme catalog ids use **underscores** (e.g. `midnight_blue`), not kebab-case.
 
 ### Seeded deck packs (`DECK_PACK`)
 
-Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is **schemaVersion 2** with `themeId`, `meta`, `narrative`, designed placeholders, per-slide `intent` / `designTokens` / `generationHints`, and `generationDefaults` (`layoutWhitelist`, `slideOrder: "fixed"`, `contentDistribution`). Visual slides may set `placeholder.imagePrompt`; AI image brief prefers that (or `generationHints.imagePromptStyle`).
+Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is **schemaVersion 2** with `themeId`, `meta`, `narrative`, designed placeholders, per-slide `intent` / `designTokens` / `generationHints`, and `generationDefaults` (`layoutWhitelist`, `slideOrder: "fixed"`, `contentDistribution`). Visual slides may set `placeholder.imagePrompt`. Seed acquires **system `TemplateMedia`** (durable S3). Pack list includes `previewImageUrl` + `media[]`. **Pack clone fills image URLs** — templates look finished; user replaces via slide media APIs or regenerate.
 
 | pack_id | Theme | slides | Use case |
 |---------|-------|--------|----------|
@@ -376,7 +376,15 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 | `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing images) |
 
-**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display `name` / `schema.preview` / `meta` / `schema.pack_id` in the picker. Response now includes `meta` and `narrative`.
+**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display `name` / `preview` / `previewImageUrl` / `meta` / `pack_id` in the picker.
+
+### Manual slide media (replace template photos)
+
+| Call | Use |
+|------|-----|
+| `POST .../slides/:slideId/media` | Multipart upload onto slide image |
+| `POST .../slides/:slideId/attach-asset` | `{ assetId }` from workspace Assets |
+| `POST .../slides/:slideId/insert-stock` | `{ query }` or stock provider+id |
 
 ### Pack slide design contract
 

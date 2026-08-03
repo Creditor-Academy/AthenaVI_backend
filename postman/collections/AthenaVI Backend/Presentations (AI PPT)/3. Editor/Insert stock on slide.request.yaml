@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/insert-stock"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "query": "bright modern conference room"
+    }
+order: 5520

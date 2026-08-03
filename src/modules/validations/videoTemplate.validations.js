@@ -209,6 +209,27 @@ const updateTemplateAdminSchema = Joi.object({
     .required(),
 });
 
+const templateMediaIdAdminParamsSchema = Joi.object({
+  params: Joi.object({
+    templateId: templateIdParam,
+    mediaId: Joi.string().trim().min(1).required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const uploadTemplateMediaAdminSchema = Joi.object({
+  params: Joi.object({
+    templateId: templateIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    kind: Joi.string().valid('photo', 'preview', 'graphic').default('photo'),
+    slotHint: Joi.string().trim().max(128).allow('', null).optional(),
+    name: Joi.string().trim().max(255).allow('', null).optional(),
+  }).default({}),
+});
+
 module.exports = {
   videoSceneTemplateSchemaObject,
   assertVideoSceneTemplateSchema,
@@ -221,4 +242,6 @@ module.exports = {
   listTemplatesAdminSchema,
   templateIdAdminParamsSchema,
   updateTemplateAdminSchema,
+  templateMediaIdAdminParamsSchema,
+  uploadTemplateMediaAdminSchema,
 };

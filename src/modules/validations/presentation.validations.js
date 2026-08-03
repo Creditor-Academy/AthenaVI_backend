@@ -464,6 +464,48 @@ const applyBrandKitSchema = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const uploadSlideMediaSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    elementId: Joi.string().trim().max(64).allow('', null).optional(),
+  }).default({}),
+});
+
+const attachSlideAssetSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    assetId: Joi.string().trim().min(1).max(64).required(),
+    elementId: Joi.string().trim().max(64).allow('', null).optional(),
+  }).required(),
+});
+
+const insertSlideStockSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    query: Joi.string().trim().max(256).allow('', null).optional(),
+    provider: Joi.string().trim().max(32).allow('', null).optional(),
+    externalId: Joi.string().trim().max(128).allow('', null).optional(),
+    elementId: Joi.string().trim().max(64).allow('', null).optional(),
+  })
+    .or('query', 'externalId')
+    .required(),
+});
+
 const slotRoleSchema = Joi.string()
   .trim()
   .valid(
@@ -812,6 +854,9 @@ module.exports = {
   listWorkspacePresentationElementsSchema,
   listWorkspacePresentationDeckPacksSchema,
   applyBrandKitSchema,
+  uploadSlideMediaSchema,
+  attachSlideAssetSchema,
+  insertSlideStockSchema,
   deckLayoutTemplateSchemaObject,
   assertDeckLayoutTemplateSchema,
   deckPackTemplateSchemaObject,

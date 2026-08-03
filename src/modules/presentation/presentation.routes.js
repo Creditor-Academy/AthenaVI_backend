@@ -3,6 +3,7 @@ const multer = require('multer');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const validate = require('../../middlewares/validate.middleware');
+const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const presentationValidations = require('../validations/presentation.validations');
 const presentationController = require('./presentation.controller');
 
@@ -160,6 +161,25 @@ router.post(
   '/:presentationId/slides/:slideId/regenerate',
   validate(presentationValidations.regenerateSlideSchema),
   presentationController.regenerateSlide
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/media',
+  uploadAssetS3.single('file'),
+  validate(presentationValidations.uploadSlideMediaSchema),
+  presentationController.uploadSlideMedia
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/attach-asset',
+  validate(presentationValidations.attachSlideAssetSchema),
+  presentationController.attachSlideAsset
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/insert-stock',
+  validate(presentationValidations.insertSlideStockSchema),
+  presentationController.insertSlideStock
 );
 
 router.post(

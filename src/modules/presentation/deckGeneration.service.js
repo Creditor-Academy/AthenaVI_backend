@@ -670,6 +670,55 @@ async function resolveSlideImage({
     };
   }
 
+  // Prefer brand kit photos when available (before keeping template/user media)
+  const searchQueryEarly =
+    brief?.search_query || brief?.searchQuery || brief?.subject || content?.title || 'presentation visual';
+  const brandPhotoEarly = pickBrandPhoto(ctx.themeTokens, searchQueryEarly);
+  if (brandPhotoEarly && (brandPhotoEarly.url || brandPhotoEarly.s3Key)) {
+    let url = brandPhotoEarly.url || null;
+    if (!url && brandPhotoEarly.s3Key) {
+      try {
+        url = await s3Service.getPresignedGetUrl(brandPhotoEarly.s3Key, 3600);
+      } catch {
+        url = s3Service.buildPublicUrl(brandPhotoEarly.s3Key);
+      }
+    }
+    if (url) {
+      return {
+        imageRef: withImageStatus(
+          {
+            source: 'brand_kit',
+            url,
+            s3Key: brandPhotoEarly.s3Key || null,
+            mediaId: brandPhotoEarly.id || null,
+            brief: brief || null,
+            visual_need: visualNeed || 'photo',
+          },
+          'ready'
+        ),
+        chargedFeature: null,
+        cacheHit: false,
+        visionScore: null,
+      };
+    }
+  }
+
+  // Keep existing ready template/upload/stock media unless force refresh (e.g. regenerate image)
+  const existing = slide?.imageRef;
+  if (
+    !ctx.forceImageRefresh &&
+    existing &&
+    existing.status === 'ready' &&
+    (existing.url || existing.s3Key)
+  ) {
+    return {
+      imageRef: withImageStatus(existing, 'ready'),
+      chargedFeature: null,
+      cacheHit: true,
+      visionScore: null,
+    };
+  }
+
   if (need === 'path_b') {
     const pathBPrompt = getPathBPrompt();
     const promptText = pathBPrompt.buildUser({
@@ -743,39 +792,9 @@ async function resolveSlideImage({
     }
   }
 
-  // photo / illustration / default → brand photos then stock then Path A
+  // photo / illustration / default → stock then Path A (brand + existing media handled above)
   const searchQuery =
     brief?.search_query || brief?.searchQuery || brief?.subject || content?.title || 'presentation visual';
-
-  const brandPhoto = pickBrandPhoto(ctx.themeTokens, searchQuery);
-  if (brandPhoto && (brandPhoto.url || brandPhoto.s3Key)) {
-    let url = brandPhoto.url || null;
-    if (!url && brandPhoto.s3Key) {
-      try {
-        url = await s3Service.getPresignedGetUrl(brandPhoto.s3Key, 3600);
-      } catch {
-        url = s3Service.buildPublicUrl(brandPhoto.s3Key);
-      }
-    }
-    if (url) {
-      return {
-        imageRef: withImageStatus(
-          {
-            source: 'brand_kit',
-            url,
-            s3Key: brandPhoto.s3Key || null,
-            mediaId: brandPhoto.id || null,
-            brief: brief || null,
-            visual_need: visualNeed || 'photo',
-          },
-          'ready'
-        ),
-        chargedFeature: null,
-        cacheHit: false,
-        visionScore: null,
-      };
-    }
-  }
 
   const briefHash = imageCache.hashBrief({
     searchQuery,

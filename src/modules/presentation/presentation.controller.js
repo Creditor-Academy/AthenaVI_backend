@@ -318,6 +318,42 @@ const applyBrandKit = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_BRAND_KIT_APPLIED);
 });
 
+const uploadSlideMedia = asyncHandler(async (req, res) => {
+  const data = await presentationService.uploadSlideMedia({
+    workspaceId: req.params.workspaceId,
+    presentationId: req.params.presentationId,
+    slideId: req.params.slideId,
+    file: req.file,
+    elementId: req.body?.elementId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_MEDIA_UPLOADED);
+});
+
+const attachSlideAsset = asyncHandler(async (req, res) => {
+  const data = await presentationService.attachSlideAsset({
+    workspaceId: req.params.workspaceId,
+    presentationId: req.params.presentationId,
+    slideId: req.params.slideId,
+    assetId: req.body.assetId,
+    elementId: req.body.elementId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_ASSET_ATTACHED);
+});
+
+const insertSlideStock = asyncHandler(async (req, res) => {
+  const data = await presentationService.insertSlideStock({
+    workspaceId: req.params.workspaceId,
+    presentationId: req.params.presentationId,
+    slideId: req.params.slideId,
+    query: req.body.query,
+    provider: req.body.provider,
+    externalId: req.body.externalId,
+    elementId: req.body.elementId,
+    userId: req.user.id,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_STOCK_INSERTED);
+});
+
 module.exports = {
   createPresentation,
   getPresentation,
@@ -346,4 +382,7 @@ module.exports = {
   listPresentationElements,
   listPresentationDeckPacks,
   applyBrandKit,
+  uploadSlideMedia,
+  attachSlideAsset,
+  insertSlideStock,
 };

@@ -51,7 +51,17 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id, contentType, intent?, designTokens?, generationHints?, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
 | `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
 
-**Bare-minimum pack checklist (authoring bar):** `schemaVersion: 2`; `meta` + `narrative`; every slide has `intent`, `designTokens`, `generationHints`, real `placeholder` copy; image layouts include `placeholder.imagePrompt` and/or `generationHints.imagePromptStyle`; `generationDefaults` with `preferVisuals`, `imageStyle`, `layoutWhitelist`, `slideOrder: "fixed"`; `preview` for the picker. Create layouts first, then the pack.
+**Bare-minimum pack checklist (authoring bar):** `schemaVersion: 2`; `meta` + `narrative`; every slide has `intent`, `designTokens`, `generationHints`, real `placeholder` copy; image layouts include `placeholder.imagePrompt` and/or `generationHints.imagePromptStyle`; `generationDefaults` with `preferVisuals`, `imageStyle`, `layoutWhitelist`, `slideOrder: "fixed"`; `preview` for the picker; **template media** on image slides (upload via API or seed acquires stock-once to S3). Create layouts first, then the pack.
+
+### Template media (Canva-like baked photos)
+
+| Method | Path |
+|--------|------|
+| `GET` | `/api/superadmin/templates/:templateId/media` |
+| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (e.g. `slide:1`), `name` |
+| `DELETE` | `/api/superadmin/templates/:templateId/media/:mediaId` |
+
+List/get template includes `media[]` with presigned `url`. Pack clone maps `slotHint` `slide:{order}` into image elements.
 
 **Create `DECK_LAYOUT` example**
 

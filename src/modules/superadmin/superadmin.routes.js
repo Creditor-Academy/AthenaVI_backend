@@ -2,6 +2,7 @@ const express = require('express');
 const validate = require('../../middlewares/validate.middleware');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const { requirePlatformSuperadmin } = require('../../middlewares/requirePlatformSuperadmin');
+const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const superadminController = require('./superadmin.controller');
 const templateAdminController = require('../templates/templateAdmin.controller');
 const superadminValidation = require('../validations/superadmin.validations');
@@ -213,6 +214,25 @@ router.patch(
   '/templates/:templateId',
   validate(videoTemplateValidation.updateTemplateAdminSchema),
   templateAdminController.updateTemplate
+);
+
+router.get(
+  '/templates/:templateId/media',
+  validate(videoTemplateValidation.templateIdAdminParamsSchema),
+  templateAdminController.listTemplateMedia
+);
+
+router.post(
+  '/templates/:templateId/media',
+  uploadAssetS3.single('file'),
+  validate(videoTemplateValidation.uploadTemplateMediaAdminSchema),
+  templateAdminController.uploadTemplateMedia
+);
+
+router.delete(
+  '/templates/:templateId/media/:mediaId',
+  validate(videoTemplateValidation.templateMediaIdAdminParamsSchema),
+  templateAdminController.deleteTemplateMedia
 );
 
 module.exports = router;

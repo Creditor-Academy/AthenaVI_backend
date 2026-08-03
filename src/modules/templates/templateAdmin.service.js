@@ -6,6 +6,7 @@ const {
   assertDeckLayoutTemplateSchema,
   assertDeckPackTemplateSchema,
 } = require('../validations/presentation.validations');
+const templateMediaService = require('./templateMedia.service');
 
 function assertDeckLayoutSchema(schema) {
   try {
@@ -36,9 +37,7 @@ async function assertPackLayoutIdsExist(schema) {
     },
     select: { id: true, schema: true },
   });
-  const found = new Set(
-    layouts.map((l) => l.schema?.layout_id).filter(Boolean)
-  );
+  const found = new Set(layouts.map((l) => l.schema?.layout_id).filter(Boolean));
   const missing = layoutIds.filter((id) => !found.has(id));
   if (missing.length) {
     throw new AppError(
@@ -58,10 +57,11 @@ async function listTemplates({ type, contentType, isActive } = {}) {
     where.isActive = isActive === true || isActive === 'true';
   }
 
-  return prisma.template.findMany({
+  const templates = await prisma.template.findMany({
     where,
     orderBy: [{ type: 'asc' }, { contentType: 'asc' }, { name: 'asc' }, { version: 'desc' }],
   });
+  return templateMediaService.withMediaAttachedMany(templates);
 }
 
 async function getTemplate(id) {
@@ -69,7 +69,7 @@ async function getTemplate(id) {
   if (!template) {
     throw new AppError(messages.TEMPLATE_NOT_FOUND, 404);
   }
-  return template;
+  return templateMediaService.withMediaAttached(template);
 }
 
 async function createTemplate({
@@ -103,7 +103,7 @@ async function createTemplate({
     validatedSchema = assertDeckLayoutSchema(schema);
   }
 
-  return prisma.template.create({
+  const created = await prisma.template.create({
     data: {
       type,
       name,
@@ -115,10 +115,12 @@ async function createTemplate({
       createdBy,
     },
   });
+  return templateMediaService.withMediaAttached(created);
 }
 
 async function updateTemplate({ id, name, schema, isActive, contentType, variant }) {
-  const existing = await getTemplate(id);
+  const existing = await prisma.template.findUnique({ where: { id } });
+  if (!existing) throw new AppError(messages.TEMPLATE_NOT_FOUND, 404);
   const data = {};
 
   if (name !== undefined) data.name = name;
@@ -143,10 +145,11 @@ async function updateTemplate({ id, name, schema, isActive, contentType, variant
     data.version = (existing.version || 1) + 1;
   }
 
-  return prisma.template.update({
+  const updated = await prisma.template.update({
     where: { id },
     data,
   });
+  return templateMediaService.withMediaAttached(updated);
 }
 
 module.exports = {

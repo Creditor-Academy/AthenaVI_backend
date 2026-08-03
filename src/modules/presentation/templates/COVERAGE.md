@@ -31,8 +31,8 @@ Each pack includes `meta`, `narrative` (`arc` + `summary`), per-slide `intent`,
 `designTokens`, `generationHints`, richer `preview`, and `generationDefaults`
 (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
 
-Image-capable slides may set `placeholder.imagePrompt` (and/or
-`generationHints.imagePromptStyle`); AI image brief prefers those strings.
+Image-capable slides get durable **`TemplateMedia`** on seed (stock-once → S3);
+pack clone fills image URLs. Seed also creates `kind: preview` for picker thumbnails.
 
 | pack_id | themeId | slides | use case |
 |---|---|---|---|

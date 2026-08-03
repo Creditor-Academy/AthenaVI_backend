@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates/{{deckPackTemplateId}}/media"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{templateMediaFile}}"
+    - key: kind
+      value: photo
+    - key: slotHint
+      value: slide:1
+    - key: name
+      value: Hero photo
+order: 4020

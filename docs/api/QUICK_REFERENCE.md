@@ -60,6 +60,12 @@
 | DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Delete Brand Kit |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/apply-brand-kit` | Bearer + member | Apply Brand Kit to deck |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/media` | Bearer + member | Upload image onto slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/attach-asset` | Bearer + member | Attach workspace Asset to slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/insert-stock` | Bearer + member | Insert stock photo onto slide |
+| GET | `/api/superadmin/templates/:templateId/media` | Superadmin | List template media |
+| POST | `/api/superadmin/templates/:templateId/media` | Superadmin | Upload template media |
+| DELETE | `/api/superadmin/templates/:templateId/media/:mediaId` | Superadmin | Delete template media |
 | GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
 | GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |

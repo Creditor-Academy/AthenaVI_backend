@@ -2,6 +2,7 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const templateAdminService = require('./templateAdmin.service');
+const templateMediaService = require('./templateMedia.service');
 
 const listTemplates = asyncHandler(async (req, res) => {
   const { type, contentType, isActive } = req.query || {};
@@ -42,9 +43,36 @@ const updateTemplate = asyncHandler(async (req, res) => {
   return successResponse(req, res, { template }, 200, messages.TEMPLATE_UPDATED);
 });
 
+const listTemplateMedia = asyncHandler(async (req, res) => {
+  const media = await templateMediaService.listMedia(req.params.templateId);
+  return successResponse(req, res, { media }, 200, messages.TEMPLATE_MEDIA_FETCHED);
+});
+
+const uploadTemplateMedia = asyncHandler(async (req, res) => {
+  const media = await templateMediaService.uploadMedia({
+    templateId: req.params.templateId,
+    file: req.file,
+    kind: req.body?.kind,
+    slotHint: req.body?.slotHint,
+    name: req.body?.name,
+  });
+  return successResponse(req, res, { media }, 201, messages.TEMPLATE_MEDIA_UPLOADED);
+});
+
+const deleteTemplateMedia = asyncHandler(async (req, res) => {
+  const result = await templateMediaService.deleteMedia({
+    templateId: req.params.templateId,
+    mediaId: req.params.mediaId,
+  });
+  return successResponse(req, res, result, 200, messages.TEMPLATE_MEDIA_DELETED);
+});
+
 module.exports = {
   listTemplates,
   getTemplate,
   createTemplate,
   updateTemplate,
+  listTemplateMedia,
+  uploadTemplateMedia,
+  deleteTemplateMedia,
 };

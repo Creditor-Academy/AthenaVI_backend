@@ -62,6 +62,9 @@ async function main() {
 
   const results = await presentationDao.upsertTemplates(payloads);
   console.log(`Seeded ${results.length} DECK_PACK template(s)`);
+
+  const { acquireMediaForAllPacks } = require('./acquire-pack-template-media');
+  await acquireMediaForAllPacks();
 }
 
 main()

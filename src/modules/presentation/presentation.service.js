@@ -9,6 +9,8 @@ const exportService = require('./export.service');
 const slideEditorRaw = require('./slideEditor.service');
 const { layoutSlotsToElements, blankCanvas, injectBrandLogo } = require('./layoutToElements');
 const brandKitService = require('../brandKit/brandKit.service');
+const templateMediaService = require('../templates/templateMedia.service');
+const templateMediaDao = require('../templates/templateMedia.dao');
 const {
   attachPresignedMediaToSlides,
   presignPresentationPayload,
@@ -174,7 +176,13 @@ async function createPresentation({
     const layouts = await presentationDao.findLayoutsByLayoutIds(layoutIds);
     const byLayoutId = new Map(layouts.map((l) => [l.schema?.layout_id, l]));
 
-    const slidePayloads = packSlides.map((ps) => {
+    const packMediaRows = await templateMediaDao.listByTemplateId(pack.id);
+    const mediaByHint = new Map(
+      (packMediaRows || []).filter((m) => m.slotHint).map((m) => [m.slotHint, m])
+    );
+
+    const slidePayloads = [];
+    for (const ps of packSlides) {
       const layout = byLayoutId.get(ps.layout_id);
       if (!layout) {
         throw new AppError(
@@ -187,10 +195,24 @@ async function createPresentation({
         ...(ps.placeholder && typeof ps.placeholder === 'object' ? ps.placeholder : {}),
       };
       if (!placeholder.title) placeholder.title = displayName;
+
+      const imageRef = await templateMediaService.resolvePackSlideImageRef({
+        packTemplateId: pack.id,
+        slideOrder: ps.order,
+        placeholder,
+        mediaByHint,
+      });
+      if (imageRef?.s3Key && !placeholder.imageS3Key) {
+        placeholder.imageS3Key = imageRef.s3Key;
+      }
+      if (imageRef?.url) {
+        placeholder.imageUrls = [imageRef.url];
+      }
+
       let elementsDoc = layoutSlotsToElements(
         layout.schema,
         placeholder,
-        null,
+        imageRef,
         canvasSize,
         {
           themeTokens: resolvedTokens,
@@ -200,7 +222,7 @@ async function createPresentation({
       elementsDoc = injectBrandLogo(elementsDoc, logo, {
         contentType: ps.contentType || layout.contentType,
       });
-      return {
+      slidePayloads.push({
         order: ps.order,
         contentType: ps.contentType || layout.contentType || null,
         layoutId: layout.schema?.layout_id || layout.id,
@@ -210,12 +232,12 @@ async function createPresentation({
           designTokens: ps.designTokens || null,
           generationHints: ps.generationHints || null,
         },
-        imageRef: null,
+        imageRef: imageRef || null,
         elements: elementsDoc,
         status: 'READY',
         manuallyEdited: true,
-      };
-    });
+      });
+    }
 
     slides = await presentationDao.createSlides(deck.id, slidePayloads);
   }
@@ -232,20 +254,31 @@ async function createPresentation({
 
 async function listPresentationDeckPacks() {
   const packs = await presentationDao.findActiveDeckPacks();
-  return packs.map((p) => ({
-    id: p.id,
-    name: p.name,
-    packId: p.schema?.pack_id || p.id,
-    themeId: p.schema?.themeId || null,
-    aspectRatio: p.schema?.aspectRatio || '16:9',
-    slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
-    meta: p.schema?.meta || null,
-    narrative: p.schema?.narrative || null,
-    preview: p.schema?.preview || null,
-    generationDefaults: p.schema?.generationDefaults || null,
-    variant: p.variant,
-    version: p.version,
-  }));
+  const withMedia = await templateMediaService.withMediaAttachedMany(packs);
+  return withMedia.map((p) => {
+    const previewMedia =
+      (p.media || []).find((m) => m.kind === 'preview') ||
+      (p.media || []).find((m) => m.slotHint === 'preview') ||
+      (p.media || []).find((m) => String(m.slotHint || '').startsWith('slide:1')) ||
+      (p.media || [])[0] ||
+      null;
+    return {
+      id: p.id,
+      name: p.name,
+      packId: p.schema?.pack_id || p.id,
+      themeId: p.schema?.themeId || null,
+      aspectRatio: p.schema?.aspectRatio || '16:9',
+      slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
+      meta: p.schema?.meta || null,
+      narrative: p.schema?.narrative || null,
+      preview: p.schema?.preview || null,
+      previewImageUrl: previewMedia?.url || null,
+      media: p.media || [],
+      generationDefaults: p.schema?.generationDefaults || null,
+      variant: p.variant,
+      version: p.version,
+    };
+  });
 }
 
 async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
@@ -425,4 +458,16 @@ module.exports = {
   ...slideEditor,
   addSlide,
   blankCanvas,
+  uploadSlideMedia: async (...args) => {
+    const slideMedia = require('./slideMedia.service');
+    return slideMedia.uploadSlideMedia(...args);
+  },
+  attachSlideAsset: async (...args) => {
+    const slideMedia = require('./slideMedia.service');
+    return slideMedia.attachSlideAsset(...args);
+  },
+  insertSlideStock: async (...args) => {
+    const slideMedia = require('./slideMedia.service');
+    return slideMedia.insertSlideStock(...args);
+  },
 };
