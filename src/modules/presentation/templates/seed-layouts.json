@@ -2300,5 +2300,494 @@
       ],
       "schemaVersion": 2
     }
+  },
+  {
+    "name": "Numbered Four Up",
+    "contentType": "bullet_list",
+    "variant": "numbered_four_up",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "numbered_four_up_v1",
+      "content_type": "bullet_list",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_bg_1",
+          "region": "cols 2-6, rows 3-7",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_2",
+          "region": "cols 7-11, rows 3-7",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_3",
+          "region": "cols 2-6, rows 8-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_4",
+          "region": "cols 7-11, rows 8-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "num_1",
+          "region": "cols 2-3, rows 3-4",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "01",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_2",
+          "region": "cols 7-8, rows 3-4",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "02",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_3",
+          "region": "cols 2-3, rows 8-9",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "03",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_4",
+          "region": "cols 7-8, rows 8-9",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "04",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 2-6, rows 4-7",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 7-11, rows 4-7",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 2-6, rows 9-12",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_4",
+          "region": "cols 7-11, rows 9-12",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Policy Numbered Split",
+    "contentType": "bullet_list",
+    "variant": "policy_numbered_split",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "policy_numbered_split_v1",
+      "content_type": "bullet_list",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-6, rows 2-5",
+          "max_lines": 3,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "body",
+          "region": "cols 2-6, rows 6-11",
+          "max_words": 80,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_bg_1",
+          "region": "cols 7-11, rows 2-4",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_2",
+          "region": "cols 7-11, rows 4-6",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_3",
+          "region": "cols 7-11, rows 7-9",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_4",
+          "region": "cols 7-11, rows 9-11",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "num_1",
+          "region": "cols 7-8, rows 2-3",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "01",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_2",
+          "region": "cols 7-8, rows 4-5",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "02",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_3",
+          "region": "cols 7-8, rows 7-8",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "03",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "num_4",
+          "region": "cols 7-8, rows 9-10",
+          "max_lines": 1,
+          "role": "heading",
+          "placeholder_text": "04",
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "lineHeight": 1.1,
+            "colorRole": "accent"
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 8-11, rows 2-4",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 8-11, rows 4-6",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 8-11, rows 7-9",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_4",
+          "region": "cols 8-11, rows 9-11",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Achievement Three Up",
+    "contentType": "bullet_list",
+    "variant": "achievement_three_up",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "achievement_three_up_v1",
+      "content_type": "bullet_list",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "body",
+          "region": "cols 2-11, rows 3-4",
+          "max_words": 50,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_bg_1",
+          "region": "cols 2-4, rows 5-11",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_2",
+          "region": "cols 5-8, rows 5-11",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_bg_3",
+          "region": "cols 9-11, rows 5-11",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 16
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 2-4, rows 6-10",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 5-8, rows 6-10",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 9-11, rows 6-10",
+          "max_words": 40,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
   }
 ]

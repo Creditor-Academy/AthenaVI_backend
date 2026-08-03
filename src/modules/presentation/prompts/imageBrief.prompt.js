@@ -13,6 +13,9 @@ function buildSystem() {
     '  "technology background."',
     '- Flag image_type as diagram/chart (not photo) when the slide',
     '  needs to convey actual information or a relationship.',
+    '- When an Author image brief is provided, treat it as the primary',
+    '  subject/composition guidance; refine for concreteness but do not',
+    '  ignore it.',
     '',
     'Return JSON only matching the schema.',
   ].join('\n');
@@ -24,6 +27,8 @@ function buildSystem() {
  *   slideContent?: object|string,
  *   themeImageStyle?: string,
  *   themeColorTreatment?: string,
+ *   wizardBrief?: string,
+ *   authorImagePrompt?: string,
  * }} vars
  */
 function buildUser(vars = {}) {
@@ -32,10 +37,16 @@ function buildUser(vars = {}) {
       ? vars.slideContent
       : JSON.stringify(vars.slideContent || {}, null, 2);
 
+  const author =
+    typeof vars.authorImagePrompt === 'string' ? vars.authorImagePrompt.trim() : '';
+
   return [
     `Slide title: ${vars.slideTitle || ''}`,
     `Theme image_style (for downstream Path A lock, do not invent layout): ${vars.themeImageStyle || ''}`,
     `Theme color_treatment: ${vars.themeColorTreatment || ''}`,
+    author
+      ? `Author image brief (prefer — use as primary subject/composition):\n${author}`
+      : '',
     vars.wizardBrief ? `Wizard brief:\n${vars.wizardBrief}` : '',
     '',
     'Slide content:',

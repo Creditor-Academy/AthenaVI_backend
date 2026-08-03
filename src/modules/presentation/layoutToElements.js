@@ -347,7 +347,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
     elements: Array.isArray(elementsDoc?.elements) ? [...elementsDoc.elements] : [],
   };
   const canvas = doc.canvas;
-  const palette = themeTokens.palette || {};
+  const palette = themeTokens?.palette || {};
   const hasBg = doc.elements.some(
     (e) => e.role === 'background' || e.role === 'design_bg' || String(e.id || '').startsWith('bg_')
   );

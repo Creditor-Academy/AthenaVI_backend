@@ -2020,5 +2020,392 @@
         "summary": "Story open, brand promise, origin, milestones, impact, people, what next, thank you."
       }
     }
+  },
+  {
+    "name": "Company Meeting — Clean",
+    "contentType": "pack",
+    "variant": "company_meeting_clean",
+    "schema": {
+      "schemaVersion": 2,
+      "pack_id": "company_meeting_clean",
+      "themeId": "clean_light",
+      "aspectRatio": "16:9",
+      "meta": {
+        "name": "Company Meeting — Clean",
+        "description": "10-slide internal company meeting deck (policy, prep, benefits, targets, challenges, achievements).",
+        "useCase": "company_meeting",
+        "audience": "employees and leadership",
+        "tone": "clear, professional, motivational",
+        "industry": [
+          "corporate",
+          "hr",
+          "operations"
+        ]
+      },
+      "narrative": {
+        "arc": "meeting_policy_targets_challenges_close",
+        "summary": "Open meeting, agenda, remote policy and prep, benefits, targets, challenges, achievements, reminder, thank you."
+      },
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_hero_image_v3",
+          "contentType": "title",
+          "placeholder": {
+            "title": "Company Meeting",
+            "subtitle": "Aldenaire & Partners",
+            "imagePrompt": "bright modern conference room, diverse team seated around a table, soft natural light, no text overlay"
+          },
+          "intent": "Open the meeting with a clear title and company framing",
+          "designTokens": {
+            "backgroundStyle": "gradient",
+            "accentPosition": "none",
+            "imagePosition": "right-half",
+            "textContrast": "high"
+          },
+          "generationHints": {
+            "maxTitleWords": 4,
+            "subtitleLength": "company or team name",
+            "imagePromptStyle": "clean corporate photography, bright office"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "agenda_numbered_v1",
+          "contentType": "agenda",
+          "placeholder": {
+            "title": "Agenda",
+            "bullets": [
+              "New Company Policy",
+              "Company Targets",
+              "Challenges",
+              "Company Achievements",
+              "Reminder"
+            ]
+          },
+          "intent": "List the five topics to be discussed today",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "left-bar",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 5,
+            "itemCountMax": 5,
+            "itemLength": "3-6 words"
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "policy_numbered_split_v1",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "New Company Policy",
+            "body": "The new policy to be implemented by the company allows employees to work remotely or from home. Productivity in remote work must be maintained by:",
+            "cards": [
+              {
+                "title": "Establishing a Work Schedule",
+                "text": ""
+              },
+              {
+                "title": "Setting Working Hours",
+                "text": ""
+              },
+              {
+                "title": "Recording Progress",
+                "text": ""
+              },
+              {
+                "title": "Maintaining Communication",
+                "text": ""
+              }
+            ]
+          },
+          "intent": "Introduce remote-work policy with four numbered requirements",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "left-bar",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 4,
+            "itemCountMax": 4,
+            "maxBodyWords": 60,
+            "parallelStructure": "short verb phrases"
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "numbered_four_up_v1",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "Things That Need to Be Prepared",
+            "cards": [
+              {
+                "title": "Internet connection must be stable",
+                "text": ""
+              },
+              {
+                "title": "Have a computer or laptop",
+                "text": ""
+              },
+              {
+                "title": "Comfortable workspace",
+                "text": ""
+              },
+              {
+                "title": "Noise-canceling headphones",
+                "text": ""
+              }
+            ]
+          },
+          "intent": "List four practical prep items for remote work",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "left-bar",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 4,
+            "itemCountMax": 4,
+            "itemLength": "4-10 words"
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "numbered_four_up_v1",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "Potential Benefits",
+            "cards": [
+              {
+                "title": "Flexible Working Hours",
+                "text": ""
+              },
+              {
+                "title": "Full salary as in-office work",
+                "text": ""
+              },
+              {
+                "title": "Time saved on commuting to and from the office",
+                "text": ""
+              },
+              {
+                "title": "Access to health benefits and other allowances",
+                "text": ""
+              }
+            ]
+          },
+          "intent": "Sell the upside of the new policy with four benefits",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "left-bar",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 4,
+            "itemCountMax": 4,
+            "itemLength": "4-12 words"
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "stat_three_up_v2",
+          "contentType": "stat",
+          "placeholder": {
+            "title": "Company Targets",
+            "stats": [
+              {
+                "value": "10k",
+                "label": "Get 10k sales"
+              },
+              {
+                "value": "Top",
+                "label": "Become top local company"
+              },
+              {
+                "value": "100%",
+                "label": "Satisfy all consumers"
+              }
+            ]
+          },
+          "intent": "Highlight three ongoing company targets",
+          "designTokens": {
+            "backgroundStyle": "gradient",
+            "accentPosition": "top-bar",
+            "imagePosition": "none",
+            "textContrast": "high"
+          },
+          "generationHints": {
+            "itemCountMin": 3,
+            "itemCountMax": 3,
+            "statFormat": "short label with optional metric"
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "bullet_list_cards_v3",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "Challenges",
+            "cards": [
+              {
+                "title": "Market Instability",
+                "text": "Challenges encountered during project execution."
+              },
+              {
+                "title": "Competition with other companies",
+                "text": ""
+              },
+              {
+                "title": "Slow negotiations with clients",
+                "text": ""
+              }
+            ]
+          },
+          "intent": "Name three execution challenges frankly",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "none",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 3,
+            "itemCountMax": 3,
+            "maxBodyWords": 20
+          }
+        },
+        {
+          "order": 8,
+          "layout_id": "achievement_three_up_v1",
+          "contentType": "bullet_list",
+          "placeholder": {
+            "title": "Company Achievements",
+            "body": "The current achievements of the company include successfully completing several projects, including:",
+            "cards": [
+              {
+                "title": "Collaborative projects with the government",
+                "text": ""
+              },
+              {
+                "title": "Environmental projects with local communities",
+                "text": ""
+              },
+              {
+                "title": "Top 10 Local Marketing Companies",
+                "text": ""
+              }
+            ]
+          },
+          "intent": "Celebrate three concrete achievements",
+          "designTokens": {
+            "backgroundStyle": "solid",
+            "accentPosition": "left-bar",
+            "imagePosition": "none",
+            "textContrast": "normal"
+          },
+          "generationHints": {
+            "itemCountMin": 3,
+            "itemCountMax": 3,
+            "maxBodyWords": 40
+          }
+        },
+        {
+          "order": 9,
+          "layout_id": "quote_banner_v3",
+          "contentType": "quote",
+          "placeholder": {
+            "title": "Reminder",
+            "quote": "Many projects still depend on our teamwork for success. Let's stay motivated and work towards achieving it!",
+            "attribution": ""
+          },
+          "intent": "Close the content arc with a motivational reminder",
+          "designTokens": {
+            "backgroundStyle": "gradient",
+            "accentPosition": "none",
+            "imagePosition": "none",
+            "textContrast": "high"
+          },
+          "generationHints": {
+            "maxBodyWords": 35,
+            "titleTone": "short label like Reminder"
+          }
+        },
+        {
+          "order": 10,
+          "layout_id": "closing_thank_you_image_v3",
+          "contentType": "closing",
+          "placeholder": {
+            "title": "Thank You",
+            "subtitle": "Aldenaire & Partners",
+            "imagePrompt": "warm teamwork moment in a bright office, colleagues smiling after a meeting, soft natural light, no text overlay"
+          },
+          "intent": "End with gratitude and brand presence",
+          "designTokens": {
+            "backgroundStyle": "gradient",
+            "accentPosition": "none",
+            "imagePosition": "full-bleed",
+            "textContrast": "high",
+            "overlayOpacity": 0.35
+          },
+          "generationHints": {
+            "maxTitleWords": 3,
+            "imagePromptStyle": "warm corporate photography, teamwork"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "baseTemplate": "corp-pitch",
+        "preferVisuals": true,
+        "imageStyle": "clean corporate photography, bright office, natural light, no text overlay",
+        "imageType": "ai",
+        "slideOrder": "fixed",
+        "layoutWhitelist": [
+          "title_hero_image_v3",
+          "agenda_numbered_v1",
+          "policy_numbered_split_v1",
+          "numbered_four_up_v1",
+          "stat_three_up_v2",
+          "bullet_list_cards_v3",
+          "achievement_three_up_v1",
+          "quote_banner_v3",
+          "closing_thank_you_image_v3"
+        ],
+        "titleSlide": {
+          "layout_id": "title_hero_image_v3",
+          "alwaysFirst": true
+        },
+        "closingSlide": {
+          "layout_id": "closing_thank_you_image_v3",
+          "alwaysLast": true
+        },
+        "contentDistribution": {
+          "maxConsecutiveBulletSlides": 2,
+          "requireStatSlide": true,
+          "requireImageSlide": true,
+          "requireChartSlide": false,
+          "requireComparisonSlide": false
+        }
+      },
+      "preview": {
+        "label": "Company Meeting — Clean",
+        "color": "#FFFFFF",
+        "accentColor": "#2563EB",
+        "description": "Internal company meeting: policy, targets, challenges, achievements.",
+        "useCase": "company_meeting",
+        "slideCount": 10,
+        "tags": [
+          "meeting",
+          "hr",
+          "policy",
+          "internal"
+        ]
+      }
+    }
   }
 ]

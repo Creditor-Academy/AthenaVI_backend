@@ -9,7 +9,7 @@ decoration/background shapes where appropriate (title, stat, chart, closing, sec
 |---|---|
 | title | `title_centered_v1`, `title_left_accent_v2`, `title_hero_image_v3` |
 | agenda | `agenda_numbered_v1`, `agenda_two_column_v2`, `agenda_side_image_v3` |
-| bullet_list | `bullet_list_classic_v1`, `bullet_list_dense_v2`, `bullet_list_cards_v3` |
+| bullet_list | `bullet_list_classic_v1`, `bullet_list_dense_v2`, `bullet_list_cards_v3`, `numbered_four_up_v1`, `policy_numbered_split_v1`, `achievement_three_up_v1` |
 | comparison | `comparison_side_by_side_v1`, `comparison_pros_cons_v2`, `comparison_table_v3` |
 | stat | `stat_big_number_v1`, `stat_three_up_v2`, `stat_with_context_v3` |
 | quote | `quote_centered_v1`, `quote_portrait_v2`, `quote_banner_v3` |
@@ -20,7 +20,8 @@ decoration/background shapes where appropriate (title, stat, chart, closing, sec
 | closing | `closing_centered_cta_v1`, `closing_contact_v2`, `closing_thank_you_image_v3` |
 | section_divider | `section_divider_centered_v1`, `section_divider_numbered_v2`, `section_divider_band_v3` |
 
-**Totals:** 12 content types × 3 variants = **36** layouts.
+**Totals:** 12 content types with core 3 variants each (**36**) plus meeting layouts
+(`numbered_four_up_v1`, `policy_numbered_split_v1`, `achievement_three_up_v1`) = **39** layouts.
 
 ## Deck packs (`DECK_PACK`) — schemaVersion 2
 
@@ -29,6 +30,9 @@ Seeded via `npm run seed:presentation-deck-packs` (requires layouts first).
 Each pack includes `meta`, `narrative` (`arc` + `summary`), per-slide `intent`,
 `designTokens`, `generationHints`, richer `preview`, and `generationDefaults`
 (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
+
+Image-capable slides may set `placeholder.imagePrompt` (and/or
+`generationHints.imagePromptStyle`); AI image brief prefers those strings.
 
 | pack_id | themeId | slides | use case |
 |---|---|---|---|
@@ -40,8 +44,9 @@ Each pack includes `meta`, `narrative` (`arc` + `summary`), per-slide `intent`,
 | `product_launch_ocean` | `ocean_mist` | 8 | product launch |
 | `executive_review_charcoal` | `charcoal_gold` | 8 | QBR (`preferVisuals: false`) |
 | `brand_story_sand` | `warm_sand` | 8 | brand / editorial |
+| `company_meeting_clean` | `clean_light` | 10 | internal company meeting (`preferVisuals: true`, title/closing image slots) |
 
-**Totals:** 8 packs.
+**Totals:** 9 packs.
 
 ### Theme tokens (catalog)
 

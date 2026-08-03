@@ -51,6 +51,8 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id, contentType, intent?, designTokens?, generationHints?, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
 | `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
 
+**Bare-minimum pack checklist (authoring bar):** `schemaVersion: 2`; `meta` + `narrative`; every slide has `intent`, `designTokens`, `generationHints`, real `placeholder` copy; image layouts include `placeholder.imagePrompt` and/or `generationHints.imagePromptStyle`; `generationDefaults` with `preferVisuals`, `imageStyle`, `layoutWhitelist`, `slideOrder: "fixed"`; `preview` for the picker. Create layouts first, then the pack.
+
 **Create `DECK_LAYOUT` example**
 
 ```json
@@ -74,6 +76,67 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
         "max_lines": 3
       }
     ]
+  }
+}
+```
+
+**Create `DECK_PACK` example** (layouts referenced must already be active)
+
+```json
+{
+  "type": "DECK_PACK",
+  "name": "Company Meeting — Clean",
+  "contentType": "pack",
+  "variant": "company_meeting_clean",
+  "isActive": true,
+  "schema": {
+    "schemaVersion": 2,
+    "pack_id": "company_meeting_clean",
+    "themeId": "clean_light",
+    "aspectRatio": "16:9",
+    "meta": {
+      "name": "Company Meeting — Clean",
+      "useCase": "company_meeting",
+      "tone": "clear, professional"
+    },
+    "narrative": {
+      "arc": "meeting_policy_targets_challenges_close",
+      "summary": "Open, agenda, policy, prep, benefits, targets, challenges, achievements, reminder, thank you."
+    },
+    "slides": [
+      {
+        "order": 1,
+        "layout_id": "title_hero_image_v3",
+        "contentType": "title",
+        "intent": "Open the meeting",
+        "designTokens": {
+          "backgroundStyle": "gradient",
+          "imagePosition": "right-half",
+          "textContrast": "high"
+        },
+        "generationHints": {
+          "maxTitleWords": 4,
+          "imagePromptStyle": "clean corporate photography, bright office"
+        },
+        "placeholder": {
+          "title": "Company Meeting",
+          "subtitle": "Your Company",
+          "imagePrompt": "bright modern conference room, soft natural light, no text"
+        }
+      }
+    ],
+    "generationDefaults": {
+      "preferVisuals": true,
+      "imageStyle": "clean corporate photography, bright office, natural light",
+      "imageType": "ai",
+      "slideOrder": "fixed",
+      "layoutWhitelist": ["title_hero_image_v3"]
+    },
+    "preview": {
+      "label": "Company Meeting — Clean",
+      "slideCount": 1,
+      "tags": ["meeting"]
+    }
   }
 }
 ```

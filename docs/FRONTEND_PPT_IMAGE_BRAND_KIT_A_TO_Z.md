@@ -362,7 +362,7 @@ Theme catalog ids use **underscores** (e.g. `midnight_blue`), not kebab-case.
 
 ### Seeded deck packs (`DECK_PACK`)
 
-Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is **schemaVersion 2** with `themeId`, `meta`, `narrative`, designed placeholders, per-slide `intent` / `designTokens` / `generationHints`, and `generationDefaults` (`layoutWhitelist`, `slideOrder: "fixed"`, `contentDistribution`).
+Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is **schemaVersion 2** with `themeId`, `meta`, `narrative`, designed placeholders, per-slide `intent` / `designTokens` / `generationHints`, and `generationDefaults` (`layoutWhitelist`, `slideOrder: "fixed"`, `contentDistribution`). Visual slides may set `placeholder.imagePrompt`; AI image brief prefers that (or `generationHints.imagePromptStyle`).
 
 | pack_id | Theme | slides | Use case |
 |---------|-------|--------|----------|
@@ -374,6 +374,7 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is
 | `product_launch_ocean` | Ocean Mist | 8 | Product launch |
 | `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
+| `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing images) |
 
 **Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display `name` / `schema.preview` / `meta` / `schema.pack_id` in the picker. Response now includes `meta` and `narrative`.
 
@@ -383,18 +384,18 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is
 |-------|---------|
 | `intent` | Plain-English purpose — fed into AI slide prompts |
 | `designTokens` | Chrome only: `backgroundStyle` (`solid`\|`gradient`), `accentPosition` (`none`\|`left-bar`\|`top-bar`\|`bottom-bar`), `imagePosition` (hint), `overlayOpacity`, `textContrast` |
-| `generationHints` | `maxTitleWords`, `maxBodyWords`, `itemCountMin/Max`, plus prose hints |
-| `placeholder` | Structured object mapped to layout slots |
+| `placeholder` | Structured object mapped to layout slots; may include `imagePrompt` for visual slides |
+| `generationHints` | `maxTitleWords`, `maxBodyWords`, `itemCountMin/Max`, `imagePromptStyle`, plus prose hints |
 
 `layout_id` owns geometry; `designTokens` do not re-layout image splits.
 
-### Layout content types (36 layouts)
+### Layout content types (39 layouts)
 
 | content_type | Example layout_ids |
 |--------------|-------------------|
 | title | `title_centered_v1`, `title_left_accent_v2`, `title_hero_image_v3` |
 | agenda | `agenda_numbered_v1`, `agenda_two_column_v2`, `agenda_side_image_v3` |
-| bullet_list | `bullet_list_classic_v1`, `bullet_list_dense_v2`, `bullet_list_cards_v3` |
+| bullet_list | `bullet_list_classic_v1`, `bullet_list_dense_v2`, `bullet_list_cards_v3`, `numbered_four_up_v1`, `policy_numbered_split_v1`, `achievement_three_up_v1` |
 | comparison | `comparison_side_by_side_v1`, `comparison_pros_cons_v2`, `comparison_table_v3` |
 | stat | `stat_big_number_v1`, `stat_three_up_v2`, `stat_with_context_v3` |
 | quote | `quote_centered_v1`, `quote_portrait_v2`, `quote_banner_v3` |

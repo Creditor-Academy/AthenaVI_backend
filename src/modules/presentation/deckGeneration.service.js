@@ -39,6 +39,20 @@ const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
 
+/** Prefer pack/slide author image brief when present. */
+function resolveAuthorImagePrompt(content) {
+  if (!content || typeof content !== 'object') return '';
+  const direct = typeof content.imagePrompt === 'string' ? content.imagePrompt.trim() : '';
+  if (direct) return direct;
+  const hints = content.generationHints;
+  if (hints && typeof hints === 'object') {
+    const style =
+      typeof hints.imagePromptStyle === 'string' ? hints.imagePromptStyle.trim() : '';
+    if (style) return style;
+  }
+  return '';
+}
+
 const CONTENT_TIMEOUT_MS =
   Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS) > 0
     ? Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS)
@@ -1323,6 +1337,7 @@ async function processSlide(ctx, slide) {
               themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
               themeColorTreatment: ctx.themeTokens?.colorTreatment,
               wizardBrief: ctx.wizardBrief || '',
+              authorImagePrompt: resolveAuthorImagePrompt(content),
             }),
             model: DEFAULT_SLIDE_MODEL,
             temperature: 0.3,
@@ -1336,9 +1351,10 @@ async function processSlide(ctx, slide) {
           });
         } catch (err) {
           await finishJob(briefJob.job.id, { status: 'FAILED', error: err.message });
+          const authorBrief = resolveAuthorImagePrompt(content);
           brief = {
-            subject: content?.title || outlineSlide.title,
-            search_query: content?.title || outlineSlide.title,
+            subject: authorBrief || content?.title || outlineSlide.title,
+            search_query: authorBrief || content?.title || outlineSlide.title,
             image_type: visualNeed === 'illustration' ? 'illustration' : 'photo',
           };
         }
@@ -2042,11 +2058,16 @@ async function regenerateSlide({
                 themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
                 themeColorTreatment: ctx.themeTokens?.colorTreatment,
                 wizardBrief: ctx.wizardBrief || '',
+                authorImagePrompt: resolveAuthorImagePrompt(content),
               }),
             });
             brief = briefResult.data;
           } catch {
-            brief = { subject: content?.title, search_query: content?.title };
+            const authorBrief = resolveAuthorImagePrompt(content);
+            brief = {
+              subject: authorBrief || content?.title,
+              search_query: authorBrief || content?.title,
+            };
           }
           const imageResult = await resolveSlideImage({
             ctx,

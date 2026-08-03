@@ -86,9 +86,12 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 
 ### Seeded deck packs
 
-`npm run seed:presentation-deck-packs` installs 8 system packs (**schemaVersion 2**). Each pack carries `themeId`,
+`npm run seed:presentation-deck-packs` installs 9 system packs (**schemaVersion 2**). Each pack carries `themeId`,
 `meta`, `narrative`, per-slide `intent` / `designTokens` / `generationHints`, designed placeholders,
 and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
+
+Visual slides may include `placeholder.imagePrompt` (persisted on pack clone). AI image brief prefers
+`content.imagePrompt` or `generationHints.imagePromptStyle` when set (prompt bundle **v1.5+**).
 
 | pack_id | Theme | Slides | Use case |
 |---|---|---|---|
@@ -100,6 +103,7 @@ and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistri
 | `product_launch_ocean` | Ocean Mist | 8 | Product launch |
 | `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
+| `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing image slots) |
 
 List response includes `meta`, `narrative`, `preview`, `generationDefaults`.
 
