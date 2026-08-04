@@ -673,15 +673,38 @@ const generationHintsSchema = Joi.object({
   .unknown(true)
   .optional();
 
+const deckPackSlideSnapshotSchema = Joi.object({
+  elements: Joi.object({
+    version: Joi.number().optional(),
+    canvas: Joi.object().unknown(true).optional(),
+    elements: Joi.array().items(Joi.object().unknown(true)).optional(),
+  })
+    .unknown(true)
+    .required(),
+  imageS3Key: Joi.string().trim().max(1024).allow('', null).optional(),
+})
+  .unknown(true)
+  .optional();
+
 const deckPackSlideSchema = Joi.object({
   order: Joi.number().integer().min(1).required(),
-  layout_id: Joi.string().trim().required(),
+  layout_id: Joi.string().trim().allow('', null).optional(),
   contentType: Joi.string().trim().max(64).required(),
   intent: Joi.string().trim().max(280).allow('', null).optional(),
   designTokens: designTokensSchema,
   generationHints: generationHintsSchema,
   placeholder: Joi.object().unknown(true).default({}),
-}).unknown(true);
+  snapshot: deckPackSlideSnapshotSchema,
+})
+  .unknown(true)
+  .custom((value, helpers) => {
+    const hasLayout = Boolean(value.layout_id && String(value.layout_id).trim());
+    const hasSnapshot = Boolean(value.snapshot?.elements);
+    if (!hasLayout && !hasSnapshot) {
+      return helpers.message('Each pack slide requires layout_id or snapshot.elements');
+    }
+    return value;
+  });
 
 const contentDistributionSchema = Joi.object({
   maxConsecutiveBulletSlides: Joi.number().integer().min(0).max(10).optional(),
@@ -705,6 +728,8 @@ const deckPackTemplateSchemaObject = Joi.object({
     audience: Joi.string().trim().max(128).optional(),
     tone: Joi.string().trim().max(256).optional(),
     industry: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
+    authoredVia: Joi.string().trim().max(64).optional(),
+    aiReady: Joi.boolean().optional(),
   })
     .unknown(true)
     .optional(),

@@ -95,6 +95,10 @@ Poll `GET .../status` (or refetch the presentation) while a slide is `GENERATING
 4. Edit canvas; optional `POST .../apply-brand-kit` later
 5. For AI: outline → generate with `generationFlow.selections.packId` + `brandKitId` (content + images fill the branded layouts; brand photos preferred)
 
+Canvas-published packs (`meta.authoredVia: "canvas"`) clone designed `snapshot.elements`. When `meta.aiReady` / role-tagged elements exist, generate **rebinds** text/images in place instead of recompiling from layout slots.
+
+**Superadmin authoring:** design in the editor → `POST /api/superadmin/presentations/:presentationId/publish-as-pack` (see [`SUPERADMIN_API.md`](api/SUPERADMIN_API.md)). JSON seed/admin create still works.
+
 All paths share the **same editor** surface.
 
 ---

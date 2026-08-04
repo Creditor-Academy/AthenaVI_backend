@@ -38,18 +38,22 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/reports/credits/platform-actions` | Platform grant/revoke audit |
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
-| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE` \| `DECK_PACK`) |
+| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE` \| `DECK_PACK` \| `VIDEO_PACK`) |
 | `POST` | `/api/superadmin/templates` | Create template — **`type` required**; schema validated by type |
 | `GET` | `/api/superadmin/templates/:templateId` | Get template |
 | `PATCH` | `/api/superadmin/templates/:templateId` | Update `name` / `schema` / `isActive` / `contentType` / `variant` |
+| `POST` | `/api/superadmin/presentations/:presentationId/publish-as-pack` | Publish PPT canvas → hybrid `DECK_PACK` |
+| `POST` | `/api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template` | Publish one video scene → `VIDEO_SCENE` |
+| `POST` | `/api/superadmin/projects/:projectId/publish-as-video-pack` | Publish all video scenes → `VIDEO_PACK` |
 
 **Template types (do not mix products):**
 
 | `type` | Product | Schema |
 |--------|---------|--------|
 | `DECK_LAYOUT` | AI PPT / presentations | `schemaVersion?`, `layout_id`, `content_type`, `grid`, `slots[]` (`id`, `region`, optional `role`, `typography`, `shape`, `layer`). No `scene` / `videoSettings`. |
-| `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id, contentType, intent?, designTokens?, generationHints?, placeholder }], generationDefaults?, preview? }` — each `layout_id` must exist as active `DECK_LAYOUT` |
-| `VIDEO_SCENE` | Video editor | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] } }` — no `slots`/`grid` |
+| `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id?, contentType, intent?, designTokens?, generationHints?, placeholder, snapshot? }], generationDefaults?, preview? }` — each present `layout_id` must exist as active `DECK_LAYOUT`; `snapshot.elements` enables canvas-quality clone + AI rebind |
+| `VIDEO_SCENE` | Video editor (one scene) | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] }, meta? }` — no `slots`/`grid` |
+| `VIDEO_PACK` | Video editor (multi-scene) | `{ schemaVersion?, pack_id, meta?, videoSettings?, scenes[], preview? }` — snapshot only, **no AI** |
 
 **Bare-minimum pack checklist (authoring bar):** `schemaVersion: 2`; `meta` + `narrative`; every slide has `intent`, `designTokens`, `generationHints`, real `placeholder` copy; image layouts include `placeholder.imagePrompt` and/or `generationHints.imagePromptStyle`; `generationDefaults` with `preferVisuals`, `imageStyle`, `layoutWhitelist`, `slideOrder: "fixed"`; `preview` for the picker; **template media** on image slides (upload via API or seed acquires stock-once to S3). Create layouts first, then the pack.
 
@@ -58,7 +62,7 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | Method | Path |
 |--------|------|
 | `GET` | `/api/superadmin/templates/:templateId/media` |
-| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (e.g. `slide:1`), `name` |
+| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (default `slide:1` for photos; use `preview` or `kind=preview` for picker thumb), optional `setAsPreview` (bool), `name` |
 | `DELETE` | `/api/superadmin/templates/:templateId/media/:mediaId` |
 
 List/get template includes `media[]` with presigned `url`. Pack clone maps `slotHint` `slide:{order}` into image elements.
@@ -153,7 +157,59 @@ List/get template includes `media[]` with presigned `url`. Pack clone maps `slot
 
 **Create `VIDEO_SCENE`:** same endpoint with `"type": "VIDEO_SCENE"` and video scene schema (see workspace video templates docs).
 
-Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates`. PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` / `scenes/from-template`. Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
+**Create `VIDEO_PACK`:** `"type": "VIDEO_PACK"` with `pack_id` + `scenes[]` (full editor scenes). Prefer canvas publish below.
+
+### Canvas publish (hybrid PPT + video packs)
+
+Design in the product editors, then publish to system templates (coexists with JSON `POST /templates`).
+
+**PPT → hybrid `DECK_PACK`**
+
+```http
+POST /api/superadmin/presentations/:presentationId/publish-as-pack
+```
+
+```json
+{
+  "name": "My Canvas Pack",
+  "packId": "my_canvas_pack_v1",
+  "themeId": "clean_light",
+  "isActive": true,
+  "variant": "canvas"
+}
+```
+
+- Stores designed `snapshot.elements` per slide + optional `layout_id` / roles for AI.
+- Copies slide images to system S3 + `TemplateMedia` (`slide:{n}`, `preview`).
+- Sets `meta.authoredVia: "canvas"` and `meta.aiReady` when every slide has `layout_id` or role-tagged text/image elements.
+- Clone (`createMode: pack`) uses snapshot when present; AI generate **rebinds** content into those elements by `role`.
+
+**Video → one scene `VIDEO_SCENE`**
+
+```http
+POST /api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template
+```
+
+```json
+{ "name": "Intro scene", "variant": "canvas", "isActive": true }
+```
+
+**Video → multi-scene `VIDEO_PACK` (no AI)**
+
+```http
+POST /api/superadmin/projects/:projectId/publish-as-video-pack
+```
+
+```json
+{
+  "name": "Onboarding video",
+  "packId": "onboarding_video_v1",
+  "isActive": true,
+  "variant": "canvas"
+}
+```
+
+Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK`. PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
 
 ---
 

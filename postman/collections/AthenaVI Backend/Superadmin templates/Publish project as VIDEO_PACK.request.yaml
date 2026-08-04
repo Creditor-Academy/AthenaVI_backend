@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/superadmin/projects/{{projectId}}/publish-as-video-pack"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Canvas Video Pack",
+      "packId": "canvas_video_pack_v1",
+      "isActive": true,
+      "variant": "canvas"
+    }
+order: 5200

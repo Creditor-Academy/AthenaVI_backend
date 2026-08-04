@@ -63,7 +63,7 @@ On **401**, refresh then retry once. Do not store refresh tokens in JS — cooki
 | Role | Scope | Used for |
 |------|-------|----------|
 | Workspace **OWNER** / **ADMIN** / **MEMBER** | `/api/workspaces/:workspaceId/...` | Brand Kit write vs read; presentations; packs |
-| Platform **superadmin** | `/api/superadmin/...` | Template CRUD (`DECK_LAYOUT`, `DECK_PACK`), credits/storage admin |
+| Platform **superadmin** | `/api/superadmin/...` | Template CRUD (`DECK_LAYOUT`, `DECK_PACK`, `VIDEO_SCENE`, `VIDEO_PACK`), canvas publish, credits/storage admin |
 
 Platform superadmin ≠ workspace ADMIN. Superadmin is checked server-side (`User.isPlatformSuperadmin` or email in `PLATFORM_SUPERADMIN_EMAILS`). UI may show a portal toggle from `GET /api/user/capabilities` (`canAccessSuperadminPortal`) — never trust that flag for security.
 
@@ -376,7 +376,15 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 | `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing images) |
 
-**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display `name` / `preview` / `previewImageUrl` / `meta` / `pack_id` in the picker.
+**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display thumbnails from **`previewImageUrl`** or **`preview.imageUrl`** / **`preview.thumbnailUrl`** (same presigned URL). Fall back to `preview.color` / `preview.accentColor` when those are null (text-first packs like consulting/QBR). Do **not** expect an image on `preview` color fields alone.
+
+### Canvas publish as pack (superadmin)
+
+Superadmin can design a finished deck in the presentation canvas, then:
+
+`POST /api/superadmin/presentations/:presentationId/publish-as-pack` with `{ name, packId, themeId?, variant?, isActive? }`.
+
+Creates a hybrid `DECK_PACK` with `snapshot.elements` per slide + `TemplateMedia`. Response `schema.meta.authoredVia` = `canvas`; `meta.aiReady` when slides have `layout_id` or role-tagged elements. Clone uses the snapshot; AI generate rebinds by `role`. JSON seed/admin create remains supported. Video: publish scene → `VIDEO_SCENE`, or whole project → `VIDEO_PACK` (no AI). See [SUPERADMIN_API.md](api/SUPERADMIN_API.md).
 
 ### Manual slide media (replace template photos)
 

@@ -7,7 +7,7 @@ const themeService = require('./theme.service');
 const deckGeneration = require('./deckGeneration.service');
 const exportService = require('./export.service');
 const slideEditorRaw = require('./slideEditor.service');
-const { layoutSlotsToElements, blankCanvas, injectBrandLogo } = require('./layoutToElements');
+const { layoutSlotsToElements, blankCanvas, injectBrandLogo, rebindContentToElements } = require('./layoutToElements');
 const brandKitService = require('../brandKit/brandKit.service');
 const templateMediaService = require('../templates/templateMedia.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
@@ -172,8 +172,10 @@ async function createPresentation({
 
   if (mode === 'pack' && pack) {
     const packSlides = Array.isArray(pack.schema?.slides) ? pack.schema.slides : [];
-    const layoutIds = packSlides.map((s) => s.layout_id);
-    const layouts = await presentationDao.findLayoutsByLayoutIds(layoutIds);
+    const layoutIds = packSlides.map((s) => s.layout_id).filter(Boolean);
+    const layouts = layoutIds.length
+      ? await presentationDao.findLayoutsByLayoutIds(layoutIds)
+      : [];
     const byLayoutId = new Map(layouts.map((l) => [l.schema?.layout_id, l]));
 
     const packMediaRows = await templateMediaDao.listByTemplateId(pack.id);
@@ -183,10 +185,11 @@ async function createPresentation({
 
     const slidePayloads = [];
     for (const ps of packSlides) {
-      const layout = byLayoutId.get(ps.layout_id);
-      if (!layout) {
+      const layout = ps.layout_id ? byLayoutId.get(ps.layout_id) : null;
+      const hasSnapshot = Boolean(ps.snapshot?.elements);
+      if (!layout && !hasSnapshot) {
         throw new AppError(
-          `Pack references missing layout_id: ${ps.layout_id}`,
+          `Pack references missing layout_id: ${ps.layout_id || '(none)'}`,
           400
         );
       }
@@ -209,23 +212,34 @@ async function createPresentation({
         placeholder.imageUrls = [imageRef.url];
       }
 
-      let elementsDoc = layoutSlotsToElements(
-        layout.schema,
-        placeholder,
-        imageRef,
-        canvasSize,
-        {
-          themeTokens: resolvedTokens,
-          designTokens: ps.designTokens || null,
+      let elementsDoc;
+      if (hasSnapshot) {
+        elementsDoc = JSON.parse(JSON.stringify(ps.snapshot.elements));
+        if (!elementsDoc.canvas) {
+          elementsDoc.canvas = { width: canvasSize.width, height: canvasSize.height };
         }
-      );
+        if (imageRef?.url || imageRef?.s3Key) {
+          elementsDoc = rebindContentToElements(elementsDoc, placeholder, imageRef);
+        }
+      } else {
+        elementsDoc = layoutSlotsToElements(
+          layout.schema,
+          placeholder,
+          imageRef,
+          canvasSize,
+          {
+            themeTokens: resolvedTokens,
+            designTokens: ps.designTokens || null,
+          }
+        );
+      }
       elementsDoc = injectBrandLogo(elementsDoc, logo, {
-        contentType: ps.contentType || layout.contentType,
+        contentType: ps.contentType || layout?.contentType,
       });
       slidePayloads.push({
         order: ps.order,
-        contentType: ps.contentType || layout.contentType || null,
-        layoutId: layout.schema?.layout_id || layout.id,
+        contentType: ps.contentType || layout?.contentType || null,
+        layoutId: layout?.schema?.layout_id || layout?.id || ps.layout_id || null,
         content: {
           ...placeholder,
           intent: ps.intent || null,
@@ -262,6 +276,9 @@ async function listPresentationDeckPacks() {
       (p.media || []).find((m) => String(m.slotHint || '').startsWith('slide:1')) ||
       (p.media || [])[0] ||
       null;
+    const previewImageUrl = previewMedia?.url || null;
+    const basePreview =
+      p.schema?.preview && typeof p.schema.preview === 'object' ? { ...p.schema.preview } : {};
     return {
       id: p.id,
       name: p.name,
@@ -271,8 +288,14 @@ async function listPresentationDeckPacks() {
       slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
       meta: p.schema?.meta || null,
       narrative: p.schema?.narrative || null,
-      preview: p.schema?.preview || null,
-      previewImageUrl: previewMedia?.url || null,
+      // Nested for FE pickers that already read `preview.*`
+      preview: {
+        ...basePreview,
+        imageUrl: previewImageUrl,
+        thumbnailUrl: previewImageUrl,
+      },
+      previewImageUrl,
+      thumbnailUrl: previewImageUrl,
       media: p.media || [],
       generationDefaults: p.schema?.generationDefaults || null,
       variant: p.variant,

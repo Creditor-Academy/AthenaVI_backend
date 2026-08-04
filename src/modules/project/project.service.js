@@ -193,7 +193,7 @@ const createProject = async (workspaceId, userId, input) => {
 
   let normalizedState;
   if (templateId) {
-    const template = await videoTemplateService.getActiveVideoSceneTemplate(templateId);
+    const template = await videoTemplateService.getActiveVideoTemplate(templateId);
     normalizedState = videoTemplateService.applyTemplateToNewProjectState({
       template,
       aspectRatio,

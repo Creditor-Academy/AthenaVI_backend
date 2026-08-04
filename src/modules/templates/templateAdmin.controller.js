@@ -55,6 +55,7 @@ const uploadTemplateMedia = asyncHandler(async (req, res) => {
     kind: req.body?.kind,
     slotHint: req.body?.slotHint,
     name: req.body?.name,
+    setAsPreview: req.body?.setAsPreview,
   });
   return successResponse(req, res, { media }, 201, messages.TEMPLATE_MEDIA_UPLOADED);
 });

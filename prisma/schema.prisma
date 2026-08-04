@@ -85,6 +85,7 @@ enum TemplateType {
   VIDEO_SCENE
   DECK_LAYOUT
   DECK_PACK
+  VIDEO_PACK
 }
 
 enum StorageUpgradeRequestStatus {

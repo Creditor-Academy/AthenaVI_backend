@@ -34,7 +34,7 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { layoutSlotsToElements, injectBrandLogo } = require('./layoutToElements');
+const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles } = require('./layoutToElements');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
@@ -1283,10 +1283,18 @@ async function processSlide(ctx, slide) {
     if (!Array.isArray(ctx.contentTypeHistory)) ctx.contentTypeHistory = [];
     ctx.contentTypeHistory.push(contentType);
 
-    // 3) Layout select + QA
+    // 3) Layout select + QA (skip when snapshot/role canvas will rebind)
     let layoutId = null;
     let template = null;
-    const existingLayoutId = slide.layoutId || null;
+    const existingLayoutId = slide.layoutId || packMeta?.layout_id || null;
+    const packSnapshotEarly = packMeta?.snapshot?.elements || null;
+    const currentElementsEarly =
+      slide.elements && typeof slide.elements === 'object' ? slide.elements : null;
+    const willRebind = Boolean(
+      (currentElementsEarly && elementsHaveRebindRoles(currentElementsEarly)) ||
+        (packSnapshotEarly && elementsHaveRebindRoles(packSnapshotEarly))
+    );
+
     if (
       ctx.preferExistingPackLayout &&
       existingLayoutId &&
@@ -1297,7 +1305,7 @@ async function processSlide(ctx, slide) {
       template = existingLayouts[0] || null;
       layoutId = existingLayoutId;
     }
-    if (!template) {
+    if (!template && !willRebind) {
       const templates = await resolveLayoutTemplates(policy.layoutContentType, {
         layoutIdWhitelist: ctx.layoutIdWhitelist || null,
       });
@@ -1309,6 +1317,7 @@ async function processSlide(ctx, slide) {
         preferImageSlot: policy.preferImageSlot,
       }));
     }
+    if (!layoutId && existingLayoutId) layoutId = existingLayoutId;
     ctx.previousLayoutId = layoutId;
 
     const qa = validateSlide({
@@ -1409,23 +1418,36 @@ async function processSlide(ctx, slide) {
     }
 
     const canvasSize = ctx.canvasSize || {};
-    let elementsDoc = layoutSlotsToElements(
-      template?.schema || { slots: [] },
-      content,
-      imageRef,
-      { width: canvasSize.width, height: canvasSize.height },
-      {
-        themeTokens: ctx.themeTokens || null,
-        designTokens,
-      }
-    );
+    const packSnapshot = packMeta?.snapshot?.elements || null;
+    const currentElements =
+      slide.elements && typeof slide.elements === 'object' ? slide.elements : null;
+    const rebindBase =
+      (currentElements && elementsHaveRebindRoles(currentElements) && currentElements) ||
+      (packSnapshot && elementsHaveRebindRoles(packSnapshot) && packSnapshot) ||
+      null;
+
+    let elementsDoc;
+    if (rebindBase) {
+      elementsDoc = rebindContentToElements(rebindBase, content, imageRef);
+    } else {
+      elementsDoc = layoutSlotsToElements(
+        template?.schema || { slots: [] },
+        content,
+        imageRef,
+        { width: canvasSize.width, height: canvasSize.height },
+        {
+          themeTokens: ctx.themeTokens || null,
+          designTokens,
+        }
+      );
+    }
     const logo = brandKitService.pickLogoForBackground(ctx.themeTokens);
     elementsDoc = injectBrandLogo(elementsDoc, logo, { contentType });
 
     const updated = await presentationDao.updateSlide(slide.id, {
       status: 'READY',
       contentType: contentType || null,
-      layoutId: layoutId || null,
+      layoutId: layoutId || slide.layoutId || packMeta?.layout_id || null,
       content,
       imageRef,
       elements: elementsDoc,

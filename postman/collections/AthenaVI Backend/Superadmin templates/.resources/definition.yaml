@@ -1,3 +1,3 @@
 $kind: collection
-description: Platform superadmin only. Shared CRUD for DECK_LAYOUT (PPT), DECK_PACK (multi-slide), and VIDEO_SCENE (video). type is required on create. Bare-minimum packs need schemaVersion 2, meta/narrative, per-slide intent/designTokens/generationHints/placeholder (imagePrompt on visual slides), and generationDefaults.
+description: Platform superadmin only. Shared CRUD for DECK_LAYOUT (PPT), DECK_PACK (multi-slide), VIDEO_SCENE, and VIDEO_PACK. Canvas publish endpoints publish-as-pack / publish-as-template / publish-as-video-pack. type is required on create.
 order: 12000

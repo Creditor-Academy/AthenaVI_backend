@@ -10,9 +10,11 @@ body:
       type: file
       src: "{{templateMediaFile}}"
     - key: kind
-      value: photo
+      value: preview
     - key: slotHint
-      value: slide:1
+      value: preview
+    - key: setAsPreview
+      value: "true"
     - key: name
-      value: Hero photo
+      value: Pack preview
 order: 4020

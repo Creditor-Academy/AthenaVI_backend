@@ -25,7 +25,9 @@ function assertDeckPackSchema(schema) {
 }
 
 async function assertPackLayoutIdsExist(schema) {
-  const layoutIds = (schema.slides || []).map((s) => s.layout_id).filter(Boolean);
+  const layoutIds = [
+    ...new Set((schema.slides || []).map((s) => s.layout_id).filter((id) => id && String(id).trim())),
+  ];
   if (!layoutIds.length) return;
   const layouts = await prisma.template.findMany({
     where: {
@@ -44,6 +46,15 @@ async function assertPackLayoutIdsExist(schema) {
       `DECK_PACK references unknown or inactive layout_id(s): ${missing.join(', ')}`,
       400
     );
+  }
+}
+
+function assertVideoPackSchema(schema) {
+  try {
+    const { assertVideoPackTemplateSchema } = require('../validations/videoTemplate.validations');
+    return assertVideoPackTemplateSchema(schema);
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid VIDEO_PACK schema', 400);
   }
 }
 
@@ -82,9 +93,9 @@ async function createTemplate({
   isActive = true,
   version = 1,
 }) {
-  if (!type || !['DECK_LAYOUT', 'VIDEO_SCENE', 'DECK_PACK'].includes(type)) {
+  if (!type || !['DECK_LAYOUT', 'VIDEO_SCENE', 'DECK_PACK', 'VIDEO_PACK'].includes(type)) {
     throw new AppError(
-      'type is required and must be DECK_LAYOUT, VIDEO_SCENE, or DECK_PACK',
+      'type is required and must be DECK_LAYOUT, VIDEO_SCENE, DECK_PACK, or VIDEO_PACK',
       400
     );
   }
@@ -96,6 +107,8 @@ async function createTemplate({
     } catch (err) {
       throw new AppError(err.message || 'Invalid VIDEO_SCENE schema', 400);
     }
+  } else if (type === 'VIDEO_PACK') {
+    validatedSchema = assertVideoPackSchema(schema);
   } else if (type === 'DECK_PACK') {
     validatedSchema = assertDeckPackSchema(schema);
     await assertPackLayoutIdsExist(validatedSchema);
@@ -134,6 +147,8 @@ async function updateTemplate({ id, name, schema, isActive, contentType, variant
       } catch (err) {
         throw new AppError(err.message || 'Invalid VIDEO_SCENE schema', 400);
       }
+    } else if (existing.type === 'VIDEO_PACK') {
+      data.schema = assertVideoPackSchema(schema);
     } else if (existing.type === 'DECK_LAYOUT') {
       data.schema = assertDeckLayoutSchema(schema);
     } else if (existing.type === 'DECK_PACK') {
@@ -159,4 +174,6 @@ module.exports = {
   updateTemplate,
   assertDeckLayoutSchema,
   assertDeckPackSchema,
+  assertVideoPackSchema,
+  assertPackLayoutIdsExist,
 };

@@ -55,8 +55,10 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 - **`createMode`**:
   - `blank` (default, zero slides)
   - `template` — requires active `DECK_LAYOUT` **`templateId`**; one READY slide
-  - `pack` — requires active `DECK_PACK` **`packId`**; clones multi-slide branded skeleton
-- AI path: create blank (or with `packId`/`brandKitId`) → outline → generate with optional `generationFlow.selections.packId` / `brandKitId`.
+  - `pack` — requires active `DECK_PACK` **`packId`**; clones multi-slide branded skeleton (uses `snapshot.elements` when present, else layout compile)
+- AI path: create blank (or with `packId`/`brandKitId`) → outline → generate with optional `generationFlow.selections.packId` / `brandKitId`. Canvas-published packs with roles/`meta.aiReady` **rebind** generated text/images into the designed canvas instead of full layout recompile.
+
+**Canvas publish (superadmin):** design in the presentation editor, then `POST /api/superadmin/presentations/:presentationId/publish-as-pack` — see [SUPERADMIN_API.md](SUPERADMIN_API.md).
 
 **Response `data`:** `{ project, deck, slides }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
 

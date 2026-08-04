@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/superadmin/projects/{{projectId}}/scenes/{{sceneId}}/publish-as-template"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Canvas Video Scene",
+      "variant": "canvas",
+      "isActive": true
+    }
+order: 5100

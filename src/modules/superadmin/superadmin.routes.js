@@ -5,6 +5,7 @@ const { requirePlatformSuperadmin } = require('../../middlewares/requirePlatform
 const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const superadminController = require('./superadmin.controller');
 const templateAdminController = require('../templates/templateAdmin.controller');
+const templatePublishController = require('../templates/templatePublish.controller');
 const superadminValidation = require('../validations/superadmin.validations');
 const videoTemplateValidation = require('../validations/videoTemplate.validations');
 
@@ -233,6 +234,24 @@ router.delete(
   '/templates/:templateId/media/:mediaId',
   validate(videoTemplateValidation.templateMediaIdAdminParamsSchema),
   templateAdminController.deleteTemplateMedia
+);
+
+router.post(
+  '/presentations/:presentationId/publish-as-pack',
+  validate(videoTemplateValidation.publishPresentationAsPackSchema),
+  templatePublishController.publishPresentationAsPack
+);
+
+router.post(
+  '/projects/:projectId/scenes/:sceneId/publish-as-template',
+  validate(videoTemplateValidation.publishProjectSceneAsTemplateSchema),
+  templatePublishController.publishProjectSceneAsTemplate
+);
+
+router.post(
+  '/projects/:projectId/publish-as-video-pack',
+  validate(videoTemplateValidation.publishProjectAsVideoPackSchema),
+  templatePublishController.publishProjectAsVideoPack
 );
 
 module.exports = router;

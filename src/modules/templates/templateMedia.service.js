@@ -69,7 +69,7 @@ async function listMedia(templateId) {
   return attachUrls(rows);
 }
 
-async function uploadMedia({ templateId, file, kind, slotHint, name }) {
+async function uploadMedia({ templateId, file, kind, slotHint, name, setAsPreview }) {
   await getTemplateOrThrow(templateId);
   if (!file?.buffer) throw new AppError(messages.INVALID_FILE_TYPE, 400);
   if (!IMAGE_MIME.has(file.mimetype)) {
@@ -81,12 +81,17 @@ async function uploadMedia({ templateId, file, kind, slotHint, name }) {
     throw new AppError('kind must be photo, preview, or graphic', 400);
   }
 
-  const hint =
+  let hint =
     slotHint != null && String(slotHint).trim()
       ? String(slotHint).trim().slice(0, 128)
-      : mediaKind === 'preview'
-        ? 'preview'
-        : `photo:${randomUUID().slice(0, 8)}`;
+      : null;
+
+  // Default slot so uploads are discoverable (not a random photo:uuid that never maps to preview)
+  if (!hint) {
+    if (mediaKind === 'preview') hint = 'preview';
+    else if (mediaKind === 'graphic') hint = `graphic:${randomUUID().slice(0, 8)}`;
+    else hint = 'slide:1';
+  }
 
   const key = systemMediaKey(templateId, hint, file.originalname || 'image.jpg');
   const uploaded = await s3Service.uploadFileToKey(file.buffer, key, file.mimetype);
@@ -103,13 +108,37 @@ async function uploadMedia({ templateId, file, kind, slotHint, name }) {
 
   const media = await templateMediaDao.upsertBySlotHint({
     templateId,
-    kind: mediaKind,
+    kind: mediaKind === 'preview' ? 'preview' : mediaKind,
     slotHint: hint,
     name: name || file.originalname || null,
     s3Key: uploaded.key,
     mimeType: file.mimetype,
     sortOrder: existing ? existing.sortOrder : sortOrder,
   });
+
+  // Pack picker uses kind/slotHint "preview". Sync so uploads actually show in preview.
+  const existingPreview = await templateMediaDao.findBySlotHint(templateId, 'preview');
+  const explicitlyOff = setAsPreview === false || setAsPreview === 'false';
+  const explicitlyOn = setAsPreview === true || setAsPreview === 'true';
+  const looksLikeHero =
+    mediaKind === 'preview' || hint === 'preview' || String(hint).startsWith('slide:1');
+  const shouldSyncPreview =
+    !explicitlyOff && (explicitlyOn || looksLikeHero || !existingPreview);
+
+  if (shouldSyncPreview && hint !== 'preview') {
+    if (existingPreview?.s3Key && existingPreview.s3Key !== uploaded.key) {
+      // Keep old preview object if it was a dedicated key unused elsewhere — best-effort skip delete
+    }
+    await templateMediaDao.upsertBySlotHint({
+      templateId,
+      kind: 'preview',
+      slotHint: 'preview',
+      name: name || file.originalname || 'preview',
+      s3Key: uploaded.key,
+      mimeType: file.mimetype,
+      sortOrder: 0,
+    });
+  }
 
   return { ...media, url: await resolveMediaUrl(media.s3Key) };
 }
@@ -151,9 +180,70 @@ async function withMediaAttachedMany(templates) {
 }
 
 /**
- * Resolve imageRef for a pack slide from TemplateMedia / placeholder.imageS3Key.
+ * Copy an existing S3 object into a template media slot (system key).
  */
+async function copyKeyToTemplateSlot({
+  templateId,
+  sourceKey,
+  kind = 'photo',
+  slotHint,
+  name = null,
+  mimeType = 'image/jpeg',
+  destKey = null,
+  setAsPreview = false,
+}) {
+  if (!sourceKey || !templateId || !slotHint) return null;
+  await getTemplateOrThrow(templateId);
+
+  const mediaKind = String(kind || 'photo').toLowerCase();
+  if (!MEDIA_KINDS.has(mediaKind)) {
+    throw new AppError('kind must be photo, preview, or graphic', 400);
+  }
+
+  const hint = String(slotHint).trim().slice(0, 128);
+  const key =
+    destKey ||
+    systemMediaKey(templateId, hint, path.basename(sourceKey) || 'image.jpg');
+
+  if (sourceKey !== key) {
+    await s3Service.copyFile(sourceKey, key);
+  }
+
+  const existing = await templateMediaDao.findBySlotHint(templateId, hint);
+  const sortOrder = existing
+    ? existing.sortOrder
+    : (await templateMediaDao.maxSortOrder(templateId, mediaKind)) + 1;
+
+  const media = await templateMediaDao.upsertBySlotHint({
+    templateId,
+    kind: mediaKind === 'preview' ? 'preview' : mediaKind,
+    slotHint: hint,
+    name: name || null,
+    s3Key: key,
+    mimeType: mimeType || 'image/jpeg',
+    sortOrder,
+  });
+
+  if (setAsPreview && hint !== 'preview') {
+    await templateMediaDao.upsertBySlotHint({
+      templateId,
+      kind: 'preview',
+      slotHint: 'preview',
+      name: name || 'preview',
+      s3Key: key,
+      mimeType: mimeType || 'image/jpeg',
+      sortOrder: 0,
+    });
+  }
+
+  return {
+    ...media,
+    url: await resolveMediaUrl(media.s3Key),
+  };
+}
+
 async function resolvePackSlideImageRef({ packTemplateId, slideOrder, placeholder, mediaByHint }) {
+  // Resolve imageRef for a pack slide from TemplateMedia / placeholder.imageS3Key.
   const hint = slotHintForSlideOrder(slideOrder);
   let s3Key =
     (placeholder && typeof placeholder.imageS3Key === 'string' && placeholder.imageS3Key.trim()) ||
@@ -207,5 +297,6 @@ module.exports = {
   withMediaAttached,
   withMediaAttachedMany,
   resolvePackSlideImageRef,
+  copyKeyToTemplateSlot,
   getTemplateOrThrow,
 };

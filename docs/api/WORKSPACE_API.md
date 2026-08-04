@@ -598,7 +598,7 @@ Supports the **Create Video** wizard (**canvas size** → **details**) in one ca
 | `aspectRatio` or `canvasSize` | No | From canvas step: `16:9` \| `9:16` \| `1:1` \| `4:5` \| `custom` |
 | `customWidth`, `customHeight` | If `custom` | Pixel size when canvas is **Custom** |
 | `data` or `projectState` | No | Full editor JSON; omit for empty `scenes` + canvas preset only |
-| `templateId` | No | Active **VIDEO_SCENE** template id — bootstraps first scene. Cannot combine with non-empty `scenes`. Not for presentations (`/presentations`). |
+| `templateId` | No | Active **VIDEO_SCENE** or **VIDEO_PACK** template id — bootstraps scenes. Pack loads **all** scenes; scene template loads one. Cannot combine with non-empty `scenes`. Not for presentations (`/presentations`). |
 | `thumbnail`, `duration`, `status` | No | Unchanged |
 
 Use **either** `data` **or** `projectState` for the editor payload (not both). Canvas presets set `videoSettings.width` / `height` when not overridden in `data.videoSettings`:
@@ -611,13 +611,15 @@ Use **either** `data` **or** `projectState` for the editor payload (not both). C
 | `4:5` | 1080 × 1350 |
 | `custom` | `customWidth` × `customHeight` |
 
-**Video scene templates (VIDEO editor only)**
+**Video templates (VIDEO editor only)**
 
 List active blueprints: `GET /api/workspaces/:workspaceId/video-templates`  
+Query `type=VIDEO_SCENE` \| `VIDEO_PACK` (omit = both).  
 Get one: `GET /api/workspaces/:workspaceId/video-templates/:templateId`  
-Append to an existing VIDEO project: `POST .../projects/:projectId/scenes/from-template` with `{ "templateId" }`.
+Append **one** scene to an existing VIDEO project: `POST .../projects/:projectId/scenes/from-template` with `{ "templateId" }` (**VIDEO_SCENE only**).  
+Create project from pack: `POST .../projects` with `templateId` of a `VIDEO_PACK`.
 
-These APIs return **`VIDEO_SCENE`** templates only. Presentation / PPT layouts use `/presentations` and `DECK_LAYOUT` — do not mix.
+Presentation / PPT layouts use `/presentations` and `DECK_LAYOUT` / `DECK_PACK` — do not mix.
 
 **Wizard example (canvas + details)**
 

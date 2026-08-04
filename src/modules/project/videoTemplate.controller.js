@@ -5,13 +5,13 @@ const videoTemplateService = require('./videoTemplate.service');
 const projectService = require('./project.service');
 
 const listVideoTemplates = asyncHandler(async (req, res) => {
-  const { contentType } = req.query || {};
-  const templates = await videoTemplateService.listActiveVideoSceneTemplates({ contentType });
+  const { contentType, type } = req.query || {};
+  const templates = await videoTemplateService.listActiveVideoTemplates({ contentType, type });
   return successResponse(req, res, { templates }, 200, messages.VIDEO_TEMPLATES_FETCHED);
 });
 
 const getVideoTemplate = asyncHandler(async (req, res) => {
-  const template = await videoTemplateService.getActiveVideoSceneTemplate(req.params.templateId);
+  const template = await videoTemplateService.getActiveVideoTemplate(req.params.templateId);
   return successResponse(req, res, { template }, 200, messages.VIDEO_TEMPLATES_FETCHED);
 });
 

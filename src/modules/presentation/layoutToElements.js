@@ -751,9 +751,95 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
   return doc;
 }
 
+/**
+ * Rebind generated slide content into an existing canvas by element role.
+ * Preserves placement/chrome; updates text/image payloads in place.
+ */
+function rebindContentToElements(elementsDoc, content = {}, imageRef = null) {
+  const doc = {
+    version: elementsDoc?.version || 1,
+    canvas: elementsDoc?.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
+    elements: Array.isArray(elementsDoc?.elements)
+      ? elementsDoc.elements.map((el) => ({ ...el, content: el.content ? { ...el.content } : {} }))
+      : [],
+  };
+
+  const imageUrl =
+    imageRef?.url ||
+    imageRef?.s3Url ||
+    (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
+    null;
+
+  for (const el of doc.elements) {
+    const role = String(el.role || '').toLowerCase();
+    const id = String(el.id || '').toLowerCase();
+    const roleOrId = role || id;
+
+    if (el.type === 'text' || el.type === 'textbox') {
+      const text = textForSlot(roleOrId, content);
+      if (text != null && String(text).length) {
+        el.content = { ...(el.content || {}), text: String(text) };
+      } else if (role === 'title' || role === 'heading' || role === 'headline') {
+        if (content.title) el.content = { ...(el.content || {}), text: String(content.title) };
+      } else if (role === 'subtitle' || role === 'subheading') {
+        if (content.subtitle) el.content = { ...(el.content || {}), text: String(content.subtitle) };
+      } else if (role === 'body' || role === 'bullets') {
+        const bullets = bulletsOf(content);
+        const body =
+          content.body || (bullets.length ? bulletBlock(bullets) : '');
+        if (body) el.content = { ...(el.content || {}), text: String(body) };
+      }
+    }
+
+    if (el.type === 'table' && (role === 'table' || id.includes('table'))) {
+      const rows = tableRowsOf(content);
+      if (rows.length) el.content = { ...(el.content || {}), rows };
+    }
+
+    if (
+      el.type === 'image' &&
+      role !== 'logo' &&
+      imageUrl &&
+      (role === 'image' || !role || id.includes('image') || id.includes('hero'))
+    ) {
+      el.content = {
+        ...(el.content || {}),
+        url: imageUrl,
+        s3Key: imageRef?.s3Key || el.content?.s3Key || null,
+        fit: el.content?.fit || 'cover',
+        alt: content.title || el.content?.alt || '',
+      };
+    }
+  }
+
+  return doc;
+}
+
+function elementsHaveRebindRoles(elementsDoc) {
+  const els = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
+  return els.some((el) => {
+    const role = String(el.role || '').toLowerCase();
+    return (
+      role === 'title' ||
+      role === 'heading' ||
+      role === 'headline' ||
+      role === 'subtitle' ||
+      role === 'subheading' ||
+      role === 'body' ||
+      role === 'image' ||
+      role === 'bullets' ||
+      role === 'caption' ||
+      role === 'quote' ||
+      role === 'cta'
+    );
+  });
+}
+
 module.exports = {
   regionToPlacement,
   layoutSlotsToElements,
+  rebindContentToElements,
+  elementsHaveRebindRoles,
   applySlideDesignTokens,
   blankCanvas,
   newElementId,

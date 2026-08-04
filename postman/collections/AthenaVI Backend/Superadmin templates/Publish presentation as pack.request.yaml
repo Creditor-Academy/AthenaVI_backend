@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/superadmin/presentations/{{presentationId}}/publish-as-pack"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "name": "Canvas Pack",
+      "packId": "canvas_pack_v1",
+      "themeId": "clean_light",
+      "isActive": true,
+      "variant": "canvas"
+    }
+order: 5000

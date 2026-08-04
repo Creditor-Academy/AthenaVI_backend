@@ -86,9 +86,12 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
-| GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE templates (video editor only) |
-| GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one VIDEO_SCENE template |
-| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId`) |
+| GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE / VIDEO_PACK (`?type=`) |
+| GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one video template |
+| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId` scene or pack) |
+| POST | `/api/superadmin/presentations/:presentationId/publish-as-pack` | Superadmin | Publish PPT canvas as DECK_PACK |
+| POST | `/api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template` | Superadmin | Publish scene as VIDEO_SCENE |
+| POST | `/api/superadmin/projects/:projectId/publish-as-video-pack` | Superadmin | Publish project as VIDEO_PACK |
 | GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId` optional) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
