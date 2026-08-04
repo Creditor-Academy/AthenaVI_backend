@@ -51,16 +51,16 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 - **`folderId`** required (must belong to workspace).
 - **`themeId`** and/or **`themeTokens`** optional; tokens resolved from catalog when `themeId` is set.
 - **`brandKitId`** optional — workspace Brand Kit overrides theme (see [BRAND_KIT_API.md](BRAND_KIT_API.md)).
-- **`aspectRatio`**: `16:9` (default) \| `4:3` \| `9:16`. Can also be set later via `generationFlow.selections.canvasSize` on generate.
+- **`aspectRatio`**: `16:9` (default) \| `4:3` only (native **1920×1080** / **1600×1200**). Can also be set later via `generationFlow.selections.canvasSize` on generate. `9:16` → **400**.
 - **`createMode`**:
-  - `blank` (default, zero slides)
+  - `blank` (default) — **one** READY slide with default canvas text
   - `template` — requires active `DECK_LAYOUT` **`templateId`**; one READY slide
   - `pack` — requires active `DECK_PACK` **`packId`**; clones multi-slide branded skeleton (uses `snapshot.elements` when present, else layout compile)
 - AI path: create blank (or with `packId`/`brandKitId`) → outline → generate with optional `generationFlow.selections.packId` / `brandKitId`. Canvas-published packs with roles/`meta.aiReady` **rebind** generated text/images into the designed canvas instead of full layout recompile.
 
 **Canvas publish (superadmin):** design in the presentation editor, then `POST /api/superadmin/presentations/:presentationId/publish-as-pack` — see [SUPERADMIN_API.md](SUPERADMIN_API.md).
 
-**Response `data`:** `{ project, deck, slides }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**.
+**Response `data`:** `{ project, deck, slides, id, title, status, themeTokens, … }` — `project.type` is `PRESENTATION`; `presentationId` for subsequent routes is the **project id**. Flat `id`/`title`/`status` mirror project/deck for FE canvas contract.
 
 ---
 
@@ -133,14 +133,17 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId` |
 | **Status** | **200** |
 
-**Response `data`:** `{ project, deck, slides }`
+**Response `data`:** `{ project, deck, slides, id, title, status, themeTokens, aspectRatio, locale, folderId }`
 
+- Nested: `project`, `deck`, `slides` (canonical)
+- **Flat FE compatibility fields** (same payload): `id` (= project id), `title` (= project.name), `status` / `themeTokens` / `aspectRatio` / `locale` / `folderId` mirrored from deck/project
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
-- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …)
+- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
-- Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` for canvas render.
+- Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` (or `src` alias) for canvas render.
+- Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed`. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
 
-Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table`. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`. Drag/snap are frontend-only; backend stores absolute geometry.
+Also: `GET .../slides/:slideId` returns a single presigned slide.
 
 **Frontend outcome vs API:** A single mega JSON “final deck” blob is **not** accepted as one POST. Map UI prompt/vibe into outline/theme calls; store/edit via slide + canvas APIs.
 
@@ -348,7 +351,7 @@ Updates `deck.themeTokens` from the kit and injects/updates `role: logo` image e
 - **`selections.colorTheme`**: kebab-case wizard theme id → `themeTokens` (overrides prior theme for this generate).
 - **`selections.packId`**: active `DECK_PACK` id — layout whitelist + pack defaults for generation.
 - **`selections.brandKitId`**: workspace Brand Kit — overrides theme, injects voice into prompts, prefers brand photos for slide images.
-- **`selections.canvasSize`**: `16:9` | `4:3` | `9:16` → `deck.aspectRatio` + canvas pixel size.
+- **`selections.canvasSize`**: `16:9` | `4:3` → `deck.aspectRatio` + canvas pixel size.
 - **`selections.imageType`**:
   - `ai` — AI-first image generation (stock fallback)
   - `stock` / `web` — stock providers only
@@ -432,10 +435,14 @@ Structural mutations return **409** while deck `status === GENERATING`.
 | Method | Path |
 |---|---|
 | `PUT` | `.../slides/:slideId/canvas` — full `{ version, canvas, elements }` replace |
-| `POST` | `.../slides/:slideId/elements` — `{ presetId }` and/or `{ element }` |
+| `POST` | `.../slides/:slideId/elements` — flat `{ type, placement, content, presetId? }` **or** `{ presetId }` / `{ element }` |
 | `PATCH` | `.../slides/:slideId/elements/:elementId` |
 | `DELETE` | `.../slides/:slideId/elements/:elementId` |
 | `PATCH` | `.../slides/:slideId/elements/reorder` — `{ "elementIds": [] }` |
+
+Cannot delete the last remaining slide (**400**). While `deck.status === GENERATING`, structure/canvas mutations → **409**.
+
+`POST .../elements` accepts FE flat bodies; image `content.src` is stored as `url`. Charts accept nested `data.labels/series`; tables accept `cells` or `rows`. Regenerate `target` accepts `content` \| `image` \| `all` \| `full` (`full` ≡ `all`).
 
 ### Patch slide
 

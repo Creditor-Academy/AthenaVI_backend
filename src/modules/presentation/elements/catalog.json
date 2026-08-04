@@ -4,7 +4,28 @@
     "type": "text",
     "label": "Title",
     "defaultPlacement": { "x": 160, "y": 200, "width": 1600, "height": 140, "rotation": 0, "opacity": 1 },
-    "defaultContent": { "text": "Title", "fontSize": 44, "bold": true, "align": "left" }
+    "defaultContent": { "text": "Title", "fontSize": 64, "bold": true, "fontWeight": 800, "align": "left" }
+  },
+  {
+    "presetId": "text_subtitle",
+    "type": "text",
+    "label": "Subtitle",
+    "defaultPlacement": { "x": 160, "y": 360, "width": 1600, "height": 80, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Subtitle", "fontSize": 28, "bold": false, "align": "left" }
+  },
+  {
+    "presetId": "text_section",
+    "type": "text",
+    "label": "Section",
+    "defaultPlacement": { "x": 160, "y": 200, "width": 1600, "height": 100, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Section", "fontSize": 40, "bold": true, "align": "left" }
+  },
+  {
+    "presetId": "text_paragraph",
+    "type": "text",
+    "label": "Paragraph",
+    "defaultPlacement": { "x": 160, "y": 400, "width": 1600, "height": 400, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Body paragraph", "fontSize": 20, "bold": false, "align": "left", "lineHeight": 1.4 }
   },
   {
     "presetId": "text_body",
@@ -14,11 +35,67 @@
     "defaultContent": { "text": "Body text", "fontSize": 20, "bold": false, "align": "left" }
   },
   {
+    "presetId": "text_bullets",
+    "type": "text",
+    "label": "Bullets",
+    "defaultPlacement": { "x": 160, "y": 320, "width": 1600, "height": 480, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "• Point one\n• Point two\n• Point three", "fontSize": 22, "align": "left", "lineHeight": 1.5 }
+  },
+  {
+    "presetId": "text_numbered",
+    "type": "text",
+    "label": "Numbered list",
+    "defaultPlacement": { "x": 160, "y": 320, "width": 1600, "height": 480, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "1. First\n2. Second\n3. Third", "fontSize": 22, "align": "left", "lineHeight": 1.5 }
+  },
+  {
+    "presetId": "text_quote",
+    "type": "text",
+    "label": "Quote",
+    "defaultPlacement": { "x": 240, "y": 360, "width": 1440, "height": 280, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "“A memorable quote.”", "fontSize": 32, "italic": true, "align": "center" }
+  },
+  {
+    "presetId": "text_caption",
+    "type": "text",
+    "label": "Caption",
+    "defaultPlacement": { "x": 160, "y": 900, "width": 1600, "height": 60, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "Caption", "fontSize": 14, "align": "left", "colorRole": "muted" }
+  },
+  {
+    "presetId": "text_label",
+    "type": "text",
+    "label": "Label",
+    "defaultPlacement": { "x": 160, "y": 160, "width": 400, "height": 40, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "LABEL", "fontSize": 12, "bold": true, "letterSpacing": 0.08, "align": "left" }
+  },
+  {
+    "presetId": "text_big_number",
+    "type": "text",
+    "label": "Big number",
+    "defaultPlacement": { "x": 160, "y": 320, "width": 600, "height": 200, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "98%", "fontSize": 96, "bold": true, "fontWeight": 800, "align": "left" }
+  },
+  {
+    "presetId": "text_stat",
+    "type": "text",
+    "label": "Stat",
+    "defaultPlacement": { "x": 160, "y": 400, "width": 500, "height": 160, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "text": "3.4x", "fontSize": 72, "bold": true, "align": "center" }
+  },
+  {
     "presetId": "shape_rect",
     "type": "shape",
     "label": "Rectangle",
     "defaultPlacement": { "x": 200, "y": 200, "width": 400, "height": 240, "rotation": 0, "opacity": 1 },
     "defaultContent": { "shape": "rect", "fill": "#0A84FF" }
+  },
+  {
+    "presetId": "shape_rounded_rect",
+    "type": "shape",
+    "label": "Rounded rectangle",
+    "defaultPlacement": { "x": 200, "y": 200, "width": 400, "height": 240, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "rounded-rect", "fill": "#3B82F6", "borderRadius": 16 }
   },
   {
     "presetId": "shape_ellipse",
@@ -28,11 +105,67 @@
     "defaultContent": { "shape": "ellipse", "fill": "#5E5CE6" }
   },
   {
+    "presetId": "shape_circle",
+    "type": "shape",
+    "label": "Circle",
+    "defaultPlacement": { "x": 300, "y": 300, "width": 280, "height": 280, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "circle", "fill": "#22D3EE" }
+  },
+  {
+    "presetId": "shape_pill",
+    "type": "shape",
+    "label": "Pill",
+    "defaultPlacement": { "x": 400, "y": 480, "width": 360, "height": 80, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "pill", "fill": "#F59E0B", "borderRadius": 999 }
+  },
+  {
+    "presetId": "shape_triangle",
+    "type": "shape",
+    "label": "Triangle",
+    "defaultPlacement": { "x": 400, "y": 300, "width": 280, "height": 280, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "triangle", "fill": "#34D399" }
+  },
+  {
+    "presetId": "shape_diamond",
+    "type": "shape",
+    "label": "Diamond",
+    "defaultPlacement": { "x": 400, "y": 300, "width": 280, "height": 280, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "diamond", "fill": "#A78BFA" }
+  },
+  {
+    "presetId": "shape_star",
+    "type": "shape",
+    "label": "Star",
+    "defaultPlacement": { "x": 400, "y": 300, "width": 240, "height": 240, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "star", "fill": "#FBBF24" }
+  },
+  {
     "presetId": "shape_line",
     "type": "shape",
     "label": "Line",
     "defaultPlacement": { "x": 200, "y": 540, "width": 1520, "height": 4, "rotation": 0, "opacity": 1 },
-    "defaultContent": { "shape": "line", "line": "#E5E5E5" }
+    "defaultContent": { "shape": "line", "line": "#E5E5E5", "stroke": "#E5E5E5", "strokeWidth": 2 }
+  },
+  {
+    "presetId": "shape_plus",
+    "type": "shape",
+    "label": "Plus",
+    "defaultPlacement": { "x": 400, "y": 400, "width": 120, "height": 120, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "plus", "fill": "#64748B" }
+  },
+  {
+    "presetId": "shape_arrow_right",
+    "type": "shape",
+    "label": "Arrow right",
+    "defaultPlacement": { "x": 400, "y": 460, "width": 320, "height": 120, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "shape": "arrow-right", "fill": "#2563EB" }
+  },
+  {
+    "presetId": "image",
+    "type": "image",
+    "label": "Image",
+    "defaultPlacement": { "x": 560, "y": 240, "width": 800, "height": 500, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "url": null, "src": null, "fit": "cover", "alt": "" }
   },
   {
     "presetId": "image_frame",
@@ -46,7 +179,7 @@
     "type": "icon",
     "label": "Icon",
     "defaultPlacement": { "x": 200, "y": 200, "width": 96, "height": 96, "rotation": 0, "opacity": 1 },
-    "defaultContent": { "icon": "star", "url": null }
+    "defaultContent": { "icon": "star", "url": null, "fit": "contain" }
   },
   {
     "presetId": "chart_bar",
@@ -60,15 +193,43 @@
     }
   },
   {
+    "presetId": "chart_column_grouped",
+    "type": "chart",
+    "label": "Grouped columns",
+    "defaultPlacement": { "x": 360, "y": 200, "width": 1200, "height": 640, "rotation": 0, "opacity": 1 },
+    "defaultContent": {
+      "chartType": "column-grouped",
+      "colors": ["#7C3AED", "#A78BFA"],
+      "data": {
+        "labels": ["Q1", "Q2", "Q3", "Q4"],
+        "series": [
+          { "name": "Series A", "values": [12, 19, 14, 22] },
+          { "name": "Series B", "values": [8, 11, 16, 18] }
+        ]
+      }
+    }
+  },
+  {
     "presetId": "table_basic",
     "type": "table",
     "label": "Table",
     "defaultPlacement": { "x": 200, "y": 240, "width": 1520, "height": 480, "rotation": 0, "opacity": 1 },
     "defaultContent": {
-      "rows": [
+      "hasHeader": true,
+      "rows": 3,
+      "cols": 2,
+      "cells": [
         ["Header 1", "Header 2"],
+        ["Cell", "Cell"],
         ["Cell", "Cell"]
       ]
     }
+  },
+  {
+    "presetId": "embed_link",
+    "type": "embed",
+    "label": "Embed / link",
+    "defaultPlacement": { "x": 480, "y": 240, "width": 960, "height": 540, "rotation": 0, "opacity": 1 },
+    "defaultContent": { "provider": "any-link", "url": "https://", "title": "Link" }
   }
 ]

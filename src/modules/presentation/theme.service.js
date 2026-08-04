@@ -14,10 +14,31 @@ function listThemes() {
   }));
 }
 
+/** Map wizard / FE PDF theme ids onto catalog or wizard-derived tokens later. */
+const THEME_ID_ALIASES = {
+  modern_professional: 'clean_light',
+  'modern-professional': 'clean_light',
+  midnight_dark: 'midnight_blue',
+  'midnight-dark': 'midnight_blue',
+};
+
+function normalizeThemeId(id) {
+  const raw = String(id || '').trim();
+  if (!raw) return '';
+  if (THEME_ID_ALIASES[raw]) return THEME_ID_ALIASES[raw];
+  const underscored = raw.replace(/-/g, '_');
+  if (THEME_ID_ALIASES[underscored]) return THEME_ID_ALIASES[underscored];
+  return raw;
+}
+
 function getThemeById(id) {
-  const themeId = String(id || '').trim();
+  const themeId = normalizeThemeId(id);
   if (!themeId) return null;
-  return catalog.find((theme) => theme.id === themeId) || null;
+  return (
+    catalog.find((theme) => theme.id === themeId) ||
+    catalog.find((theme) => theme.id === String(id || '').trim()) ||
+    null
+  );
 }
 
 function parseHexColor(hex) {
@@ -99,17 +120,34 @@ function assertContrast(palette) {
  */
 function resolveThemeTokens({ themeId, themeTokens } = {}) {
   const hasCustom = themeTokens != null && typeof themeTokens === 'object';
-  const id = themeId != null && String(themeId).trim() !== '' ? String(themeId).trim() : null;
+  const id = themeId != null && String(themeId).trim() !== '' ? normalizeThemeId(themeId) : null;
 
   let resolved;
   if (hasCustom) {
     resolved = themeTokens;
-  } else if (id) {
-    const theme = getThemeById(id);
+  } else if (id || (themeId != null && String(themeId).trim() !== '')) {
+    const theme = getThemeById(themeId);
     if (!theme) {
-      throw new AppError(`Unknown themeId: ${id}`, 400);
+      // Fall back to wizard color themes when FE sends modern-professional etc.
+      try {
+        const generationFlowService = require('./generationFlow.service');
+        const wizardTokens = generationFlowService.resolveWizardThemeTokens(
+          String(themeId).trim(),
+          null,
+          null
+        );
+        if (wizardTokens?.palette) {
+          resolved = wizardTokens;
+        }
+      } catch {
+        resolved = null;
+      }
+      if (!resolved) {
+        throw new AppError(`Unknown themeId: ${themeId}`, 400);
+      }
+    } else {
+      resolved = theme.themeTokens;
     }
-    resolved = theme.themeTokens;
   } else {
     const fallback = getThemeById(DEFAULT_THEME_ID);
     if (!fallback) {
@@ -129,6 +167,8 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
 module.exports = {
   DEFAULT_THEME_ID,
   AA_CONTRAST_RATIO,
+  THEME_ID_ALIASES,
+  normalizeThemeId,
   listThemes,
   getThemeById,
   resolveThemeTokens,

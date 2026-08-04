@@ -20,9 +20,9 @@ scripts:
     code: |-
       if (pm.response.code === 201) {
         const j = pm.response.json();
-        const id = j && j.data && j.data.project && j.data.project.id;
+        const id = (j && j.data && (j.data.id || (j.data.project && j.data.project.id)));
         if (id) pm.collectionVariables.set("presentationId", id);
-        const slides = j && j.data && j.data.deck && j.data.deck.slides;
+        const slides = j && j.data && (j.data.slides || (j.data.deck && j.data.deck.slides));
         if (Array.isArray(slides) && slides[0]) pm.collectionVariables.set("slideId", slides[0].id);
       }
     language: text/javascript

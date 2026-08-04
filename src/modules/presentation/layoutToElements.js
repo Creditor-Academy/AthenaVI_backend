@@ -672,14 +672,23 @@ function layoutSlotsToElements(
  */
 function blankCanvas(opts = {}) {
   const withDefaultText = opts.withDefaultText === true;
-  const canvas = { width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+  const width = Number(opts.width) > 0 ? Number(opts.width) : CANVAS_WIDTH;
+  const height = Number(opts.height) > 0 ? Number(opts.height) : CANVAS_HEIGHT;
+  const canvas = { width, height };
   const elements = [];
   if (withDefaultText) {
     elements.push({
       id: newElementId('txt'),
       type: 'text',
       layer: 1,
-      placement: { x: 200, y: 400, width: 1520, height: 120, rotation: 0, opacity: 1 },
+      placement: {
+        x: Math.round(width * 0.1),
+        y: Math.round(height * 0.37),
+        width: Math.round(width * 0.8),
+        height: Math.round(height * 0.11),
+        rotation: 0,
+        opacity: 1,
+      },
       content: { text: 'Double-click to edit', fontSize: 32, bold: false, align: 'center' },
       role: 'title',
     });

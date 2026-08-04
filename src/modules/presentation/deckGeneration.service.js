@@ -1935,6 +1935,8 @@ async function getStatus(presentationId, workspaceId) {
   return {
     deckId: deck.id,
     status: deck.status,
+    deckStatus: deck.status,
+    message: null,
     partial: Boolean(deck.partial),
     progress,
     etaSeconds,
@@ -1966,6 +1968,9 @@ async function regenerateSlide({
   overwriteManualEdits = true,
   prompt = null,
 }) {
+  const normalizedTarget =
+    String(target || 'all').toLowerCase() === 'full' ? 'all' : String(target || 'all').toLowerCase();
+  target = normalizedTarget;
   const { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
@@ -2219,14 +2224,41 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
   const data = {
     manuallyEdited: patch.manuallyEdited !== undefined ? patch.manuallyEdited : true,
   };
-  if (patch.content !== undefined) data.content = patch.content;
+
+  let nextContent =
+    patch.content !== undefined
+      ? patch.content && typeof patch.content === 'object'
+        ? { ...patch.content }
+        : patch.content
+      : slide.content && typeof slide.content === 'object'
+        ? { ...slide.content }
+        : {};
+
+  if (patch.title !== undefined) {
+    nextContent = { ...(nextContent || {}), title: patch.title };
+  }
+  if (patch.background !== undefined) {
+    nextContent = { ...(nextContent || {}), background: patch.background };
+  }
+
+  if (
+    patch.content !== undefined ||
+    patch.title !== undefined ||
+    patch.background !== undefined
+  ) {
+    data.content = nextContent;
+  }
   if (patch.layoutId !== undefined) data.layoutId = patch.layoutId;
   if (patch.contentType !== undefined) data.contentType = patch.contentType;
   if (patch.imageRef !== undefined) data.imageRef = patch.imageRef;
-  if (patch.elements !== undefined) data.elements = patch.elements;
+  if (patch.elements !== undefined) {
+    const { normalizeCanvasDoc } = require('./elementContent.normalize');
+    data.elements = normalizeCanvasDoc(patch.elements);
+  }
 
   const updated = await presentationDao.updateSlide(slideId, data);
-  return { slide: updated };
+  const { enrichSlideForClient } = require('./elementContent.normalize');
+  return { slide: enrichSlideForClient(updated) };
 }
 
 module.exports = {

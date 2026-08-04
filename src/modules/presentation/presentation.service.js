@@ -16,6 +16,24 @@ const {
   presignPresentationPayload,
 } = require('./presignSlideMedia');
 const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
+const { enrichSlidesForClient } = require('./elementContent.normalize');
+
+function withFlatPresentationFields({ project, deck, slides }) {
+  const proj = project || {};
+  const d = deck || {};
+  return {
+    project: proj,
+    deck: d,
+    slides,
+    id: proj.id || d.projectId,
+    title: proj.name,
+    status: d.status,
+    themeTokens: d.themeTokens,
+    aspectRatio: d.aspectRatio,
+    locale: d.locale,
+    folderId: proj.folderId,
+  };
+}
 
 const SLIDE_EDITOR_PASSTHROUGH = new Set([
   'listElementCatalog',
@@ -103,7 +121,8 @@ async function createPresentation({
     }
   }
 
-  const packAspect = pack?.schema?.aspectRatio || aspectRatio;
+  const packAspectRaw = String(pack?.schema?.aspectRatio || aspectRatio || '16:9').trim();
+  const resolvedAspect = packAspectRaw === '4:3' ? '4:3' : '16:9';
   const resolvedTokens = await resolveCreateThemeTokens({
     workspaceId,
     themeId,
@@ -119,7 +138,7 @@ async function createPresentation({
     name: displayName,
     createdBy: userId,
     themeTokens: resolvedTokens,
-    aspectRatio: packAspect || aspectRatio,
+    aspectRatio: resolvedAspect,
     locale,
   });
 
@@ -142,8 +161,28 @@ async function createPresentation({
   }
 
   let slides = deck.slides || [];
-  const canvasSize = canvasForAspect(packAspect || aspectRatio);
+  const canvasSize = canvasForAspect(resolvedAspect);
   const logo = brandKitService.pickLogoForBackground(resolvedTokens);
+
+  if (mode === 'blank') {
+    const elementsDoc = blankCanvas({
+      width: canvasSize.width,
+      height: canvasSize.height,
+      withDefaultText: true,
+    });
+    const slide = await presentationDao.createOneSlide({
+      deckId: deck.id,
+      order: 1,
+      contentType: null,
+      layoutId: null,
+      content: { title: displayName },
+      imageRef: null,
+      elements: elementsDoc,
+      status: 'READY',
+      manuallyEdited: true,
+    });
+    slides = [slide];
+  }
 
   if (mode === 'template' && template) {
     let elementsDoc = layoutSlotsToElements(
@@ -258,12 +297,14 @@ async function createPresentation({
 
   const refreshed = await presentationDao.findDeckById(deck.id);
   const outDeck = refreshed || { ...deck, slides };
-  const signedSlides = await attachPresignedMediaToSlides(outDeck.slides || slides);
-  return {
+  const signedSlides = enrichSlidesForClient(
+    await attachPresignedMediaToSlides(outDeck.slides || slides)
+  );
+  return withFlatPresentationFields({
     project,
     deck: { ...outDeck, slides: signedSlides },
     slides: signedSlides,
-  };
+  });
 }
 
 async function listPresentationDeckPacks() {
@@ -364,25 +405,41 @@ async function getPresentation(workspaceId, presentationId) {
     },
   });
 
-  return {
-    project: fullProject || project,
-    deck: {
-      id: deck.id,
-      projectId: deck.projectId,
-      themeTokens: deck.themeTokens,
-      outline: deck.outline,
-      status: deck.status,
-      aspectRatio: deck.aspectRatio,
-      locale: deck.locale,
-      promptBundleVersion: deck.promptBundleVersion,
-      generationMetrics: deck.generationMetrics,
-      partial: deck.partial,
-      creditsChargedSoFar: deck.creditsChargedSoFar,
-      createdAt: deck.createdAt,
-      updatedAt: deck.updatedAt,
-    },
-    slides: await attachPresignedMediaToSlides(deck.slides || []),
+  const proj = fullProject || project;
+  const deckPayload = {
+    id: deck.id,
+    projectId: deck.projectId,
+    themeTokens: deck.themeTokens,
+    outline: deck.outline,
+    status: deck.status,
+    aspectRatio: deck.aspectRatio,
+    locale: deck.locale,
+    promptBundleVersion: deck.promptBundleVersion,
+    generationMetrics: deck.generationMetrics,
+    partial: deck.partial,
+    creditsChargedSoFar: deck.creditsChargedSoFar,
+    createdAt: deck.createdAt,
+    updatedAt: deck.updatedAt,
   };
+  const slides = enrichSlidesForClient(await attachPresignedMediaToSlides(deck.slides || []));
+
+  return withFlatPresentationFields({
+    project: proj,
+    deck: deckPayload,
+    slides,
+  });
+}
+
+async function getSlide({ workspaceId, presentationId, slideId }) {
+  const { deck } = await deckGeneration.loadPresentationDeck(presentationId, {
+    requireWorkspaceId: workspaceId,
+  });
+  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  if (!slide) {
+    throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+  }
+  const [signed] = enrichSlidesForClient(await attachPresignedMediaToSlides([slide]));
+  return { slide: signed };
 }
 
 async function creditEstimate({ workspaceId, presentationId, slideCount }) {
@@ -421,17 +478,23 @@ async function addSlide({
   templateId,
   layoutId,
   content,
+  title = null,
   generate = false,
   prompt = null,
   target = 'all',
 }) {
+  let slideContent = content && typeof content === 'object' ? { ...content } : {};
+  if (title != null && String(title).trim() && !slideContent.title) {
+    slideContent.title = String(title).trim();
+  }
+
   const created = await slideEditor.addSlide({
     workspaceId,
     presentationId,
     afterSlideId,
     templateId,
     layoutId,
-    content,
+    content: slideContent,
   });
 
   if (!generate) {
@@ -440,15 +503,17 @@ async function addSlide({
 
   const promptText =
     (prompt != null && String(prompt).trim()) ||
-    (content && content.title && String(content.title).trim()) ||
+    (slideContent.title && String(slideContent.title).trim()) ||
     null;
+
+  const normalizedTarget = String(target || 'all').toLowerCase() === 'full' ? 'all' : target || 'all';
 
   const regen = await deckGeneration.regenerateSlide({
     workspaceId,
     presentationId,
     slideId: created.slide.id,
     userId,
-    target: target || 'all',
+    target: normalizedTarget,
     overwriteManualEdits: true,
     prompt: promptText,
   });
@@ -464,6 +529,7 @@ async function addSlide({
 module.exports = {
   createPresentation,
   getPresentation,
+  getSlide,
   creditEstimate,
   listPresentationDeckPacks,
   applyBrandKit,
@@ -472,7 +538,10 @@ module.exports = {
   setTheme: deckGeneration.setTheme,
   startGenerate: deckGeneration.startGenerate,
   getStatus: deckGeneration.getStatus,
-  regenerateSlide: deckGeneration.regenerateSlide,
+  regenerateSlide: async (args) => {
+    const target = String(args?.target || 'all').toLowerCase() === 'full' ? 'all' : args?.target || 'all';
+    return deckGeneration.regenerateSlide({ ...args, target });
+  },
   patchSlide: async (...args) =>
     presignPresentationPayload(await deckGeneration.patchSlide(...args)),
   queueExport: exportService.queueExport,

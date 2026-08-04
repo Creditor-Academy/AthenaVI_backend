@@ -8,20 +8,21 @@ body:
   type: json
   content: |-
     {
-      "element": {
-        "type": "shape",
-        "placement": {
-          "x": 200,
-          "y": 200,
-          "width": 400,
-          "height": 240,
-          "rotation": 0,
-          "opacity": 1
-        },
-        "content": {
-          "shape": "rect",
-          "fill": "#0A84FF"
-        }
+      "type": "shape",
+      "placement": {
+        "x": 200,
+        "y": 200,
+        "width": 400,
+        "height": 240,
+        "rotation": 0,
+        "opacity": 1
+      },
+      "content": {
+        "shape": "rounded-rect",
+        "fill": "#0A84FF",
+        "stroke": "#1E3A8A",
+        "strokeWidth": 2,
+        "borderRadius": 16
       }
     }
 order: 3000

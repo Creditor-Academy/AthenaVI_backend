@@ -124,9 +124,11 @@ On insert: `POST .../slides/:slideId/elements` with `{ "presetId": "text_title" 
 
 ## Canvas data (render & save)
 
-Default canvas: **1920 × 1080** (16:9). Create/generate also accept **`4:3`** (1600 × 1200) and **`9:16`** (1080 × 1920) via `aspectRatio` / `generationFlow.selections.canvasSize`.
+Default canvas: **1920 × 1080** (16:9). Create/generate also accept **`4:3`** (1600 × 1200) via `aspectRatio` / `generationFlow.selections.canvasSize`. PPT aspect ratios are **`16:9` and `4:3` only**.
 
 **schemaVersion 2 elements:** shapes may use `content.fill` as `{ type: "solid"|"gradient", ... }`; text may include `fontWeight`, `letterSpacing`, `lineHeight`, `colorRole`. Resolve palette tokens from `deck.themeTokens.palette` (includes `accent`, `cardBg`, `gradientStart`, `gradientEnd`). Pack clone emits background + accent decorations without AI.
+
+GET presentation returns nested `{ project, deck, slides }` **plus** flat `id`, `title`, `status`, `themeTokens`, … for FE PDF contract compatibility.
 
 ### Visuals / images
 

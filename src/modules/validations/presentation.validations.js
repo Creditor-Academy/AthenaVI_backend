@@ -65,7 +65,7 @@ const canvasElementSchema = Joi.object({
   type: Joi.string()
     .valid(...ELEMENT_TYPES)
     .required(),
-  layer: Joi.number().integer().min(1).optional(),
+  layer: Joi.number().integer().min(0).optional(),
   placement: placementSchema.required(),
   content: Joi.object().unknown(true).optional(),
   role: Joi.string().trim().allow('', null).optional(),
@@ -93,7 +93,7 @@ const createPresentationSchema = Joi.object({
     themeId: Joi.string().trim().max(64).allow(null).optional(),
     themeTokens: themeTokensSchema.allow(null).optional(),
     locale: localeField.optional(),
-    aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
+    aspectRatio: Joi.string().valid('16:9', '4:3').default('16:9'),
     createMode: Joi.string().valid('blank', 'template', 'pack').default('blank'),
     templateId: templateIdField.when('createMode', {
       is: 'template',
@@ -174,7 +174,7 @@ const generationFlowSelectionsSchema = Joi.object({
   industries: Joi.array().items(Joi.string().trim().max(64)).max(20).optional(),
   baseTemplate: Joi.string().trim().max(64).allow('', null).optional(),
   colorTheme: Joi.string().trim().max(64).allow('', null).optional(),
-  canvasSize: Joi.string().valid('16:9', '4:3', '9:16').allow('', null).optional(),
+  canvasSize: Joi.string().valid('16:9', '4:3').allow('', null).optional(),
   imageType: Joi.string()
     .valid('ai', 'web', 'stock', 'placeholders', 'none')
     .allow('', null)
@@ -223,6 +223,12 @@ const slideContentSchema = Joi.object({
   timeline: Joi.any().optional(),
   notes: Joi.string().allow('', null).optional(),
   pathBSpec: Joi.any().optional(),
+  background: Joi.object({
+    color: Joi.string().allow('', null).optional(),
+    imageUrl: Joi.string().uri().allow('', null).optional(),
+  })
+    .unknown(true)
+    .optional(),
 }).unknown(true);
 
 const patchSlideSchema = Joi.object({
@@ -232,12 +238,19 @@ const patchSlideSchema = Joi.object({
     slideId: slideIdParam,
   }),
   body: Joi.object({
+    title: Joi.string().allow('', null).optional(),
     content: slideContentSchema.optional(),
     layoutId: Joi.string().trim().max(128).allow(null).optional(),
     contentType: Joi.string().trim().max(64).allow(null).optional(),
     imageRef: Joi.object().unknown(true).allow(null).optional(),
     elements: canvasDocSchema.optional(),
     manuallyEdited: Joi.boolean().optional(),
+    background: Joi.object({
+      color: Joi.string().allow('', null).optional(),
+      imageUrl: Joi.string().allow('', null).optional(),
+    })
+      .unknown(true)
+      .optional(),
   })
     .min(1)
     .required(),
@@ -254,15 +267,19 @@ const addSlideSchema = Joi.object({
     afterSlideId: Joi.string().trim().optional(),
     templateId: templateIdField.optional(),
     layoutId: Joi.string().trim().max(128).optional(),
+    title: Joi.string().trim().max(500).allow('', null).optional(),
     content: slideContentSchema.optional(),
     generate: Joi.boolean().default(false),
     prompt: slideAiPromptField.optional(),
-    target: Joi.string().valid('content', 'image', 'all').default('all'),
+    target: Joi.string().valid('content', 'image', 'all', 'full').default('all'),
   })
     .custom((value, helpers) => {
       if (!value || !value.generate) return value;
       const hasPrompt = Boolean(value.prompt && String(value.prompt).trim());
-      const hasTitle = Boolean(value.content && value.content.title && String(value.content.title).trim());
+      const hasTitle = Boolean(
+        (value.content && value.content.title && String(value.content.title).trim()) ||
+          (value.title && String(value.title).trim())
+      );
       if (!hasPrompt && !hasTitle) {
         return helpers.message('When generate is true, provide prompt or content.title');
       }
@@ -318,6 +335,13 @@ const addElementSchema = Joi.object({
   }),
   body: Joi.object({
     presetId: Joi.string().trim().optional(),
+    type: Joi.string()
+      .valid(...ELEMENT_TYPES)
+      .optional(),
+    placement: placementSchema.optional(),
+    content: Joi.object().unknown(true).optional(),
+    role: Joi.string().optional(),
+    layer: Joi.number().integer().optional(),
     element: Joi.object({
       type: Joi.string()
         .valid(...ELEMENT_TYPES)
@@ -330,7 +354,7 @@ const addElementSchema = Joi.object({
       .unknown(true)
       .optional(),
   })
-    .or('presetId', 'element')
+    .or('presetId', 'element', 'type')
     .required(),
 });
 
@@ -382,7 +406,7 @@ const regenerateSlideSchema = Joi.object({
     slideId: slideIdParam,
   }),
   body: Joi.object({
-    target: Joi.string().valid('content', 'image', 'all').default('all'),
+    target: Joi.string().valid('content', 'image', 'all', 'full').default('all'),
     overwriteManualEdits: Joi.boolean().default(true),
     prompt: slideAiPromptField.optional(),
   })
@@ -720,7 +744,7 @@ const deckPackTemplateSchemaObject = Joi.object({
   schemaVersion: Joi.number().integer().min(1).max(10).optional(),
   pack_id: Joi.string().trim().required(),
   themeId: Joi.string().trim().max(64).allow(null, '').optional(),
-  aspectRatio: Joi.string().valid('16:9', '4:3', '9:16').default('16:9'),
+  aspectRatio: Joi.string().valid('16:9', '4:3').default('16:9'),
   meta: Joi.object({
     name: Joi.string().trim().max(255).optional(),
     description: Joi.string().trim().max(2000).optional(),

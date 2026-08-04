@@ -103,6 +103,12 @@ router.post(
   presentationController.addSlide
 );
 
+router.get(
+  '/:presentationId/slides/:slideId',
+  validate(presentationValidations.slideByIdSchema),
+  presentationController.getSlide
+);
+
 router.delete(
   '/:presentationId/slides/:slideId',
   validate(presentationValidations.slideByIdSchema),

@@ -11,16 +11,40 @@ const CANVAS_HEIGHT = 1080;
 const PPTX_WIDTH_IN = 13.333;
 const PPTX_HEIGHT_IN = 7.5;
 
-const ELEMENT_TYPES = ['text', 'image', 'shape', 'icon', 'chart', 'table'];
+/** PPT canvas element types (FE contract) */
+const ELEMENT_TYPES = ['text', 'image', 'shape', 'icon', 'chart', 'table', 'embed'];
+
+/** PPT supports 16:9 and 4:3 only (native pixel canvases). */
+const PPT_ASPECT_RATIOS = ['16:9', '4:3'];
 
 const ASPECT_CANVAS = {
   '16:9': { width: 1920, height: 1080, pptxWidthIn: 13.333, pptxHeightIn: 7.5 },
   '4:3': { width: 1600, height: 1200, pptxWidthIn: 10, pptxHeightIn: 7.5 },
-  '9:16': { width: 1080, height: 1920, pptxWidthIn: 7.5, pptxHeightIn: 13.333 },
 };
 
+/** Shape kinds accepted from FE; export maps unknown → rect */
+const SHAPE_KINDS = [
+  'rect',
+  'rounded-rect',
+  'circle',
+  'ellipse',
+  'pill',
+  'triangle',
+  'diamond',
+  'star',
+  'line',
+  'plus',
+  'arrow-right',
+  'arrow-left',
+  'arrow-up',
+  'arrow-down',
+  'flow-process',
+  'flow-decision',
+];
+
 function resolveAspectCanvas(aspectRatio) {
-  return ASPECT_CANVAS[String(aspectRatio || '16:9')] || ASPECT_CANVAS['16:9'];
+  const key = String(aspectRatio || '16:9').trim();
+  return ASPECT_CANVAS[key] || ASPECT_CANVAS['16:9'];
 }
 
 module.exports = {
@@ -32,6 +56,8 @@ module.exports = {
   PPTX_WIDTH_IN,
   PPTX_HEIGHT_IN,
   ELEMENT_TYPES,
+  PPT_ASPECT_RATIOS,
   ASPECT_CANVAS,
+  SHAPE_KINDS,
   resolveAspectCanvas,
 };

@@ -45,6 +45,12 @@ const getPresentation = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_FETCHED);
 });
 
+const getSlide = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.getSlide({ workspaceId, presentationId, slideId });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_FETCHED || messages.PRESENTATION_FETCHED);
+});
+
 const generateOutline = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const userId = req.user.id;
@@ -189,12 +195,18 @@ const putCanvas = asyncHandler(async (req, res) => {
 
 const addElement = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId, slideId } = req.params;
+  const body = req.body || {};
   const data = await presentationService.addElement({
     workspaceId,
     presentationId,
     slideId,
-    presetId: req.body.presetId,
-    element: req.body.element,
+    presetId: body.presetId,
+    element: body.element,
+    type: body.type,
+    placement: body.placement,
+    content: body.content,
+    role: body.role,
+    layer: body.layer,
   });
   return successResponse(req, res, data, 201, messages.PRESENTATION_ELEMENT_CREATED);
 });
@@ -357,6 +369,7 @@ const insertSlideStock = asyncHandler(async (req, res) => {
 module.exports = {
   createPresentation,
   getPresentation,
+  getSlide,
   generateOutline,
   updateOutline,
   setTheme,

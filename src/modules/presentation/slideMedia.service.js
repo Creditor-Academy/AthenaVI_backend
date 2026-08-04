@@ -31,7 +31,7 @@ function getElementsDoc(slide) {
   return blankCanvas();
 }
 
-function applyImageToElements(elementsDoc, { url, s3Key, elementId }) {
+function applyImageToElements(elementsDoc, { url, s3Key, elementId, assetId, provider }) {
   const doc = {
     version: elementsDoc.version || 1,
     canvas: elementsDoc.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
@@ -47,11 +47,19 @@ function applyImageToElements(elementsDoc, { url, s3Key, elementId }) {
     if (!target) target = doc.elements.find((e) => e.type === 'image');
   }
 
+  const mediaContent = {
+    url,
+    src: url,
+    s3Key,
+    fit: 'cover',
+  };
+  if (assetId) mediaContent.assetId = assetId;
+  if (provider) mediaContent.provider = provider;
+
   if (target) {
     target.content = {
       ...(target.content || {}),
-      url,
-      s3Key,
+      ...mediaContent,
       fit: target.content?.fit || 'cover',
     };
   } else {
@@ -68,7 +76,7 @@ function applyImageToElements(elementsDoc, { url, s3Key, elementId }) {
         rotation: 0,
         opacity: 1,
       },
-      content: { url, s3Key, fit: 'cover', alt: '' },
+      content: { ...mediaContent, alt: '' },
       role: 'image',
     });
   }
@@ -97,7 +105,13 @@ async function persistSlideImage({
   extraImageRef = {},
 }) {
   const { deck, slide } = await loadSlideContext(workspaceId, presentationId, slideId);
-  const elements = applyImageToElements(getElementsDoc(slide), { url, s3Key, elementId });
+  const elements = applyImageToElements(getElementsDoc(slide), {
+    url,
+    s3Key,
+    elementId,
+    assetId: extraImageRef?.assetId,
+    provider: source || extraImageRef?.provider,
+  });
   const imageRef = {
     source: source || 'upload',
     url,

@@ -284,6 +284,7 @@ module.exports = {
   PRESENTATION_SLIDE_CREATED: 'Slide created successfully',
   PRESENTATION_SLIDE_DELETED: 'Slide deleted successfully',
   PRESENTATION_SLIDE_DUPLICATED: 'Slide duplicated successfully',
+  PRESENTATION_SLIDE_FETCHED: 'Slide fetched successfully',
   PRESENTATION_SLIDES_REORDERED: 'Slides reordered successfully',
   PRESENTATION_LAYOUT_APPLIED: 'Layout applied successfully',
   PRESENTATION_CANVAS_UPDATED: 'Canvas updated successfully',

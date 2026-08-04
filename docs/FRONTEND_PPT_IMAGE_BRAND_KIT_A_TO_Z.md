@@ -329,7 +329,8 @@ After AI fills ≤20 slides, users can still add more manually up to 40.
 |------------------------------|--------|
 | `16:9` (default) | 1920 × 1080 |
 | `4:3` | 1600 × 1200 |
-| `9:16` | 1080 × 1920 |
+
+PPT supports **`16:9` and `4:3` only**. FE must use `slide.elements.canvas` for stage size.
 
 ## 2.4 Workspace pickers (load once for chrome)
 
@@ -494,22 +495,23 @@ All paths share the **same editor**.
 
 | `createMode` | Requires | Result |
 |--------------|----------|--------|
-| `blank` | — | Zero slides |
+| `blank` | — | **One** READY slide (default canvas text) |
 | `template` | `templateId` (active `DECK_LAYOUT`) | One READY slide |
 | `pack` | `packId` (active `DECK_PACK`) | Multi-slide skeleton with placeholders + optional logos |
 
-**Response `data`:** `{ project, deck, slides }` — `project.type === "PRESENTATION"`. Use `project.id` as `presentationId`.
+**Response `data`:** `{ project, deck, slides, id, title, status, themeTokens, aspectRatio, locale, folderId }` — `project.type === "PRESENTATION"`. Use `project.id` (or flat `id`) as `presentationId`.
 
 ## 2.7 Get presentation
 
 `GET /api/workspaces/:workspaceId/presentations/:presentationId`
 
-**Response `data`:** `{ project, deck, slides }`
+**Response `data`:** `{ project, deck, slides }` **plus flat** `id`, `title`, `status`, `themeTokens`, `aspectRatio`, `locale`, `folderId`
 
 - `deck`: `themeTokens`, `outline`, `status`, `aspectRatio`, `locale`, `generationMetrics`, `partial`, `creditsChargedSoFar`, …
-- slides: `content`, `layoutId`, `imageRef`, **`elements`**, `status`, `manuallyEdited`, …
+- slides: `content`, `layoutId`, `imageRef`, **`elements`**, `status`, `manuallyEdited`, … (+ helper `title` / `description`)
+- Also: `GET .../slides/:slideId` for a single slide
 
-Image URLs are **presigned (~1h)**. Prefer `elements[].content.url` for canvas. Refetch presentation if images 403.
+Image URLs are **presigned (~1h)**. Prefer `elements[].content.url` (or `src`) for canvas. Refetch presentation if images 403.
 
 ### Freeform canvas shape (`slide.elements`)
 
@@ -560,11 +562,12 @@ Image URLs are **presigned (~1h)**. Prefer `elements[].content.url` for canvas. 
 
 | `type` | Typical `content` |
 |--------|-------------------|
-| `text` | `text`, `fontSize`, `bold`, `fontWeight`, `italic`, `color`, `colorRole`, `align`, `letterSpacing`, `lineHeight` |
-| `image` / `icon` | `url`, `fit`, `alt` / `icon` |
-| `shape` | `shape`: `rect` \| `ellipse` \| `line`; `fill` string token **or** `{ type: "solid"\|"gradient", color?, colorRole?, stops? }`; optional `borderRadius` |
-| `chart` | `chartType`, `labels`, `series` |
-| `table` | `rows`: string[][] |
+| `text` | `text`, `fontSize`, `bold`, `fontWeight`, `italic`, `color`, `colorRole`, `align`, `letterSpacing`, `lineHeight`, `fontFamily` |
+| `image` / `icon` | `url` or `src`, `fit`, `alt` / `icon`, optional `assetId`, `provider` |
+| `shape` | `shape`: `rect` \| `rounded-rect` \| `circle` \| `ellipse` \| `pill` \| `triangle` \| `diamond` \| `star` \| `line` \| `plus` \| arrows; `fill` string/token/gradient; optional `stroke`, `strokeWidth`, `borderRadius` |
+| `chart` | `chartType` (incl. `column-grouped`, `pie`, …), `labels`/`series` **or** nested `data`, optional `colors` |
+| `table` | `rows` string[][] **or** `cells` + `hasHeader` (max 8×8) |
+| `embed` | `provider`, `url`, `title` (export as link card) |
 
 **Frontend must render** gradient fills (`linear-gradient`), accent bars, and typography fields. Resolve `colorRole` / palette tokens from `deck.themeTokens.palette` (`bg`, `surface`, `primary`, `secondary`, `text`, `muted`, `accent`, `divider`, `cardBg`, `gradientStart`, `gradientEnd`).
 
@@ -786,16 +789,18 @@ Base: `/api/workspaces/:workspaceId/presentations/:presentationId`
 | Method | Path |
 |--------|------|
 | `PUT` | `/slides/:slideId/canvas` — full `{ version, canvas, elements }` replace |
-| `POST` | `/slides/:slideId/elements` — `{ presetId }` and/or `{ element }` |
+| `POST` | `/slides/:slideId/elements` — flat `{ type, placement, content, presetId? }` **or** `{ presetId }` / `{ element }` |
 | `PATCH` | `/slides/:slideId/elements/:elementId` |
 | `DELETE` | `/slides/:slideId/elements/:elementId` |
 | `PATCH` | `/slides/:slideId/elements/reorder` — `{ "elementIds": [] }` |
 
-Element catalog presets: `GET .../presentation-elements` → insert with `{ "presetId": "text_title" }`.
+Element catalog presets: `GET .../presentation-elements` → `{ presets: [{ id, presetId, type, label, content, defaultContent }] }`. Insert with `{ "presetId": "text_title" }` or a full flat element body. Types: `text` \| `image` \| `icon` \| `shape` \| `chart` \| `table` \| `embed`.
+
+Cannot delete the last slide (**400**).
 
 ### Patch slide
 
-`PATCH .../slides/:slideId` — any of `content`, `layoutId`, `contentType`, `imageRef`, `elements`, `manuallyEdited`.
+`PATCH .../slides/:slideId` — any of `title`, `content`, `layoutId`, `contentType`, `imageRef`, `elements`, `manuallyEdited`, `background: { color, imageUrl }` (stored on `content.background`).
 
 ### Regenerate slide
 
@@ -809,7 +814,7 @@ Element catalog presets: `GET .../presentation-elements` → insert with `{ "pre
 }
 ```
 
-- `target`: `content` \| `image` \| `all` (default `all`)  
+- `target`: `content` \| `image` \| `all` \| `full` (`full` ≡ `all`; default `all`)  
 - Manual edits blocked unless `overwriteManualEdits: true` (**409**)  
 - Confirm in UI before overwrite  
 - On blank decks, pass `prompt` or set `content.title` first  
@@ -882,6 +887,7 @@ POST   .../apply-brand-kit
 POST   .../generate
 
 POST   .../slides
+GET    .../slides/:slideId
 DELETE .../slides/:slideId
 POST   .../slides/:slideId/duplicate
 PATCH  .../slides/reorder

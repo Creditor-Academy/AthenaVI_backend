@@ -27,7 +27,6 @@ const IMAGE_STYLE_PHRASES = {
 const CANVAS_BY_ASPECT = {
   '16:9': { aspectRatio: '16:9', width: 1920, height: 1080 },
   '4:3': { aspectRatio: '4:3', width: 1600, height: 1200 },
-  '9:16': { aspectRatio: '9:16', width: 1080, height: 1920 },
 };
 
 const BASE_TEMPLATE_BIAS = {
@@ -90,10 +89,21 @@ function resolveImageStylePhrase(imageStyle, imageStyleFilter) {
   return base || 'professional presentation photography';
 }
 
-function getWizardThemeById(colorTheme) {
+function normalizeWizardThemeId(colorTheme) {
   const id = String(colorTheme || '').trim();
+  if (!id) return '';
+  // FE PDF may send underscores; wizard catalog uses hyphens
+  return id.replace(/_/g, '-');
+}
+
+function getWizardThemeById(colorTheme) {
+  const id = normalizeWizardThemeId(colorTheme);
   if (!id) return null;
-  return wizardColorThemes.find((t) => t.id === id) || null;
+  return (
+    wizardColorThemes.find((t) => t.id === id) ||
+    wizardColorThemes.find((t) => t.id === String(colorTheme || '').trim()) ||
+    null
+  );
 }
 
 function resolveWizardThemeTokens(colorTheme, imageStyle, imageStyleFilter) {

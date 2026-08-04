@@ -145,7 +145,25 @@ function shapeTypeForPptx(shape) {
   const s = String(shape || 'rect').toLowerCase();
   if (s === 'ellipse' || s === 'oval' || s === 'circle') return 'ellipse';
   if (s === 'line') return 'line';
+  if (s === 'triangle') return 'triangle';
+  if (s === 'diamond' || s === 'flow-decision') return 'diamond';
+  if (s === 'star' || s === 'plus') return 'star5';
+  if (s === 'arrow-right' || s === 'right-arrow') return 'rightArrow';
+  if (s === 'arrow-left' || s === 'left-arrow') return 'leftArrow';
+  if (s === 'arrow-up' || s === 'up-arrow') return 'upArrow';
+  if (s === 'arrow-down' || s === 'down-arrow') return 'downArrow';
+  // rounded-rect, pill, flow-process, unknown → rect
   return 'rect';
+}
+
+function mapChartTypeForPptx(chartType) {
+  const { mapChartType } = require('./elementContent.normalize');
+  const t = mapChartType(chartType);
+  if (t === 'doughnut') return 'doughnut';
+  if (t === 'pie') return 'pie';
+  if (t === 'line') return 'line';
+  if (t === 'area') return 'area';
+  return 'bar';
 }
 
 async function addElementsToPptxSlide(s, slide, palette, textColor) {
@@ -231,35 +249,53 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
     } else if (el.type === 'shape') {
       const shape = shapeTypeForPptx(content.shape);
       const fillResolved = resolveFillForExport(content.fill, palette, '0A84FF');
+      const strokeColor = content.stroke || content.line;
+      const strokeWidth = content.strokeWidth != null ? Number(content.strokeWidth) : strokeColor ? 1.5 : 0;
       const shapeOpts = {
         x: box.x,
         y: box.y,
         w: box.w,
         h: box.h,
-        line: content.line
-          ? { color: resolveColor(content.line, palette, 'E5E5E5'), width: 1.5 }
+        line: strokeColor
+          ? { color: resolveColor(strokeColor, palette, 'E5E5E5'), width: strokeWidth || 1.5 }
           : { type: 'none' },
         rotate,
       };
+      if (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill') {
+        const r = Number(content.borderRadius);
+        shapeOpts.rectRadius =
+          content.shape === 'pill' ? 0.5 : Number.isFinite(r) ? Math.min(0.5, r / Math.min(box.w, box.h) / 72) : 0.1;
+      }
       if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
         shapeOpts.fill = {
           type: 'gradient',
           color: fillResolved.colors[0],
           color2: fillResolved.colors[fillResolved.colors.length - 1],
-          // 135deg ≈ diagonal
           gradientType: 'linear',
           angle: 135,
         };
       } else {
         shapeOpts.fill = { color: fillResolved.color };
       }
-      s.addShape(shape, shapeOpts);
+      try {
+        s.addShape(shape, shapeOpts);
+      } catch {
+        s.addShape('rect', { ...shapeOpts, shape: undefined });
+      }
     } else if (el.type === 'chart') {
-      const labels = Array.isArray(content.labels) ? content.labels : [];
-      const series = Array.isArray(content.series) ? content.series : [];
+      const labels = Array.isArray(content.labels)
+        ? content.labels
+        : Array.isArray(content.data?.labels)
+          ? content.data.labels
+          : [];
+      const series = Array.isArray(content.series)
+        ? content.series
+        : Array.isArray(content.data?.series)
+          ? content.data.series
+          : [];
       if (labels.length && series.length) {
         try {
-          s.addChart(content.chartType || 'bar', {
+          const chartOpts = {
             x: box.x,
             y: box.y,
             w: box.w,
@@ -270,7 +306,15 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
               name: ser.name || 'Series',
               values: ser.values || [],
             })),
-          });
+          };
+          if (Array.isArray(content.colors) && content.colors.length) {
+            chartOpts.chartColors = content.colors.map((c) =>
+              String(c || '')
+                .replace(/^#/, '')
+                .toUpperCase()
+            );
+          }
+          s.addChart(mapChartTypeForPptx(content.chartType || content.chartTypeRaw), chartOpts);
         } catch {
           s.addText('Chart', {
             x: box.x,
@@ -304,13 +348,21 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
         });
       }
     } else if (el.type === 'table') {
-      const rows = Array.isArray(content.rows) ? content.rows : [];
+      const rows = Array.isArray(content.rows)
+        ? content.rows
+        : Array.isArray(content.cells)
+          ? content.cells
+          : [];
       if (rows.length) {
         s.addTable(
-          rows.map((row) =>
+          rows.map((row, rowIdx) =>
             (Array.isArray(row) ? row : [row]).map((cell) => ({
               text: String(cell ?? ''),
-              options: { color: textColor, fontSize: 12 },
+              options: {
+                color: textColor,
+                fontSize: 12,
+                bold: content.hasHeader && rowIdx === 0,
+              },
             }))
           ),
           { x: box.x, y: box.y, w: box.w, h: box.h, border: [{ pt: 0.5, color: 'CCCCCC' }] }
@@ -327,6 +379,28 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
           valign: 'middle',
         });
       }
+    } else if (el.type === 'embed') {
+      const title = content.title || content.provider || 'Link';
+      const url = content.url || content.src || '';
+      s.addShape('rect', {
+        x: box.x,
+        y: box.y,
+        w: box.w,
+        h: box.h,
+        fill: { color: 'F8FAFC' },
+        line: { color: 'CBD5E1', width: 1 },
+      });
+      s.addText(`${title}\n${url}`, {
+        x: box.x + 0.15,
+        y: box.y + 0.15,
+        w: Math.max(0.5, box.w - 0.3),
+        h: Math.max(0.4, box.h - 0.3),
+        fontSize: 14,
+        color: textColor,
+        align: 'left',
+        valign: 'middle',
+        hyperlink: url ? { url } : undefined,
+      });
     }
   }
 
@@ -422,7 +496,13 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
   const textColor = String(palette.text || '111111').replace(/^#/, '');
 
   for (const slide of slides) {
-    const s = pptx.addSlide({ background: { color: bgColor } });
+    const slideBg =
+      slide.content?.background?.color ||
+      palette.bg ||
+      'FFFFFF';
+    const s = pptx.addSlide({
+      background: { color: String(slideBg).replace(/^#/, '') },
+    });
     if (slideHasElements(slide)) {
       await addElementsToPptxSlide(s, slide, palette, textColor);
     } else {
@@ -505,10 +585,24 @@ function buildSlideHtmlPage(slide, palette) {
           const radius =
             c.borderRadius != null
               ? `${c.borderRadius}px`
-              : String(c.shape || '').toLowerCase() === 'ellipse'
+              : String(c.shape || '').toLowerCase() === 'ellipse' ||
+                  String(c.shape || '').toLowerCase() === 'circle'
                 ? '50%'
-                : '0';
-          return `<div style="${style};background:${escapeHtml(bgCss)};border-radius:${radius}"></div>`;
+                : String(c.shape || '').toLowerCase() === 'pill'
+                  ? '999px'
+                  : String(c.shape || '').toLowerCase() === 'rounded-rect'
+                    ? '16px'
+                    : '0';
+          const border =
+            c.stroke || c.line
+              ? `border:${Number(c.strokeWidth) || 2}px solid ${escapeHtml(c.stroke || c.line)}`
+              : '';
+          return `<div style="${style};background:${escapeHtml(bgCss)};border-radius:${radius};${border}"></div>`;
+        }
+        if (el.type === 'embed') {
+          const title = escapeHtml(c.title || c.provider || 'Link');
+          const url = escapeHtml(c.url || c.src || '');
+          return `<div style="${style};background:#F8FAFC;border:1px solid #CBD5E1;padding:12px;color:${escapeHtml(text)};font-size:14px"><strong>${title}</strong><div>${url}</div></div>`;
         }
         if (el.type === 'chart' || el.type === 'table') {
           return `<div style="${style};background:#f5f5f5;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;color:#666">${escapeHtml(el.type)}</div>`;
@@ -898,6 +992,8 @@ async function getExport({ workspaceId, presentationId, exportId }) {
   if (row.status === 'READY' && row.s3Key) {
     const presignedUrl = await s3Service.getPresignedGetUrl(row.s3Key, PRESIGN_EXPIRES_SEC);
     payload.presignedUrl = presignedUrl;
+    payload.url = presignedUrl;
+    payload.downloadUrl = presignedUrl;
     payload.expiresIn = PRESIGN_EXPIRES_SEC;
     payload.s3Key = row.s3Key;
   }

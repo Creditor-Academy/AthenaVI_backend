@@ -8,8 +8,14 @@ const {
   MAX_ELEMENTS_PER_SLIDE,
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  resolveAspectCanvas,
 } = require('./presentation.constants');
 const elementCatalog = require('./elements/catalog.json');
+const {
+  normalizeElement,
+  normalizeCanvasDoc,
+  enrichSlideForClient,
+} = require('./elementContent.normalize');
 
 function assertNotGenerating(deck) {
   if (deck.status === 'GENERATING') {
@@ -23,25 +29,33 @@ function normalizeCanvasPayload(input) {
   if (elements.length > MAX_ELEMENTS_PER_SLIDE) {
     throw new AppError(`A slide may have at most ${MAX_ELEMENTS_PER_SLIDE} elements`, 400);
   }
-  return {
+  return normalizeCanvasDoc({
     version: input?.version || 1,
     canvas: {
       width: Number(canvas.width) || CANVAS_WIDTH,
       height: Number(canvas.height) || CANVAS_HEIGHT,
     },
     elements,
-  };
+  });
 }
 
 function getElementsDoc(slide) {
   if (slide.elements && typeof slide.elements === 'object' && Array.isArray(slide.elements.elements)) {
-    return slide.elements;
+    return {
+      ...slide.elements,
+      elements: [...slide.elements.elements],
+    };
   }
   return blankCanvas();
 }
 
 async function loadDeckContext(workspaceId, presentationId) {
   return loadPresentationDeck(presentationId, { requireWorkspaceId: workspaceId });
+}
+
+function canvasSizeForDeck(deck) {
+  const aspect = resolveAspectCanvas(deck?.aspectRatio);
+  return { width: aspect.width, height: aspect.height };
 }
 
 async function addSlide({
@@ -82,14 +96,18 @@ async function addSlide({
   }
 
   const slideContent = content && typeof content === 'object' ? content : {};
+  const canvasSize = canvasSizeForDeck(deck);
   const elementsDoc = layoutSchema
-    ? layoutSlotsToElements(layoutSchema, slideContent, null, {}, {
+    ? layoutSlotsToElements(layoutSchema, slideContent, null, canvasSize, {
         themeTokens: deck.themeTokens || null,
         designTokens: slideContent.designTokens || null,
       })
-    : blankCanvas({ withDefaultText: true });
+    : blankCanvas({
+        withDefaultText: true,
+        width: canvasSize.width,
+        height: canvasSize.height,
+      });
 
-  // Shift orders for slides at/after insert position
   await presentationDao.shiftSlideOrders(deck.id, insertOrder, 1);
 
   const slide = await presentationDao.createOneSlide({
@@ -104,21 +122,26 @@ async function addSlide({
     manuallyEdited: true,
   });
 
-  return { slide, deckId: deck.id };
+  return { slide: enrichSlideForClient(slide), deckId: deck.id };
 }
 
 async function deleteSlide({ workspaceId, presentationId, slideId }) {
   const { deck } = await loadDeckContext(workspaceId, presentationId);
   assertNotGenerating(deck);
 
-  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  const slides = deck.slides || [];
+  const slide = slides.find((s) => s.id === slideId);
   if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+
+  if (slides.length <= 1) {
+    throw new AppError('A presentation must keep at least one slide', 400);
+  }
 
   await presentationDao.deleteSlideById(slideId);
   await presentationDao.resequenceSlideOrders(deck.id);
 
   const updated = await presentationDao.findDeckById(deck.id);
-  return { slides: updated.slides || [], deckId: deck.id };
+  return { slides: (updated.slides || []).map(enrichSlideForClient), deckId: deck.id };
 }
 
 async function duplicateSlide({ workspaceId, presentationId, slideId }) {
@@ -143,12 +166,12 @@ async function duplicateSlide({ workspaceId, presentationId, slideId }) {
     layoutId: source.layoutId,
     content: source.content,
     imageRef: source.imageRef,
-    elements: source.elements || blankCanvas(),
+    elements: source.elements || blankCanvas(canvasSizeForDeck(deck)),
     status: 'READY',
     manuallyEdited: true,
   });
 
-  return { slide, deckId: deck.id };
+  return { slide: enrichSlideForClient(slide), deckId: deck.id };
 }
 
 async function reorderSlides({ workspaceId, presentationId, slideIds }) {
@@ -169,7 +192,7 @@ async function reorderSlides({ workspaceId, presentationId, slideIds }) {
 
   await presentationDao.reorderSlides(deck.id, slideIds);
   const updated = await presentationDao.findDeckById(deck.id);
-  return { slides: updated.slides || [], deckId: deck.id };
+  return { slides: (updated.slides || []).map(enrichSlideForClient), deckId: deck.id };
 }
 
 async function applyLayout({ workspaceId, presentationId, slideId, templateId }) {
@@ -185,10 +208,16 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
   }
 
   const content = slide.content && typeof slide.content === 'object' ? slide.content : {};
-  const elementsDoc = layoutSlotsToElements(template.schema, content, slide.imageRef, {}, {
-    themeTokens: deck.themeTokens || null,
-    designTokens: content.designTokens || null,
-  });
+  const elementsDoc = layoutSlotsToElements(
+    template.schema,
+    content,
+    slide.imageRef,
+    canvasSizeForDeck(deck),
+    {
+      themeTokens: deck.themeTokens || null,
+      designTokens: content.designTokens || null,
+    }
+  );
 
   const updated = await presentationDao.updateSlide(slideId, {
     layoutId: template.schema?.layout_id || template.id,
@@ -198,7 +227,7 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
     status: 'READY',
   });
 
-  return { slide: updated };
+  return { slide: enrichSlideForClient(updated) };
 }
 
 async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
@@ -214,10 +243,29 @@ async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
     manuallyEdited: true,
     status: 'READY',
   });
-  return { slide: updated };
+  return { slide: enrichSlideForClient(updated) };
 }
 
-async function addElement({ workspaceId, presentationId, slideId, element, presetId }) {
+/**
+ * Accept nested `{ element }` or flat FE body fields on the same object.
+ */
+function resolveIncomingElement({ element, presetId, flat }) {
+  let next = element && typeof element === 'object' ? { ...element } : null;
+  if (!next && flat && flat.type) {
+    next = {
+      type: flat.type,
+      placement: flat.placement,
+      content: flat.content,
+      role: flat.role,
+      layer: flat.layer,
+      presetId: flat.presetId || presetId,
+    };
+  }
+  return { next, presetId: presetId || flat?.presetId || next?.presetId };
+}
+
+async function addElement(args) {
+  const { workspaceId, presentationId, slideId } = args;
   const { deck } = await loadDeckContext(workspaceId, presentationId);
   assertNotGenerating(deck);
 
@@ -229,27 +277,35 @@ async function addElement({ workspaceId, presentationId, slideId, element, prese
     throw new AppError(`A slide may have at most ${MAX_ELEMENTS_PER_SLIDE} elements`, 400);
   }
 
-  let next = element && typeof element === 'object' ? { ...element } : null;
+  const { next: resolved, presetId } = resolveIncomingElement({
+    element: args.element,
+    presetId: args.presetId,
+    flat: args,
+  });
+
+  let next = resolved;
   if (presetId) {
     const preset = elementCatalog.find((p) => p.presetId === presetId);
     if (!preset) throw new AppError('Unknown element preset', 400);
     next = {
-      type: preset.type,
+      type: next?.type || preset.type,
       layer: doc.elements.length + 1,
       placement: { ...(next?.placement || preset.defaultPlacement) },
       content: { ...(preset.defaultContent || {}), ...(next?.content || {}) },
       role: next?.role || preset.type,
+      presetId,
     };
   }
 
   if (!next || !next.type) {
     throw new AppError('element.type is required', 400);
   }
-  next.id = newElementId();
-  if (!next.placement) {
-    next.placement = { x: 200, y: 200, width: 400, height: 200, rotation: 0, opacity: 1 };
-  }
-  if (next.layer == null) next.layer = doc.elements.length + 1;
+  next = normalizeElement({
+    ...next,
+    id: newElementId(),
+    placement: next.placement || { x: 200, y: 200, width: 400, height: 200, rotation: 0, opacity: 1 },
+    layer: next.layer == null ? doc.elements.length + 1 : next.layer,
+  });
 
   doc.elements.push(next);
   const updated = await presentationDao.updateSlide(slideId, {
@@ -257,7 +313,7 @@ async function addElement({ workspaceId, presentationId, slideId, element, prese
     manuallyEdited: true,
     status: 'READY',
   });
-  return { slide: updated, element: next };
+  return { slide: enrichSlideForClient(updated), element: next };
 }
 
 async function patchElement({ workspaceId, presentationId, slideId, elementId, patch }) {
@@ -272,20 +328,22 @@ async function patchElement({ workspaceId, presentationId, slideId, elementId, p
   if (idx < 0) throw new AppError('Element not found', 404);
 
   const current = doc.elements[idx];
-  doc.elements[idx] = {
+  const merged = {
     ...current,
     ...patch,
     id: current.id,
+    type: patch.type || current.type,
     placement: patch.placement ? { ...current.placement, ...patch.placement } : current.placement,
     content: patch.content ? { ...current.content, ...patch.content } : current.content,
   };
+  doc.elements[idx] = normalizeElement(merged);
 
   const updated = await presentationDao.updateSlide(slideId, {
     elements: doc,
     manuallyEdited: true,
     status: 'READY',
   });
-  return { slide: updated, element: doc.elements[idx] };
+  return { slide: enrichSlideForClient(updated), element: doc.elements[idx] };
 }
 
 async function deleteElement({ workspaceId, presentationId, slideId, elementId }) {
@@ -305,7 +363,7 @@ async function deleteElement({ workspaceId, presentationId, slideId, elementId }
     manuallyEdited: true,
     status: 'READY',
   });
-  return { slide: updated };
+  return { slide: enrichSlideForClient(updated) };
 }
 
 async function reorderElements({ workspaceId, presentationId, slideId, elementIds }) {
@@ -333,13 +391,19 @@ async function reorderElements({ workspaceId, presentationId, slideId, elementId
     manuallyEdited: true,
     status: 'READY',
   });
-  return { slide: updated };
+  return { slide: enrichSlideForClient(updated) };
 }
 
 function listElementCatalog() {
+  const presets = elementCatalog.map((p) => ({
+    ...p,
+    id: p.presetId,
+    presetId: p.presetId,
+    content: p.defaultContent,
+  }));
   return {
     canvas: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
-    presets: elementCatalog,
+    presets,
   };
 }
 
@@ -347,11 +411,14 @@ async function listDeckLayouts({ contentType } = {}) {
   const rows = await presentationDao.findActiveTemplatesByContentType(contentType || null);
   return rows.map((t) => ({
     id: t.id,
+    templateId: t.id,
     name: t.name,
     contentType: t.contentType,
     variant: t.variant,
     schema: t.schema,
     version: t.version,
+    previewUrl: null,
+    thumbnailUrl: null,
   }));
 }
 
