@@ -2789,5 +2789,639 @@
         }
       ]
     }
+  },
+  {
+    "name": "Grid Four Cards",
+    "contentType": "grid",
+    "variant": "v1",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "grid_four_cards_v1",
+      "content_type": "grid",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 2-6, rows 3-6",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 7-11, rows 3-6",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 2-6, rows 7-10",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_4",
+          "region": "cols 7-11, rows 7-10",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Grid Three Columns",
+    "contentType": "grid",
+    "variant": "v2",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "grid_three_columns_v2",
+      "content_type": "grid",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 2-4, rows 4-10",
+          "max_lines": 6,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 5-7, rows 4-10",
+          "max_lines": 6,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 8-11, rows 4-10",
+          "max_lines": 6,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Grid Six Tiles",
+    "contentType": "grid",
+    "variant": "v3",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "grid_six_tiles_v3",
+      "content_type": "grid",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_1",
+          "region": "cols 2-5, rows 3-5",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 6-8, rows 3-5",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_3",
+          "region": "cols 9-11, rows 3-5",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_4",
+          "region": "cols 2-5, rows 7-10",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_5",
+          "region": "cols 6-8, rows 7-10",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_6",
+          "region": "cols 9-11, rows 7-10",
+          "max_lines": 3,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Pricing Three Tiers",
+    "contentType": "pricing",
+    "variant": "v1",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "pricing_three_tiers_v1",
+      "content_type": "pricing",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "plan_1",
+          "region": "cols 2-4, rows 4-11",
+          "max_lines": 8,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "plan_2",
+          "region": "cols 5-7, rows 4-11",
+          "max_lines": 8,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "plan_3",
+          "region": "cols 8-11, rows 4-11",
+          "max_lines": 8,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Pricing Featured Middle",
+    "contentType": "pricing",
+    "variant": "v2",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "pricing_featured_middle_v2",
+      "content_type": "pricing",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "subtitle",
+          "region": "cols 2-11, rows 3-3",
+          "max_lines": 1,
+          "role": "subheading",
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 500,
+            "colorRole": "muted"
+          }
+        },
+        {
+          "id": "plan_1",
+          "region": "cols 2-4, rows 5-11",
+          "max_lines": 7,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "plan_2",
+          "region": "cols 5-8, rows 4-11",
+          "max_lines": 9,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 600,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "plan_3",
+          "region": "cols 9-11, rows 5-11",
+          "max_lines": 7,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Pricing Table",
+    "contentType": "pricing",
+    "variant": "v3",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "pricing_table_v3",
+      "content_type": "pricing",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "table",
+          "region": "cols 2-11, rows 4-11",
+          "role": "table"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Device Frame Laptop",
+    "contentType": "device_frames",
+    "variant": "v1",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "device_frame_laptop_v1",
+      "content_type": "device_frames",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "body",
+          "region": "cols 2-5, rows 4-10",
+          "max_words": 60,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "image",
+          "region": "cols 6-11, rows 3-11",
+          "role": "image",
+          "fit": "cover"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Device Frame Phone",
+    "contentType": "device_frames",
+    "variant": "v2",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "device_frame_phone_v2",
+      "content_type": "device_frames",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "image",
+          "region": "cols 3-6, rows 3-11",
+          "role": "image",
+          "fit": "cover"
+        },
+        {
+          "id": "body",
+          "region": "cols 7-11, rows 4-10",
+          "max_words": 60,
+          "role": "body",
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "lineHeight": 1.45,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Device Frame Dual Screens",
+    "contentType": "device_frames",
+    "variant": "v3",
+    "schema": {
+      "schemaVersion": 2,
+      "layout_id": "device_frame_dual_v3",
+      "content_type": "device_frames",
+      "grid": "12-col",
+      "slots": [
+        {
+          "id": "accent_bar",
+          "region": "cols 1-1, rows 1-12",
+          "role": "decoration",
+          "layer": 0,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "title",
+          "region": "cols 2-11, rows 1-2",
+          "max_lines": 2,
+          "role": "heading",
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "letterSpacing": -0.02,
+            "lineHeight": 1.15,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "image",
+          "region": "cols 2-6, rows 3-10",
+          "role": "image",
+          "fit": "cover"
+        },
+        {
+          "id": "card_1",
+          "region": "cols 7-11, rows 3-6",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        },
+        {
+          "id": "card_2",
+          "region": "cols 7-11, rows 7-10",
+          "max_lines": 4,
+          "role": "body",
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "lineHeight": 1.35,
+            "colorRole": "text"
+          }
+        }
+      ]
+    }
   }
 ]

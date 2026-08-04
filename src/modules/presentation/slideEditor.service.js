@@ -407,19 +407,42 @@ function listElementCatalog() {
   };
 }
 
-async function listDeckLayouts({ contentType } = {}) {
-  const rows = await presentationDao.findActiveTemplatesByContentType(contentType || null);
-  return rows.map((t) => ({
-    id: t.id,
-    templateId: t.id,
-    name: t.name,
-    contentType: t.contentType,
-    variant: t.variant,
-    schema: t.schema,
-    version: t.version,
-    previewUrl: null,
-    thumbnailUrl: null,
-  }));
+const {
+  listLayoutCategories,
+  resolveCategoryContentTypes,
+  categoryIdsForContentType,
+} = require('./layoutCategories');
+
+async function listDeckLayouts({ contentType, category } = {}) {
+  let typesFilter = null;
+  if (category) {
+    const resolved = resolveCategoryContentTypes(category);
+    if (resolved === undefined) {
+      throw new AppError(`Unknown layout category: ${category}`, 400);
+    }
+    typesFilter = resolved; // null = all
+  } else if (contentType) {
+    typesFilter = [String(contentType)];
+  }
+
+  const rows = await presentationDao.findActiveTemplatesByContentType(
+    typesFilter && typesFilter.length ? typesFilter : null
+  );
+  return {
+    categories: listLayoutCategories(),
+    templates: rows.map((t) => ({
+      id: t.id,
+      templateId: t.id,
+      name: t.name,
+      contentType: t.contentType,
+      categories: categoryIdsForContentType(t.contentType),
+      variant: t.variant,
+      schema: t.schema,
+      version: t.version,
+      previewUrl: null,
+      thumbnailUrl: null,
+    })),
+  };
 }
 
 module.exports = {

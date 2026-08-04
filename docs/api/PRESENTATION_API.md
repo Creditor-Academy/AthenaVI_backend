@@ -80,11 +80,24 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 
 | Method | Path | Returns |
 |---|---|---|
-| `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=` | Active `DECK_LAYOUT` templates |
+| `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=&category=` | Active `DECK_LAYOUT` templates + `categories[]` gallery tabs |
 | `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs` | Active `DECK_PACK` multi-slide packs |
 | `GET` | `/api/workspaces/:workspaceId/presentation-themes` | Curated theme catalog |
 | `GET` | `/api/workspaces/:workspaceId/presentation-elements` | Element library presets for the canvas palette |
 | `GET` | `/api/workspaces/:workspaceId/brand-kits` | Workspace Brand Kits (see [BRAND_KIT_API.md](BRAND_KIT_API.md)) |
+
+### Layout gallery categories
+
+`GET .../presentation-templates` returns `categories[]` (picker tabs) and `templates[]`.
+
+- **Tabs:** render `categories[].label` / `id`.
+- **Filter:** `?category=simple_slides` (or `?contentType=agenda` for one AI tag).
+- Each template includes `contentType` (AI tag) and `categories` (which tabs it belongs to).
+- Do **not** send display labels as `contentType`.
+
+Category ids: `all`, `simple_slides`, `grid`, `charts_and_data`, `timeline_and_plans`, `pricing`, `agenda`, `people_and_team`, `quotes_and_testimonials`, `device_frames`, `closing`.
+
+New seed types: `grid`, `pricing`, `device_frames` (3 layouts each). Re-seed: `npm run seed:presentation-templates`. See `src/modules/presentation/templates/COVERAGE.md`.
 
 ### Seeded deck packs
 

@@ -301,9 +301,15 @@ const creditEstimate = asyncHandler(async (req, res) => {
 });
 
 const listPresentationTemplates = asyncHandler(async (req, res) => {
-  const { contentType } = req.query || {};
-  const data = await presentationService.listDeckLayouts({ contentType });
-  return successResponse(req, res, { templates: data }, 200, messages.PRESENTATION_TEMPLATES_FETCHED);
+  const { contentType, category } = req.query || {};
+  const data = await presentationService.listDeckLayouts({ contentType, category });
+  return successResponse(
+    req,
+    res,
+    { categories: data.categories, templates: data.templates },
+    200,
+    messages.PRESENTATION_TEMPLATES_FETCHED
+  );
 });
 
 const listPresentationThemes = asyncHandler(async (req, res) => {

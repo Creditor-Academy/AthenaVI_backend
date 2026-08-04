@@ -338,7 +338,7 @@ Base: `/api/workspaces/:workspaceId`
 
 | UI | Method | Path |
 |----|--------|------|
-| Single-slide layout gallery | `GET` | `/presentation-templates?contentType=` |
+| Single-slide layout gallery | `GET` | `/presentation-templates?category=` (tabs) or `?contentType=` |
 | Multi-slide deck packs | `GET` | `/presentation-deck-packs` |
 | Brand Kits | `GET` | `/brand-kits` |
 | Theme picker | `GET` | `/presentation-themes` |

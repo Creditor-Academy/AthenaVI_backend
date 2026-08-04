@@ -449,6 +449,22 @@ const listWorkspacePresentationTemplatesSchema = Joi.object({
   }),
   query: Joi.object({
     contentType: Joi.string().trim().max(64).optional(),
+    category: Joi.string()
+      .trim()
+      .valid(
+        'all',
+        'simple_slides',
+        'grid',
+        'charts_and_data',
+        'timeline_and_plans',
+        'pricing',
+        'agenda',
+        'people_and_team',
+        'quotes_and_testimonials',
+        'device_frames',
+        'closing'
+      )
+      .optional(),
   }).default({}),
   body: Joi.object({}).unknown(false),
 });

@@ -44,13 +44,16 @@ const LIST_SOURCE_KEYS = {
   metric: ['stats', 'metrics'],
   member: ['team', 'members', 'people'],
   milestone: ['milestones', 'timeline', 'events'],
-  card: ['cards', 'features', 'items'],
-  feature: ['features', 'cards'],
-  item: ['items'],
+  card: ['cards', 'features', 'items', 'plans', 'tiers'],
+  feature: ['features', 'cards', 'plans'],
+  item: ['items', 'plans', 'tiers'],
   column: ['columns'],
+  plan: ['plans', 'tiers', 'pricing', 'cards'],
+  price: ['plans', 'tiers', 'pricing'],
+  tier: ['tiers', 'plans', 'pricing'],
 };
 
-const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column)_(\d+)$/;
+const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column|plan|price|tier)_(\d+)$/;
 const CENTERED_LAYOUT_RE = /centered|thank_you|big_number|banner/;
 
 function itemToText(item) {

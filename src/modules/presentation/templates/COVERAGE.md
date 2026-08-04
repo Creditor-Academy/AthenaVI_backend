@@ -3,7 +3,28 @@
 Maps each `content_type` to seed `layout_id` values from `seed-layouts.json`.
 
 All layouts are **schemaVersion 2**: slots include `role`, optional `typography`, and
-decoration/background shapes where appropriate (title, stat, chart, closing, section_divider).
+decoration/background shapes where appropriate.
+
+## FE gallery categories
+
+`GET .../presentation-templates` returns `categories[]` (picker tabs) plus `templates[]`.
+Filter with `?category=simple_slides` (or `?contentType=agenda` for a single AI tag).
+
+| category id | Label | contentTypes |
+|---|---|---|
+| `all` | All | *(no filter)* |
+| `simple_slides` | Simple slides | `title`, `bullet_list`, `section_divider`, `image+text`, `comparison` |
+| `grid` | Grid | `grid` |
+| `charts_and_data` | Charts and data | `chart`, `stat` |
+| `timeline_and_plans` | Timeline and project plans | `timeline` |
+| `pricing` | Pricing | `pricing` |
+| `agenda` | Agenda | `agenda` |
+| `people_and_team` | People and team | `team` |
+| `quotes_and_testimonials` | Quotes and testimonial | `quote` |
+| `device_frames` | Device frames | `device_frames` |
+| `closing` | Closing | `closing` |
+
+Source of truth: [`layoutCategories.js`](../layoutCategories.js).
 
 | content_type | layout_ids |
 |---|---|
@@ -19,9 +40,11 @@ decoration/background shapes where appropriate (title, stat, chart, closing, sec
 | chart | `chart_full_width_v1`, `chart_with_callouts_v2`, `chart_compact_v3` |
 | closing | `closing_centered_cta_v1`, `closing_contact_v2`, `closing_thank_you_image_v3` |
 | section_divider | `section_divider_centered_v1`, `section_divider_numbered_v2`, `section_divider_band_v3` |
+| grid | `grid_four_cards_v1`, `grid_three_columns_v2`, `grid_six_tiles_v3` |
+| pricing | `pricing_three_tiers_v1`, `pricing_featured_middle_v2`, `pricing_table_v3` |
+| device_frames | `device_frame_laptop_v1`, `device_frame_phone_v2`, `device_frame_dual_v3` |
 
-**Totals:** 12 content types with core 3 variants each (**36**) plus meeting layouts
-(`numbered_four_up_v1`, `policy_numbered_split_v1`, `achievement_three_up_v1`) = **39** layouts.
+**Totals:** 15 content types; core variants + meeting layouts = **48** layouts.
 
 ## Deck packs (`DECK_PACK`) — schemaVersion 2
 

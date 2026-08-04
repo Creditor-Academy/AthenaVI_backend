@@ -241,12 +241,17 @@ async function updateExport(exportId, data) {
 }
 
 async function findActiveTemplatesByContentType(contentType) {
+  const where = {
+    type: 'DECK_LAYOUT',
+    isActive: true,
+  };
+  if (Array.isArray(contentType) && contentType.length) {
+    where.contentType = { in: contentType };
+  } else if (contentType) {
+    where.contentType = contentType;
+  }
   return prisma.template.findMany({
-    where: {
-      type: 'DECK_LAYOUT',
-      isActive: true,
-      ...(contentType ? { contentType } : {}),
-    },
+    where,
     orderBy: [{ contentType: 'asc' }, { variant: 'asc' }, { version: 'desc' }],
   });
 }

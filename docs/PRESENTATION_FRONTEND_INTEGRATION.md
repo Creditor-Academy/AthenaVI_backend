@@ -109,13 +109,15 @@ Base: `/api/workspaces/:workspaceId`
 
 | UI | Method | Path |
 |----|--------|------|
-| Layout / template gallery | `GET` | `/presentation-templates?contentType=` |
+| Layout / template gallery | `GET` | `/presentation-templates?category=` (tabs from `categories[]`) or `?contentType=` |
 | Deck packs (multi-slide) | `GET` | `/presentation-deck-packs` |
 | Brand Kits | `GET` | `/brand-kits` |
 | Theme picker | `GET` | `/presentation-themes` |
 | Insert palette | `GET` | `/presentation-elements` |
 
 Theme ids look like `midnight_blue` (underscores), not `dark-professional`.
+
+**Layout gallery tabs:** use `data.categories` from `/presentation-templates` (`id` + `label`). Filter with `?category=people_and_team`. Each template has `contentType` (AI tag) and `categories[]`. New types: `grid`, `pricing`, `device_frames`.
 
 Element catalog returns presets (`presetId`, `type`, `label`, `defaultPlacement`, `defaultContent`).  
 On insert: `POST .../slides/:slideId/elements` with `{ "presetId": "text_title" }` (and optional overrides).

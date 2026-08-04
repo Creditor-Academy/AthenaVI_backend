@@ -37,7 +37,7 @@ function buildUser(vars = {}) {
     content,
     '',
     'content_type must be one of:',
-    'title|agenda|bullet_list|comparison|stat|quote|image+text|timeline|team|chart|closing|section_divider',
+    'title|agenda|bullet_list|comparison|stat|quote|image+text|timeline|team|chart|closing|section_divider|grid|pricing|device_frames',
     '',
     'Output JSON schema:',
     JSON.stringify(

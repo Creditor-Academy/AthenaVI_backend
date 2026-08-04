@@ -421,7 +421,9 @@ function applyVisualPolicy({ visualNeed, contentType, preferVisuals, baseTemplat
   }
 
   let layoutContentType = type;
-  if (['bullet_list', 'comparison', 'stat', 'timeline', 'team', 'section_divider'].includes(type)) {
+  if (['grid', 'pricing', 'device_frames'].includes(type)) {
+    layoutContentType = type;
+  } else if (['bullet_list', 'comparison', 'stat', 'timeline', 'team', 'section_divider'].includes(type)) {
     layoutContentType = 'image+text';
   } else if (type === 'title' || type === 'agenda' || type === 'closing' || type === 'quote') {
     layoutContentType = type;
