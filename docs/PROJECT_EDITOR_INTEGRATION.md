@@ -102,8 +102,8 @@ sequenceDiagram
 | **Save editor state** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/data` |
 | Move folder | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` |
 | Delete project | `DELETE` | `/api/workspaces/:workspaceId/projects/:projectId` |
-| List video scene templates | `GET` | `/api/workspaces/:workspaceId/video-templates` |
-| Get video scene template | `GET` | `/api/workspaces/:workspaceId/video-templates/:templateId` |
+| List video templates | `GET` | `/api/workspaces/:workspaceId/video-templates?type=VIDEO_SCENE\|VIDEO_PACK` |
+| Get video template | `GET` | `/api/workspaces/:workspaceId/video-templates/:templateId` |
 | Append scene from template | `POST` | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` |
 
 ### Create project (wizard)
@@ -123,20 +123,48 @@ Response `201`: `data.project.id` → store as **`projectId`**. Project `type` i
 
 Optional: send initial `data` or `projectState` with `videoSettings` and `scenes: []`.
 
-Optional **video scene template** (VIDEO editor only — not PPT):
+Optional **video template** (VIDEO editor only — not PPT):
 
 ```json
 {
   "title": "From template",
   "folderId": "folder-uuid",
   "aspectRatio": "16:9",
-  "templateId": "cuid-of-VIDEO_SCENE-template"
+  "templateId": "cuid-of-VIDEO_SCENE-or-VIDEO_PACK"
 }
 ```
 
+- `VIDEO_SCENE` → one scene; `VIDEO_PACK` → all pack scenes.
 - Do **not** send non-empty `data.scenes` together with `templateId` (400).
-- Applied scene includes `templateId` stamp for traceability.
-- Presentation decks use `/presentations` + `DECK_LAYOUT` — never these video template APIs.
+- Applied scenes include `templateId` stamp for traceability.
+- Element `s3Key`/`url` are refreshed from durable `TemplateMedia` (presigned) on apply.
+- Presentation decks use `/presentations` + `DECK_LAYOUT` / `DECK_PACK` — never these video template APIs.
+
+### Public video template picker
+
+```http
+GET /api/workspaces/:workspaceId/video-templates
+GET /api/workspaces/:workspaceId/video-templates?type=VIDEO_SCENE
+GET /api/workspaces/:workspaceId/video-templates?type=VIDEO_PACK
+```
+
+Each item includes gallery fields (same idea as presentation deck packs):
+
+| Field | Notes |
+|-------|--------|
+| `id`, `name`, `type`, `contentType`, `variant` | Catalog identity |
+| `packId`, `sceneCount` | Set for `VIDEO_PACK` |
+| `previewImageUrl`, `thumbnailUrl` | From `TemplateMedia` `preview` / `scene:1` |
+| `preview.imageUrl` | Nested alias for FE pickers |
+| `media[]` | Presigned `url` per baked asset |
+| `schema` | Full blueprint (scene or pack) |
+
+**Superadmin authoring (public catalog):** design in the scene editor → publish:
+
+- One scene → `POST /api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template`
+- Whole project → `POST /api/superadmin/projects/:projectId/publish-as-video-pack`
+
+Publish copies media into system S3 + `TemplateMedia` (`scene:{n}`, `element:{id}`, `preview`) and sets `meta.authoredVia: "canvas"`.
 
 ### Append scene from video template
 
@@ -146,7 +174,7 @@ POST /api/workspaces/:workspaceId/projects/:projectId/scenes/from-template
 { "templateId": "cuid-of-VIDEO_SCENE-template" }
 ```
 
-Rejects `Project.type === PRESENTATION` (400). Free to apply (no `ppt_*` credits).
+**VIDEO_SCENE only** (packs use create with `templateId`). Rejects `Project.type === PRESENTATION` (400). Free to apply (no `ppt_*` credits). Media URLs rehydrated from `TemplateMedia` on apply.
 
 ### Update metadata only
 

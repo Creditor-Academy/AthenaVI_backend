@@ -616,7 +616,10 @@ Use **either** `data` **or** `projectState` for the editor payload (not both). C
 List active blueprints: `GET /api/workspaces/:workspaceId/video-templates`  
 Query `type=VIDEO_SCENE` \| `VIDEO_PACK` (omit = both).  
 Get one: `GET /api/workspaces/:workspaceId/video-templates/:templateId`  
-Append **one** scene to an existing VIDEO project: `POST .../projects/:projectId/scenes/from-template` with `{ "templateId" }` (**VIDEO_SCENE only**).  
+
+**List/get gallery fields** (PPT-pack parity): each template includes `media[]` (presigned), `previewImageUrl` / `thumbnailUrl` / `preview.imageUrl` (from `TemplateMedia` `preview` or `scene:1`), plus for packs `packId` and `sceneCount`. Canvas-published templates bake media into `TemplateMedia` under `videos/_system/...` with slotHints `scene:{n}`, `element:{id}`, `preview`.
+
+Append **one** scene to an existing VIDEO project: `POST .../projects/:projectId/scenes/from-template` with `{ "templateId" }` (**VIDEO_SCENE only**). Apply refreshes element URLs from `TemplateMedia`.  
 Create project from pack: `POST .../projects` with `templateId` of a `VIDEO_PACK`.
 
 Presentation / PPT layouts use `/presentations` and `DECK_LAYOUT` / `DECK_PACK` — do not mix.

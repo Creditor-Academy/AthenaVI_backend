@@ -1,5 +1,4 @@
 const path = require('path');
-const { randomUUID } = require('crypto');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const prisma = require('../../shared/config/prismaClient');
@@ -112,25 +111,6 @@ function collectS3KeysFromValue(value, out = new Set()) {
     }
   }
   return out;
-}
-
-async function copyKeysToSystemPrefix(keys, destPrefix) {
-  const keyMap = new Map();
-  for (const sourceKey of keys) {
-    if (!sourceKey || keyMap.has(sourceKey)) continue;
-    const ext = path.extname(sourceKey) || '.bin';
-    const destKey = `${destPrefix}/${randomUUID()}${ext}`;
-    try {
-      const copied = await s3Service.copyFile(sourceKey, destKey);
-      keyMap.set(sourceKey, {
-        s3Key: copied.key,
-        url: copied.url || s3Service.buildPublicUrl(copied.key),
-      });
-    } catch (err) {
-      // Skip missing/unreadable sources; keep original key in snapshot
-    }
-  }
-  return keyMap;
 }
 
 async function assertPackIdUnique(type, packId) {
@@ -311,6 +291,7 @@ function stripSceneForBlueprint(scene) {
   const cloned = deepClone(scene) || {};
   delete cloned.sceneId;
   delete cloned.templateId;
+  delete cloned.generation;
   return {
     name: cloned.name || 'Scene',
     order: cloned.order != null ? cloned.order : 0,
@@ -322,6 +303,128 @@ function stripSceneForBlueprint(scene) {
     ...(cloned.presenter ? { presenter: cloned.presenter } : {}),
     ...(cloned.transition ? { transition: cloned.transition } : {}),
   };
+}
+
+/**
+ * Collect media assets from a scene (image/video/audio elements + nested s3 keys).
+ * Returns ordered list with stable hints for TemplateMedia.
+ */
+function collectSceneMediaAssets(scene, { sceneOrder = 0 } = {}) {
+  const assets = [];
+  const seen = new Set();
+  const elements = Array.isArray(scene?.elements) ? scene.elements : [];
+
+  for (const el of elements) {
+    const type = String(el?.type || '').toLowerCase();
+    if (!['image', 'video', 'audio'].includes(type)) continue;
+    if (String(el?.role || '').toLowerCase() === 'logo') continue;
+    const s3Key =
+      (el?.content?.s3Key && String(el.content.s3Key).trim()) ||
+      (el?.content?.key && String(el.content.key).trim()) ||
+      null;
+    if (!s3Key || seen.has(s3Key)) continue;
+    seen.add(s3Key);
+    assets.push({
+      s3Key,
+      elementId: el.id ? String(el.id) : null,
+      type,
+      mimeType: guessMimeFromKey(s3Key),
+      isVisual: type === 'image' || type === 'video',
+      sceneOrder,
+    });
+  }
+
+  // Any remaining nested keys (background, etc.)
+  const allKeys = collectS3KeysFromValue(scene);
+  let extraIdx = 0;
+  for (const s3Key of allKeys) {
+    if (seen.has(s3Key)) continue;
+    seen.add(s3Key);
+    assets.push({
+      s3Key,
+      elementId: null,
+      type: 'other',
+      mimeType: guessMimeFromKey(s3Key),
+      isVisual: false,
+      sceneOrder,
+      extraIdx: extraIdx++,
+    });
+  }
+
+  return assets;
+}
+
+function kindForAsset(asset) {
+  if (asset.type === 'image') return 'photo';
+  return 'graphic';
+}
+
+async function registerSceneAssetsAsTemplateMedia({
+  templateId,
+  assets,
+  packId = null,
+  setPreviewOnFirstVisual = true,
+}) {
+  const keyMap = new Map();
+  let primaryVisualDone = false;
+
+  for (let i = 0; i < assets.length; i++) {
+    const asset = assets[i];
+    if (!asset?.s3Key || keyMap.has(asset.s3Key)) continue;
+
+    const isPrimary =
+      setPreviewOnFirstVisual && !primaryVisualDone && asset.isVisual === true;
+    let hint;
+    if (isPrimary) {
+      hint = templateMediaService.slotHintForSceneOrder(asset.sceneOrder || 0);
+    } else if (asset.elementId) {
+      hint = `element:${asset.elementId}`.slice(0, 128);
+    } else {
+      hint = `asset:${asset.sceneOrder || 0}:${asset.extraIdx != null ? asset.extraIdx : i}`.slice(
+        0,
+        128
+      );
+    }
+
+    const ext = path.extname(asset.s3Key) || '.bin';
+    const destKey = packId
+      ? isPrimary
+        ? templateMediaService.videoPackSceneMediaKey(packId, (asset.sceneOrder || 0) + 1, ext)
+        : templateMediaService.videoSystemMediaKey(
+            templateId,
+            hint,
+            path.basename(asset.s3Key) || `media${ext}`
+          )
+      : templateMediaService.videoSystemMediaKey(
+          templateId,
+          hint,
+          path.basename(asset.s3Key) || `media${ext}`
+        );
+
+    try {
+      const media = await templateMediaService.copyKeyToTemplateSlot({
+        templateId,
+        sourceKey: asset.s3Key,
+        kind: kindForAsset(asset),
+        slotHint: hint,
+        name: asset.elementId || hint,
+        mimeType: asset.mimeType,
+        destKey,
+        setAsPreview: isPrimary,
+      });
+      if (media?.s3Key) {
+        keyMap.set(asset.s3Key, {
+          s3Key: media.s3Key,
+          url: media.url || s3Service.buildPublicUrl(media.s3Key),
+        });
+        if (isPrimary) primaryVisualDone = true;
+      }
+    } catch {
+      // keep original key if copy fails
+    }
+  }
+
+  return keyMap;
 }
 
 async function loadVideoProject(projectId) {
@@ -362,11 +465,7 @@ async function publishProjectSceneAsTemplate({
     throw new AppError('Scene not found on project', 404);
   }
 
-  const keys = collectS3KeysFromValue(scene);
-  const destPrefix = `videos/_system/templates/pending`;
-  const keyMap = await copyKeysToSystemPrefix([...keys], destPrefix);
-  const rewritten = rewriteKeysInValue(stripSceneForBlueprint(scene), keyMap);
-
+  const blueprint = stripSceneForBlueprint(scene);
   const schema = {
     version: 1,
     videoSettings: data.videoSettings || undefined,
@@ -376,7 +475,7 @@ async function publishProjectSceneAsTemplate({
       sourceProjectId: projectId,
       sourceSceneId: sceneId,
     },
-    scene: rewritten,
+    scene: blueprint,
   };
 
   const template = await templateAdminService.createTemplate({
@@ -389,35 +488,22 @@ async function publishProjectSceneAsTemplate({
     createdBy: userId,
   });
 
-  // Move copied keys under final template id prefix when possible
-  if (keyMap.size) {
-    const finalMap = new Map();
-    for (const [src, info] of keyMap.entries()) {
-      const ext = path.extname(info.s3Key) || '.bin';
-      const finalKey = `videos/_system/templates/${template.id}/${randomUUID()}${ext}`;
-      try {
-        await s3Service.copyFile(info.s3Key, finalKey);
-        try {
-          await s3Service.deleteFile(info.s3Key);
-        } catch {
-          // best-effort
-        }
-        finalMap.set(info.s3Key, {
-          s3Key: finalKey,
-          url: s3Service.buildPublicUrl(finalKey),
-        });
-      } catch {
-        finalMap.set(info.s3Key, info);
-      }
-    }
-    const finalScene = rewriteKeysInValue(schema.scene, finalMap);
-    return templateAdminService.updateTemplate({
-      id: template.id,
-      schema: { ...schema, scene: finalScene },
-    });
+  const assets = collectSceneMediaAssets(scene, { sceneOrder: 0 });
+  if (!assets.length) {
+    return templateMediaService.withMediaAttached(template);
   }
 
-  return templateMediaService.withMediaAttached(template);
+  const keyMap = await registerSceneAssetsAsTemplateMedia({
+    templateId: template.id,
+    assets,
+    setPreviewOnFirstVisual: true,
+  });
+
+  const finalScene = rewriteKeysInValue(blueprint, keyMap);
+  return templateAdminService.updateTemplate({
+    id: template.id,
+    schema: { ...schema, scene: finalScene },
+  });
 }
 
 /**
@@ -445,13 +531,10 @@ async function publishProjectAsVideoPack({
 
   scenes.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
 
-  const keys = collectS3KeysFromValue({ scenes, videoSettings: data.videoSettings });
-  const destPrefix = `videos/_system/packs/${normalizedPackId}`;
-  const keyMap = await copyKeysToSystemPrefix([...keys], destPrefix);
-  const rewrittenScenes = rewriteKeysInValue(deepClone(scenes), keyMap).map((s, idx) => ({
-    ...s,
-    order: s.order != null ? s.order : idx,
-  }));
+  const strippedScenes = scenes.map((s, idx) => {
+    const bp = stripSceneForBlueprint(s);
+    return { ...bp, order: bp.order != null ? bp.order : idx };
+  });
 
   const schema = {
     schemaVersion: 1,
@@ -464,14 +547,14 @@ async function publishProjectAsVideoPack({
       sourceWorkspaceId: project.workspaceId,
     },
     videoSettings: data.videoSettings || undefined,
-    scenes: rewrittenScenes,
+    scenes: strippedScenes,
     preview: {
       label: name,
-      sceneCount: rewrittenScenes.length,
+      sceneCount: strippedScenes.length,
     },
   };
 
-  return templateAdminService.createTemplate({
+  const template = await templateAdminService.createTemplate({
     name,
     contentType: contentType || null,
     variant: variant || 'canvas',
@@ -479,6 +562,96 @@ async function publishProjectAsVideoPack({
     type: 'VIDEO_PACK',
     isActive,
     createdBy: userId,
+  });
+
+  const allAssets = [];
+  scenes.forEach((s, idx) => {
+    // Use sorted index (0-based) so first scene always maps to slotHint scene:1
+    allAssets.push(...collectSceneMediaAssets(s, { sceneOrder: idx }));
+  });
+
+  if (!allAssets.length) {
+    return templateMediaService.withMediaAttached(template);
+  }
+
+  // One primary visual per scene gets scene:{n}; first scene's primary also sets preview.
+  const keyMap = new Map();
+  const scenesByOrder = new Map();
+  for (const asset of allAssets) {
+    const o = asset.sceneOrder || 0;
+    if (!scenesByOrder.has(o)) scenesByOrder.set(o, []);
+    scenesByOrder.get(o).push(asset);
+  }
+
+  const sortedOrders = [...scenesByOrder.keys()].sort((a, b) => a - b);
+  let packPreviewSet = false;
+
+  for (const order of sortedOrders) {
+    const sceneAssets = scenesByOrder.get(order) || [];
+    let scenePrimaryDone = false;
+
+    for (let i = 0; i < sceneAssets.length; i++) {
+      const asset = sceneAssets[i];
+      if (!asset?.s3Key || keyMap.has(asset.s3Key)) continue;
+
+      const isPrimary = !scenePrimaryDone && asset.isVisual === true;
+      let hint;
+      if (isPrimary) {
+        hint = templateMediaService.slotHintForSceneOrder(order);
+      } else if (asset.elementId) {
+        hint = `element:${asset.elementId}`.slice(0, 128);
+      } else {
+        hint = `asset:${order}:${asset.extraIdx != null ? asset.extraIdx : i}`.slice(0, 128);
+      }
+
+      const ext = path.extname(asset.s3Key) || '.bin';
+      const destKey = isPrimary
+        ? templateMediaService.videoPackSceneMediaKey(normalizedPackId, order + 1, ext)
+        : templateMediaService.videoSystemMediaKey(
+            template.id,
+            hint,
+            path.basename(asset.s3Key) || `media${ext}`
+          );
+
+      const setAsPreview = isPrimary && !packPreviewSet;
+      try {
+        const media = await templateMediaService.copyKeyToTemplateSlot({
+          templateId: template.id,
+          sourceKey: asset.s3Key,
+          kind: kindForAsset(asset),
+          slotHint: hint,
+          name: asset.elementId || hint,
+          mimeType: asset.mimeType,
+          destKey,
+          setAsPreview,
+        });
+        if (media?.s3Key) {
+          keyMap.set(asset.s3Key, {
+            s3Key: media.s3Key,
+            url: media.url || s3Service.buildPublicUrl(media.s3Key),
+          });
+          if (isPrimary) {
+            scenePrimaryDone = true;
+            if (setAsPreview) packPreviewSet = true;
+          }
+        }
+      } catch {
+        // keep original
+      }
+    }
+  }
+
+  const rewrittenScenes = rewriteKeysInValue(deepClone(strippedScenes), keyMap);
+  return templateAdminService.updateTemplate({
+    id: template.id,
+    schema: {
+      ...schema,
+      scenes: rewrittenScenes,
+      preview: {
+        label: name,
+        sceneCount: rewrittenScenes.length,
+      },
+    },
   });
 }
 

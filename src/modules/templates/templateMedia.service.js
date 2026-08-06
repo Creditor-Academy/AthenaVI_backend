@@ -21,6 +21,24 @@ function packSlideMediaKey(packId, order, ext = '.jpg') {
   return `presentations/_system/packs/${packId}/slide-${order}${ext}`;
 }
 
+/** System S3 key for VIDEO_SCENE / VIDEO_PACK TemplateMedia (not presentations/). */
+function videoSystemMediaKey(templateId, slotHint, originalName = 'media.bin') {
+  const ext = path.extname(originalName) || '.bin';
+  const safeSlot = String(slotHint || 'photo')
+    .replace(/[^a-zA-Z0-9:_-]/g, '_')
+    .slice(0, 64);
+  return `videos/_system/templates/${templateId}/${safeSlot}-${randomUUID()}${ext}`;
+}
+
+function videoPackSceneMediaKey(packId, order, ext = '.bin') {
+  return `videos/_system/packs/${packId}/scene-${order}${ext}`;
+}
+
+function slotHintForSceneOrder(order) {
+  const n = Number(order);
+  return `scene:${Number.isFinite(n) ? n + 1 : 1}`;
+}
+
 async function resolveMediaUrl(s3Key) {
   if (!s3Key) return null;
   try {
@@ -70,7 +88,7 @@ async function listMedia(templateId) {
 }
 
 async function uploadMedia({ templateId, file, kind, slotHint, name, setAsPreview }) {
-  await getTemplateOrThrow(templateId);
+  const template = await getTemplateOrThrow(templateId);
   if (!file?.buffer) throw new AppError(messages.INVALID_FILE_TYPE, 400);
   if (!IMAGE_MIME.has(file.mimetype)) {
     throw new AppError(messages.INVALID_IMAGE_TYPE, 400);
@@ -86,14 +104,18 @@ async function uploadMedia({ templateId, file, kind, slotHint, name, setAsPrevie
       ? String(slotHint).trim().slice(0, 128)
       : null;
 
+  const isVideoTemplate = template.type === 'VIDEO_SCENE' || template.type === 'VIDEO_PACK';
+
   // Default slot so uploads are discoverable (not a random photo:uuid that never maps to preview)
   if (!hint) {
     if (mediaKind === 'preview') hint = 'preview';
     else if (mediaKind === 'graphic') hint = `graphic:${randomUUID().slice(0, 8)}`;
-    else hint = 'slide:1';
+    else hint = isVideoTemplate ? 'scene:1' : 'slide:1';
   }
 
-  const key = systemMediaKey(templateId, hint, file.originalname || 'image.jpg');
+  const key = isVideoTemplate
+    ? videoSystemMediaKey(templateId, hint, file.originalname || 'image.jpg')
+    : systemMediaKey(templateId, hint, file.originalname || 'image.jpg');
   const uploaded = await s3Service.uploadFileToKey(file.buffer, key, file.mimetype);
   const sortOrder = (await templateMediaDao.maxSortOrder(templateId, mediaKind)) + 1;
 
@@ -121,7 +143,10 @@ async function uploadMedia({ templateId, file, kind, slotHint, name, setAsPrevie
   const explicitlyOff = setAsPreview === false || setAsPreview === 'false';
   const explicitlyOn = setAsPreview === true || setAsPreview === 'true';
   const looksLikeHero =
-    mediaKind === 'preview' || hint === 'preview' || String(hint).startsWith('slide:1');
+    mediaKind === 'preview' ||
+    hint === 'preview' ||
+    String(hint).startsWith('slide:1') ||
+    String(hint).startsWith('scene:1');
   const shouldSyncPreview =
     !explicitlyOff && (explicitlyOn || looksLikeHero || !existingPreview);
 
@@ -287,10 +312,13 @@ module.exports = {
   MEDIA_KINDS,
   systemMediaKey,
   packSlideMediaKey,
+  videoSystemMediaKey,
+  videoPackSceneMediaKey,
   resolveMediaUrl,
   attachUrls,
   layoutHasImageSlot,
   slotHintForSlideOrder,
+  slotHintForSceneOrder,
   listMedia,
   uploadMedia,
   deleteMedia,

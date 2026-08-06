@@ -71,24 +71,50 @@ async function main() {
     process.exit(1);
   }
 
-  // list video templates
+  // list video templates (both types + gallery fields)
   const list = await req('GET', `/workspaces/${CTX.workspaceId}/video-templates`, {
     token,
     expectStatus: 200,
   });
+  const listTemplates = list.json?.data?.templates || [];
   record('GET .../video-templates', {
     ...list,
     ok:
       list.ok &&
-      Array.isArray(list.json?.data?.templates) &&
-      list.json.data.templates.length >= 1 &&
-      list.json.data.templates.every((t) => t.type === 'VIDEO_SCENE'),
-    detail: `count=${list.json?.data?.templates?.length}`,
+      Array.isArray(listTemplates) &&
+      listTemplates.length >= 1 &&
+      listTemplates.every((t) => t.type === 'VIDEO_SCENE' || t.type === 'VIDEO_PACK') &&
+      listTemplates.every(
+        (t) =>
+          Array.isArray(t.media) &&
+          Object.prototype.hasOwnProperty.call(t, 'previewImageUrl') &&
+          t.preview &&
+          typeof t.preview === 'object'
+      ),
+    detail: `count=${listTemplates.length} galleryFields=ok`,
+  });
+
+  // filter VIDEO_SCENE only
+  const listScenes = await req(
+    'GET',
+    `/workspaces/${CTX.workspaceId}/video-templates?type=VIDEO_SCENE`,
+    { token, expectStatus: 200 }
+  );
+  const sceneOnly = listScenes.json?.data?.templates || [];
+  record('GET .../video-templates?type=VIDEO_SCENE', {
+    ...listScenes,
+    ok:
+      listScenes.ok &&
+      sceneOnly.length >= 1 &&
+      sceneOnly.every((t) => t.type === 'VIDEO_SCENE'),
+    detail: `count=${sceneOnly.length}`,
   });
 
   // ensure no DECK_LAYOUT leaked
-  const leaked = (list.json?.data?.templates || []).filter((t) => t.type !== 'VIDEO_SCENE');
-  record('isolation: video-templates only VIDEO_SCENE', {
+  const leaked = listTemplates.filter(
+    (t) => t.type !== 'VIDEO_SCENE' && t.type !== 'VIDEO_PACK'
+  );
+  record('isolation: video-templates only VIDEO_*', {
     ok: leaked.length === 0,
     status: 200,
     json: { message: leaked.length ? `leaked ${leaked.length}` : 'clean' },

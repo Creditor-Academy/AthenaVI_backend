@@ -194,7 +194,7 @@ const createProject = async (workspaceId, userId, input) => {
   let normalizedState;
   if (templateId) {
     const template = await videoTemplateService.getActiveVideoTemplate(templateId);
-    normalizedState = videoTemplateService.applyTemplateToNewProjectState({
+    normalizedState = await videoTemplateService.applyTemplateToNewProjectState({
       template,
       aspectRatio,
       canvasSize,
@@ -250,10 +250,15 @@ const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, temp
   const nextOrder =
     scenes.reduce((max, s) => Math.max(max, Number(s.order) || 0), -1) + 1;
 
+  const hydratedSchema = await videoTemplateService.hydrateVideoTemplateSchema(
+    template.schema,
+    template.media
+  );
+
   let schema;
   try {
     schema = require('../validations/videoTemplate.validations').assertVideoSceneTemplateSchema(
-      template.schema
+      hydratedSchema
     );
   } catch (err) {
     throw new AppError(err.message || 'Invalid VIDEO_SCENE template schema', 400);

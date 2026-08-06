@@ -3,4 +3,5 @@ url: "{{baseUrl}}/workspaces/{{workspaceId}}/video-templates?type=VIDEO_PACK"
 method: GET
 headers:
   Authorization: Bearer {{accessToken}}
+# Expect VIDEO_PACK items with packId, sceneCount, media[], previewImageUrl
 order: 1100

@@ -62,10 +62,10 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | Method | Path |
 |--------|------|
 | `GET` | `/api/superadmin/templates/:templateId/media` |
-| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (default `slide:1` for photos; use `preview` or `kind=preview` for picker thumb), optional `setAsPreview` (bool), `name` |
+| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (default `slide:1` for PPT photos / `scene:1` for video templates; use `preview` or `kind=preview` for picker thumb), optional `setAsPreview` (bool), `name` |
 | `DELETE` | `/api/superadmin/templates/:templateId/media/:mediaId` |
 
-List/get template includes `media[]` with presigned `url`. Pack clone maps `slotHint` `slide:{order}` into image elements.
+List/get template includes `media[]` with presigned `url`. Pack clone maps `slotHint` `slide:{order}` into image elements. Video templates use `scene:{n}` / `element:{id}` / `preview` (system keys under `videos/_system/...`).
 
 **Create `DECK_LAYOUT` example**
 
@@ -194,6 +194,10 @@ POST /api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template
 { "name": "Intro scene", "variant": "canvas", "isActive": true }
 ```
 
+- Copies scene media (image/video/audio `s3Key`s) into system S3 + `TemplateMedia` (`scene:1` for primary visual + `preview`, `element:{id}` / `asset:…` for others).
+- Rewrites schema element keys to durable system keys; preserves avatar placeholders / `presenter` (strips `generation` / HeyGen job ids).
+- Sets `meta.authoredVia: "canvas"`.
+
 **Video → multi-scene `VIDEO_PACK` (no AI)**
 
 ```http
@@ -209,7 +213,13 @@ POST /api/superadmin/projects/:projectId/publish-as-video-pack
 }
 ```
 
-Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK`. PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
+- Per-scene primary visual → `TemplateMedia` slotHint `scene:{n}` (1-based); first scene primary also upserts `preview`.
+- Remaining assets → `element:{id}` / `asset:…` under `videos/_system/...`.
+- Sets `meta.authoredVia: "canvas"`. Snapshot only — **no AI**.
+
+Admin can also upload picker thumbs via `POST /api/superadmin/templates/:templateId/media` (`kind=preview` or `slotHint=scene:1` for video types).
+
+Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK` (returns `media[]` + `previewImageUrl`). PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
 
 ---
 

@@ -844,11 +844,12 @@ Filter UI by `project.type === "PRESENTATION"` vs `"VIDEO"`. Open presentations 
 
 ## 2.17 PPT vs video templates (do not mix)
 
-| | PPT layout `DECK_LAYOUT` | PPT pack `DECK_PACK` | Video `VIDEO_SCENE` |
-|--|--------------------------|----------------------|---------------------|
-| Workspace list | `GET .../presentation-templates` | `GET .../presentation-deck-packs` | `GET .../video-templates` |
-| Apply | `createMode: "template"` / `apply-layout` | `createMode: "pack"` + AI whitelist | Project `templateId` / `scenes/from-template` |
-| Schema | `layout_id`, `grid`, `slots[]` | `pack_id`, `slides[]`, `themeId` | `scene.elements` with frames |
+| | PPT layout `DECK_LAYOUT` | PPT pack `DECK_PACK` | Video `VIDEO_SCENE` / `VIDEO_PACK` |
+|--|--------------------------|----------------------|-------------------------------------|
+| Workspace list | `GET .../presentation-templates` | `GET .../presentation-deck-packs` (`previewImageUrl`, `media[]`) | `GET .../video-templates?type=` (`previewImageUrl`, `media[]`) |
+| Apply | `createMode: "template"` / `apply-layout` | `createMode: "pack"` + AI whitelist | Project `templateId` (scene or pack) / `scenes/from-template` (scene only) |
+| Schema | `layout_id`, `grid`, `slots[]` | `pack_id`, `slides[]`, `themeId` | `scene.elements` / pack `scenes[]` with frames |
+| Canvas publish | — | `publish-as-pack` → `TemplateMedia` `slide:n` | `publish-as-template` / `publish-as-video-pack` → `TemplateMedia` `scene:n` |
 
 Brand Kit is workspace-owned look — separate from templates.
 
