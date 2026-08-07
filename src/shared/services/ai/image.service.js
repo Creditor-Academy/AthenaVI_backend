@@ -17,7 +17,7 @@ function mapQuality(quality, model) {
     if (quality === 'low') return 'low';
     return quality || 'medium';
   }
-  // dall-e-3
+  // Legacy non–gpt-image models (no longer offered in image-gen catalog)
   if (quality === 'hd' || quality === 'high') return 'hd';
   return 'standard';
 }
@@ -96,7 +96,7 @@ async function generateImage({
 
 /**
  * Edit an existing image via OpenAI Images Edit API.
- * Uses gpt-image models (dall-e-3 does not support edit).
+ * Uses gpt-image models only.
  * @param {{ imageBuffer: Buffer, instruction: string, model?: string, size?: string, quality?: string }} opts
  */
 async function editImage({

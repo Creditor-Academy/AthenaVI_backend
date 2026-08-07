@@ -14,7 +14,8 @@ const IMAGE_GEN_FEATURE = Object.freeze({
 const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE]: 6,
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 12,
-  [IMAGE_GEN_FEATURE.DALL_E_3]: 8,
+  // Same OpenAI call as HD (dall-e-3 is a catalog alias → gpt-image-1 high)
+  [IMAGE_GEN_FEATURE.DALL_E_3]: 12,
   [IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE]: 2,
   [IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE]: 1,
 });

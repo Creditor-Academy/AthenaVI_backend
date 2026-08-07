@@ -3612,3 +3612,48 @@
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-07-30T10:22:43.462Z"}
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-07-30T10:22:43.491Z"}
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-07-30T10:22:43.491Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T08:17:16.062Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T08:17:16.067Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T08:17:16.102Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T08:17:16.103Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T08:17:18.784Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:03:33.194Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:03:33.198Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:03:33.231Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:03:33.231Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:03:35.896Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:03:50.474Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:03:50.477Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:03:50.508Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:03:50.508Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:03:53.076Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:04:12.579Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:04:12.585Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:04:12.626Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:04:12.627Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:04:15.377Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:04:42.688Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:04:42.691Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:04:42.721Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:04:42.722Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:04:45.446Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:14:30.407Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:14:30.416Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:14:30.479Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:14:30.480Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:14:33.255Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:15:01.085Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:15:01.089Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:15:01.116Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:15:01.117Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:15:03.740Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:15:21.384Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:15:21.388Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:15:21.416Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:15:21.416Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:15:24.065Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-07T09:17:19.766Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-07T09:17:19.772Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-07T09:17:19.836Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-07T09:17:19.837Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-07T09:17:22.814Z"}

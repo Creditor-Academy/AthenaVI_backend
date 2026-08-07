@@ -26,7 +26,7 @@ OpenAI-only workspace image studio: general images, infographics, and social cre
 |------|--------|--------|
 | `gpt-image-1` | `gpt-image-1` medium | Default |
 | `gpt-image-1-hd` | `gpt-image-1` high | HD |
-| `dall-e-3` | `dall-e-3` | Image/social; tweaks use GPT Image edit |
+| `dall-e-3` | `gpt-image-1` high | Compatibility alias (OpenAI retired DALL·E 3); image/social only |
 
 ### Formats
 
@@ -173,7 +173,7 @@ Returns file attachment (`Content-Disposition: attachment`). **No credit charge.
 |---------|------------|--------------|
 | `image_gen_gpt_image` | 6 | `IMAGE_GEN_GPT_IMAGE_AC` |
 | `image_gen_gpt_image_hd` | 12 | `IMAGE_GEN_GPT_IMAGE_HD_AC` |
-| `image_gen_dall_e_3` | 8 | `IMAGE_GEN_DALL_E_3_AC` |
+| `image_gen_dall_e_3` | 12 | `IMAGE_GEN_DALL_E_3_AC` (alias → same quality as HD) |
 | Infographic surcharge | +2 | `IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC` |
 | Social surcharge | +1 | `IMAGE_GEN_SOCIAL_SURCHARGE_AC` |
 

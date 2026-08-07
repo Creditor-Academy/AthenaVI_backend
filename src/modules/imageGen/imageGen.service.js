@@ -102,7 +102,7 @@ function resolveRequestFormat({ mode, formatId }) {
 function assertModeModelCompatible(mode, model) {
   if (!model.modes.includes(mode)) {
     throw new AppError(
-      `Model ${model.id} does not support mode "${mode}". Choose gpt-image-1 or gpt-image-1-hd.`,
+      `Model ${model.id} does not support mode "${mode}". Choose a model that lists this mode.`,
       400
     );
   }
@@ -164,7 +164,7 @@ async function runPipeline({
     infographic,
   });
 
-  const openaiSize = openaiSizeForFormat(format, model.openaiModel);
+  const openaiSize = openaiSizeForFormat(format);
   const generated = await generateImage({
     prompt: finalPrompt,
     model: model.openaiModel,
@@ -345,7 +345,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
   const sourceBuffer = await getObjectBuffer(parent.s3Key);
-  const openaiSize = openaiSizeForFormat(format, 'gpt-image-1');
+  const openaiSize = openaiSizeForFormat(format);
   const edited = await editImage({
     imageBuffer: sourceBuffer,
     instruction: String(instruction).trim(),

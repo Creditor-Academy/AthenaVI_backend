@@ -28,15 +28,17 @@ const MODELS = Object.freeze([
     supportsEdit: true,
   },
   {
+    // Compatibility alias: OpenAI retired dall-e-3 (May 2026). Runs gpt-image-1 @ high.
     id: 'dall-e-3',
     name: 'DALL·E 3',
-    description: 'OpenAI DALL·E 3 — creative variety. Tweaks use GPT Image edit under the hood.',
-    openaiModel: 'dall-e-3',
-    quality: 'standard',
+    description:
+      'Legacy option — OpenAI retired DALL·E 3; we generate with GPT Image HD under the hood.',
+    openaiModel: 'gpt-image-1',
+    quality: 'high',
     feature: IMAGE_GEN_FEATURE.DALL_E_3,
     modes: ['image', 'social'],
     recommended: false,
-    supportsEdit: false,
+    supportsEdit: true,
   },
 ]);
 

@@ -944,7 +944,7 @@ Versions share `rootId` / `parentId` chains.
 |----|--------|
 | `gpt-image-1` | Default (medium) |
 | `gpt-image-1-hd` | HD (higher AC) |
-| `dall-e-3` | Image/social; tweaks use GPT Image edit |
+| `dall-e-3` | Compat alias → GPT Image HD; image/social only |
 
 Respect each model’s `modes` array (e.g. hide DALL·E for `infographic` if not listed).
 
@@ -976,7 +976,7 @@ Response: `{ athenaCredits, breakdown }`.
 |---------|------------|
 | `image_gen_gpt_image` | 6 |
 | `image_gen_gpt_image_hd` | 12 |
-| `image_gen_dall_e_3` | 8 |
+| `image_gen_dall_e_3` | 12 (alias → HD quality) |
 | Infographic surcharge | +2 |
 | Social surcharge | +1 |
 

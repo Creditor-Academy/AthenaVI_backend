@@ -57,8 +57,9 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 
 1. Mode `social`, required `formatId` (e.g. `instagram_post`, `linkedin_banner`).
 2. Optional `headline` / `subheadline` / `brandPalette`.
-3. Generate (server crops to exact platform pixels).
-4. Download JPG/PNG for upload to the network.
+3. Generate (server fits to exact platform pixels; when OpenAI aspect differs a lot from the target, uses contain + pad so text is not chopped).
+4. Prefer sending `headline` / `subheadline` for readable on-canvas copy; keep copy short.
+5. Download JPG/PNG for upload to the network.
 
 ### D — Iterate
 
@@ -93,6 +94,6 @@ Successful charges appear in workspace credit history with `metadata.feature` li
 | Topic | Hint |
 |-------|------|
 | Sync generate | Loading state + cancel only client-side (request may still complete/charge) |
-| DALL·E 3 | Hide or disable for `infographic` mode (`modes` from catalog) |
-| HD | Higher AC — show estimate |
+| HD (`gpt-image-1-hd`) | Best quality; higher AC — show estimate |
+| DALL·E 3 (`dall-e-3`) | Still offered for UI compat; backend runs GPT Image HD. Hide for `infographic` (`modes` from catalog) |
 | Library | Filter AI assets; open generation via `stockMetadata.generationId` |
