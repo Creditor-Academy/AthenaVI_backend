@@ -4,7 +4,20 @@ const s3Service = require('../s3/s3.service');
 const themeService = require('../presentation/theme.service');
 const brandKitDao = require('./brandKit.dao');
 
-const LOGO_ROLES = new Set(['primary', 'secondary', 'icon', 'light', 'dark']);
+const LOGO_ROLES = new Set([
+  'primary',
+  'secondary',
+  'icon',
+  'light',
+  'dark',
+  'main',
+  'light-mode',
+  'dark-mode',
+  'with-name-below',
+  'with-name-adjacent',
+  'black',
+  'white',
+]);
 const IMAGE_MIME = new Set([
   'image/jpeg',
   'image/png',
@@ -358,6 +371,17 @@ async function loadKitThemeTokens(workspaceId, brandKitId) {
   return brandKitToThemeTokens(kit);
 }
 
+async function streamMedia({ workspaceId, brandKitId, mediaId, req, res }) {
+  const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+  if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
+  const media = await brandKitDao.findMedia(brandKitId, mediaId);
+  if (!media || !media.s3Key) throw new AppError(messages.BRAND_KIT_MEDIA_NOT_FOUND, 404);
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  return s3Service.streamObjectToResponse(req, res, media.s3Key);
+}
+
 module.exports = {
   listBrandKits,
   getBrandKit,
@@ -367,10 +391,11 @@ module.exports = {
   deleteBrandKit,
   uploadMedia,
   deleteMedia,
+  streamMedia,
+  loadKitThemeTokens,
   brandKitToThemeTokens,
   pickLogoForBackground,
   buildBrandVoiceBrief,
-  loadKitThemeTokens,
   validateBrandKitData,
   relativeLuminance,
 };

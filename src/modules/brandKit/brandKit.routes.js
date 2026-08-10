@@ -66,4 +66,10 @@ router.delete(
   brandKitController.deleteMedia
 );
 
+router.get(
+  '/:brandKitId/media/:mediaId/stream',
+  requireWorkspaceRole(anyMember),
+  brandKitController.streamMedia
+);
+
 module.exports = router;

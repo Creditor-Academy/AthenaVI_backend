@@ -106,7 +106,20 @@ const uploadBrandKitMediaSchema = Joi.object({
   body: Joi.object({
     kind: Joi.string().valid('logo', 'photo', 'graphic').required(),
     role: Joi.string()
-      .valid('primary', 'secondary', 'icon', 'light', 'dark')
+      .valid(
+        'primary',
+        'secondary',
+        'icon',
+        'light',
+        'dark',
+        'main',
+        'light-mode',
+        'dark-mode',
+        'with-name-below',
+        'with-name-adjacent',
+        'black',
+        'white'
+      )
       .allow(null, '')
       .optional(),
     name: Joi.string().trim().max(255).allow(null, '').optional(),

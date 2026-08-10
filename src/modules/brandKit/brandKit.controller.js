@@ -72,6 +72,16 @@ const deleteMedia = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.BRAND_KIT_MEDIA_DELETED);
 });
 
+const streamMedia = asyncHandler(async (req, res) => {
+  await brandKitService.streamMedia({
+    workspaceId: req.params.workspaceId,
+    brandKitId: req.params.brandKitId,
+    mediaId: req.params.mediaId,
+    req,
+    res,
+  });
+});
+
 module.exports = {
   listBrandKits,
   getBrandKit,
@@ -81,4 +91,5 @@ module.exports = {
   deleteBrandKit,
   uploadMedia,
   deleteMedia,
+  streamMedia,
 };
