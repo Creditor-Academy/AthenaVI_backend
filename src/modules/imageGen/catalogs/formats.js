@@ -1,7 +1,14 @@
 /**
  * Social + generic format catalog.
- * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp crop.
+ * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp cover-crop.
+ * composeRules = model instructions for full-bleed layout per platform size.
  */
+
+const FULL_BLEED_COMMON = [
+  'FULL-BLEED edge-to-edge: fill the entire canvas.',
+  'No letterboxing, borders, empty side bars, floating cards, or large plain unused regions.',
+  'No separate solid color panels used as filler.',
+];
 
 const FORMATS = Object.freeze([
   {
@@ -13,6 +20,10 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1024',
     openaiSizeDalle: '1024x1024',
     safeZone: 'Keep subject centered with comfortable margins.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      '1:1 square composition; balanced center focus.',
+    ],
   },
   {
     id: 'landscape',
@@ -23,6 +34,10 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone: 'Keep focal content in the center third.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Landscape 3:2; keep hero in the center third.',
+    ],
   },
   {
     id: 'portrait',
@@ -33,6 +48,10 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1536',
     openaiSizeDalle: '1024x1792',
     safeZone: 'Keep focal content in the center third.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Portrait 2:3; keep hero in the center third.',
+    ],
   },
   {
     id: 'linkedin_banner',
@@ -43,7 +62,16 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Ultra-wide 4:1 banner. Keep ALL text and logos inside the middle horizontal band with ≥12% margin from top/bottom/left/right. Leave room for profile photo overlap on the left.',
+      '1584×396 (~4:1) profile banner. Full-bleed texture across the full width. Keep text center-right; left ~25% subtle for profile photo overlap.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Ultra-wide LinkedIn PROFILE BANNER (~4:1 panoramic strip).',
+      'Visual texture and gradients must continue LEFT EDGE → RIGHT EDGE with no empty sides.',
+      'LEFT ~25%: subtle low-contrast texture only (profile photo overlaps here) — no text, logos, faces, or strong focal objects.',
+      'CENTER → RIGHT: stronger detail; place headline around center-right, not far left.',
+      'All critical content stays in the vertical CENTER band (top/bottom may be cropped from source).',
+      'Side margins ≥10% for any text.',
+    ],
   },
   {
     id: 'linkedin_post',
@@ -54,7 +82,14 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Landscape ~1.91:1. Center hero + text; keep all copy inside ≥10% margins — no edge text.',
+      '1200×627 (~1.91:1) feed post. Full-bleed; large readable headline centered with ≥10% margins.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'LinkedIn FEED POST (~1.91:1 landscape).',
+      'Single continuous scene filling the frame — professional, clean, high contrast.',
+      'Headline large and centered (or slight left of center); ≥10% margin from all edges.',
+      'Avoid tiny text; design must read clearly in the LinkedIn feed thumbnail.',
+    ],
   },
   {
     id: 'instagram_post',
@@ -65,7 +100,13 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1024',
     openaiSizeDalle: '1024x1024',
     safeZone:
-      '1:1 square. Bold centered composition; keep text fully inside with ≥8% margin from all edges.',
+      '1080×1080 (1:1) feed post. Bold centered composition; text fully inside ≥8% margins.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Instagram FEED POST (1:1 square).',
+      'Bold centered composition that fills the square edge-to-edge.',
+      'Text fully on-canvas with ≥8% margin from all edges; strong mobile readability.',
+    ],
   },
   {
     id: 'instagram_story',
@@ -76,7 +117,15 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1536',
     openaiSizeDalle: '1024x1792',
     safeZone:
-      '9:16 story. Keep text/CTAs in the vertical middle third — avoid top ~250px and bottom ~250px (UI chrome).',
+      '1080×1920 (9:16) story. Full-bleed vertical; keep text/CTAs in middle third — avoid top/bottom ~250px UI chrome.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Instagram STORY (9:16 tall).',
+      'Continuous vertical full-bleed design — no empty solid bars at top or bottom.',
+      'Keep headlines and CTAs in the MIDDLE vertical third.',
+      'Avoid top ~250px and bottom ~250px (system UI / reply chrome).',
+      'Left/right margins ≥8% for all text.',
+    ],
   },
   {
     id: 'instagram_landscape',
@@ -87,7 +136,13 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Wide ~1.91:1 feed image. Center focal subject and text; ≥10% edge margins.',
+      '1080×566 (~1.91:1) landscape feed. Full-bleed; center subject + text with ≥10% margins.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Instagram LANDSCAPE feed (~1.91:1).',
+      'Wide continuous scene; center focal subject and typography.',
+      'Text ≥10% from edges; no empty side or top/bottom bars.',
+    ],
   },
   {
     id: 'facebook_post',
@@ -98,7 +153,13 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Link-preview ~1.91:1. Large centered text fully inside ≥10% margins; high contrast.',
+      '1200×630 (~1.91:1) link/post preview. Full-bleed; large centered high-contrast text with ≥10% margins.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Facebook POST / link preview (~1.91:1).',
+      'Designed to stay clear when shrunk in News Feed.',
+      'Large centered headline, high contrast; ≥10% margins; no cluttered tiny type.',
+    ],
   },
   {
     id: 'facebook_cover',
@@ -109,7 +170,15 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Ultra-wide cover. Keep all text in the center band with ≥12% margins; avoid far left/right edges.',
+      '820×312 (~2.63:1) page/profile cover. Full-bleed across width; text in center band; keep lower-left quieter for profile UI.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'Facebook COVER photo (~2.63:1 panoramic).',
+      'Texture and design must span FULL WIDTH — no empty side panels.',
+      'Keep primary text in the horizontal CENTER band with ≥12% side margins.',
+      'Lower-LEFT should stay quieter (profile picture / UI overlap on some layouts).',
+      'Critical content in vertical center (source will be cover-cropped to this strip).',
+    ],
   },
   {
     id: 'x_post',
@@ -120,7 +189,13 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      '16:9 post. Strong center focus; all text fully visible with ≥10% margins.',
+      '1600×900 (16:9) timeline image. Full-bleed; strong center focus; text ≥10% from edges.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'X / Twitter POST image (16:9).',
+      'Cinematic landscape fill; strong center focus.',
+      'Headline fully visible with ≥10% margins; readable in timeline.',
+    ],
   },
   {
     id: 'x_header',
@@ -131,7 +206,15 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      'Wide 3:1 header. Keep text in the upper/center safe band; leave lower-center clear for avatar overlap.',
+      '1500×500 (3:1) profile header. Full-bleed; text upper/center; leave lower-center clear for avatar overlap.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'X / Twitter PROFILE HEADER (3:1 panoramic).',
+      'Continuous design across FULL WIDTH — no empty side bars.',
+      'Place text in the UPPER / CENTER safe band.',
+      'Leave LOWER-CENTER relatively clear for circular avatar overlap on the profile page.',
+      'Keep left/right extremes free of critical text; ≥10% side margins.',
+    ],
   },
   {
     id: 'youtube_thumbnail',
@@ -142,7 +225,14 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone:
-      '16:9 thumbnail. Large high-contrast title fully on-canvas with ≥10% margins; bold readable type.',
+      '1280×720 (16:9) thumbnail. Full-bleed; huge high-contrast title; ≥10% margins; readable at small size.',
+    composeRules: [
+      ...FULL_BLEED_COMMON,
+      'YouTube THUMBNAIL (16:9).',
+      'Bold, high-contrast, clickable composition that fills the frame.',
+      'Title text LARGE and fully on-canvas (≥10% margins); must stay legible at small thumbnail size.',
+      'Avoid tiny details that disappear when scaled down; no empty bars.',
+    ],
   },
 ]);
 
@@ -166,9 +256,12 @@ function resolveFormat(formatId) {
   return FORMAT_BY_ID[formatId] || null;
 }
 
-function openaiSizeForFormat(format) {
+function openaiSizeForFormat(format, openaiModel) {
   if (!format) {
-    return '1024x1024';
+    return String(openaiModel || '').startsWith('dall-e') ? '1024x1024' : '1024x1024';
+  }
+  if (String(openaiModel || '').startsWith('dall-e')) {
+    return format.openaiSizeDalle;
   }
   return format.openaiSizeGpt;
 }

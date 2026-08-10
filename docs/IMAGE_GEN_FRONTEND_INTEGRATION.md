@@ -57,9 +57,10 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 
 1. Mode `social`, required `formatId` (e.g. `instagram_post`, `linkedin_banner`).
 2. Optional `headline` / `subheadline` / `brandPalette`.
-3. Generate (server fits to exact platform pixels; when OpenAI aspect differs a lot from the target, uses contain + pad so text is not chopped).
+3. Generate (server **cover-crops** to exact platform pixels for full-bleed — no letterbox side panels).
 4. Prefer sending `headline` / `subheadline` for readable on-canvas copy; keep copy short.
-5. Download JPG/PNG for upload to the network.
+5. For banners/covers, remind users the design is panoramic full-bleed; empty side bars mean regenerate.
+6. Download JPG/PNG for upload to the network.
 
 ### D — Iterate
 

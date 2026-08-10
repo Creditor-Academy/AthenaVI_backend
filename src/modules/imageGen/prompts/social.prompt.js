@@ -19,9 +19,30 @@ function gcd(a, b) {
   return x || 1;
 }
 
+function isBannerOrCover(format) {
+  const id = format?.id || '';
+  return /banner|cover|header/i.test(id);
+}
+
 /**
- * Build a social creative prompt with format-aware composition + typography rules.
- * Emphasizes safe zones so post-resize does not clip or misalign text.
+ * Per-format composition block from catalog composeRules (fallback to safeZone).
+ */
+function formatCompositionBlock(format) {
+  if (!format) return null;
+  const rules = Array.isArray(format.composeRules) ? format.composeRules.filter(Boolean) : [];
+  if (rules.length) {
+    return [`Composition rules for ${format.name} (${format.width}×${format.height}):`, ...rules.map((r) => `- ${r}`)].join(
+      '\n'
+    );
+  }
+  if (format.safeZone) {
+    return `Platform safe zone: ${format.safeZone}`;
+  }
+  return null;
+}
+
+/**
+ * Build a social creative prompt with per-format composition + typography rules.
  */
 function buildSocialPrompt({
   prompt,
@@ -33,19 +54,25 @@ function buildSocialPrompt({
 } = {}) {
   const parts = [];
   const ratio = aspectLabel(format);
+  const bannerLike = isBannerOrCover(format);
 
   if (format) {
     parts.push(
       [
         `Create a polished ${format.name} social media graphic.`,
         `Final canvas: exactly ${format.width}x${format.height} pixels${ratio ? ` (${ratio} aspect ratio)` : ''}.`,
-        'Compose the FULL design for this exact aspect ratio as if designing on the final canvas.',
-        'Do not design for a different aspect and hope it crops later.',
+        'Compose as one continuous full-bleed artwork for this exact size.',
       ].join(' ')
     );
 
-    if (format.safeZone) {
-      parts.push(`Safe zone / platform UI: ${format.safeZone}`);
+    const composition = formatCompositionBlock(format);
+    if (composition) {
+      parts.push(composition);
+    }
+
+    // Keep a short safeZone reminder for FE-aligned copy (composeRules already include detail)
+    if (format.safeZone && Array.isArray(format.composeRules) && format.composeRules.length) {
+      parts.push(`Safe zone summary: ${format.safeZone}`);
     }
   }
 
@@ -53,27 +80,29 @@ function buildSocialPrompt({
     [
       'Typography rules (critical):',
       '- All headline and body text must be fully visible, sharp, and perfectly aligned (no tilted/warped letters).',
-      '- Keep ALL text inside a centered safe area with at least 10% margin from every edge.',
-      '- Never place text, logos, or CTAs near edges, corners, or where platform UI may overlap.',
-      '- No cropped, cut-off, overflowing, overlapping, or unreadable text.',
-      '- Prefer short headlines; large high-contrast letters with clear spacing.',
-      '- Text must sit on a clean area (solid or soft gradient) so it stays legible.',
+      '- Keep text inside the format safe zone — never cut off by edges or platform UI.',
+      '- No cropped, overflowing, overlapping, or unreadable text.',
+      '- Prefer short headlines; large high-contrast modern type with clear spacing.',
+      '- Text may use a soft local contrast treatment (subtle scrim/glow) — NOT a large separate solid panel or side bars.',
     ].join('\n')
   );
 
   if (headline) {
-    parts.push(
-      `Primary headline (exact wording, fully on-canvas, centered or left-aligned consistently): "${String(headline).trim()}".`
-    );
+    const placement = bannerLike
+      ? 'Place around center-right (not extreme left); fully on-canvas'
+      : 'Fully on-canvas within safe margins';
+    parts.push(`Primary headline (${placement}): "${String(headline).trim()}".`);
   }
   if (subheadline) {
     parts.push(
-      `Supporting subheadline (exact wording, fully on-canvas, aligned under the headline): "${String(subheadline).trim()}".`
+      `Supporting subheadline (exact wording, fully on-canvas under the headline): "${String(subheadline).trim()}".`
     );
   }
 
   if (Array.isArray(brandPalette) && brandPalette.length) {
-    parts.push(`Brand colors: ${brandPalette.join(', ')}. Use them consistently for accents and text contrast.`);
+    parts.push(
+      `Brand colors: ${brandPalette.join(', ')}. Use as accents and lighting — never as empty solid filler panels.`
+    );
   }
 
   if (prompt) {
@@ -86,7 +115,9 @@ function buildSocialPrompt({
   }
 
   parts.push(
-    'High-quality marketing creative, professional layout, balanced composition, production-ready for social upload.'
+    bannerLike
+      ? 'Premium panoramic social banner/cover: full-bleed, edge-to-edge, no blank panels, production-ready.'
+      : 'High-quality marketing creative, full-bleed, professional layout, production-ready for social upload.'
   );
 
   return parts.filter(Boolean).join('\n\n');
@@ -95,4 +126,6 @@ function buildSocialPrompt({
 module.exports = {
   buildSocialPrompt,
   aspectLabel,
+  formatCompositionBlock,
+  isBannerOrCover,
 };

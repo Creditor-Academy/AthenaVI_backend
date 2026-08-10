@@ -164,7 +164,7 @@ async function runPipeline({
     infographic,
   });
 
-  const openaiSize = openaiSizeForFormat(format);
+  const openaiSize = openaiSizeForFormat(format, model.openaiModel);
   const generated = await generateImage({
     prompt: finalPrompt,
     model: model.openaiModel,
@@ -345,7 +345,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
   const sourceBuffer = await getObjectBuffer(parent.s3Key);
-  const openaiSize = openaiSizeForFormat(format);
+  const openaiSize = openaiSizeForFormat(format, 'gpt-image-1');
   const edited = await editImage({
     imageBuffer: sourceBuffer,
     instruction: String(instruction).trim(),
