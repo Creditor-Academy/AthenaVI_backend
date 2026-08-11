@@ -23,6 +23,35 @@ router.post(
   brandKitController.createBrandKit
 );
 
+router.post(
+  '/suggest/colors',
+  requireWorkspaceRole(ownerOrAdmin),
+  uploadAssetS3.single('file'),
+  validate(brandKitValidations.suggestColorsSchema),
+  brandKitController.suggestColors
+);
+
+router.post(
+  '/suggest/fonts',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.suggestFontsSchema),
+  brandKitController.suggestFonts
+);
+
+router.post(
+  '/suggest/voice',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.suggestVoiceSchema),
+  brandKitController.suggestVoice
+);
+
+router.post(
+  '/suggest/image-style',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.suggestImageStyleSchema),
+  brandKitController.suggestImageStyle
+);
+
 router.get(
   '/:brandKitId',
   requireWorkspaceRole(anyMember),
@@ -49,6 +78,34 @@ router.post(
   requireWorkspaceRole(ownerOrAdmin),
   validate(brandKitValidations.brandKitByIdSchema),
   brandKitController.setDefaultBrandKit
+);
+
+router.get(
+  '/:brandKitId/health',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.brandKitByIdSchema),
+  brandKitController.getBrandKitHealth
+);
+
+router.post(
+  '/:brandKitId/suggest/logo-variants',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.suggestLogoVariantsSchema),
+  brandKitController.suggestLogoVariants
+);
+
+router.post(
+  '/:brandKitId/guidelines/generate',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.generateGuidelineSchema),
+  brandKitController.generateGuideline
+);
+
+router.get(
+  '/:brandKitId/guidelines',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.brandKitByIdSchema),
+  brandKitController.getGuideline
 );
 
 router.post(

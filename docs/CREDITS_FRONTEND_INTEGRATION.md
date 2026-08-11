@@ -103,8 +103,16 @@ flowchart TB
 | Voice clone | `voice_clone` | `POST /api/heygen/voices/clone` | Personal |
 | Voice design | `voice_design` | `POST /api/heygen/voices` | Personal |
 | Speech preview | `voice_preview` | `POST /api/heygen/voices/preview-speech` | Personal |
+| Brand kit color suggest | `brand_kit_suggest_colors` | `POST .../brand-kits/suggest/colors` | Workspace-scoped* |
+| Brand kit font suggest | `brand_kit_suggest_fonts` | `POST .../brand-kits/suggest/fonts` | Workspace-scoped* |
+| Brand kit voice suggest | `brand_kit_suggest_voice` | `POST .../brand-kits/suggest/voice` | Workspace-scoped* |
+| Brand kit image style suggest | `brand_kit_suggest_image_style` | `POST .../brand-kits/suggest/image-style` | Workspace-scoped* |
+| Brand kit logo variants (apply) | `brand_kit_logo_variants` | `POST .../brand-kits/:id/suggest/logo-variants` with `applyRoles` | Workspace-scoped* |
+| Brand guideline deck | `brand_kit_guideline_generate` | `POST .../brand-kits/:id/guidelines/generate` | Workspace-scoped* |
 
 \*Workspace-scoped = personal pool if `PRIVATE`, workspace pool if `TEAM`.
+
+**Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge.
 
 ### Free (no credit charge)
 
@@ -185,6 +193,21 @@ These are **illustrative** — call estimate APIs with `avatarType` for live num
 | Remotion export | `durationInFrames / fps` from final stitched output |
 | Voice preview | Estimated from preview `text` length |
 
+### Brand Kit (flat AC)
+
+Flat workspace-scoped charges from `src/shared/config/brandKitCreditPricing.js`. **Do not hard-code** — read defaults from server config or show fixed labels until an estimate API is added.
+
+| `feature` key | Default AC | Charged when |
+|---------------|------------|--------------|
+| `brand_kit_suggest_colors` | 2 | Valid palette returned |
+| `brand_kit_suggest_fonts` | 1 | Valid fonts returned |
+| `brand_kit_suggest_voice` | 1 | Valid voice returned |
+| `brand_kit_suggest_image_style` | 1 | Valid image brief returned |
+| `brand_kit_logo_variants` | 2 | Only when `applyRoles` commits variants |
+| `brand_kit_guideline_generate` | 3 | Guideline deck created or regenerated |
+
+Env overrides: `BRAND_KIT_*_AC` (see [`ENVIRONMENT.md`](api/ENVIRONMENT.md)). Full API: [`BRAND_KIT_API.md`](api/BRAND_KIT_API.md).
+
 ---
 
 ## 5. When credits are charged
@@ -226,8 +249,9 @@ sequenceDiagram
 | Scene HeyGen video | Yes — at `POST .../heygen/videos` | When MP4 is uploaded to S3 (`billingStatus: charged`) |
 | Remotion export | Yes — at `POST .../renders` | When render `status: completed` |
 | Voice clone / design / avatar / preview | Yes — before HeyGen call | Immediately after HeyGen succeeds |
+| Brand Kit suggest / guideline | Yes — `assertAfford` before AI/sharp work | After successful response (logo variants only when variants applied) |
 
-**Failed jobs are not charged.** HeyGen video failure sets `billingStatus: failed`. Remotion failure sets `billingStatus: failed`.
+**Failed jobs are not charged.** HeyGen video failure sets `billingStatus: failed`. Remotion failure sets `billingStatus: failed`. Brand Kit suggest calls that fail validation or AI errors are not charged.
 
 **Edge case:** Pre-check uses an **estimate**. Final charge uses **actual** duration when available (may differ slightly from estimate). Always refresh balance after completion.
 
@@ -271,6 +295,14 @@ Each export creates a new `renderId` → new charge on success. `forceRebuild: t
 | Voice design | `heygen-voice-design:{userId}:{voiceId}` |
 | Voice clone | `heygen-voice-clone:{voiceId}` |
 | Voice preview | `heygen-voice-preview:{userId}:{voiceId}:{timestamp}` (each preview is unique) |
+
+### Brand Kit (flat features)
+
+| Action | Idempotency key pattern | Notes |
+|--------|-------------------------|-------|
+| Suggest colors/fonts/voice/image-style | `brandKit:{action}:{workspaceId}:{payloadHash}` | Same body → same hash → no double charge on retry |
+| Logo variants (apply) | `brandKit:logo_variants:{workspaceId}:{rolesHash}` | Preview without `applyRoles` is free |
+| Guideline generate | `brandKit:guideline:{workspaceId}:{brandKitId}:{timestamp}` | Each regenerate is a new charge |
 
 ---
 
@@ -579,7 +611,7 @@ Display:
 - `amount` — positive = credit in, negative = usage out
 - `type` — see table in §7.6
 - `createdAt`
-- `metadata.feature` when present (e.g. `heygen_video`, `remotion_export`, `ppt_*`, `image_gen_*`)
+- `metadata.feature` when present (e.g. `heygen_video`, `remotion_export`, `ppt_*`, `image_gen_*`, `brand_kit_*`)
 - Prefer **`usageDetail.label`** / **`usageDetail.displayName`** when present (server maps features to readable names, including presentation and image-gen)
 
 ---
@@ -639,6 +671,9 @@ Billable routes that may return **402**:
 - `POST /api/heygen/voices/clone`
 - `POST /api/heygen/voices/preview-speech`
 - `POST /api/credits/:id/allocate` / `deallocate`
+- `POST .../brand-kits/suggest/colors|fonts|voice|image-style`
+- `POST .../brand-kits/:brandKitId/suggest/logo-variants` (when applying with `applyRoles`)
+- `POST .../brand-kits/:brandKitId/guidelines/generate`
 
 ---
 
@@ -710,6 +745,13 @@ Billable routes that may return **402**:
 
 - [ ] Global or per-route **402** handler with balance refresh
 - [ ] No client-side price math for billing
+
+### Brand Kit (Virtual Studio)
+
+- [ ] Show flat AC cost before suggest / guideline actions (from config or product copy)
+- [ ] Handle **402** on all Brand Kit billable POSTs
+- [ ] Logo variant preview (no `applyRoles`) — no credit check required
+- [ ] Refresh balance after suggest / guideline success
 
 ### Admin (if building portal)
 

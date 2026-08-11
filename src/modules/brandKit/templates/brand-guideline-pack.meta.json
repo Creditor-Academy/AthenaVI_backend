@@ -1,0 +1,14 @@
+{
+  "pack_id": "brand_guideline_v1",
+  "purpose": "brand_guideline",
+  "aspectRatio": "16:9",
+  "slideScenes": [
+    { "order": 1, "sceneId": "cover", "contentType": "title", "layoutId": "brand_guideline_cover" },
+    { "order": 2, "sceneId": "colors", "contentType": "section_divider", "layoutId": "brand_guideline_colors" },
+    { "order": 3, "sceneId": "logos", "contentType": "grid", "layoutId": "brand_guideline_logos" },
+    { "order": 4, "sceneId": "typography", "contentType": "bullet_list", "layoutId": "brand_guideline_typography" },
+    { "order": 5, "sceneId": "imagery", "contentType": "image+text", "layoutId": "brand_guideline_imagery" },
+    { "order": 6, "sceneId": "governance", "contentType": "closing", "layoutId": "brand_guideline_governance" }
+  ],
+  "note": "Slides are built deterministically by brandKit.guideline.service.js at generate time; this file documents the fixed scene structure."
+}

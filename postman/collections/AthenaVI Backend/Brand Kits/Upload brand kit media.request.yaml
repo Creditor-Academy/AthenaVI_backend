@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/media"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{brandKitLogoFile}}"
+    - key: kind
+      value: logo
+    - key: role
+      value: primary
+    - key: name
+      value: Primary logo
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.media && j.data.media.id;
+        if (id) pm.collectionVariables.set("brandKitMediaId", id);
+      }
+    language: text/javascript
+order: 1050

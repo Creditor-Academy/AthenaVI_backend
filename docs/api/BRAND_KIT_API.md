@@ -1,6 +1,6 @@
 # Brand Kit API
 
-Canva-style **workspace Brand Kits**: named colors, fonts, multi-role logos, brand photos/graphics, voice, and chart colors. Kits are scoped to a single workspace.
+Canva-style **workspace Brand Kits**: named colors, fonts, multi-role logos, brand photos/graphics, voice, chart colors, AI suggestions, and brand guideline decks. Kits are scoped to a single workspace.
 
 Base path: **`/api/workspaces/:workspaceId/brand-kits`**
 
@@ -9,6 +9,7 @@ Base path: **`/api/workspaces/:workspaceId/brand-kits`**
 | **Auth** | `Authorization: Bearer <access_token>` |
 | **Read** | Workspace **OWNER**, **ADMIN**, or **MEMBER** |
 | **Write** | Workspace **OWNER** or **ADMIN** |
+| **AI suggest / guideline generate** | OWNER/ADMIN (credits charged) |
 
 Envelope: [OVERVIEW.md](OVERVIEW.md).
 
@@ -18,21 +19,33 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 
 ```json
 {
+  "meta": {
+    "tagline": "Empowering Executive Decks",
+    "industry": null,
+    "guidelineProjectId": "clxx…"
+  },
   "colors": [
-    { "id": "c1", "name": "Navy", "hex": "#0B1220" },
-    { "id": "c2", "name": "Blue", "hex": "#3B82F6" },
-    { "id": "c3", "name": "White", "hex": "#F8FAFC" }
+    { "id": "c1", "name": "Primary (Light)", "hex": "#D51C0B" },
+    { "id": "c2", "name": "Background (Light)", "hex": "#F7F3F3" },
+    { "id": "c3", "name": "Text (Light)", "hex": "#1B1110" },
+    { "id": "c4", "name": "Background (Dark)", "hex": "#1B1110" },
+    { "id": "c5", "name": "Primary (Dark)", "hex": "#FB6456" },
+    { "id": "c6", "name": "Text (Dark)", "hex": "#F7F3F3" }
   ],
   "colorRoles": {
-    "bg": "c1",
+    "bg": "c2",
     "text": "c3",
-    "primary": "c2",
-    "secondary": "c2",
-    "muted": "c3"
+    "primary": "c1",
+    "secondary": "c1",
+    "muted": "c3",
+    "bgDark": "c4",
+    "textDark": "c6",
+    "primaryDark": "c5"
   },
   "fonts": {
-    "heading": { "fontPairingId": "inter_space", "family": "Inter" },
-    "body": { "fontPairingId": "inter_space", "family": "Inter" }
+    "heading": { "fontPairingId": "outfit_source", "family": "Outfit", "weight": 700, "sizePx": 40, "lineHeight": 1.2 },
+    "subheading": { "fontPairingId": "outfit_source", "family": "Space Grotesk", "weight": 600, "sizePx": 20, "lineHeight": 1.4 },
+    "body": { "fontPairingId": "outfit_source", "family": "Inter", "weight": 400, "sizePx": 14, "lineHeight": 1.6 }
   },
   "voice": {
     "tone": "Professional, confident",
@@ -41,16 +54,23 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
     "donts": ["No slang"],
     "vocabulary": ["Athena VI"]
   },
-  "chartStyles": { "colorIds": ["c2", "c3"] },
-  "imageStyle": "clean product photography, brand-safe"
+  "usage": {
+    "logoClearSpace": "1.5x cap height",
+    "logoMinSizePx": 24,
+    "doNot": ["Recolor logo", "Stretch lockup"]
+  },
+  "chartStyles": { "colorIds": ["c1", "c5"] },
+  "imageStyle": "clean product photography, studio lighting, brand-safe"
 }
 ```
 
-`colorRoles.bg` / `text` / `primary` are required and must reference color ids. Palette is contrast-checked (WCAG AA) when creating/updating.
+`colorRoles.bg` / `text` / `primary` are required and must reference color ids. Light and dark pairs are contrast-checked (WCAG AA) when creating/updating or when applying AI color suggestions.
+
+When mapped to presentations, kits produce `themeTokens` with `palette`, optional `paletteDark`, font weights/sizes, and `brand.chartColors`.
 
 ---
 
-## Routes
+## CRUD routes
 
 | Method | Path | Role | Purpose |
 |--------|------|------|---------|
@@ -58,12 +78,23 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 | `POST` | `/` | OWNER/ADMIN | Create kit `{ name, data, isDefault? }` |
 | `GET` | `/:brandKitId` | member | Full kit + media (presigned URLs) |
 | `PATCH` | `/:brandKitId` | OWNER/ADMIN | Update name / data / isDefault |
-| `DELETE` | `/:brandKitId` | OWNER/ADMIN | Delete kit + S3 media (decks keep snapshotted themeTokens) |
+| `DELETE` | `/:brandKitId` | OWNER/ADMIN | Delete kit + S3 media |
 | `POST` | `/:brandKitId/set-default` | OWNER/ADMIN | Set as workspace default |
+| `GET` | `/:brandKitId/health` | member | Completeness score (Overview gauge) |
+
+### Default kit resolution
+
+If `brandKitId` is omitted on presentation **create** or **generate**, the workspace kit with `isDefault: true` is applied when present.
+
+---
+
+## Media
+
+| Method | Path | Role | Purpose |
+|--------|------|------|---------|
 | `POST` | `/:brandKitId/media` | OWNER/ADMIN | Multipart upload |
 | `DELETE` | `/:brandKitId/media/:mediaId` | OWNER/ADMIN | Remove media |
-
-### Media upload
+| `GET` | `/:brandKitId/media/:mediaId/stream` | member | Stream media bytes |
 
 `POST .../media` — `multipart/form-data`:
 
@@ -71,8 +102,57 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 |-------|----------|--------|
 | `file` | yes | jpeg / png / webp / svg, max 50MB |
 | `kind` | yes | `logo` \| `photo` \| `graphic` |
-| `role` | logos only | `primary` \| `secondary` \| `icon` \| `light` \| `dark` |
+| `role` | logos only | `primary`, `secondary`, `icon`, `light`, `dark`, `with-name-below`, `with-name-adjacent`, `black`, `white`, … |
 | `name` | no | Display label |
+
+Re-uploading a logo with the same `role` replaces the previous asset (no duplicate role rows).
+
+---
+
+## AI suggestion routes (credits)
+
+Suggest endpoints return proposals only — client confirms via `PATCH` or `POST .../media`.
+
+| Method | Path | Body / upload | Response |
+|--------|------|---------------|----------|
+| `POST` | `/suggest/colors` | multipart `file` **or** `{ mediaId, brandKitId?, tone?, tagline? }` | `{ colors, colorRoles, rationale }` |
+| `POST` | `/suggest/fonts` | `{ tone?, primaryHex?, brandKitId? }` | `{ fonts, rationale }` |
+| `POST` | `/suggest/voice` | `{ name, tagline?, tone?, brandKitId? }` | `{ voice, rationale }` |
+| `POST` | `/suggest/image-style` | `{ tone?, colors?, colorRoles?, brandKitId? }` | `{ imageStyle, chartStyles, rationale }` |
+| `POST` | `/:brandKitId/suggest/logo-variants` | `{ applyRoles?: string[] }` | `{ generated, missingRoles, variants[] }` |
+
+**Logo variants:** deterministic transforms (light/dark/black/white/lockups) from the primary mark. Omit `applyRoles` for **free preview** (base64 URLs, no S3 upload, no credit charge). Pass `applyRoles` to commit selected roles to the kit in one call (charged only when variants are applied).
+
+Credit feature keys and default AC: see [CREDITS_API.md — Brand Kit AI](CREDITS_API.md#brand-kit-ai-flat-ac). Frontend integration: [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md).
+
+---
+
+## Brand guideline deck
+
+| Method | Path | Role | Purpose |
+|--------|------|------|---------|
+| `POST` | `/:brandKitId/guidelines/generate` | OWNER/ADMIN | Create 6-slide guideline presentation |
+| `GET` | `/:brandKitId/guidelines` | member | Linked presentation id + status |
+
+**Generate body:** `{ "folderId": "<uuid>" }` (required).
+
+Creates a normal workspace **Presentation** with fixed scenes: Cover → Colors → Logos → Typography → Imagery → Governance. Stores `data.meta.guidelineProjectId` on the kit.
+
+**Regenerate:** if `guidelineProjectId` already points to an existing presentation in the workspace, slides are replaced in place (same project/deck id). Otherwise a new presentation is created.
+
+**Download:** use existing presentation export:
+
+`POST /api/workspaces/:workspaceId/presentations/:presentationId/export` `{ "format": "pdf" | "pptx" }`
+
+Scene structure reference: `src/modules/brandKit/templates/brand-guideline-pack.meta.json`.
+
+---
+
+## Health response
+
+`GET .../:brandKitId/health` → `{ health: { score, label, checks[], missing[], guidelineProjectId } }`
+
+Deterministic completeness (no LLM). Labels: `Excellent Consistency` (≥90), `Good Consistency` (≥75), etc.
 
 ---
 
@@ -80,13 +160,13 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 
 | Action | API |
 |--------|-----|
-| Create with kit | `POST .../presentations` + `brandKitId` (any `createMode`) |
-| Create from deck pack + kit | `createMode: "pack"`, `packId`, `brandKitId` |
+| Create with kit | `POST .../presentations` + `brandKitId` (optional if default kit exists) |
+| Create from deck pack + kit | `createMode: "pack"`, `packId`, `brandKitId?` |
 | Apply to existing deck | `POST .../presentations/:id/apply-brand-kit` `{ "brandKitId" }` |
-| AI generate | `generationFlow.selections.brandKitId` (and optional `packId`) |
+| AI generate | `generationFlow.selections.brandKitId` |
 
-**Precedence:** Brand Kit theme/voice/logos/photos → pack theme → wizard `colorTheme` → catalog default.
+**Precedence:** Brand Kit → pack theme → wizard `colorTheme` → catalog default.
 
-Resolved kit becomes `deck.themeTokens` (includes `brand.logos`, `brand.photos`, `brand.voice`, `brand.chartColors`). Export resolves symbolic colors from `themeTokens.palette`.
+Resolved kit becomes `deck.themeTokens` (`brand.logos`, `brand.photos`, `brand.voice`, `brand.chartColors`, `paletteDark`). Chart export falls back to `brand.chartColors` when slide content has no colors.
 
-See also: [PRESENTATION_API.md](PRESENTATION_API.md), [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md).
+See also: [PRESENTATION_API.md](PRESENTATION_API.md), [FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md](../FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md).

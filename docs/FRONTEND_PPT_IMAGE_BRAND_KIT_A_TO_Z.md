@@ -201,6 +201,28 @@ Canva-style **workspace Brand Kits**. Scoped to one workspace. Used by presentat
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/set-default` | OWNER/ADMIN | Mark as workspace default (clears other defaults) |
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | OWNER/ADMIN | Multipart upload |
 | `DELETE` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId` | OWNER/ADMIN | Remove one media item |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId/stream` | member | Stream media |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/health` | member | Completeness score |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/colors` | OWNER/ADMIN | AI palette (credits) |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/fonts` | OWNER/ADMIN | AI fonts (credits) |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` | OWNER/ADMIN | AI voice (credits) |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` | OWNER/ADMIN | AI image brief (credits) |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` | OWNER/ADMIN | Logo variants (credits when applying) |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | OWNER/ADMIN | 6-slide guideline deck (regenerates in place if linked) |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | member | Guideline link |
+
+### Brand Kit credits
+
+Flat workspace-scoped AC per action (defaults: colors **2**, fonts/voice/image-style **1**, logo variants **2**, guideline **3**). See [`CREDITS_FRONTEND_INTEGRATION.md`](CREDITS_FRONTEND_INTEGRATION.md) and [`CREDITS_API.md`](api/CREDITS_API.md#brand-kit-ai-flat-ac).
+
+| UX | Billing |
+|----|---------|
+| Logo variant preview (no `applyRoles`) | **Free** — base64 previews only |
+| Logo variant apply (`applyRoles: [...]`) | Charged when variants are committed |
+| Guideline generate | Charged each run; **reuses** existing linked presentation when `guidelineProjectId` is valid |
+| Suggest colors/fonts/voice/image-style | Charged after successful AI response; failed validation = no charge |
+
+Handle **402** before billable Brand Kit POSTs; refresh balance after success.
 
 ### Create body
 
@@ -1292,7 +1314,11 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 ### Brand Kit
 - [ ] Full CRUD + media + default  
 - [ ] MEMBER read-only UX  
-- [ ] Wire into PPT create / apply / generate  
+- [ ] AI suggest: colors, fonts, voice, image-style, logo variants (preview free; apply charged)
+- [ ] Show flat AC cost + handle 402 on billable Brand Kit actions  
+- [ ] Health score on Overview tab  
+- [ ] Generate guideline deck + export PDF/PPTX  
+- [ ] Wire into PPT create / apply / generate (default kit when omitted)  
 
 ### Presentations
 - [ ] Four create modes: blank, AI, template, pack  
@@ -1328,6 +1354,15 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/set-default` |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` |
 | DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId` |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId/stream` |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/health` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/colors` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/fonts` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` |
 
 ## Presentations (core)
 

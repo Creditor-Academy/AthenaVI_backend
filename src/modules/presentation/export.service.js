@@ -166,7 +166,7 @@ function mapChartTypeForPptx(chartType) {
   return 'bar';
 }
 
-async function addElementsToPptxSlide(s, slide, palette, textColor) {
+async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors = []) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
   const canvasH = doc.canvas?.height || CANVAS_HEIGHT;
@@ -307,8 +307,11 @@ async function addElementsToPptxSlide(s, slide, palette, textColor) {
               values: ser.values || [],
             })),
           };
-          if (Array.isArray(content.colors) && content.colors.length) {
-            chartOpts.chartColors = content.colors.map((c) =>
+          const chartColorSource =
+            (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
+            (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : null);
+          if (chartColorSource?.length) {
+            chartOpts.chartColors = chartColorSource.map((c) =>
               String(c || '')
                 .replace(/^#/, '')
                 .toUpperCase()
@@ -490,6 +493,7 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
   pptx.layout = layoutName;
 
   const palette = deck.themeTokens?.palette || {};
+  const brandChartColors = deck.themeTokens?.brand?.chartColors || [];
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (slideId) slides = slides.filter((s) => s.id === slideId);
   const bgColor = String(palette.bg || 'FFFFFF').replace(/^#/, '');
@@ -504,7 +508,7 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
       background: { color: String(slideBg).replace(/^#/, '') },
     });
     if (slideHasElements(slide)) {
-      await addElementsToPptxSlide(s, slide, palette, textColor);
+      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors);
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
     }

@@ -153,7 +153,11 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
       : null;
 
   const packId = flowCtx.packId || metricsPack?.packId || null;
-  const brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
+  let brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
+  if (!brandKitId) {
+    brandKitId = await brandKitService.resolveBrandKitId(workspaceId, null);
+    if (brandKitId) flowCtx.brandKitId = brandKitId;
+  }
 
   let pack = null;
   let layoutIdWhitelist = null;

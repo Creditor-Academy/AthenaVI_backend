@@ -2,6 +2,12 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const brandKitService = require('./brandKit.service');
+const brandKitSuggestService = require('./brandKit.suggest.service');
+const brandKitLogoVariantsService = require('./brandKit.logoVariants.service');
+const brandKitHealthService = require('./brandKit.health.service');
+const brandKitGuidelineService = require('./brandKit.guideline.service');
+const brandKitCredit = require('./brandKitCredit.service');
+const crypto = require('crypto');
 
 const listBrandKits = asyncHandler(async (req, res) => {
   const data = await brandKitService.listBrandKits(req.params.workspaceId);
@@ -82,6 +88,112 @@ const streamMedia = asyncHandler(async (req, res) => {
   });
 });
 
+const getBrandKitHealth = asyncHandler(async (req, res) => {
+  const kit = await brandKitService.getBrandKit(req.params.workspaceId, req.params.brandKitId);
+  const health = brandKitHealthService.computeBrandKitHealth(kit);
+  return successResponse(req, res, { health }, 200, messages.BRAND_KIT_HEALTH_FETCHED);
+});
+
+const suggestColors = asyncHandler(async (req, res) => {
+  const data = await brandKitSuggestService.suggestColors({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    tone: req.body.tone,
+    tagline: req.body.tagline,
+    brandKitId: req.body.brandKitId,
+    mediaId: req.body.mediaId,
+    file: req.file,
+  });
+  return successResponse(req, res, { suggestion: data }, 200, messages.BRAND_KIT_SUGGEST_COLORS);
+});
+
+const suggestFonts = asyncHandler(async (req, res) => {
+  const data = await brandKitSuggestService.suggestFonts({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    tone: req.body.tone,
+    primaryHex: req.body.primaryHex,
+    brandKitId: req.body.brandKitId,
+  });
+  return successResponse(req, res, { suggestion: data }, 200, messages.BRAND_KIT_SUGGEST_FONTS);
+});
+
+const suggestVoice = asyncHandler(async (req, res) => {
+  const data = await brandKitSuggestService.suggestVoice({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    name: req.body.name,
+    tagline: req.body.tagline,
+    tone: req.body.tone,
+    brandKitId: req.body.brandKitId,
+  });
+  return successResponse(req, res, { suggestion: data }, 200, messages.BRAND_KIT_SUGGEST_VOICE);
+});
+
+const suggestImageStyle = asyncHandler(async (req, res) => {
+  const data = await brandKitSuggestService.suggestImageStyle({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    tone: req.body.tone,
+    colors: req.body.colors,
+    colorRoles: req.body.colorRoles,
+    brandKitId: req.body.brandKitId,
+  });
+  return successResponse(req, res, { suggestion: data }, 200, messages.BRAND_KIT_SUGGEST_IMAGE_STYLE);
+});
+
+const suggestLogoVariants = asyncHandler(async (req, res) => {
+  const applyRoles = req.body.applyRoles || [];
+  const feature = brandKitCredit.BRAND_KIT_FEATURE.LOGO_VARIANTS;
+
+  if (applyRoles.length > 0) {
+    const estimatedAc = brandKitCredit.getFlatAc(feature);
+    await brandKitCredit.assertAfford(req.params.workspaceId, req.user.id, estimatedAc);
+  }
+
+  const data = await brandKitLogoVariantsService.suggestLogoVariants({
+    workspaceId: req.params.workspaceId,
+    brandKitId: req.params.brandKitId,
+    applyRoles,
+  });
+
+  if (data.variants.some((v) => v.applied)) {
+    const hash = crypto
+      .createHash('sha256')
+      .update(JSON.stringify({ brandKitId: req.params.brandKitId, roles: req.body.applyRoles }))
+      .digest('hex')
+      .slice(0, 16);
+
+    await brandKitCredit.chargeFlat({
+      workspaceId: req.params.workspaceId,
+      userId: req.user.id,
+      feature,
+      idempotencyKey: `brandKit:logo_variants:${req.params.workspaceId}:${hash}`,
+      metadata: { brandKitId: req.params.brandKitId, action: 'logo_variants' },
+    });
+  }
+
+  return successResponse(req, res, data, 200, messages.BRAND_KIT_LOGO_VARIANTS);
+});
+
+const generateGuideline = asyncHandler(async (req, res) => {
+  const data = await brandKitGuidelineService.generateGuideline({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    brandKitId: req.params.brandKitId,
+    folderId: req.body.folderId,
+  });
+  return successResponse(req, res, { guideline: data }, 201, messages.BRAND_KIT_GUIDELINE_GENERATED);
+});
+
+const getGuideline = asyncHandler(async (req, res) => {
+  const data = await brandKitGuidelineService.getGuidelineInfo(
+    req.params.workspaceId,
+    req.params.brandKitId
+  );
+  return successResponse(req, res, { guideline: data }, 200, messages.BRAND_KIT_GUIDELINE_FETCHED);
+});
+
 module.exports = {
   listBrandKits,
   getBrandKit,
@@ -92,4 +204,12 @@ module.exports = {
   uploadMedia,
   deleteMedia,
   streamMedia,
+  getBrandKitHealth,
+  suggestColors,
+  suggestFonts,
+  suggestVoice,
+  suggestImageStyle,
+  suggestLogoVariants,
+  generateGuideline,
+  getGuideline,
 };

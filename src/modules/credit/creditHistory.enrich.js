@@ -1,6 +1,7 @@
 const prisma = require('../../shared/config/prismaClient');
 const { FEATURE } = require('../../shared/config/creditPricing');
 const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
+const { BRAND_KIT_FEATURE } = require('../../shared/config/brandKitCreditPricing');
 
 const FEATURE_LABELS = Object.freeze({
   [FEATURE.HEYGEN_VIDEO]: 'Scene avatar video',
@@ -22,6 +23,12 @@ const FEATURE_LABELS = Object.freeze({
   [IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE]: 'AI infographic surcharge',
   [IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE]: 'AI social image surcharge',
   [IMAGE_GEN_FEATURE.TWEAK]: 'AI image tweak',
+  [BRAND_KIT_FEATURE.SUGGEST_COLORS]: 'Brand kit color suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_FONTS]: 'Brand kit font suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_VOICE]: 'Brand kit voice suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_IMAGE_STYLE]: 'Brand kit image style suggestion',
+  [BRAND_KIT_FEATURE.LOGO_VARIANTS]: 'Brand kit logo variants',
+  [BRAND_KIT_FEATURE.GUIDELINE_GENERATE]: 'Brand guideline deck',
 });
 
 function truncateText(value, max = 120) {

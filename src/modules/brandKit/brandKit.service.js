@@ -61,6 +61,35 @@ function relativeLuminance(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+function buildPaletteFromRoles(map, roles, prefix = '') {
+  const bgKey = prefix ? `bg${prefix}` : 'bg';
+  const textKey = prefix ? `text${prefix}` : 'text';
+  const primaryKey = prefix ? `primary${prefix}` : 'primary';
+
+  const bgRole = roles[bgKey] || roles.bg;
+  const textRole = roles[textKey] || roles.text;
+  const primaryRole = roles[primaryKey] || roles.primary;
+
+  return {
+    bg: resolveHex(map, bgRole, prefix ? '#1B1110' : '#FFFFFF'),
+    text: resolveHex(map, textRole, prefix ? '#F7F3F3' : '#0F172A'),
+    primary: resolveHex(map, primaryRole, '#2563EB'),
+    secondary: resolveHex(map, roles.secondary || primaryRole, '#0EA5E9'),
+    surface: resolveHex(map, roles.accent || roles.secondary || bgRole, '#F8FAFC'),
+    muted: resolveHex(map, roles.muted || textRole, '#64748B'),
+    accent: resolveHex(map, roles.accent || primaryRole, '#3B82F6'),
+    divider: prefix ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+    cardBg: prefix ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+    gradientStart: resolveHex(map, bgRole, prefix ? '#1B1110' : '#FFFFFF'),
+    gradientEnd: resolveHex(
+      map,
+      roles.accent || roles.secondary || bgRole,
+      prefix ? '#121A2B' : '#F8FAFC'
+    ),
+    shadow: prefix ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.12)',
+  };
+}
+
 function validateBrandKitData(data) {
   if (!data || typeof data !== 'object') {
     throw new AppError('Brand kit data is required', 400);
@@ -72,7 +101,14 @@ function validateBrandKitData(data) {
       throw new AppError(`colorRoles.${key} must reference a color id`, 400);
     }
   }
-  for (const key of ['secondary', 'accent', 'muted']) {
+  for (const key of [
+    'secondary',
+    'accent',
+    'muted',
+    'bgDark',
+    'textDark',
+    'primaryDark',
+  ]) {
     if (roles[key] && !map.has(String(roles[key]))) {
       throw new AppError(`colorRoles.${key} must reference a color id`, 400);
     }
@@ -84,6 +120,29 @@ function validateBrandKitData(data) {
       }
     }
   }
+  const seenColorIds = new Set();
+  for (const c of data.colors || []) {
+    const id = String(c?.id || '');
+    if (!id) continue;
+    if (seenColorIds.has(id)) {
+      throw new AppError(`Duplicate color id: ${id}`, 400);
+    }
+    seenColorIds.add(id);
+  }
+}
+
+function buildTypeScale(fonts = {}) {
+  const heading = fonts.heading || {};
+  const subheading = fonts.subheading || {};
+  const body = fonts.body || {};
+  return {
+    display: heading.sizePx ? Math.round(heading.sizePx * 1.4) : 56,
+    title: heading.sizePx || 44,
+    subtitle: subheading.sizePx || 28,
+    body: body.sizePx || 18,
+    caption: body.sizePx ? Math.round(body.sizePx * 0.85) : 14,
+    stat: heading.sizePx ? Math.round(heading.sizePx * 1.5) : 64,
+  };
 }
 
 /**
@@ -96,22 +155,19 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
   const data = kit.data;
   const map = colorMap(data);
   const roles = data.colorRoles || {};
-  const palette = {
-    bg: resolveHex(map, roles.bg, '#FFFFFF'),
-    text: resolveHex(map, roles.text, '#0F172A'),
-    primary: resolveHex(map, roles.primary, '#2563EB'),
-    secondary: resolveHex(map, roles.secondary || roles.primary, '#0EA5E9'),
-    surface: resolveHex(map, roles.accent || roles.secondary || roles.bg, '#F8FAFC'),
-    muted: resolveHex(map, roles.muted || roles.text, '#64748B'),
-    accent: resolveHex(map, roles.accent || roles.primary, '#3B82F6'),
-    divider: 'rgba(0,0,0,0.1)',
-    cardBg: 'rgba(0,0,0,0.04)',
-    gradientStart: resolveHex(map, roles.bg, '#FFFFFF'),
-    gradientEnd: resolveHex(map, roles.accent || roles.secondary || roles.bg, '#F8FAFC'),
-    shadow: 'rgba(0,0,0,0.12)',
-  };
+  const palette = buildPaletteFromRoles(map, roles);
 
   themeService.assertContrast(palette);
+
+  let paletteDark = null;
+  if (roles.bgDark || roles.textDark || roles.primaryDark) {
+    paletteDark = buildPaletteFromRoles(map, roles, 'Dark');
+    try {
+      themeService.assertContrast(paletteDark);
+    } catch {
+      // dark pair optional — do not block kit save if incomplete
+    }
+  }
 
   const chartColors = (data.chartStyles?.colorIds || [])
     .map((id) => resolveHex(map, id, null))
@@ -122,7 +178,12 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
   const graphics = [];
 
   for (const m of kit.media || []) {
-    const url = includeMediaUrls && m.s3Key ? s3Service.buildPublicUrl(m.s3Key) : null;
+    const url =
+      includeMediaUrls && m.s3Key
+        ? m.url || s3Service.buildPublicUrl(m.s3Key)
+        : includeMediaUrls && m.url
+          ? m.url
+          : null;
     const entry = {
       id: m.id,
       role: m.role || null,
@@ -142,19 +203,25 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
   }
 
   const heading = data.fonts?.heading || {};
+  const subheading = data.fonts?.subheading || {};
   const body = data.fonts?.body || {};
 
-  return {
+  const tokens = {
     palette,
     fontPairingId: heading.fontPairingId || body.fontPairingId || 'inter_space',
     fonts: {
       heading: heading.family || null,
+      subheading: subheading.family || null,
       body: body.family || null,
       tertiary: data.fonts?.tertiary?.family || null,
-      headingWeight: 700,
-      bodyWeight: 400,
+      headingWeight: heading.weight ?? 700,
+      subheadingWeight: subheading.weight ?? 600,
+      bodyWeight: body.weight ?? 400,
+      headingLineHeight: heading.lineHeight ?? 1.2,
+      subheadingLineHeight: subheading.lineHeight ?? 1.4,
+      bodyLineHeight: body.lineHeight ?? 1.6,
     },
-    typeScale: { display: 56, title: 44, subtitle: 28, body: 18, caption: 14, stat: 64 },
+    typeScale: buildTypeScale(data.fonts),
     scaleRatio: 1.333,
     spacingScale: { xs: 4, sm: 8, md: 16, lg: 24 },
     imageStyle: data.imageStyle || 'brand-safe professional photography, no text overlay',
@@ -162,7 +229,9 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
     brand: {
       brandKitId: kit.id,
       name: kit.name,
+      tagline: data.meta?.tagline || null,
       voice: data.voice || null,
+      usage: data.usage || null,
       chartColors,
       logos,
       photos,
@@ -170,15 +239,34 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
       namedColors: data.colors || [],
     },
   };
+
+  if (paletteDark) {
+    tokens.paletteDark = paletteDark;
+  }
+
+  return tokens;
 }
 
 function pickLogoForBackground(themeTokens) {
   const logos = themeTokens?.brand?.logos || {};
   const bg = themeTokens?.palette?.bg || '#FFFFFF';
   const darkBg = relativeLuminance(bg) < 0.45;
-  if (darkBg && logos.light) return logos.light;
-  if (!darkBg && logos.dark) return logos.dark;
-  return logos.primary || logos.secondary || logos.icon || logos.light || logos.dark || null;
+  if (darkBg && (logos.light || logos['light-mode'])) {
+    return logos.light || logos['light-mode'];
+  }
+  if (!darkBg && (logos.dark || logos['dark-mode'])) {
+    return logos.dark || logos['dark-mode'];
+  }
+  if (darkBg && logos.white) return logos.white;
+  if (!darkBg && logos.black) return logos.black;
+  return (
+    logos.primary ||
+    logos.secondary ||
+    logos.icon ||
+    logos.light ||
+    logos.dark ||
+    null
+  );
 }
 
 function buildBrandVoiceBrief(themeTokens) {
@@ -229,6 +317,12 @@ function serializeKitSummary(kit) {
   };
 }
 
+async function resolveBrandKitId(workspaceId, brandKitId) {
+  if (brandKitId) return String(brandKitId).trim();
+  const defaultKit = await brandKitDao.findDefaultByWorkspace(workspaceId);
+  return defaultKit?.id || null;
+}
+
 async function listBrandKits(workspaceId) {
   const kits = await brandKitDao.listByWorkspace(workspaceId);
   return kits.map(serializeKitSummary);
@@ -242,7 +336,6 @@ async function getBrandKit(workspaceId, brandKitId) {
 
 async function createBrandKit({ workspaceId, userId, name, data, isDefault }) {
   validateBrandKitData(data);
-  // Ensure contrast via mapper
   brandKitToThemeTokens({ id: 'new', name, data, media: [] }, { includeMediaUrls: false });
   const kit = await brandKitDao.createKit({
     workspaceId,
@@ -314,7 +407,16 @@ async function uploadMedia({
   let mediaRole = role ? String(role).toLowerCase() : null;
   if (mediaKind === 'logo') {
     if (!mediaRole || !LOGO_ROLES.has(mediaRole)) {
-      throw new AppError('logo uploads require role: primary|secondary|icon|light|dark', 400);
+      throw new AppError('logo uploads require a valid role', 400);
+    }
+    const existingRows = await brandKitDao.findAllMediaByKindRole(brandKitId, mediaKind, mediaRole);
+    for (const existing of existingRows) {
+      await brandKitDao.deleteMedia(existing.id);
+      try {
+        await s3Service.deleteFile(existing.s3Key);
+      } catch {
+        // best-effort
+      }
     }
   } else {
     mediaRole = null;
@@ -368,7 +470,15 @@ async function deleteMedia({ workspaceId, brandKitId, mediaId }) {
 async function loadKitThemeTokens(workspaceId, brandKitId) {
   const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
-  return brandKitToThemeTokens(kit);
+  const kitWithUrls = await attachPresignedMedia(kit);
+  return brandKitToThemeTokens(kitWithUrls);
+}
+
+async function loadKitThemeTokensResolved(workspaceId, brandKitId) {
+  const resolvedId = await resolveBrandKitId(workspaceId, brandKitId);
+  if (!resolvedId) return { themeTokens: null, brandKitId: null };
+  const themeTokens = await loadKitThemeTokens(workspaceId, resolvedId);
+  return { themeTokens, brandKitId: resolvedId };
 }
 
 async function streamMedia({ workspaceId, brandKitId, mediaId, req, res }) {
@@ -393,9 +503,17 @@ module.exports = {
   deleteMedia,
   streamMedia,
   loadKitThemeTokens,
+  loadKitThemeTokensResolved,
+  resolveBrandKitId,
   brandKitToThemeTokens,
   pickLogoForBackground,
   buildBrandVoiceBrief,
   validateBrandKitData,
   relativeLuminance,
+  colorMap,
+  resolveHex,
+  buildPaletteFromRoles,
+  buildTypeScale,
+  LOGO_ROLES,
+  IMAGE_MIME,
 };

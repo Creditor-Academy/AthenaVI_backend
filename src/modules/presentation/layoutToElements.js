@@ -569,6 +569,7 @@ function layoutSlotsToElements(
     }
 
     if (lower.includes('chart') || lower.includes('graph') || role === 'chart') {
+      const brandChartColors = themeTokens?.brand?.chartColors;
       elements.push({
         id: newElementId('cht'),
         type: 'chart',
@@ -578,6 +579,12 @@ function layoutSlotsToElements(
           chartType: content.chart?.type || 'bar',
           series: content.chart?.series || content.chart?.data || [],
           labels: content.chart?.labels || [],
+          colors:
+            (Array.isArray(content.chart?.colors) && content.chart.colors.length
+              ? content.chart.colors
+              : null) ||
+            (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
+            (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : []),
         },
         role: 'chart',
       });

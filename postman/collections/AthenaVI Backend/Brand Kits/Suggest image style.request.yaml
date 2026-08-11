@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/suggest/image-style"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tone": "Professional",
+      "brandKitId": "{{brandKitId}}"
+    }
+order: 1130

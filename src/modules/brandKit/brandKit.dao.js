@@ -35,6 +35,38 @@ async function findInWorkspace(workspaceId, brandKitId) {
   });
 }
 
+async function findDefaultByWorkspace(workspaceId) {
+  return prisma.workspaceBrandKit.findFirst({
+    where: { workspaceId, isDefault: true },
+    include: {
+      media: {
+        orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+      },
+    },
+  });
+}
+
+async function findMediaByKindRole(brandKitId, kind, role) {
+  const roles = kind === 'logo' ? logoRoleCandidates(role) : [String(role || '').toLowerCase()];
+  return prisma.brandKitMedia.findFirst({
+    where: { brandKitId, kind, role: { in: roles } },
+  });
+}
+
+async function findAllMediaByKindRole(brandKitId, kind, role) {
+  const roles = kind === 'logo' ? logoRoleCandidates(role) : [String(role || '').toLowerCase()];
+  return prisma.brandKitMedia.findMany({
+    where: { brandKitId, kind, role: { in: roles } },
+  });
+}
+
+function logoRoleCandidates(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'light' || r === 'light-mode') return ['light', 'light-mode'];
+  if (r === 'dark' || r === 'dark-mode') return ['dark', 'dark-mode'];
+  return [r];
+}
+
 async function createKit({ workspaceId, name, data, isDefault, createdBy }) {
   return prisma.$transaction(async (tx) => {
     if (isDefault) {
@@ -148,6 +180,10 @@ module.exports = {
   listByWorkspace,
   findById,
   findInWorkspace,
+  findDefaultByWorkspace,
+  findMediaByKindRole,
+  findAllMediaByKindRole,
+  logoRoleCandidates,
   createKit,
   updateKit,
   setDefault,

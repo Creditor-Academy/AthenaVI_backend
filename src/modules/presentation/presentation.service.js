@@ -61,13 +61,18 @@ async function resolveCreateThemeTokens({
   brandKitId,
   packThemeId,
 }) {
-  if (brandKitId) {
-    return brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
+  const { themeTokens: kitTokens, brandKitId: resolvedKitId } =
+    await brandKitService.loadKitThemeTokensResolved(workspaceId, brandKitId);
+  if (kitTokens) {
+    return { themeTokens: kitTokens, brandKitId: resolvedKitId };
   }
-  return themeService.resolveThemeTokens({
-    themeId: themeId || packThemeId || null,
-    themeTokens,
-  });
+  return {
+    themeTokens: themeService.resolveThemeTokens({
+      themeId: themeId || packThemeId || null,
+      themeTokens,
+    }),
+    brandKitId: null,
+  };
 }
 
 function canvasForAspect(aspectRatio) {
@@ -123,13 +128,14 @@ async function createPresentation({
 
   const packAspectRaw = String(pack?.schema?.aspectRatio || aspectRatio || '16:9').trim();
   const resolvedAspect = packAspectRaw === '4:3' ? '4:3' : '16:9';
-  const resolvedTokens = await resolveCreateThemeTokens({
-    workspaceId,
-    themeId,
-    themeTokens,
-    brandKitId,
-    packThemeId: pack?.schema?.themeId || null,
-  });
+  const { themeTokens: resolvedTokens, brandKitId: effectiveBrandKitId } =
+    await resolveCreateThemeTokens({
+      workspaceId,
+      themeId,
+      themeTokens,
+      brandKitId,
+      packThemeId: pack?.schema?.themeId || null,
+    });
   const displayName = String(name || title || 'Untitled Presentation').trim() || 'Untitled Presentation';
 
   const { project, deck } = await presentationDao.createPresentationProject({
@@ -151,10 +157,10 @@ async function createPresentation({
     metricsBase.deckPack = {
       packId: pack.id,
       pack_id: pack.schema?.pack_id || null,
-      brandKitId: brandKitId || null,
+      brandKitId: effectiveBrandKitId || brandKitId || null,
     };
-  } else if (brandKitId) {
-    metricsBase.deckPack = { packId: null, brandKitId };
+  } else if (effectiveBrandKitId || brandKitId) {
+    metricsBase.deckPack = { packId: null, brandKitId: effectiveBrandKitId || brandKitId };
   }
   if (Object.keys(metricsBase).length) {
     await presentationDao.updateDeck(deck.id, { generationMetrics: metricsBase });
@@ -165,11 +171,12 @@ async function createPresentation({
   const logo = brandKitService.pickLogoForBackground(resolvedTokens);
 
   if (mode === 'blank') {
-    const elementsDoc = blankCanvas({
+    let elementsDoc = blankCanvas({
       width: canvasSize.width,
       height: canvasSize.height,
       withDefaultText: true,
     });
+    elementsDoc = injectBrandLogo(elementsDoc, logo, { contentType: 'title', force: true });
     const slide = await presentationDao.createOneSlide({
       deckId: deck.id,
       order: 1,

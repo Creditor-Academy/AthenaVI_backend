@@ -152,12 +152,35 @@ All history endpoints attach **`usageDetail`** on each transaction (null for unk
 | `voice_design` | `label`, `promptPreview`, `voiceId` |
 | `avatar_create` | `label`, `avatarName`, `avatarType`, `avatarGroupId` |
 | `voice_preview` | `label`, `previewText`, `voiceId`, `durationSeconds` |
+| `brand_kit_suggest_colors` | `label`: Brand kit color suggestion |
+| `brand_kit_suggest_fonts` | `label`: Brand kit font suggestion |
+| `brand_kit_suggest_voice` | `label`: Brand kit voice suggestion |
+| `brand_kit_suggest_image_style` | `label`: Brand kit image style suggestion |
+| `brand_kit_logo_variants` | `label`: Brand kit logo variants |
+| `brand_kit_guideline_generate` | `label`: Brand guideline deck |
 
 **Non-usage** — `usageDetail` includes a human `label` (e.g. `Credits granted`, `Allocated to workspace`) and optional `reason` / `workspaceId`.
 
 Older ledger rows are enriched at read time from `reference` + linked `heygen_responses` / `project_renders` / `projects` when metadata is sparse.
 
 ---
+
+## Brand Kit AI (flat AC)
+
+Workspace-scoped flat charges from `src/shared/config/brandKitCreditPricing.js`. Deducted from the **workspace credit pool** (personal pool on `PRIVATE`, workspace pool on `TEAM`).
+
+| `feature` key | Default AC | API | Charged when |
+|---------------|------------|-----|--------------|
+| `brand_kit_suggest_colors` | 2 | `POST .../brand-kits/suggest/colors` | After valid AI palette returned |
+| `brand_kit_suggest_fonts` | 1 | `POST .../brand-kits/suggest/fonts` | After valid AI fonts returned |
+| `brand_kit_suggest_voice` | 1 | `POST .../brand-kits/suggest/voice` | After valid AI voice returned |
+| `brand_kit_suggest_image_style` | 1 | `POST .../brand-kits/suggest/image-style` | After valid AI brief returned |
+| `brand_kit_logo_variants` | 2 | `POST .../brand-kits/:id/suggest/logo-variants` | Only when `applyRoles` commits variants (preview without `applyRoles` is free) |
+| `brand_kit_guideline_generate` | 3 | `POST .../brand-kits/:id/guidelines/generate` | After deck created or regenerated |
+
+Override defaults via env: `BRAND_KIT_SUGGEST_COLORS_AC`, `BRAND_KIT_SUGGEST_FONTS_AC`, `BRAND_KIT_SUGGEST_VOICE_AC`, `BRAND_KIT_SUGGEST_IMAGE_STYLE_AC`, `BRAND_KIT_LOGO_VARIANTS_AC`, `BRAND_KIT_GUIDELINE_GENERATE_AC`.
+
+See [`BRAND_KIT_API.md`](BRAND_KIT_API.md) for request/response contracts.
 
 ---
 

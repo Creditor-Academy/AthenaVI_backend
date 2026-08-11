@@ -58,7 +58,18 @@
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + member | Get Brand Kit |
 | PATCH | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Update Brand Kit |
 | DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Delete Brand Kit |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/set-default` | Bearer + OWNER/ADMIN | Set default Brand Kit |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/health` | Bearer + member | Brand Kit completeness score |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/colors` | Bearer + OWNER/ADMIN | AI suggest palette from logo |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/fonts` | Bearer + OWNER/ADMIN | AI suggest font pairing |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` | Bearer + OWNER/ADMIN | AI expand brand voice |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` | Bearer + OWNER/ADMIN | AI suggest image brief + chart colors |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` | Bearer + OWNER/ADMIN | Generate logo variants |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | Bearer + OWNER/ADMIN | Generate 6-slide guideline deck |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | Bearer + member | Guideline presentation link |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |
+| DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId` | Bearer + OWNER/ADMIN | Delete Brand Kit media |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId/stream` | Bearer + member | Stream Brand Kit media |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/apply-brand-kit` | Bearer + member | Apply Brand Kit to deck |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/media` | Bearer + member | Upload image onto slide |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/attach-asset` | Bearer + member | Attach workspace Asset to slide |
