@@ -225,7 +225,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
     scaleRatio: 1.333,
     spacingScale: { xs: 4, sm: 8, md: 16, lg: 24 },
     imageStyle: data.imageStyle || 'brand-safe professional photography, no text overlay',
-    colorTreatment: `brand primary ${palette.primary}`,
+    colorTreatment: null,
     brand: {
       brandKitId: kit.id,
       name: kit.name,
@@ -245,6 +245,35 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
   }
 
   return tokens;
+}
+
+/**
+ * Merge brand kit tokens into wizard/catalog theme tokens (Brand Kit + Color Theme mode).
+ * Kit supplies palette, fonts, logo, voice; wizard theme accents can remain as secondary palette hints.
+ */
+function mergeBrandKitWithThemeTokens(wizardTokens, kitTokens) {
+  if (!kitTokens) return wizardTokens || {};
+  if (!wizardTokens || typeof wizardTokens !== 'object') return kitTokens;
+
+  const merged = {
+    ...wizardTokens,
+    ...kitTokens,
+    palette: {
+      ...(wizardTokens.palette || {}),
+      ...(kitTokens.palette || {}),
+    },
+    fonts: {
+      ...(wizardTokens.fonts || {}),
+      ...(kitTokens.fonts || {}),
+    },
+    typeScale: kitTokens.typeScale || wizardTokens.typeScale,
+    brand: kitTokens.brand || wizardTokens.brand,
+    imageStyle: kitTokens.imageStyle || wizardTokens.imageStyle,
+    colorTreatment: wizardTokens.colorTreatment ?? kitTokens.colorTreatment ?? null,
+  };
+
+  if (kitTokens.paletteDark) merged.paletteDark = kitTokens.paletteDark;
+  return merged;
 }
 
 function pickLogoForBackground(themeTokens) {
@@ -506,6 +535,7 @@ module.exports = {
   loadKitThemeTokensResolved,
   resolveBrandKitId,
   brandKitToThemeTokens,
+  mergeBrandKitWithThemeTokens,
   pickLogoForBackground,
   buildBrandVoiceBrief,
   validateBrandKitData,

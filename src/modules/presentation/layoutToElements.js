@@ -149,7 +149,10 @@ function textForSlot(slotId, content = {}) {
     case 'contact':
       return linesOf(content.contact);
     case 'caption':
-      return String(content.caption || content.note || '').trim();
+    case 'footnote':
+      return String(content.caption || content.footnote || content.note || '').trim();
+    case 'main_title':
+      return String(content.title || '').trim();
     case 'section_number':
       return String(content.sectionNumber ?? content.section_number ?? '').trim();
     case 'left_title':
@@ -336,7 +339,173 @@ function elementRoleFromSlot(slot, slotId) {
   if (lower.includes('title') && !lower.includes('subtitle')) return 'title';
   if (lower.includes('subtitle')) return 'subtitle';
   if (lower.includes('bullet')) return 'body';
+  if (lower.includes('footnote') || lower.includes('caption')) return 'caption';
   return slotId;
+}
+
+function isLogoSlot(slotId, role) {
+  const lower = String(slotId || '').toLowerCase();
+  const r = String(role || '').toLowerCase();
+  return lower === 'logo' || r === 'logo' || (r === 'decoration' && lower.includes('logo'));
+}
+
+function isMediaImageSlot(slotId, role, slot) {
+  const lower = String(slotId || '').toLowerCase();
+  const r = String(role || '').toLowerCase();
+  if (isLogoSlot(slotId, role)) return false;
+  if (r === 'background' || r === 'image') return true;
+  if (lower.includes('background') || lower.includes('hero')) return true;
+  if (lower.includes('image') && !lower.includes('caption')) return true;
+  if (slot?.fit === 'cover') return true;
+  return false;
+}
+
+function isDecorShapeSlot(slotId, role, slot) {
+  if (isLogoSlot(slotId, role) || isMediaImageSlot(slotId, role, slot)) return false;
+  const r = String(role || '').toLowerCase();
+  return r === 'decoration' || r === 'divider' || Boolean(slot?.shape);
+}
+
+function isPackPlaceholderText(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (!t) return false;
+  return (
+    /^your (title|subtitle|heading|headline|name|company|tagline|text|quote)/.test(t) ||
+    t === 'insert text' ||
+    t.startsWith('lorem ipsum') ||
+    t === 'double-click to edit'
+  );
+}
+
+function isLogoLikeElement(el) {
+  const role = String(el?.role || '').toLowerCase();
+  const id = String(el?.id || '').toLowerCase();
+  const slotId = String(el?.slotId || '').toLowerCase();
+  return role === 'logo' || id.includes('logo') || slotId.includes('logo');
+}
+
+const REBIND_TEXT_ROLES = new Set([
+  'title',
+  'heading',
+  'headline',
+  'subtitle',
+  'subheading',
+  'body',
+  'bullets',
+  'caption',
+  'quote',
+  'cta',
+  'stat_value',
+  'stat_label',
+  'lead',
+  'attribution',
+  'table',
+  'eyebrow',
+  'section_number',
+  'footnote',
+]);
+
+const REBIND_IMAGE_ROLES = new Set(['image', 'background', 'hero']);
+
+function inferRoleFromKeys(role, slotId, id) {
+  const r = String(role || '').toLowerCase();
+  if (r) return r;
+  const key = String(slotId || id || '').toLowerCase();
+  if (!key) return '';
+  if (key.includes('logo')) return 'logo';
+  if (key.includes('subtitle')) return 'subtitle';
+  if (key.includes('title') || key.includes('headline')) return 'title';
+  if (key.includes('bullet') || key.includes('body')) return 'body';
+  if (key.includes('caption') || key.includes('footnote')) return 'caption';
+  if (key.includes('quote')) return 'quote';
+  if (key.includes('hero') || key.includes('background') || key.includes('image')) return 'image';
+  if (key.includes('stat')) return key.includes('label') ? 'stat_label' : 'stat_value';
+  return key;
+}
+
+function resolveElementRole(el) {
+  return inferRoleFromKeys(el?.role, el?.slotId, el?.id);
+}
+
+function slotKeyMatchesRebind(role, slotId, id) {
+  const r = String(role || '').toLowerCase();
+  if (REBIND_TEXT_ROLES.has(r) || REBIND_IMAGE_ROLES.has(r)) return true;
+  const key = String(slotId || id || '').toLowerCase();
+  if (!key) return false;
+  return (
+    key.includes('title') ||
+    key.includes('subtitle') ||
+    key.includes('headline') ||
+    key.includes('body') ||
+    key.includes('bullet') ||
+    key.includes('caption') ||
+    key.includes('quote') ||
+    key.includes('hero') ||
+    key.includes('background') ||
+    key.includes('image') ||
+    key.includes('stat') ||
+    key.includes('table')
+  );
+}
+
+function isImagePlaceholderElement(el) {
+  if (!el || el.type !== 'shape') return false;
+  const c = el.content || {};
+  const label = String(c.label || c.text || '').trim();
+  if (label === 'Image placeholder') return true;
+  const role = resolveElementRole(el);
+  const slotId = String(el.slotId || el.id || '').toLowerCase();
+  return (
+    role === 'image' ||
+    role === 'background' ||
+    role === 'hero' ||
+    slotId.includes('hero') ||
+    slotId.includes('background') ||
+    (slotId.includes('image') && !slotId.includes('caption'))
+  );
+}
+
+function fontFamilyForRole(role, themeTokens) {
+  const fonts = themeTokens?.fonts || {};
+  const r = String(role || '').toLowerCase();
+  if (r === 'title' || r === 'heading' || r === 'headline' || r === 'stat_value') {
+    return fonts.heading || null;
+  }
+  if (r === 'subtitle' || r === 'subheading') {
+    return fonts.subheading || fonts.heading || null;
+  }
+  return fonts.body || fonts.subheading || null;
+}
+
+function applyThemeFontsToText(el, themeTokens, role) {
+  if (!themeTokens?.fonts || (el.type !== 'text' && el.type !== 'textbox')) return;
+  const fontFamily = fontFamilyForRole(role, themeTokens);
+  if (fontFamily) {
+    el.content = { ...(el.content || {}), fontFamily };
+  }
+}
+
+function applyThemeColorsToText(el, themeTokens, role) {
+  if (!themeTokens?.palette || (el.type !== 'text' && el.type !== 'textbox')) return;
+  const palette = themeTokens.palette;
+  const r = String(role || '').toLowerCase();
+  let colorRole = el.content?.colorRole || 'text';
+  if (!el.content?.colorRole) {
+    if (r === 'caption' || r === 'stat_label' || r === 'attribution') colorRole = 'muted';
+    else if (r === 'cta' || r === 'stat_value') colorRole = 'accent';
+    else colorRole = 'text';
+  }
+  const color = paletteColor(palette, colorRole, el.content?.color || null);
+  if (color) {
+    el.content = { ...(el.content || {}), color, colorRole };
+  }
+}
+
+function mediaRoleForSlot(slotId, role) {
+  const lower = String(slotId || '').toLowerCase();
+  const r = String(role || '').toLowerCase();
+  if (r === 'background' || lower.includes('background')) return 'background';
+  return 'image';
 }
 
 /**
@@ -492,28 +661,24 @@ function layoutSlotsToElements(
     const role = String(slot.role || '').toLowerCase();
     const slotLayer = slot.layer != null ? Number(slot.layer) : layer++;
 
-    if (role === 'background' || role === 'decoration' || role === 'divider' || slot.shape) {
-      const fill = resolveFill(
-        slot.shape || { fillColorRole: role === 'divider' ? 'accent' : 'primary' },
-        palette
-      );
+    if (isLogoSlot(slotId, role)) {
       elements.push({
-        id: newElementId('shp'),
-        type: 'shape',
+        id: newElementId('logo'),
+        type: 'image',
         layer: slotLayer,
         placement,
         content: {
-          shape: slot.shape?.type || 'rect',
-          fill,
-          borderRadius: slot.shape?.borderRadius,
+          url: null,
+          fit: 'contain',
+          alt: 'Brand logo',
         },
-        role: role || (lower === 'accent' ? 'accent' : slotId),
+        role: 'logo',
       });
       if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
     }
 
-    if (lower.includes('image') || lower === 'hero' || slot.fit === 'cover' || role === 'image') {
+    if (isMediaImageSlot(slotId, role, slot)) {
       const url =
         imageRef?.url ||
         imageRef?.s3Url ||
@@ -529,7 +694,28 @@ function layoutSlotsToElements(
           fit: slot.fit || 'cover',
           alt: content.title || '',
         },
-        role: 'image',
+        role: mediaRoleForSlot(slotId, role),
+      });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+      continue;
+    }
+
+    if (isDecorShapeSlot(slotId, role, slot)) {
+      const fill = resolveFill(
+        slot.shape || { fillColorRole: role === 'divider' ? 'accent' : 'primary' },
+        palette
+      );
+      elements.push({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: slotLayer,
+        placement,
+        content: {
+          shape: slot.shape?.type || 'rect',
+          fill,
+          borderRadius: slot.shape?.borderRadius,
+        },
+        role: role || (lower === 'accent' ? 'accent' : slotId),
       });
       if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;
@@ -606,6 +792,9 @@ function layoutSlotsToElements(
     if (style.colorRole) textContent.colorRole = style.colorRole;
     if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
     if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
+    const slotRole = elementRoleFromSlot(slot, slotId);
+    const fontFamily = fontFamilyForRole(slotRole, themeTokens);
+    if (fontFamily) textContent.fontFamily = fontFamily;
 
     elements.push({
       id: newElementId('txt'),
@@ -728,8 +917,9 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
   const contentType = String(opts.contentType || '').toLowerCase();
   const allowTypes = new Set(['title', 'closing', 'section_divider', '']);
   if (!opts.force && contentType && !allowTypes.has(contentType)) {
-    // Still update existing logo roles on any slide
-    const hasLogo = doc.elements.some((e) => e?.role === 'logo');
+    const hasLogo = doc.elements.some(
+      (e) => e?.role === 'logo' || String(e?.id || '').toLowerCase().includes('logo')
+    );
     if (!hasLogo) return doc;
   }
 
@@ -743,7 +933,9 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
     opacity: 1,
   };
 
-  const existingIdx = doc.elements.findIndex((e) => e?.role === 'logo');
+  const existingIdx = doc.elements.findIndex(
+    (e) => e?.role === 'logo' || String(e?.id || '').toLowerCase().includes('logo')
+  );
   const logoEl = {
     id: existingIdx >= 0 ? doc.elements[existingIdx].id : newElementId('logo'),
     type: 'image',
@@ -774,7 +966,9 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
  * Rebind generated slide content into an existing canvas by element role.
  * Preserves placement/chrome; updates text/image payloads in place.
  */
-function rebindContentToElements(elementsDoc, content = {}, imageRef = null) {
+function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opts = {}) {
+  const forceTextReplace = opts.forceTextReplace === true;
+  const themeTokens = opts.themeTokens || null;
   const doc = {
     version: elementsDoc?.version || 1,
     canvas: elementsDoc?.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
@@ -789,37 +983,69 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null) {
     (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
     null;
 
+  const applyText = (el, nextText, role) => {
+    if (nextText == null) return;
+    const value = String(nextText);
+    if (!value.length) return;
+    const current = el.content?.text;
+    if (forceTextReplace || !current || isPackPlaceholderText(current)) {
+      el.content = { ...(el.content || {}), text: value };
+      applyThemeFontsToText(el, themeTokens, role);
+      applyThemeColorsToText(el, themeTokens, role);
+    }
+  };
+
   for (const el of doc.elements) {
-    const role = String(el.role || '').toLowerCase();
+    const role = resolveElementRole(el);
+    const slotId = String(el.slotId || '').toLowerCase();
     const id = String(el.id || '').toLowerCase();
-    const roleOrId = role || id;
+    const roleOrId = role || slotId || id;
 
     if (el.type === 'text' || el.type === 'textbox') {
       const text = textForSlot(roleOrId, content);
       if (text != null && String(text).length) {
-        el.content = { ...(el.content || {}), text: String(text) };
+        applyText(el, text, role);
       } else if (role === 'title' || role === 'heading' || role === 'headline') {
-        if (content.title) el.content = { ...(el.content || {}), text: String(content.title) };
+        applyText(el, content.title, role);
       } else if (role === 'subtitle' || role === 'subheading') {
-        if (content.subtitle) el.content = { ...(el.content || {}), text: String(content.subtitle) };
+        applyText(el, content.subtitle, role);
+      } else if (role === 'caption' || role === 'footnote' || id.includes('footnote')) {
+        applyText(el, content.caption || content.footnote || content.note, role);
+      } else if (role === 'quote') {
+        applyText(el, content.quote || content.body, role);
       } else if (role === 'body' || role === 'bullets') {
         const bullets = bulletsOf(content);
-        const body =
-          content.body || (bullets.length ? bulletBlock(bullets) : '');
-        if (body) el.content = { ...(el.content || {}), text: String(body) };
+        const body = content.body || (bullets.length ? bulletBlock(bullets) : '');
+        applyText(el, body, role);
+      } else if (!role && (slotId.includes('title') || id.includes('title'))) {
+        applyText(el, content.title, 'title');
+      } else if (!role && (slotId.includes('body') || slotId.includes('bullet'))) {
+        const bullets = bulletsOf(content);
+        applyText(el, content.body || (bullets.length ? bulletBlock(bullets) : ''), 'body');
       }
     }
 
-    if (el.type === 'table' && (role === 'table' || id.includes('table'))) {
+    if (el.type === 'table' && (role === 'table' || id.includes('table') || slotId.includes('table'))) {
       const rows = tableRowsOf(content);
       if (rows.length) el.content = { ...(el.content || {}), rows };
     }
 
+    const isImageSlot =
+      role === 'image' ||
+      role === 'background' ||
+      role === 'hero' ||
+      slotId.includes('image') ||
+      slotId.includes('hero') ||
+      slotId.includes('background') ||
+      id.includes('image') ||
+      id.includes('hero') ||
+      id.includes('background');
+
     if (
       el.type === 'image' &&
-      role !== 'logo' &&
+      !isLogoLikeElement(el) &&
       imageUrl &&
-      (role === 'image' || !role || id.includes('image') || id.includes('hero'))
+      isImageSlot
     ) {
       el.content = {
         ...(el.content || {}),
@@ -829,6 +1055,22 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null) {
         alt: content.title || el.content?.alt || '',
       };
     }
+
+    if (
+      isImagePlaceholderElement(el) &&
+      !isLogoLikeElement(el) &&
+      imageUrl &&
+      isImageSlot
+    ) {
+      el.type = 'image';
+      el.content = {
+        url: imageUrl,
+        s3Key: imageRef?.s3Key || null,
+        fit: 'cover',
+        alt: content.title || '',
+      };
+      if (!el.role && isImageSlot) el.role = role || 'image';
+    }
   }
 
   return doc;
@@ -837,20 +1079,10 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null) {
 function elementsHaveRebindRoles(elementsDoc) {
   const els = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
   return els.some((el) => {
-    const role = String(el.role || '').toLowerCase();
-    return (
-      role === 'title' ||
-      role === 'heading' ||
-      role === 'headline' ||
-      role === 'subtitle' ||
-      role === 'subheading' ||
-      role === 'body' ||
-      role === 'image' ||
-      role === 'bullets' ||
-      role === 'caption' ||
-      role === 'quote' ||
-      role === 'cta'
-    );
+    const role = resolveElementRole(el);
+    const slotId = String(el.slotId || '').toLowerCase();
+    const id = String(el.id || '').toLowerCase();
+    return slotKeyMatchesRebind(role, slotId, id) || isImagePlaceholderElement(el);
   });
 }
 
@@ -863,4 +1095,6 @@ module.exports = {
   blankCanvas,
   newElementId,
   injectBrandLogo,
+  isPackPlaceholderText,
+  isMediaImageSlot,
 };

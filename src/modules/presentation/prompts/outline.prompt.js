@@ -13,12 +13,25 @@ function buildSystem() {
   ].join(' ');
 }
 
+function buildPackEnrichSystem() {
+  return [
+    'You enrich a fixed deck-pack outline with original titles and summaries.',
+    'The slide order, layoutId, suggestedContentType, and intent are FIXED — do not change them.',
+    'Replace template placeholder wording with meaningful content derived from the user source.',
+    'Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
+    'Invent a concise deck title from the source meaning — not a truncated copy of the prompt.',
+    'Return JSON only matching the schema.',
+  ].join(' ');
+}
+
 /**
  * @param {{
  *   sourceText: string,
  *   slideCount?: number,
  *   density?: 'concise'|'balanced'|'detailed',
  *   audience?: string,
+ *   voiceAndTone?: string,
+ *   purpose?: string,
  *   locale?: string,
  * }} vars
  */
@@ -28,11 +41,15 @@ function buildUser(vars = {}) {
     slideCount = 10,
     density = 'balanced',
     audience = '',
+    voiceAndTone = '',
+    purpose = '',
     locale = 'en',
   } = vars;
 
   return [
-    `Audience/use case: ${audience || 'inferred from source'}`,
+    voiceAndTone ? `Voice & tone: ${voiceAndTone}` : null,
+    audience ? `Audience: ${audience}` : `Audience/use case: ${audience || 'inferred from source'}`,
+    purpose ? `Purpose: ${purpose}` : null,
     `Locale: ${locale}`,
     `Slide count target: ${slideCount}`,
     `Density: ${density}`,
@@ -69,11 +86,81 @@ function buildUser(vars = {}) {
       null,
       2
     ),
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * @param {{
+ *   sourceText: string,
+ *   density?: string,
+ *   locale?: string,
+ *   voiceAndTone?: string,
+ *   audience?: string,
+ *   purpose?: string,
+ *   packSlides?: Array<object>,
+ *   packNarrative?: object|null,
+ * }} vars
+ */
+function buildPackEnrichUser(vars = {}) {
+  const {
+    sourceText = '',
+    density = 'balanced',
+    locale = 'en',
+    voiceAndTone = '',
+    audience = '',
+    purpose = '',
+    packSlides = [],
+    packNarrative = null,
+  } = vars;
+
+  const narrativeLines = [];
+  if (packNarrative?.arc) narrativeLines.push(`Pack narrative arc: ${packNarrative.arc}`);
+  if (packNarrative?.summary) narrativeLines.push(`Pack narrative: ${packNarrative.summary}`);
+
+  return [
+    'Fixed pack slide blueprint (preserve order, layoutId, suggestedContentType, intent):',
+    JSON.stringify(packSlides, null, 2),
+    '',
+    voiceAndTone ? `Voice & tone: ${voiceAndTone}` : null,
+    audience ? `Audience: ${audience}` : null,
+    purpose ? `Purpose: ${purpose}` : null,
+    `Locale: ${locale}`,
+    `Density: ${density}`,
+    narrativeLines.length ? narrativeLines.join('\n') : null,
+    '',
+    'User source / prompt:',
+    String(sourceText),
+    '',
+    'Rules:',
+    '- Return exactly one slide entry per pack slide (same order values).',
+    '- Provide fresh title + summary per slide aligned with pack intent and user source.',
+    '- Do NOT change layoutId, suggestedContentType, or intent fields.',
+    '- Deck title: concise natural title from source meaning (3–10 words).',
+    '',
+    'Output JSON schema:',
+    JSON.stringify(
+      {
+        title: 'Concise Deck Title',
+        slides: packSlides.map((s) => ({
+          order: s.order,
+          title: 'Fresh slide title',
+          summary: 'Fresh slide summary',
+        })),
+      },
+      null,
+      2
+    ),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 module.exports = {
   buildSystem,
   buildUser,
+  buildPackEnrichSystem,
+  buildPackEnrichUser,
   DENSITY_CAPS,
 };

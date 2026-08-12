@@ -70,7 +70,7 @@ const getSlide = asyncHandler(async (req, res) => {
 const generateOutline = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const userId = req.user.id;
-  const { source, prompt, outlineText, documentText, slideCount, density, locale } = req.body;
+  const { source, prompt, outlineText, documentText, slideCount, density, locale, voiceAndTone, audience, purpose } = req.body;
 
   const data = await presentationService.generateOutline({
     workspaceId,
@@ -84,6 +84,9 @@ const generateOutline = asyncHandler(async (req, res) => {
     slideCount,
     density,
     locale,
+    voiceAndTone,
+    audience,
+    purpose,
   });
 
   return successResponse(req, res, data, 200, messages.PRESENTATION_OUTLINE_GENERATED);

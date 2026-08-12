@@ -220,7 +220,7 @@ async function createPresentation({
       imageRef: null,
       elements: elementsDoc,
       status: 'READY',
-      manuallyEdited: true,
+      manuallyEdited: false,
     });
     slides = [slide];
   }

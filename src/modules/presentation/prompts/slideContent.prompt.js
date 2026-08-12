@@ -94,6 +94,10 @@ function buildUser(vars = {}) {
     hintLines.length ? `\nGeneration hints:\n${hintLines.join('\n')}` : '',
     slotLines ? `\nLayout slot constraints (fit the visual container):\n${slotLines}` : '',
     '',
+    'Rules:',
+    '- Replace any template placeholder wording with original content from the brief.',
+    '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
+    '',
     'Output JSON schema (fill relevant slots; unused fields null or empty):',
     JSON.stringify(
       {

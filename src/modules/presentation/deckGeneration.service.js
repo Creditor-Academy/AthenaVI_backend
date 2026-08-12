@@ -34,7 +34,7 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles } = require('./layoutToElements');
+const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, isMediaImageSlot, isPackPlaceholderText } = require('./layoutToElements');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
@@ -146,6 +146,35 @@ function pickBrandPhoto(themeTokens, searchQuery) {
   return best || null;
 }
 
+function isBlankStarterSlide(slide) {
+  if (!slide?.manuallyEdited) return false;
+  if (slide.layoutId) return false;
+  const elements = slide.elements?.elements || [];
+  if (!elements.length) return true;
+  const textEls = elements.filter((e) => e.type === 'text' || e.type === 'textbox');
+  if (!textEls.length) return elements.length <= 3;
+  return textEls.every((el) => {
+    const t = el.content?.text;
+    return !t || isPackPlaceholderText(t);
+  });
+}
+
+function contentNeedsFreshGeneration(content) {
+  if (!content || typeof content !== 'object') return true;
+  const title = String(content.title || '').trim();
+  if (!title) return true;
+  if (isPackPlaceholderText(title)) return true;
+  if (title === 'Untitled Presentation') return true;
+  const bullets = Array.isArray(content.bullets) ? content.bullets : [];
+  const hasBullets = bullets.some((b) => {
+    const t = typeof b === 'string' ? b : b?.text || '';
+    return t && !isPackPlaceholderText(t);
+  });
+  const body = String(content.body || '').trim();
+  if (hasBullets || (body && !isPackPlaceholderText(body))) return false;
+  return !title || isPackPlaceholderText(title);
+}
+
 async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   const metricsPack =
     deck.generationMetrics && typeof deck.generationMetrics === 'object'
@@ -153,11 +182,9 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
       : null;
 
   const packId = flowCtx.packId || metricsPack?.packId || null;
-  let brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
-  if (!brandKitId) {
-    brandKitId = await brandKitService.resolveBrandKitId(workspaceId, null);
-    if (brandKitId) flowCtx.brandKitId = brandKitId;
-  }
+  const brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
+  const wizardThemeTokens =
+    flowCtx.themeTokens && typeof flowCtx.themeTokens === 'object' ? { ...flowCtx.themeTokens } : null;
 
   let pack = null;
   let layoutIdWhitelist = null;
@@ -219,7 +246,9 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   if (brandKitId) {
     try {
       const kitTokens = await brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
-      flowCtx.themeTokens = kitTokens;
+      flowCtx.themeTokens = wizardThemeTokens
+        ? brandKitService.mergeBrandKitWithThemeTokens(wizardThemeTokens, kitTokens)
+        : kitTokens;
       const voiceBrief = brandKitService.buildBrandVoiceBrief(kitTokens);
       if (voiceBrief) {
         flowCtx.wizardBrief = [flowCtx.wizardBrief, voiceBrief].filter(Boolean).join('\n');
@@ -227,6 +256,8 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     } catch (err) {
       logger.warn('Brand kit resolve failed during generate', { brandKitId, error: err.message });
     }
+  } else if (wizardThemeTokens && !flowCtx.themeTokens) {
+    flowCtx.themeTokens = wizardThemeTokens;
   }
 
   return {
@@ -234,6 +265,7 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     packId: pack?.id || null,
     brandKitId,
     layoutIdWhitelist,
+    packSlides: pack?.schema?.slides || [],
   };
 }
 
@@ -467,6 +499,68 @@ function withImageStatus(imageRef, status, extra = {}) {
   };
 }
 
+function imageColorTreatmentForCtx(ctx) {
+  if (ctx?.themeTokens?.brand?.brandKitId) return null;
+  return ctx?.themeTokens?.colorTreatment || null;
+}
+
+function layoutNeedsVisual(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots.some((s) => isMediaImageSlot(s.id, s.role, s));
+}
+
+async function loadDeckPackForOutline(deck) {
+  const packId = deck.generationMetrics?.deckPack?.packId;
+  if (!packId) return null;
+  const pack = await presentationDao.findTemplateById(packId);
+  if (!pack || pack.type !== 'DECK_PACK' || !pack.isActive) return null;
+  return pack;
+}
+
+function buildPackOutlineSkeleton(pack, { density, locale, sourceText }) {
+  const packSlides = Array.isArray(pack.schema?.slides) ? pack.schema.slides : [];
+  return {
+    title: pack.schema?.meta?.title || sanitizePresentationTitle(sourceText?.slice(0, 120)),
+    slideCount: packSlides.length,
+    density,
+    locale,
+    sourcePrompt: sourceText,
+    slides: packSlides.map((ps) => ({
+      order: Number(ps.order),
+      title: ps.placeholder?.title || ps.intent || `Slide ${ps.order}`,
+      summary: ps.placeholder?.summary || ps.intent || '',
+      suggestedContentType: ps.contentType || null,
+      layoutId: ps.layout_id || null,
+      intent: ps.intent || null,
+    })),
+  };
+}
+
+function mergePackOutlineWithLlm(skeleton, llmData, { slideCount, density, locale, sourceText }) {
+  const llmSlides = Array.isArray(llmData?.slides) ? llmData.slides : [];
+  const byOrder = new Map(
+    llmSlides.map((s, idx) => [Number(s.order) > 0 ? Number(s.order) : idx + 1, s])
+  );
+
+  const mergedSlides = skeleton.slides.map((sk) => {
+    const llm = byOrder.get(Number(sk.order)) || {};
+    return {
+      ...sk,
+      title: String(llm.title || sk.title || `Slide ${sk.order}`).trim(),
+      summary: llm.summary != null ? String(llm.summary) : sk.summary,
+    };
+  });
+
+  return normalizeOutline(
+    {
+      title: llmData?.title || skeleton.title,
+      slides: mergedSlides,
+      preferVisuals: skeleton.preferVisuals,
+    },
+    { slideCount, density, locale, sourceText }
+  );
+}
+
 function sanitizePresentationTitle(raw) {
   const FALLBACK = 'Untitled Presentation';
   let title = String(raw || '').trim().replace(/\s+/g, ' ');
@@ -498,8 +592,17 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
       title: String(s.title || `Slide ${idx + 1}`).trim(),
       summary: s.summary != null ? String(s.summary) : '',
       suggestedContentType: s.suggestedContentType || s.content_type || null,
+      layoutId: s.layoutId || s.layout_id || null,
+      intent: s.intent || null,
     }))
     .slice(0, AI_SLIDE_MAX);
+
+  if (normalizedSlides.length > 0) {
+    const first = normalizedSlides.find((s) => Number(s.order) === 1) || normalizedSlides[0];
+    if (first && (!first.suggestedContentType || first.suggestedContentType === 'bullet_list')) {
+      first.suggestedContentType = 'title';
+    }
+  }
 
   const requested =
     slideCount != null ? Math.min(AI_SLIDE_MAX, Math.max(1, Number(slideCount) || 12)) : null;
@@ -711,8 +814,12 @@ async function resolveSlideImage({
 
   // Keep existing ready template/upload/stock media unless force refresh (e.g. regenerate image)
   const existing = slide?.imageRef;
+  const isTemplateSeed =
+    String(existing?.source || '').toLowerCase() === 'template' ||
+    String(existing?.source || '').toLowerCase() === 'pack';
   if (
     !ctx.forceImageRefresh &&
+    !(ctx.packBound && isTemplateSeed) &&
     existing &&
     existing.status === 'ready' &&
     (existing.url || existing.s3Key)
@@ -805,7 +912,7 @@ async function resolveSlideImage({
   const briefHash = imageCache.hashBrief({
     searchQuery,
     imageStyle: ctx.themeTokens?.imageStyle,
-    colorTreatment: ctx.themeTokens?.colorTreatment,
+    colorTreatment: imageColorTreatmentForCtx(ctx),
     tier: 'standard',
   });
 
@@ -871,7 +978,7 @@ async function resolveSlideImage({
     let visionScore = null;
     const styleBits = [
       ctx.imageStylePhrase || ctx.themeTokens?.imageStyle || '',
-      ctx.themeTokens?.colorTreatment || '',
+      imageColorTreatmentForCtx(ctx) || '',
     ]
       .filter(Boolean)
       .join('. ');
@@ -1144,7 +1251,8 @@ async function processSlide(ctx, slide) {
     });
 
     let content = slide.content && typeof slide.content === 'object' ? { ...slide.content } : null;
-    if (!contentJob.duplicate) {
+    const needsFreshContent = contentNeedsFreshGeneration(content);
+    if (!contentJob.duplicate || (needsFreshContent && (ctx.packBound || ctx.forceTextReplace))) {
       const contentStarted = Date.now();
       try {
         const llmResult = await withTimeout(
@@ -1152,7 +1260,10 @@ async function processSlide(ctx, slide) {
             system: contentPrompt.buildSystem(),
             user: contentPrompt.buildUser({
               deckTitle: ctx.outline?.title || ctx.projectName,
-              themeTone: ctx.themeTokens?.imageStyle || 'professional',
+              themeTone:
+                ctx.themeTokens?.brand?.voice?.tone ||
+                ctx.themeTokens?.imageStyle ||
+                'professional',
               density: ctx.density || 'balanced',
               slideOrder: slide.order,
               slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
@@ -1270,6 +1381,19 @@ async function processSlide(ctx, slide) {
       visualNeed = visualNeed || (preferVisuals ? 'photo' : 'none');
     }
 
+    if (ctx.packBound && earlyLayoutSchema && layoutNeedsVisual(earlyLayoutSchema)) {
+      if (!visualNeed || String(visualNeed).toLowerCase() === 'none') {
+        visualNeed = 'photo';
+      }
+    }
+
+    if (!ctx.packBound && Number(slide.order) === 1) {
+      contentType = 'title';
+      if (!visualNeed || String(visualNeed).toLowerCase() === 'none') {
+        visualNeed = ctx.preferVisuals !== false ? 'photo' : 'none';
+      }
+    }
+
     const policy = applyVisualPolicy({
       visualNeed,
       contentType,
@@ -1369,7 +1493,7 @@ async function processSlide(ctx, slide) {
               slideTitle: content?.title,
               slideContent: content,
               themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
-              themeColorTreatment: ctx.themeTokens?.colorTreatment,
+              themeColorTreatment: imageColorTreatmentForCtx(ctx),
               wizardBrief: ctx.wizardBrief || '',
               authorImagePrompt: resolveAuthorImagePrompt(content),
             }),
@@ -1428,13 +1552,19 @@ async function processSlide(ctx, slide) {
     const currentElements =
       slide.elements && typeof slide.elements === 'object' ? slide.elements : null;
     const rebindBase =
+      (ctx.packBound && packSnapshot && packSnapshot) ||
       (currentElements && elementsHaveRebindRoles(currentElements) && currentElements) ||
       (packSnapshot && elementsHaveRebindRoles(packSnapshot) && packSnapshot) ||
       null;
 
     let elementsDoc;
+    const hasBrandKit = Boolean(ctx.themeTokens?.brand?.brandKitId);
     if (rebindBase) {
-      elementsDoc = rebindContentToElements(rebindBase, content, imageRef);
+      elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
+        forceTextReplace: Boolean(ctx.forceTextReplace),
+        themeTokens: ctx.themeTokens || null,
+      });
+      elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
     } else {
       elementsDoc = layoutSlotsToElements(
         template?.schema || { slots: [] },
@@ -1448,7 +1578,10 @@ async function processSlide(ctx, slide) {
       );
     }
     const logo = brandKitService.pickLogoForBackground(ctx.themeTokens);
-    elementsDoc = injectBrandLogo(elementsDoc, logo, { contentType });
+    elementsDoc = injectBrandLogo(elementsDoc, logo, {
+      contentType,
+      force: Boolean(ctx.packBound || hasBrandKit),
+    });
 
     const updated = await presentationDao.updateSlide(slide.id, {
       status: 'READY',
@@ -1530,6 +1663,15 @@ async function processDeckGeneration({
       baseTemplateBias: resolvedFlow.baseTemplateBias || null,
       layoutIdWhitelist: packBrand.layoutIdWhitelist || resolvedFlow.layoutIdWhitelist || null,
       preferExistingPackLayout: Boolean(packBrand.packId || resolvedFlow.packId),
+      packSlides: packBrand.packSlides || resolvedFlow.packSlides || [],
+      contentDistribution: resolvedFlow.contentDistribution || null,
+      packBound: Boolean(packBrand.packId || resolvedFlow.packId),
+      forceTextReplace: true,
+      forceImageRefresh: Boolean(
+        packBrand.packId &&
+          resolvedFlow.imageSource !== 'none' &&
+          resolvedFlow.imageSource !== 'placeholder'
+      ),
     };
 
     if (resolvedFlow.themeTokens) {
@@ -1624,6 +1766,9 @@ async function generateOutline({
   slideCount = 12,
   density = 'balanced',
   locale = 'en',
+  voiceAndTone = null,
+  audience = null,
+  purpose = null,
 }) {
   await presentationRateLimit.assertGenerateAllowed(userId, workspaceId);
   const { deck, project } = await loadPresentationDeck(presentationId, {
@@ -1665,33 +1810,98 @@ async function generateOutline({
   await presentationCredit.assertAfford(workspaceId, userId, estimate.athenaCredits);
 
   const outlinePrompt = getOutlinePrompt();
-  const llmResult = await chatJson({
-    system: outlinePrompt.buildSystem(),
-    user: outlinePrompt.buildUser({
-      sourceText,
-      slideCount,
+  const pack = await loadDeckPackForOutline(deck);
+  let effectiveSlideCount = slideCount;
+  let outline;
+  let chargeResult;
+
+  const outlineBrandKitId =
+    deck.generationMetrics?.deckPack?.brandKitId || null;
+  let outlineVoiceAndTone = voiceAndTone || '';
+  if (outlineBrandKitId) {
+    try {
+      const kitTokens = await brandKitService.loadKitThemeTokens(workspaceId, outlineBrandKitId);
+      const brandVoice = brandKitService.buildBrandVoiceBrief(kitTokens);
+      if (brandVoice) {
+        outlineVoiceAndTone = [outlineVoiceAndTone, brandVoice].filter(Boolean).join('\n');
+      }
+    } catch {
+      // optional brand context for outline
+    }
+  }
+
+  if (pack) {
+    const packSlides = Array.isArray(pack.schema?.slides) ? pack.schema.slides : [];
+    effectiveSlideCount = packSlides.length || slideCount;
+    const skeleton = buildPackOutlineSkeleton(pack, {
       density,
       locale,
-    }),
-    model: DEFAULT_OUTLINE_MODEL,
-  });
+      sourceText,
+    });
 
-  const outline = normalizeOutline(llmResult.data, {
-    slideCount,
-    density,
-    locale,
-    sourceText,
-  });
+    const llmResult = await chatJson({
+      system: outlinePrompt.buildPackEnrichSystem(),
+      user: outlinePrompt.buildPackEnrichUser({
+        sourceText,
+        density,
+        locale,
+        voiceAndTone: outlineVoiceAndTone,
+        audience,
+        purpose,
+        packSlides: skeleton.slides,
+        packNarrative: pack.schema?.narrative || null,
+      }),
+      model: DEFAULT_OUTLINE_MODEL,
+    });
 
-  const chargeResult = await presentationCredit.chargeOutlineReconcile({
-    workspaceId,
-    userId,
-    deckId: deck.id,
-    usage: llmResult.usage,
-    idempotencyKey: `ppt:outline:${deck.id}:${hashPayload([source, sourceText.slice(0, 200), String(slideCount), density])}`,
-    metadata: { projectId: project.id },
-  });
-  await trackCharge(deck.id, chargeResult);
+    outline = mergePackOutlineWithLlm(skeleton, llmResult.data, {
+      slideCount: effectiveSlideCount,
+      density,
+      locale,
+      sourceText,
+    });
+
+    chargeResult = await presentationCredit.chargeOutlineReconcile({
+      workspaceId,
+      userId,
+      deckId: deck.id,
+      usage: llmResult.usage,
+      idempotencyKey: `ppt:outline:pack:${deck.id}:${hashPayload([source, sourceText.slice(0, 200), String(effectiveSlideCount), density])}`,
+      metadata: { projectId: project.id, packId: pack.id },
+    });
+    await trackCharge(deck.id, chargeResult);
+  } else {
+    const llmResult = await chatJson({
+      system: outlinePrompt.buildSystem(),
+      user: outlinePrompt.buildUser({
+        sourceText,
+        slideCount: effectiveSlideCount,
+        density,
+        locale,
+        audience: audience || '',
+        voiceAndTone: outlineVoiceAndTone || '',
+        purpose: purpose || '',
+      }),
+      model: DEFAULT_OUTLINE_MODEL,
+    });
+
+    outline = normalizeOutline(llmResult.data, {
+      slideCount: effectiveSlideCount,
+      density,
+      locale,
+      sourceText,
+    });
+
+    chargeResult = await presentationCredit.chargeOutlineReconcile({
+      workspaceId,
+      userId,
+      deckId: deck.id,
+      usage: llmResult.usage,
+      idempotencyKey: `ppt:outline:${deck.id}:${hashPayload([source, sourceText.slice(0, 200), String(effectiveSlideCount), density])}`,
+      metadata: { projectId: project.id },
+    });
+    await trackCharge(deck.id, chargeResult);
+  }
 
   // Persist generated deck title on the Project before returning
   const presentation = await presentationDao.updateProjectName(project.id, outline.title);
@@ -1711,7 +1921,7 @@ async function generateOutline({
     outline: updated.outline,
     deckId: updated.id,
     promptBundleVersion: updated.promptBundleVersion,
-    creditsCharged: chargeResult.skipped ? 0 : chargeResult.charged || chargeResult.pricing?.athenaCredits || 0,
+    creditsCharged: chargeResult?.skipped ? 0 : chargeResult?.charged || chargeResult?.pricing?.athenaCredits || 0,
   };
 }
 
@@ -1800,7 +2010,9 @@ async function startGenerate({
   flowCtx.layoutIdWhitelist = packBrand.layoutIdWhitelist;
   flowCtx.packId = packBrand.packId;
   flowCtx.brandKitId = packBrand.brandKitId;
+  flowCtx.packSlides = packBrand.packSlides || flowCtx.packSlides || [];
   flowCtx.preferExistingPackLayout = Boolean(packBrand.packId);
+  const isPackMode = Boolean(packBrand.packId && packBrand.packSlides?.length);
 
   const resolvedDensity =
     flowCtx.density || density || deck.outline?.density || 'balanced';
@@ -1827,10 +2039,39 @@ async function startGenerate({
         : '',
     ]);
 
-  // Preserve manually edited slides unless overwrite
+  // Preserve manually edited slides unless overwrite; pack mode re-queues skeleton slides for AI fill
   const existing = deck.slides || [];
   if (overwriteManualEdits) {
     await presentationDao.deleteSlidesByDeckId(deck.id);
+  } else if (isPackMode) {
+    const outlineOrders = new Set(outlineSlides.map((s) => Number(s.order)));
+    const toDelete = existing.filter((s) => !outlineOrders.has(Number(s.order)));
+    if (toDelete.length) {
+      await prisma.slide.deleteMany({ where: { id: { in: toDelete.map((s) => s.id) } } });
+    }
+    for (const slide of existing.filter((s) => outlineOrders.has(Number(s.order)))) {
+      await presentationDao.updateSlide(slide.id, {
+        status: 'PENDING',
+        manuallyEdited: false,
+      });
+    }
+    const remainingOrders = new Set(
+      existing.filter((s) => outlineOrders.has(Number(s.order))).map((s) => Number(s.order))
+    );
+    const pendingData = outlineSlides
+      .filter((s) => !remainingOrders.has(Number(s.order)))
+      .map((s) => ({
+        order: Number(s.order),
+        contentType: s.suggestedContentType || null,
+        layoutId: s.layoutId || null,
+        content: null,
+        imageRef: null,
+        status: 'PENDING',
+        manuallyEdited: false,
+      }));
+    if (pendingData.length) {
+      await presentationDao.createSlides(deck.id, pendingData);
+    }
   } else {
     const toDelete = existing.filter((s) => !s.manuallyEdited).map((s) => s.id);
     if (toDelete.length) {
@@ -1838,24 +2079,50 @@ async function startGenerate({
     }
   }
 
-  const preserved = overwriteManualEdits
-    ? []
-    : existing.filter((s) => s.manuallyEdited);
-  const preservedOrders = new Set(preserved.map((s) => s.order));
+  if (!isPackMode && !overwriteManualEdits) {
+    const blankStarters = existing.filter((s) => isBlankStarterSlide(s));
+    for (const slide of blankStarters) {
+      await presentationDao.updateSlide(slide.id, {
+        status: 'PENDING',
+        manuallyEdited: false,
+      });
+    }
 
-  const pendingData = outlineSlides
-    .filter((s) => !preservedOrders.has(Number(s.order)))
-    .map((s) => ({
+    const preserved = existing.filter((s) => s.manuallyEdited && !isBlankStarterSlide(s));
+    const preservedOrders = new Set(preserved.map((s) => Number(s.order)));
+    const requeuedOrders = new Set(blankStarters.map((s) => Number(s.order)));
+
+    const pendingData = outlineSlides
+      .filter(
+        (s) =>
+          !preservedOrders.has(Number(s.order)) && !requeuedOrders.has(Number(s.order))
+      )
+      .map((s) => ({
+        order: Number(s.order),
+        contentType: s.suggestedContentType || null,
+        layoutId: s.layoutId || null,
+        content: null,
+        imageRef: null,
+        status: 'PENDING',
+        manuallyEdited: false,
+      }));
+
+    if (pendingData.length) {
+      await presentationDao.createSlides(deck.id, pendingData);
+    }
+  } else if (overwriteManualEdits) {
+    const pendingData = outlineSlides.map((s) => ({
       order: Number(s.order),
       contentType: s.suggestedContentType || null,
+      layoutId: s.layoutId || null,
       content: null,
       imageRef: null,
       status: 'PENDING',
       manuallyEdited: false,
     }));
-
-  if (pendingData.length) {
-    await presentationDao.createSlides(deck.id, pendingData);
+    if (pendingData.length) {
+      await presentationDao.createSlides(deck.id, pendingData);
+    }
   }
 
   if (flowCtx.title) {
@@ -2022,6 +2289,7 @@ async function regenerateSlide({
         ? { title: existingTitle }
         : null;
     reset.layoutId = null;
+    reset.elements = null;
   }
   if (target === 'all' || target === 'image') {
     reset.imageRef = null;
@@ -2062,6 +2330,11 @@ async function regenerateSlide({
     baseTemplateBias: flowCtx.baseTemplateBias || null,
     layoutIdWhitelist: packBrand.layoutIdWhitelist || null,
     preferExistingPackLayout: Boolean(packBrand.packId) && target === 'image',
+    packSlides: packBrand.packSlides || flowCtx.packSlides || [],
+    contentDistribution: flowCtx.contentDistribution || null,
+    packBound: Boolean(packBrand.packId),
+    forceTextReplace: true,
+    forceImageRefresh: target === 'image' || Boolean(packBrand.packId),
   };
 
   // For image-only, keep content and skip content LLM by marking duplicate-like path:
@@ -2108,7 +2381,7 @@ async function regenerateSlide({
                 slideTitle: content?.title,
                 slideContent: content,
                 themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
-                themeColorTreatment: ctx.themeTokens?.colorTreatment,
+                themeColorTreatment: imageColorTreatmentForCtx(ctx),
                 wizardBrief: ctx.wizardBrief || '',
                 authorImagePrompt: resolveAuthorImagePrompt(content),
               }),

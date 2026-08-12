@@ -147,6 +147,9 @@ const generateOutlineSchema = Joi.object({
     slideCount: slideCountField.default(12),
     density: densityField,
     locale: localeField,
+    voiceAndTone: Joi.string().trim().max(64).allow('', null).optional(),
+    audience: Joi.string().trim().max(64).allow('', null).optional(),
+    purpose: Joi.string().trim().max(64).allow('', null).optional(),
   }).required(),
 });
 
