@@ -336,6 +336,7 @@ module.exports = {
   PRESENTATION_TEMPLATE_UPDATED: 'Deck template updated',
   PRESENTATION_TEMPLATE_NOT_FOUND: 'Deck template not found',
   PRESENTATION_DECK_PACKS_FETCHED: 'Presentation deck packs fetched',
+  PRESENTATION_DECK_PACK_FETCHED: 'Presentation deck pack fetched',
   PRESENTATION_DECK_PACK_NOT_FOUND: 'Presentation deck pack not found',
   PRESENTATION_BRAND_KIT_APPLIED: 'Brand kit applied to presentation',
 

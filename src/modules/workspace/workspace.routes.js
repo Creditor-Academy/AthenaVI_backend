@@ -87,6 +87,13 @@ router.get(
   presentationController.listPresentationDeckPacks
 );
 router.get(
+  '/:workspaceId/presentation-deck-packs/:packId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.workspacePresentationDeckPackByIdSchema),
+  presentationController.getPresentationDeckPack
+);
+router.get(
   '/:workspaceId/video-templates',
   authMiddleware,
   requireWorkspaceRole(anyMember),

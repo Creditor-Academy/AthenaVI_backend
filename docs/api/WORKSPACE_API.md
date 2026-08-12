@@ -669,6 +669,11 @@ Create project from pack: `POST .../projects` with `templateId` of a `VIDEO_PACK
 
 Presentation / PPT layouts use `/presentations` and `DECK_LAYOUT` / `DECK_PACK` — do not mix.
 
+**Presentation deck packs**
+
+List: `GET /api/workspaces/:workspaceId/presentation-deck-packs` (summary — no `schema.slides`).  
+Get one: `GET /api/workspaces/:workspaceId/presentation-deck-packs/:packId` (full `schema`, `slidePreviews[]`, presigned `media[]`).
+
 **Wizard example (canvas + details)**
 
 ```http

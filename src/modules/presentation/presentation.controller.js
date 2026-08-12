@@ -343,6 +343,11 @@ const listPresentationDeckPacks = asyncHandler(async (req, res) => {
   return successResponse(req, res, { packs: data }, 200, messages.PRESENTATION_DECK_PACKS_FETCHED);
 });
 
+const getPresentationDeckPack = asyncHandler(async (req, res) => {
+  const pack = await presentationService.getPresentationDeckPack(req.params.packId);
+  return successResponse(req, res, { pack }, 200, messages.PRESENTATION_DECK_PACK_FETCHED);
+});
+
 const applyBrandKit = asyncHandler(async (req, res) => {
   const data = await presentationService.applyBrandKit({
     workspaceId: req.params.workspaceId,
@@ -417,6 +422,7 @@ module.exports = {
   listPresentationThemes,
   listPresentationElements,
   listPresentationDeckPacks,
+  getPresentationDeckPack,
   applyBrandKit,
   uploadSlideMedia,
   attachSlideAsset,

@@ -362,6 +362,7 @@ Base: `/api/workspaces/:workspaceId`
 |----|--------|------|
 | Single-slide layout gallery | `GET` | `/presentation-templates?category=` (tabs) or `?contentType=` |
 | Multi-slide deck packs | `GET` | `/presentation-deck-packs` |
+| Deck pack detail (slide grid) | `GET` | `/presentation-deck-packs/:packId` |
 | Brand Kits | `GET` | `/brand-kits` |
 | Theme picker | `GET` | `/presentation-themes` |
 | Insert palette | `GET` | `/presentation-elements` |
@@ -399,7 +400,7 @@ Installed by backend seed (`npm run seed:presentation-deck-packs`). Each pack is
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 | `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing images) |
 
-**Important:** List packs via `GET .../presentation-deck-packs`. The `packId` you send on create/generate is the **template row id** returned by that API (cuid). Display thumbnails from **`previewImageUrl`** or **`preview.imageUrl`** / **`preview.thumbnailUrl`** (same presigned URL). Fall back to `preview.color` / `preview.accentColor` when those are null (text-first packs like consulting/QBR). Do **not** expect an image on `preview` color fields alone.
+**Important:** List packs via `GET .../presentation-deck-packs` (summary only — **no `schema.slides`**). For pack drill-down / slide grid, call `GET .../presentation-deck-packs/:packId` (`schema.slides`, `slidePreviews[]`, presigned `media[]`). The `packId` you send on create/generate is the **template row id** returned by list/detail (cuid). Display pack thumbnails from **`previewImageUrl`** or **`preview.imageUrl`** / **`preview.thumbnailUrl`** (same presigned URL). Per-slide thumbnails: **`slidePreviews[].previewImageUrl`** or `media[]` with `slotHint: slide:{order}`. Fall back to `preview.color` / `preview.accentColor` when those are null (text-first packs like consulting/QBR). Do **not** expect an image on `preview` color fields alone.
 
 ### Canvas publish as pack (superadmin)
 
@@ -485,7 +486,8 @@ Creates a hybrid `DECK_PACK` with `snapshot.elements` per slide + `TemplateMedia
 ### D — Create from deck pack + Brand Kit
 
 1. Ensure Brand Kit exists (Part 1)  
-2. `GET .../presentation-deck-packs` → pack picker  
+2. `GET .../presentation-deck-packs` → pack picker (summary)  
+3. `GET .../presentation-deck-packs/:packId` → slide drill-down when user opens a pack
 3. `POST .../presentations` `{ folderId, createMode: "pack", packId, brandKitId? }`  
 4. Edit canvas; optional later `POST .../apply-brand-kit`  
 5. For AI fill: outline → generate with `generationFlow.selections.packId` + `brandKitId`  
@@ -868,7 +870,7 @@ Filter UI by `project.type === "PRESENTATION"` vs `"VIDEO"`. Open presentations 
 
 | | PPT layout `DECK_LAYOUT` | PPT pack `DECK_PACK` | Video `VIDEO_SCENE` / `VIDEO_PACK` |
 |--|--------------------------|----------------------|-------------------------------------|
-| Workspace list | `GET .../presentation-templates` | `GET .../presentation-deck-packs` (`previewImageUrl`, `media[]`) | `GET .../video-templates?type=` (`previewImageUrl`, `media[]`) |
+| Workspace list | `GET .../presentation-templates` | `GET .../presentation-deck-packs` (`previewImageUrl`, `media[]`; detail: `.../:packId`) | `GET .../video-templates?type=` (`previewImageUrl`, `media[]`) |
 | Apply | `createMode: "template"` / `apply-layout` | `createMode: "pack"` + AI whitelist | Project `templateId` (scene or pack) / `scenes/from-template` (scene only) |
 | Schema | `layout_id`, `grid`, `slots[]` | `pack_id`, `slides[]`, `themeId` | `scene.elements` / pack `scenes[]` with frames |
 | Canvas publish | — | `publish-as-pack` → `TemplateMedia` `slide:n` | `publish-as-template` / `publish-as-video-pack` → `TemplateMedia` `scene:n` |
@@ -896,6 +898,7 @@ Brand Kit is workspace-owned look — separate from templates.
 POST   /api/workspaces/:workspaceId/presentations
 GET    /api/workspaces/:workspaceId/presentation-templates
 GET    /api/workspaces/:workspaceId/presentation-deck-packs
+GET    /api/workspaces/:workspaceId/presentation-deck-packs/:packId
 GET    /api/workspaces/:workspaceId/presentation-themes
 GET    /api/workspaces/:workspaceId/presentation-elements
 GET    /api/workspaces/:workspaceId/brand-kits
@@ -1384,6 +1387,7 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 | POST | `/api/workspaces/:workspaceId/presentations` |
 | GET | `/api/workspaces/:workspaceId/presentation-templates` |
 | GET | `/api/workspaces/:workspaceId/presentation-deck-packs` |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs/:packId` |
 | GET | `/api/workspaces/:workspaceId/presentation-themes` |
 | GET | `/api/workspaces/:workspaceId/presentation-elements` |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` |

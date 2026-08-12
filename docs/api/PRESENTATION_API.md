@@ -97,7 +97,8 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=&category=` | Active `DECK_LAYOUT` templates + `categories[]` gallery tabs |
-| `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs` | Active `DECK_PACK` multi-slide packs |
+| `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs` | Active `DECK_PACK` multi-slide packs (summary picker) |
+| `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs/:packId` | One active `DECK_PACK` with full `schema.slides` + `slidePreviews[]` |
 | `GET` | `/api/workspaces/:workspaceId/presentation-themes` | Curated theme catalog |
 | `GET` | `/api/workspaces/:workspaceId/presentation-elements` | Element library presets for the canvas palette |
 | `GET` | `/api/workspaces/:workspaceId/brand-kits` | Workspace Brand Kits (see [BRAND_KIT_API.md](BRAND_KIT_API.md)) |
@@ -123,7 +124,7 @@ and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistri
 
 Visual slides may include `placeholder.imagePrompt`. Seed also acquires **durable system photos** into
 `TemplateMedia` (stock-once → S3). **Pack clone** fills image element URLs from that media (no empty frames).
-List packs includes `previewImageUrl` + `media[]` (presigned). AI image brief prefers
+List packs includes `previewImageUrl` + `media[]` (presigned). **List does not include `schema.slides`** — use `GET .../presentation-deck-packs/:packId` for drill-down (full `schema`, hydrated snapshot URLs, and `slidePreviews[]` per slide). AI image brief prefers
 `content.imagePrompt` or `generationHints.imagePromptStyle` (prompt bundle **v1.5+**).
 
 | pack_id | Theme | Slides | Use case |

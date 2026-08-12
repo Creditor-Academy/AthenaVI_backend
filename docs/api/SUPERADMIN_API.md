@@ -219,7 +219,7 @@ POST /api/superadmin/projects/:projectId/publish-as-video-pack
 
 Admin can also upload picker thumbs via `POST /api/superadmin/templates/:templateId/media` (`kind=preview` or `slotHint=scene:1` for video types).
 
-Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs`, `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK` (returns `media[]` + `previewImageUrl`). PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
+Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs` (summary), `GET .../presentation-deck-packs/:packId` (detail), `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK` (returns `media[]` + `previewImageUrl`). PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
 
 ---
 

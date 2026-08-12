@@ -90,10 +90,11 @@ Poll `GET .../status` (or refetch the presentation) while a slide is `GENERATING
 ### D — Create from deck pack (Canva-style) + Brand Kit
 
 1. Settings: create Brand Kit via `/brand-kits` (colors, fonts, logos, photos, voice) — see [`docs/api/BRAND_KIT_API.md`](api/BRAND_KIT_API.md)
-2. `GET .../presentation-deck-packs` → pack picker
-3. `POST .../presentations` `{ folderId, createMode: "pack", packId, brandKitId? }`
-4. Edit canvas; optional `POST .../apply-brand-kit` later
-5. For AI: outline → generate with `generationFlow.selections.packId` + `brandKitId` (content + images fill the branded layouts; brand photos preferred)
+2. `GET .../presentation-deck-packs` → pack picker (summary cards)
+3. On pack drill-down: `GET .../presentation-deck-packs/:packId` → slide grid (`slidePreviews[]`, full `schema.slides`)
+4. `POST .../presentations` `{ folderId, createMode: "pack", packId, brandKitId? }`
+5. Edit canvas; optional `POST .../apply-brand-kit` later
+6. For AI: outline → generate with `generationFlow.selections.packId` + `brandKitId` (content + images fill the branded layouts; brand photos preferred)
 
 Canvas-published packs (`meta.authoredVia: "canvas"`) clone designed `snapshot.elements`. When `meta.aiReady` / role-tagged elements exist, generate **rebinds** text/images in place instead of recompiling from layout slots.
 
@@ -111,6 +112,7 @@ Base: `/api/workspaces/:workspaceId`
 |----|--------|------|
 | Layout / template gallery | `GET` | `/presentation-templates?category=` (tabs from `categories[]`) or `?contentType=` |
 | Deck packs (multi-slide) | `GET` | `/presentation-deck-packs` |
+| Deck pack detail (slide grid) | `GET` | `/presentation-deck-packs/:packId` |
 | Brand Kits | `GET` | `/brand-kits` |
 | Theme picker | `GET` | `/presentation-themes` |
 | Insert palette | `GET` | `/presentation-elements` |

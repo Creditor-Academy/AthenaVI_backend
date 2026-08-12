@@ -10,6 +10,7 @@ const slideEditorRaw = require('./slideEditor.service');
 const { layoutSlotsToElements, blankCanvas, injectBrandLogo, rebindContentToElements } = require('./layoutToElements');
 const brandKitService = require('../brandKit/brandKit.service');
 const templateMediaService = require('../templates/templateMedia.service');
+const deckPackGalleryService = require('./deckPackGallery.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
 const {
   attachPresignedMediaToSlides,
@@ -348,41 +349,11 @@ async function createPresentation({
 }
 
 async function listPresentationDeckPacks() {
-  const packs = await presentationDao.findActiveDeckPacks();
-  const withMedia = await templateMediaService.withMediaAttachedMany(packs);
-  return withMedia.map((p) => {
-    const previewMedia =
-      (p.media || []).find((m) => m.kind === 'preview') ||
-      (p.media || []).find((m) => m.slotHint === 'preview') ||
-      (p.media || []).find((m) => String(m.slotHint || '').startsWith('slide:1')) ||
-      (p.media || [])[0] ||
-      null;
-    const previewImageUrl = previewMedia?.url || null;
-    const basePreview =
-      p.schema?.preview && typeof p.schema.preview === 'object' ? { ...p.schema.preview } : {};
-    return {
-      id: p.id,
-      name: p.name,
-      packId: p.schema?.pack_id || p.id,
-      themeId: p.schema?.themeId || null,
-      aspectRatio: p.schema?.aspectRatio || '16:9',
-      slideCount: Array.isArray(p.schema?.slides) ? p.schema.slides.length : 0,
-      meta: p.schema?.meta || null,
-      narrative: p.schema?.narrative || null,
-      // Nested for FE pickers that already read `preview.*`
-      preview: {
-        ...basePreview,
-        imageUrl: previewImageUrl,
-        thumbnailUrl: previewImageUrl,
-      },
-      previewImageUrl,
-      thumbnailUrl: previewImageUrl,
-      media: p.media || [],
-      generationDefaults: p.schema?.generationDefaults || null,
-      variant: p.variant,
-      version: p.version,
-    };
-  });
+  return deckPackGalleryService.listActiveDeckPacks();
+}
+
+async function getPresentationDeckPack(packId) {
+  return deckPackGalleryService.getActiveDeckPack(packId);
 }
 
 async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
@@ -573,6 +544,7 @@ module.exports = {
   getSlide,
   creditEstimate,
   listPresentationDeckPacks,
+  getPresentationDeckPack,
   applyBrandKit,
   generateOutline: deckGeneration.generateOutline,
   updateOutline: deckGeneration.updateOutline,

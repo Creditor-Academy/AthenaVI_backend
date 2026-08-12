@@ -502,6 +502,15 @@ const listWorkspacePresentationDeckPacksSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const workspacePresentationDeckPackByIdSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    packId: templateIdField.required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
 const applyBrandKitSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -928,6 +937,7 @@ module.exports = {
   listWorkspacePresentationThemesSchema,
   listWorkspacePresentationElementsSchema,
   listWorkspacePresentationDeckPacksSchema,
+  workspacePresentationDeckPackByIdSchema,
   applyBrandKitSchema,
   uploadSlideMediaSchema,
   attachSlideAssetSchema,

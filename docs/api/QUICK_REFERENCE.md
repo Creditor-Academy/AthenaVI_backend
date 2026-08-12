@@ -54,7 +54,8 @@
 | POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template` \| `pack`) |
 | GET | `/api/workspaces/:workspaceId/presentations` | Bearer + member | List presentations (`folderId` optional) |
 | GET | `/api/workspaces/:workspaceId/presentation-templates` | Bearer + member | List DECK_LAYOUT templates + categories (`?category=` / `?contentType=`) |
-| GET | `/api/workspaces/:workspaceId/presentation-deck-packs` | Bearer + member | List DECK_PACK multi-slide packs |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs` | Bearer + member | List DECK_PACK multi-slide packs (summary) |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs/:packId` | Bearer + member | Get one DECK_PACK (full schema + slidePreviews) |
 | GET | `/api/workspaces/:workspaceId/brand-kits` | Bearer + member | List workspace Brand Kits |
 | POST | `/api/workspaces/:workspaceId/brand-kits` | Bearer + OWNER/ADMIN | Create Brand Kit |
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + member | Get Brand Kit |
