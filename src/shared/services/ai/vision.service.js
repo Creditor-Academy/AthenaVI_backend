@@ -100,6 +100,100 @@ async function checkImageRelevance({
   };
 }
 
+/**
+ * Summarize a reference image for image-gen context enrichment.
+ * @param {{
+ *   buffer?: Buffer,
+ *   imageBase64?: string,
+ *   mimeType?: string,
+ *   hint?: string,
+ *   model?: string,
+ * }} opts
+ * @returns {Promise<{ summary: string, latencyMs: number }>}
+ */
+async function summarizeReferenceImage({
+  buffer,
+  imageBase64,
+  mimeType = 'image/png',
+  hint = '',
+  model,
+} = {}) {
+  const openai = getOpenAI();
+  const resolvedModel =
+    model ||
+    process.env.IMAGE_GEN_VISION_MODEL ||
+    process.env.PPT_VISION_MODEL ||
+    DEFAULT_SLIDE_MODEL;
+
+  let dataUrl;
+  if (buffer && Buffer.isBuffer(buffer)) {
+    const mime = String(mimeType || 'image/png').toLowerCase();
+    dataUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+  } else if (imageBase64 && String(imageBase64).trim()) {
+    const raw = String(imageBase64).trim();
+    dataUrl = raw.startsWith('data:') ? raw : `data:image/png;base64,${raw}`;
+  } else {
+    throw new AppError('Image buffer or imageBase64 is required for reference summary', 400);
+  }
+
+  const imagePart = { type: 'image_url', image_url: { url: dataUrl } };
+  const system = [
+    'You summarize reference images for AI image generation.',
+    'Describe subject, style, color palette, composition, lighting, typography/visible text, and mood.',
+    'Return JSON only: { "summary": "..." }.',
+    'Keep summary under 120 words. Be concrete and visual, not marketing fluff.',
+  ].join(' ');
+
+  const userText = [
+    hint ? `User hint: ${String(hint).trim()}` : null,
+    'Summarize this image as a visual reference for generating a new image.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const started = Date.now();
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: resolvedModel,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: userText }, imagePart],
+        },
+      ],
+    });
+  } catch (err) {
+    const msg = err?.message || 'OpenAI vision reference summary failed';
+    const status = err?.status >= 400 && err?.status < 600 ? err.status : 502;
+    throw new AppError(msg, status);
+  }
+
+  const latencyMs = Date.now() - started;
+  const raw = completion?.choices?.[0]?.message?.content;
+  if (!raw) {
+    throw new AppError('OpenAI vision returned empty content', 502);
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new AppError('OpenAI vision returned invalid JSON', 502);
+  }
+
+  const summary = parsed.summary != null ? String(parsed.summary).trim() : '';
+  if (!summary) {
+    throw new AppError('OpenAI vision returned empty summary', 502);
+  }
+
+  return { summary, latencyMs };
+}
+
 module.exports = {
   checkImageRelevance,
+  summarizeReferenceImage,
 };

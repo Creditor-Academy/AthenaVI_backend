@@ -163,9 +163,109 @@ async function editImage({
   };
 }
 
+/**
+ * Generate an image from a prompt plus optional reference images via Images Edit API.
+ * Uses gpt-image models only. Passes multiple images as visual references.
+ * @param {{
+ *   prompt: string,
+ *   referenceBuffers: Buffer[],
+ *   model?: string,
+ *   size?: string,
+ *   quality?: string,
+ *   inputFidelity?: string,
+ * }} opts
+ */
+async function generateImageWithReferences({
+  prompt,
+  referenceBuffers = [],
+  model = 'gpt-image-1',
+  size,
+  quality = 'standard',
+  inputFidelity,
+} = {}) {
+  const openai = getOpenAI();
+  let resolvedModel = model || 'gpt-image-1';
+  if (!String(resolvedModel).startsWith('gpt-image')) {
+    resolvedModel = 'gpt-image-1';
+  }
+
+  if (!prompt || !String(prompt).trim()) {
+    throw new AppError('Image prompt is required', 400);
+  }
+  if (!Array.isArray(referenceBuffers) || referenceBuffers.length === 0) {
+    throw new AppError('At least one reference image buffer is required', 400);
+  }
+  if (referenceBuffers.length > 5) {
+    throw new AppError('At most 5 reference images are allowed', 400);
+  }
+
+  const files = [];
+  for (let i = 0; i < referenceBuffers.length; i += 1) {
+    const buf = referenceBuffers[i];
+    if (!buf || !Buffer.isBuffer(buf)) {
+      throw new AppError('Each reference image must be a Buffer', 400);
+    }
+    // eslint-disable-next-line no-await-in-loop
+    const file = await toFile(buf, `reference-${i + 1}.png`, { type: 'image/png' });
+    files.push(file);
+  }
+
+  const fidelity =
+    inputFidelity ||
+    (process.env.IMAGE_GEN_REFERENCE_INPUT_FIDELITY &&
+      String(process.env.IMAGE_GEN_REFERENCE_INPUT_FIDELITY).trim()) ||
+    'high';
+
+  const params = {
+    model: resolvedModel,
+    image: files,
+    prompt: String(prompt).trim(),
+    quality: mapQuality(quality, resolvedModel),
+    n: 1,
+  };
+  if (size) {
+    params.size = size;
+  }
+  if (fidelity === 'low' || fidelity === 'high') {
+    params.input_fidelity = fidelity;
+  }
+
+  const started = Date.now();
+  let response;
+  try {
+    response = await openai.images.edit({
+      ...params,
+      response_format: 'b64_json',
+    });
+  } catch (err) {
+    if (err?.message && /response_format/i.test(err.message)) {
+      try {
+        response = await openai.images.edit(params);
+      } catch (retryErr) {
+        const msg = retryErr?.message || 'OpenAI image generation with references failed';
+        const status = retryErr?.status >= 400 && retryErr?.status < 600 ? retryErr.status : 502;
+        throw new AppError(msg, status);
+      }
+    } else {
+      const msg = err?.message || 'OpenAI image generation with references failed';
+      const status = err?.status >= 400 && err?.status < 600 ? err.status : 502;
+      throw new AppError(msg, status);
+    }
+  }
+
+  const extracted = extractB64(response);
+  return {
+    ...extracted,
+    usage: response?.usage || null,
+    latencyMs: Date.now() - started,
+    model: resolvedModel,
+  };
+}
+
 module.exports = {
   generateImage,
   editImage,
+  generateImageWithReferences,
   mapQuality,
   DEFAULT_IMAGE_MODEL,
 };

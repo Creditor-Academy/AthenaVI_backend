@@ -62,6 +62,67 @@ Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `insta
 
 ---
 
+## Context bundles
+
+Upload documents / reference images (or reference workspace assets) **before** generate. Context create is **free** (rate-limited). Generate/regenerate charge as usual.
+
+### Create context
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/context` |
+| **Status** | **201** |
+| **Content-Type** | `multipart/form-data` |
+
+| Part | Rules |
+|------|--------|
+| `files` | 0–N files (field name `files`). Max **5** combined with `assetIds`. Max **20 MB** each. |
+| `payload` | JSON string: `{ "inlineText"?: string, "assetIds"?: uuid[] }` |
+
+**Allowed types:** PDF, DOCX, MD, TXT, PNG, JPG, JPEG, WebP.  
+**Validation:** at least one of `files`, `assetIds`, `inlineText`. `assetIds` must be **image** assets in the workspace.
+
+**Response `data.context`:**
+
+```json
+{
+  "id": "uuid",
+  "status": "READY",
+  "expiresAt": "ISO",
+  "pinnedAt": null,
+  "createdAt": "ISO",
+  "previews": {
+    "inlineText": "...",
+    "documents": [{ "name": "brief.pdf", "excerpt": "...", "truncated": false }],
+    "images": [{ "name": "ref.png", "summary": "..." }],
+    "assetRefs": [{ "assetId": "...", "name": "...", "role": "reference_image" }]
+  },
+  "warnings": []
+}
+```
+
+### Get context
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/context/:contextId` |
+
+Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE workspace mismatch.
+
+### Delete context
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/context/:contextId` |
+| **Status** | **200** |
+
+**409** if context is pinned (already used by a generation). Only deletes uploaded S3 keys (never workspace Asset keys).
+
+---
+
 ## Generate
 
 | | |
@@ -87,7 +148,8 @@ Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `insta
     "title": "Onboarding",
     "sections": [{ "title": "Sign up", "bullets": ["Email", "Verify"] }]
   },
-  "name": "launch.png"
+  "name": "launch.png",
+  "contextId": "optional-context-uuid"
 }
 ```
 
@@ -97,8 +159,11 @@ Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `insta
 | `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). |
 | `prompt` | Required unless `infographic.sections` provided |
 | `style` / `styleId` | Optional vibe from `/styles` |
+| `contextId` | Optional. Uses document text + vision summaries in the prompt; reference images go through `images.edit` |
 
 **Response `data`:** `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`.
+
+`generation` includes `contextId` and `contextPreview` when context was used. A snapshot is stored in `generation.request.contextSnapshot` for regenerate.
 
 Master file is always **PNG** on S3.
 
@@ -129,7 +194,9 @@ PRIVATE workspaces only return the current user’s generations.
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` |
 | **Status** | **201** |
 
-Body fields optional — omitted fields reuse the parent generation’s request. Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+Body fields optional — omitted fields reuse the parent generation’s request (including `contextId`). Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+
+If the live context expired, regenerate still applies **text** context from `request.contextSnapshot` (visual reference images require a live/pinned context).
 
 ---
 
@@ -145,7 +212,7 @@ Body fields optional — omitted fields reuse the parent generation’s request.
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge).
+Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge). Context bundles are **not** applied on tweak (v1).
 
 ---
 
@@ -177,7 +244,7 @@ Returns file attachment (`Content-Disposition: attachment`). **No credit charge.
 | Infographic surcharge | +2 | `IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC` |
 | Social surcharge | +1 | `IMAGE_GEN_SOCIAL_SURCHARGE_AC` |
 
-Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`.
+Context create is **free**. Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` / `IMAGE_GEN_CONTEXT_RATE_LIMIT_WINDOW_SEC`.
 
 Requires **`OPENAI_API_KEY`**.
 

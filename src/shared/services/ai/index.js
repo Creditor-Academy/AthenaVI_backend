@@ -5,8 +5,8 @@ const {
   DEFAULT_OUTLINE_MODEL,
   DEFAULT_SLIDE_MODEL,
 } = require('./llm.service');
-const { generateImage, editImage, DEFAULT_IMAGE_MODEL } = require('./image.service');
-const { checkImageRelevance } = require('./vision.service');
+const { generateImage, editImage, generateImageWithReferences, DEFAULT_IMAGE_MODEL } = require('./image.service');
+const { checkImageRelevance, summarizeReferenceImage } = require('./vision.service');
 
 module.exports = {
   getOpenAI,
@@ -16,6 +16,8 @@ module.exports = {
   DEFAULT_SLIDE_MODEL,
   generateImage,
   editImage,
+  generateImageWithReferences,
   DEFAULT_IMAGE_MODEL,
   checkImageRelevance,
+  summarizeReferenceImage,
 };

@@ -132,6 +132,9 @@
 | GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (social + generic) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
 | GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
+| POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |
+| GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
+| DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Delete unpinned context |
 | POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image generations |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |

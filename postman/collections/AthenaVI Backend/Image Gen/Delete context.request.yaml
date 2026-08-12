@@ -1,0 +1,5 @@
+$kind: http-request
+name: Delete context
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/context/{{imageGenContextId}}"
+method: DELETE
+order: 2575

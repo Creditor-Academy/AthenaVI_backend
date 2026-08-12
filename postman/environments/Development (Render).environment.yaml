@@ -33,3 +33,11 @@ values:
     value: ''
     type: default
     enabled: true
+  - key: imageGenContextId
+    value: ''
+    type: default
+    enabled: true
+  - key: imageGenerationId
+    value: ''
+    type: default
+    enabled: true

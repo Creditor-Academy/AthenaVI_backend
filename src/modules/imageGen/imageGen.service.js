@@ -1,13 +1,18 @@
 const { v4: uuidv4 } = require('uuid');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
-const { generateImage, editImage } = require('../../shared/services/ai');
+const {
+  generateImage,
+  editImage,
+  generateImageWithReferences,
+} = require('../../shared/services/ai');
 const { getObjectBuffer } = require('../s3/s3.service');
 const { persistWorkspaceAsset } = require('../asset/asset.service');
 const prisma = require('../../shared/config/prismaClient');
 const imageGenCredit = require('./imageGenCredit.service');
 const imageGenDao = require('./imageGen.dao');
 const rateLimit = require('./imageGenRateLimit.service');
+const contextService = require('./imageGen.context.service');
 const { listModels, resolveModel, estimateCredits } = require('./catalogs/models');
 const {
   listFormats,
@@ -26,6 +31,7 @@ const MODES = new Set(['image', 'infographic', 'social']);
 
 function serializeGeneration(row) {
   if (!row) return row;
+  const request = row.request && typeof row.request === 'object' ? row.request : {};
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -41,6 +47,8 @@ function serializeGeneration(row) {
     rootId: row.rootId,
     action: row.action,
     assetId: row.assetId,
+    contextId: row.contextId || request.contextId || null,
+    contextPreview: request.contextPreview || null,
     s3Key: row.s3Key,
     url: row.url,
     openaiSize: row.openaiSize,
@@ -125,6 +133,8 @@ async function runPipeline({
   parentId,
   rootId,
   rateLimitFn,
+  contextId = null,
+  parentSnapshot = null,
 }) {
   if (!MODES.has(mode)) {
     throw new AppError('Invalid mode. Use image, infographic, or social.', 400);
@@ -151,9 +161,20 @@ async function runPipeline({
   const pricing = estimateCredits({ modelId: model.id, mode, isTweak: false });
 
   await rateLimitFn(userId, workspace.id);
+
+  // Resolve context before credit check so invalid/expired contextId fails with 4xx
+  // (not 402) and we don't assert affordability unnecessarily.
+  const contextResult = await contextService.resolveForGenerate({
+    contextId: contextId || null,
+    workspace,
+    userId,
+    parentSnapshot: action === 'regenerate' ? parentSnapshot : null,
+    requireLive: action === 'generate' && Boolean(contextId),
+  });
+
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
-  const finalPrompt = buildFinalPrompt({
+  const basePrompt = buildFinalPrompt({
     mode,
     prompt: prompt || '',
     styleId,
@@ -164,13 +185,35 @@ async function runPipeline({
     infographic,
   });
 
+  let enrichedPrompt = contextService.appendContextBlock(
+    basePrompt,
+    contextResult.enrichmentBlock
+  );
+
+  const referenceBuffers = contextResult.referenceImageBuffers || [];
+  const useRefs = referenceBuffers.length > 0;
+  if (useRefs) {
+    enrichedPrompt = contextService.withReferenceImageIndexHints(
+      enrichedPrompt,
+      referenceBuffers.length
+    );
+  }
+
   const openaiSize = openaiSizeForFormat(format, model.openaiModel);
-  const generated = await generateImage({
-    prompt: finalPrompt,
-    model: model.openaiModel,
-    quality: model.quality,
-    size: openaiSize,
-  });
+  const generated = useRefs
+    ? await generateImageWithReferences({
+        prompt: enrichedPrompt,
+        referenceBuffers,
+        model: model.openaiModel,
+        quality: model.quality,
+        size: openaiSize,
+      })
+    : await generateImage({
+        prompt: enrichedPrompt,
+        model: model.openaiModel,
+        quality: model.quality,
+        size: openaiSize,
+      });
 
   const cropped = await cropToFormat(generated.buffer, format);
   const generationId = uuidv4();
@@ -193,10 +236,12 @@ async function runPipeline({
       formatId: format?.id || null,
       styleId: styleId || null,
       action,
+      contextId: contextResult.contextId || null,
     },
   });
 
   const resolvedRootId = rootId || parentId || generationId;
+  const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
   const requestPayload = {
     mode,
     modelId: model.id,
@@ -208,6 +253,9 @@ async function runPipeline({
     brandPalette: brandPalette || null,
     infographic: infographic || null,
     name: assetName,
+    contextId: liveContextId || contextResult.contextId || contextId || null,
+    contextPreview: contextResult.contextPreview || null,
+    contextSnapshot: contextResult.contextSnapshot || null,
   };
 
   const row = await imageGenDao.createGeneration({
@@ -218,13 +266,14 @@ async function runPipeline({
     modelId: model.id,
     formatId: format?.id || null,
     styleId: styleId || null,
-    prompt: prompt || finalPrompt,
+    prompt: prompt || enrichedPrompt,
     revisedPrompt: generated.revised_prompt || null,
     request: requestPayload,
     parentId: parentId || null,
     rootId: resolvedRootId,
     action,
     assetId: asset.id,
+    contextId: liveContextId,
     s3Key: asset.key,
     url: asset.url,
     openaiSize,
@@ -233,6 +282,10 @@ async function runPipeline({
     creditsCharged: 0,
     status: 'SUCCEEDED',
   });
+
+  if (contextResult.pinContextId) {
+    await contextService.pinIfNeeded(contextResult.pinContextId);
+  }
 
   const charge = await imageGenCredit.chargeFlat({
     workspaceId: workspace.id,
@@ -246,10 +299,10 @@ async function runPipeline({
       modelId: model.id,
       formatId: format?.id || null,
       action,
+      contextId: liveContextId,
     },
   });
 
-  // Update creditsCharged on the row if Prisma allows - use a lightweight update
   const charged = charge?.pricing?.athenaCredits ?? pricing.athenaCredits;
   if (charged > 0) {
     await prisma.imageGeneration.update({
@@ -285,6 +338,8 @@ async function generate({ userId, workspace, body }) {
     parentId: null,
     rootId: null,
     rateLimitFn: rateLimit.assertGenerateAllowed,
+    contextId: body.contextId || null,
+    parentSnapshot: null,
   });
 }
 
@@ -295,6 +350,11 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
   }
 
   const prev = parent.request || {};
+  const inheritedContextId =
+    body.contextId !== undefined
+      ? body.contextId || null
+      : parent.contextId || prev.contextId || null;
+
   return runPipeline({
     userId,
     workspace,
@@ -320,6 +380,8 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
     parentId: parent.id,
     rootId: parent.rootId || parent.id,
     rateLimitFn: rateLimit.assertRegenerateAllowed,
+    contextId: inheritedContextId,
+    parentSnapshot: prev.contextSnapshot || null,
   });
 }
 
@@ -397,6 +459,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
     rootId: parent.rootId || parent.id,
     action: 'tweak',
     assetId: asset.id,
+    contextId: parent.contextId || prev.contextId || null,
     s3Key: asset.key,
     url: asset.url,
     openaiSize,

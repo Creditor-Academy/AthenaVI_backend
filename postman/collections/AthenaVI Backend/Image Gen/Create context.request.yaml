@@ -1,0 +1,18 @@
+$kind: http-request
+name: Create context
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/context"
+method: POST
+body:
+  type: formdata
+  data:
+    - key: payload
+      type: text
+      value: |-
+        {
+          "inlineText": "Brand brief: clean SaaS aesthetic, blue and teal accents",
+          "assetIds": []
+        }
+    - key: files
+      type: file
+      src: []
+order: 2500

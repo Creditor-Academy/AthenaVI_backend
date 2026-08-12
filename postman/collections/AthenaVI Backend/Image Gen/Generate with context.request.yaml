@@ -1,0 +1,16 @@
+$kind: http-request
+name: Generate with context
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "image",
+      "modelId": "gpt-image-1",
+      "formatId": "square",
+      "style": "cinematic",
+      "prompt": "Product launch visual using the attached brand brief and references",
+      "contextId": "{{imageGenContextId}}"
+    }
+order: 3050

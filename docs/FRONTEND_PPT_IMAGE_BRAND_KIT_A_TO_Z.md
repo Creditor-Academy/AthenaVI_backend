@@ -1004,6 +1004,17 @@ Response: `{ athenaCredits, breakdown }`.
 
 Requires server `OPENAI_API_KEY`. Rate limits return **429**.
 
+## 3.4b Context bundles
+
+`POST /api/image-gen/workspaces/:workspaceId/context` → **201** (`multipart/form-data`)
+
+- Parts: `files` (PDF/DOCX/MD/TXT/PNG/JPG/WebP), `payload` JSON string `{ inlineText?, assetIds? }`
+- Free (rate-limited). Max 5 files+assets combined.
+- Response: `data.context` with `id`, `previews`, `warnings`, `expiresAt`
+- Also: `GET/DELETE .../context/:contextId` (DELETE → 409 if pinned)
+
+Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_API.md#context-bundles).
+
 ## 3.5 Generate
 
 `POST /api/image-gen/workspaces/:workspaceId/generate` → **201** (sync)
@@ -1023,7 +1034,8 @@ Requires server `OPENAI_API_KEY`. Rate limits return **429**.
     "title": "Onboarding",
     "sections": [{ "title": "Sign up", "bullets": ["Email", "Verify"] }]
   },
-  "name": "launch.png"
+  "name": "launch.png",
+  "contextId": "optional-context-uuid"
 }
 ```
 
@@ -1034,11 +1046,12 @@ Requires server `OPENAI_API_KEY`. Rate limits return **429**.
 | `prompt` | Required unless `infographic.sections` provided |
 | `style` / `styleId` | Optional from `/styles` |
 | `brandPalette` | Optional hex list — can mirror Brand Kit colors in UI |
+| `contextId` | Optional context bundle from §3.4b |
 
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`.
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`.
 
 ## 3.6 List / get generations
 
@@ -1392,6 +1405,9 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 | GET | `/api/image-gen/formats` |
 | GET | `/api/image-gen/styles` |
 | GET | `/api/image-gen/workspaces/:workspaceId/estimate` |
+| POST | `/api/image-gen/workspaces/:workspaceId/context` |
+| GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` |
+| DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` |
 | POST | `/api/image-gen/workspaces/:workspaceId/generate` |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations` |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` |

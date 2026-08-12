@@ -9,6 +9,11 @@ const generationParams = Joi.object({
   generationId: Joi.string().uuid().required(),
 });
 
+const contextParams = Joi.object({
+  workspaceId: Joi.string().uuid().required(),
+  contextId: Joi.string().uuid().required(),
+});
+
 const infographicSchema = Joi.object({
   layout: Joi.string()
     .valid('process', 'comparison', 'timeline', 'stats', 'hierarchy', 'funnel', 'custom')
@@ -38,6 +43,7 @@ const generateBody = Joi.object({
   brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
   infographic: infographicSchema.optional(),
   name: Joi.string().trim().max(255).optional(),
+  contextId: Joi.string().uuid().allow(null, '').optional(),
 }).custom((value, helpers) => {
   const mode = value.mode || 'image';
   if (mode === 'social' && !value.formatId) {
@@ -70,6 +76,7 @@ const regenerateSchema = Joi.object({
     brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
     infographic: infographicSchema.optional(),
     name: Joi.string().trim().max(255).optional(),
+    contextId: Joi.string().uuid().allow(null, '').optional(),
   }).default({}),
 });
 
@@ -108,6 +115,24 @@ const downloadSchema = Joi.object({
   }),
 });
 
+const createContextBody = Joi.object({
+  inlineText: Joi.string().trim().max(50_000).allow('', null).optional(),
+  assetIds: Joi.array().items(Joi.string().uuid()).max(5).optional(),
+}).default({});
+
+const createContextSchema = Joi.object({
+  params: workspaceParams,
+  body: createContextBody,
+});
+
+const getContextSchema = Joi.object({
+  params: contextParams,
+});
+
+const deleteContextSchema = Joi.object({
+  params: contextParams,
+});
+
 module.exports = {
   generateSchema,
   regenerateSchema,
@@ -116,4 +141,7 @@ module.exports = {
   getGenerationSchema,
   estimateSchema,
   downloadSchema,
+  createContextSchema,
+  getContextSchema,
+  deleteContextSchema,
 };

@@ -1,8 +1,10 @@
 $kind: collection
 description: |-
-  AI Image Gen (OpenAI): models/formats/styles catalogs, generate (image/infographic/social), regenerate, tweak, download (png/jpg/pdf).
+  AI Image Gen (OpenAI): models/formats/styles catalogs, context bundles (docs/refs), generate (image/infographic/social), regenerate, tweak, download (png/jpg/pdf).
 
-  Requires `OPENAI_API_KEY`. Charges workspace credits on success. Downloads are free.
+  Requires `OPENAI_API_KEY`. Charges workspace credits on success (context create is free). Downloads are free.
+
+  Set `imageGenContextId` from Create context response when testing generate-with-context.
 auth:
   - id: image-gen-bearer-auth
     type: bearer
