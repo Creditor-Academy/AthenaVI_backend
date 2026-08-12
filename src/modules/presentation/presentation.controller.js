@@ -39,6 +39,22 @@ const createPresentation = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 201, messages.PRESENTATION_CREATED);
 });
 
+const listPresentations = asyncHandler(async (req, res) => {
+  const { workspaceId } = req.params;
+  const { folderId } = req.query;
+  const presentations = await presentationService.listPresentations({
+    workspaceId,
+    folderId,
+  });
+  return successResponse(
+    req,
+    res,
+    { presentations },
+    200,
+    messages.PRESENTATIONS_FETCHED
+  );
+});
+
 const getPresentation = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const data = await presentationService.getPresentation(workspaceId, presentationId);
@@ -374,6 +390,7 @@ const insertSlideStock = asyncHandler(async (req, res) => {
 
 module.exports = {
   createPresentation,
+  listPresentations,
   getPresentation,
   getSlide,
   generateOutline,

@@ -104,6 +104,7 @@ module.exports = {
   WORKSPACE_INVITE_NOT_PENDING: 'Invitation is not pending',
   WORKSPACE_INVITATIONS_FETCHED: 'Workspace invitations fetched successfully',
   WORKSPACE_INVITE_CANCELLED: 'Workspace invitation cancelled successfully',
+  WORKSPACE_LIBRARY_FETCHED: 'Workspace library fetched successfully',
 
 
   // Credit
@@ -273,6 +274,7 @@ module.exports = {
 
   // Presentations (AI PPT)
   PRESENTATION_CREATED: 'Presentation created successfully',
+  PRESENTATIONS_FETCHED: 'Presentations fetched successfully',
   PRESENTATION_FETCHED: 'Presentation fetched successfully',
   PRESENTATION_NOT_FOUND: 'Presentation not found',
   PRESENTATION_OUTLINE_GENERATED: 'Outline generated successfully',

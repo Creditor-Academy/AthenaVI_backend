@@ -110,6 +110,15 @@ const createPresentationSchema = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const listPresentationsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  query: Joi.object({
+    folderId: Joi.string().uuid().optional(),
+  }),
+});
+
 const presentationByIdSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -889,6 +898,7 @@ const updatePresentationTemplateSchema = Joi.object({
 module.exports = {
   AI_SLIDE_MAX,
   createPresentationSchema,
+  listPresentationsSchema,
   presentationByIdSchema,
   generateOutlineSchema,
   patchOutlineSchema,

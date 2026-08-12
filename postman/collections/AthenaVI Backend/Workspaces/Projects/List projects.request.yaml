@@ -1,7 +1,8 @@
 $kind: http-request
-description: Summary cards only (no `data`). Includes owner, lastModifiedAt/By, storageBytes. Optional folderId query.
-url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}"
+description: Summary cards only (no `data`). Includes owner, lastModifiedAt/By, storageBytes. Optional folderId and type=VIDEO|PRESENTATION.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}&type=VIDEO"
 method: GET
 queryParams:
   folderId: "{{folderId}}"
+  type: VIDEO
 order: 3000

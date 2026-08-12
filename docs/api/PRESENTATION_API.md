@@ -8,6 +8,8 @@ Base path: **`/api/workspaces/:workspaceId/presentations`**
 
 Creates a **`Project`** with **`type: PRESENTATION`** (not video). Deck/slides live in related tables (`decks`, `slides`, `deck_exports`). Billing uses presentation-specific features (`ppt_*`) via `presentationCreditPricing.js` — separate from HeyGen/Remotion rates, but charged against the same workspace credit pool.
 
+For workspace UI tabs (Videos / PPT / Images), prefer **`GET /api/workspaces/:workspaceId/library`** — see [WORKSPACE_API.md](WORKSPACE_API.md) → Workspace library.
+
 ---
 
 ## Auth & roles
@@ -20,6 +22,20 @@ Creates a **`Project`** with **`type: PRESENTATION`** (not video). Deck/slides l
 Envelope: [OVERVIEW.md](OVERVIEW.md) — `{ success, message, data }` / `{ success, false, message, errors }`.
 
 Insufficient credits → **402**. Rate limits on generate/regenerate may return **429**.
+
+---
+
+## List presentations
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/presentations` |
+| **Auth** | Bearer + member |
+
+**Query (optional):** `folderId`
+
+**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). Full deck/slides: get-by-id.
 
 ---
 

@@ -17,6 +17,8 @@ const {
 } = require('./presignSlideMedia');
 const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
 const { enrichSlidesForClient } = require('./elementContent.normalize');
+const { enrichProjects } = require('../project/project.format');
+const projectDao = require('../project/project.dao');
 
 function withFlatPresentationFields({ project, deck, slides }) {
   const proj = project || {};
@@ -33,6 +35,37 @@ function withFlatPresentationFields({ project, deck, slides }) {
     locale: d.locale,
     folderId: proj.folderId,
   };
+}
+
+async function assertFolderInWorkspace(folderId, workspaceId) {
+  const folder = await projectDao.findFolderById(folderId);
+  if (!folder || folder.workspaceId !== workspaceId) {
+    throw new AppError(messages.FOLDER_NOT_FOUND, 404);
+  }
+  return folder;
+}
+
+async function listPresentations({ workspaceId, folderId }) {
+  if (folderId) {
+    await assertFolderInWorkspace(folderId, workspaceId);
+  }
+
+  const rows = await presentationDao.listPresentations({ workspaceId, folderId });
+  const enriched = await enrichProjects(rows, { includeData: false });
+
+  return enriched.map((project, index) => {
+    const deck = rows[index]?.deck || null;
+    return {
+      ...project,
+      title: project.name,
+      deckId: deck?.id || null,
+      deckStatus: deck?.status || null,
+      aspectRatio: deck?.aspectRatio || null,
+      locale: deck?.locale || null,
+      partial: deck?.partial ?? false,
+      slideCount: deck?._count?.slides ?? 0,
+    };
+  });
 }
 
 const SLIDE_EDITOR_PASSTHROUGH = new Set([
@@ -535,6 +568,7 @@ async function addSlide({
 
 module.exports = {
   createPresentation,
+  listPresentations,
   getPresentation,
   getSlide,
   creditEstimate,

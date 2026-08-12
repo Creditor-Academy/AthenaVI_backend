@@ -4,4 +4,5 @@ method: GET
 queryParams:
   take: "20"
   skip: "0"
+  mode: image
 order: 4000

@@ -1,0 +1,10 @@
+$kind: http-request
+description: >
+  Workspace content tabs. Omit category for { categories: [{ id, label, count }] }.
+  category=video|presentation|image returns { category, items } (images = Image Gen, not assets).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/library"
+method: GET
+queryParams:
+  category: video
+  folderId: "{{folderId}}"
+order: 2500

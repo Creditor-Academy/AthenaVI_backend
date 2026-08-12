@@ -61,6 +61,48 @@ async function findDeckByProjectId(projectId) {
   });
 }
 
+/**
+ * List PRESENTATION projects for a workspace (summary cards for FE library).
+ */
+async function listPresentations({ workspaceId, folderId }) {
+  return prisma.project.findMany({
+    where: {
+      workspaceId,
+      type: 'PRESENTATION',
+      ...(folderId ? { folderId } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      workspaceId: true,
+      folderId: true,
+      createdBy: true,
+      updatedBy: true,
+      type: true,
+      thumbnail: true,
+      duration: true,
+      status: true,
+      storageBytes: true,
+      createdAt: true,
+      updatedAt: true,
+      folder: {
+        select: { id: true, name: true },
+      },
+      deck: {
+        select: {
+          id: true,
+          status: true,
+          aspectRatio: true,
+          locale: true,
+          partial: true,
+          _count: { select: { slides: true } },
+        },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+}
+
 async function findDeckById(deckId) {
   return prisma.deck.findUnique({
     where: { id: deckId },
@@ -370,6 +412,7 @@ async function incrementDeckCreditsCharged(deckId, amountAc) {
 module.exports = {
   createPresentationProject,
   findDeckByProjectId,
+  listPresentations,
   findDeckById,
   updateDeck,
   updateProjectName,

@@ -38,6 +38,12 @@ router.post(
 );
 
 router.get(
+  '/',
+  validate(presentationValidations.listPresentationsSchema),
+  presentationController.listPresentations
+);
+
+router.get(
   '/:presentationId',
   validate(presentationValidations.presentationByIdSchema),
   presentationController.getPresentation

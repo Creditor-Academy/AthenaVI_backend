@@ -1,0 +1,7 @@
+$kind: http-request
+description: List PRESENTATION projects (summary cards). Optional folderId.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations?folderId={{folderId}}"
+method: GET
+queryParams:
+  folderId: "{{folderId}}"
+order: 500

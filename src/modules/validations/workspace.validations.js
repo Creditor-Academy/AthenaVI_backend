@@ -12,6 +12,19 @@ const workspaceByIdSchema = Joi.object({
   }),
 });
 
+const listWorkspaceLibrarySchema = Joi.object({
+  params: Joi.object({
+    workspaceId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({
+    category: Joi.string().valid('video', 'presentation', 'image').optional(),
+    folderId: Joi.string().uuid().optional(),
+    take: Joi.number().integer().min(1).max(100).optional(),
+    skip: Joi.number().integer().min(0).optional(),
+    mode: Joi.string().valid('image', 'infographic', 'social').optional(),
+  }),
+});
+
 const renameWorkspaceSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().min(3).max(100).required(),
@@ -65,6 +78,7 @@ const changeMemberRoleSchema = Joi.object({ body: Joi.object({
 module.exports = {
   createWorkspaceSchema,
   workspaceByIdSchema,
+  listWorkspaceLibrarySchema,
   renameWorkspaceSchema,
   inviteMemberSchema,
   acceptInvitationSchema,

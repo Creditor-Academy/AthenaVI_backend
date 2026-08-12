@@ -278,12 +278,12 @@ const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, temp
   return saveProjectData(workspaceId, projectId, userId, nextData);
 };
 
-const listProjects = async (workspaceId, folderId) => {
+const listProjects = async (workspaceId, folderId, type) => {
   if (folderId) {
     await assertFolderInWorkspace(folderId, workspaceId);
   }
 
-  const projects = await projectDao.listProjects({ workspaceId, folderId });
+  const projects = await projectDao.listProjects({ workspaceId, folderId, type });
   return enrichProjects(projects, { includeData: false });
 };
 

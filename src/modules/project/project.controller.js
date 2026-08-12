@@ -5,8 +5,8 @@ const messages = require('../../shared/utils/messages');
 
 const listProjects = asyncHandler(async (req, res) => {
   const { workspaceId } = req.params;
-  const { folderId } = req.query;
-  const projects = await projectService.listProjects(workspaceId, folderId);
+  const { folderId, type } = req.query;
+  const projects = await projectService.listProjects(workspaceId, folderId, type);
 
   return successResponse(req, res, { projects }, 200, messages.PROJECTS_FETCHED);
 });

@@ -409,6 +409,7 @@ const listProjectsSchema = Joi.object({
   }),
   query: Joi.object({
     folderId: Joi.string().uuid().optional(),
+    type: Joi.string().valid('VIDEO', 'PRESENTATION').optional(),
   }),
 });
 

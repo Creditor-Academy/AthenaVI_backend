@@ -25,11 +25,12 @@ const findFolderById = async (folderId) => {
   });
 };
 
-const listProjects = async ({ workspaceId, folderId }) => {
+const listProjects = async ({ workspaceId, folderId, type }) => {
   return prisma.project.findMany({
     where: {
       workspaceId,
       ...(folderId ? { folderId } : {}),
+      ...(type ? { type } : {}),
     },
     select: projectListSelect,
     orderBy: { updatedAt: 'desc' },

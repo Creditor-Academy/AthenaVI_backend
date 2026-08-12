@@ -13,7 +13,7 @@ function findById(id, workspaceId) {
   });
 }
 
-function listGenerations({ workspaceId, userId, isPrivate, take, skip }) {
+function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode }) {
   const limit = Math.min(Math.max(Number(take) || 20, 1), 100);
   const offset = Math.max(Number(skip) || 0, 0);
 
@@ -21,6 +21,7 @@ function listGenerations({ workspaceId, userId, isPrivate, take, skip }) {
     where: {
       workspaceId,
       ...(isPrivate && userId ? { userId } : {}),
+      ...(mode ? { mode } : {}),
     },
     take: limit,
     skip: offset,

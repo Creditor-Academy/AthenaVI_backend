@@ -515,6 +515,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
     isPrivate: workspace.type === 'PRIVATE',
     take: query.take,
     skip: query.skip,
+    mode: query.mode,
   });
   return rows.map(serializeGeneration);
 }

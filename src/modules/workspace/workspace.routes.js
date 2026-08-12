@@ -37,12 +37,20 @@ const presentationValidations = require('../validations/presentation.validations
 const brandKitRoutes = require('../brandKit/brandKit.routes');
 const videoTemplateController = require('../project/videoTemplate.controller');
 const videoTemplateValidations = require('../validations/videoTemplate.validations');
+const workspaceLibraryController = require('./workspaceLibrary.controller');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
+router.get(
+  '/:workspaceId/library',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(workspaceValidations.listWorkspaceLibrarySchema),
+  workspaceLibraryController.getLibrary
+);
 router.get(
   '/:workspaceId/presentation-templates',
   authMiddleware,

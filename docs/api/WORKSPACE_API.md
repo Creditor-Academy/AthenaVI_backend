@@ -14,6 +14,51 @@ All workspace routes require **`Authorization: Bearer <access_token>`**. Some ro
 
 **Brand Kits** (Canva-style workspace branding) live under **`/api/workspaces/:workspaceId/brand-kits`** — see [BRAND_KIT_API.md](BRAND_KIT_API.md). Presentation deck packs: `GET .../presentation-deck-packs` in [PRESENTATION_API.md](PRESENTATION_API.md).
 
+### Workspace library (Videos / PPT / Images)
+
+FE tabs for workspace content. **Images** here means **Image Gen** history (not `/api/assets`).
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/library` |
+| **Auth** | Bearer + member |
+
+**Query**
+
+| Param | Required | Notes |
+|-------|----------|--------|
+| `category` | no | Omit for tab counts. One of `video` \| `presentation` \| `image` to list items. |
+| `folderId` | no | Filter `video` / `presentation` to one folder |
+| `take` / `skip` | no | Pagination for `category=image` (1–100 / ≥0) |
+| `mode` | no | Image Gen only: `image` \| `infographic` \| `social` |
+
+**Without `category` (200)** – tab badges:
+
+```json
+{
+  "categories": [
+    { "id": "video", "label": "Videos", "projectType": "VIDEO", "count": 3 },
+    { "id": "presentation", "label": "Presentations", "projectType": "PRESENTATION", "count": 2 },
+    { "id": "image", "label": "Images", "count": 10 }
+  ]
+}
+```
+
+**With `category` (200)** – `data.category` + `data.items`. Each item includes `kind` / `category` matching the tab.
+
+| `category` | Items are |
+|------------|-----------|
+| `video` | VIDEO projects (same shape as project list) |
+| `presentation` | PRESENTATION projects + `deckStatus`, `slideCount`, `aspectRatio`, … |
+| `image` | Image Gen generations (same shape as `/api/image-gen/.../generations`) |
+
+Aliases (same filters, existing domain paths):
+
+- Videos: `GET .../projects?type=VIDEO`
+- PPT: `GET .../presentations` or `GET .../projects?type=PRESENTATION`
+- Images: `GET /api/image-gen/workspaces/:workspaceId/generations`
+
 Each user has exactly one **private** workspace (created on registration). Users can create additional **team** workspaces.
 
 ---
@@ -676,6 +721,7 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 **Query (optional)**
 
 - `folderId` – filter projects inside one folder
+- `type` – `VIDEO` \| `PRESENTATION` (omit = both). Prefer workspace **library** for FE tabs: [Workspace library](#workspace-library-videos--ppt--images).
 
 **Response (200)** – `data.projects`: array ordered by `lastModifiedAt` desc. List responses **omit** `data` (editor JSON); use get-by-id for full editor state.
 

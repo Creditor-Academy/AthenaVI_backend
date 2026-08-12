@@ -50,7 +50,9 @@
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
+| GET | `/api/workspaces/:workspaceId/library` | Bearer + member | Content tabs: omit `category` for counts; `category=video\|presentation\|image` lists items |
 | POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template` \| `pack`) |
+| GET | `/api/workspaces/:workspaceId/presentations` | Bearer + member | List presentations (`folderId` optional) |
 | GET | `/api/workspaces/:workspaceId/presentation-templates` | Bearer + member | List DECK_LAYOUT templates + categories (`?category=` / `?contentType=`) |
 | GET | `/api/workspaces/:workspaceId/presentation-deck-packs` | Bearer + member | List DECK_PACK multi-slide packs |
 | GET | `/api/workspaces/:workspaceId/brand-kits` | Bearer + member | List workspace Brand Kits |
@@ -103,7 +105,7 @@
 | POST | `/api/superadmin/presentations/:presentationId/publish-as-pack` | Superadmin | Publish PPT canvas as DECK_PACK |
 | POST | `/api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template` | Superadmin | Publish scene as VIDEO_SCENE |
 | POST | `/api/superadmin/projects/:projectId/publish-as-video-pack` | Superadmin | Publish project as VIDEO_PACK |
-| GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId` optional) |
+| GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId`, `type=VIDEO\|PRESENTATION` optional) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
@@ -136,7 +138,7 @@
 | GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
 | DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Delete unpinned context |
 | POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset |
-| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image generations |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image generations (`take`/`skip`/`mode`) |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |

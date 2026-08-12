@@ -175,7 +175,7 @@ Master file is always **PNG** on S3.
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations` |
-| **Query** | `take` (1–100), `skip` |
+| **Query** | `take` (1–100), `skip`, `mode` (`image` \| `infographic` \| `social`) |
 
 | | |
 |---|---|

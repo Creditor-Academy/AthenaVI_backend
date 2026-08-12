@@ -36,8 +36,9 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 7. Generate: `POST .../generate` with optional `contextId` — **long timeout** (image gen can take 30–90s).
 8. After success: preview `data.asset.url` / `data.generation.url`; show `contextPreview` badge if present.
 9. Actions: Regenerate (inherits context), Tweak (instruction modal; no context in v1), Download menu (`png` | `jpg` | `pdf`).
-10. History: `GET .../generations` — versions share `rootId`.
-11. Library filter: assets `source=ai_gen`.
+10. History: `GET .../generations` (`?mode=image|infographic|social` optional) — versions share `rootId`.
+11. Workspace **Images** tab: prefer `GET /api/workspaces/:workspaceId/library?category=image` (see [WORKSPACE_API.md](api/WORKSPACE_API.md)).
+12. Library filter: assets `source=ai_gen`.
 
 ---
 

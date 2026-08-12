@@ -92,6 +92,7 @@ const listGenerationsSchema = Joi.object({
   query: Joi.object({
     take: Joi.number().integer().min(1).max(100).optional(),
     skip: Joi.number().integer().min(0).optional(),
+    mode: Joi.string().valid('image', 'infographic', 'social').optional(),
   }),
 });
 
