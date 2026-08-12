@@ -102,6 +102,13 @@ router.post(
 );
 
 router.get(
+  '/:brandKitId/guidelines/pdf',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.brandKitByIdSchema),
+  brandKitController.downloadGuidelinePdf
+);
+
+router.get(
   '/:brandKitId/guidelines',
   requireWorkspaceRole(anyMember),
   validate(brandKitValidations.brandKitByIdSchema),

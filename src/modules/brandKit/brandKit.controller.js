@@ -6,6 +6,7 @@ const brandKitSuggestService = require('./brandKit.suggest.service');
 const brandKitLogoVariantsService = require('./brandKit.logoVariants.service');
 const brandKitHealthService = require('./brandKit.health.service');
 const brandKitGuidelineService = require('./brandKit.guideline.service');
+const brandKitGuidelinePdfService = require('./brandKit.guidelinePdf.service');
 const brandKitCredit = require('./brandKitCredit.service');
 const crypto = require('crypto');
 
@@ -194,6 +195,22 @@ const getGuideline = asyncHandler(async (req, res) => {
   return successResponse(req, res, { guideline: data }, 200, messages.BRAND_KIT_GUIDELINE_FETCHED);
 });
 
+const downloadGuidelinePdf = asyncHandler(async (req, res) => {
+  const { buffer, filename, contentType } = await brandKitGuidelinePdfService.generateGuidelinePdf({
+    workspaceId: req.params.workspaceId,
+    brandKitId: req.params.brandKitId,
+  });
+
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Length', buffer.length);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+  );
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).send(buffer);
+});
+
 module.exports = {
   listBrandKits,
   getBrandKit,
@@ -212,4 +229,5 @@ module.exports = {
   suggestLogoVariants,
   generateGuideline,
   getGuideline,
+  downloadGuidelinePdf,
 };
