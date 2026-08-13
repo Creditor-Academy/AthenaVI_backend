@@ -884,7 +884,7 @@ model WorkspaceBrandKit {
 model BrandKitMedia {
   id         String   @id @default(cuid())
   brandKitId String   @map("brand_kit_id")
-  kind       String // logo | photo | graphic
+  kind       String // logo | photo | graphic | mockup
   role       String? // logos: primary|secondary|icon|light|dark
   name       String?
   assetId    String?  @map("asset_id")

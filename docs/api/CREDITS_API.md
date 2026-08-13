@@ -157,6 +157,7 @@ All history endpoints attach **`usageDetail`** on each transaction (null for unk
 | `brand_kit_suggest_voice` | `label`: Brand kit voice suggestion |
 | `brand_kit_suggest_image_style` | `label`: Brand kit image style suggestion |
 | `brand_kit_logo_variants` | `label`: Brand kit logo variants |
+| `brand_kit_logo_mockup` | `label`: Brand kit logo mockup |
 | `brand_kit_guideline_generate` | `label`: Brand guideline deck |
 
 **Non-usage** — `usageDetail` includes a human `label` (e.g. `Credits granted`, `Allocated to workspace`) and optional `reason` / `workspaceId`.
@@ -176,9 +177,10 @@ Workspace-scoped flat charges from `src/shared/config/brandKitCreditPricing.js`.
 | `brand_kit_suggest_voice` | 1 | `POST .../brand-kits/suggest/voice` | After valid AI voice returned |
 | `brand_kit_suggest_image_style` | 1 | `POST .../brand-kits/suggest/image-style` | After valid AI brief returned |
 | `brand_kit_logo_variants` | 2 | `POST .../brand-kits/:id/suggest/logo-variants` | Only when `applyRoles` commits variants (preview without `applyRoles` is free) |
+| `brand_kit_logo_mockup` | 4 | `POST .../brand-kits/:id/mockups/generate` | After success; **first 2 generations per kit are free** |
 | `brand_kit_guideline_generate` | 3 | `POST .../brand-kits/:id/guidelines/generate` | After deck created or regenerated |
 
-Override defaults via env: `BRAND_KIT_SUGGEST_COLORS_AC`, `BRAND_KIT_SUGGEST_FONTS_AC`, `BRAND_KIT_SUGGEST_VOICE_AC`, `BRAND_KIT_SUGGEST_IMAGE_STYLE_AC`, `BRAND_KIT_LOGO_VARIANTS_AC`, `BRAND_KIT_GUIDELINE_GENERATE_AC`.
+Override defaults via env: `BRAND_KIT_SUGGEST_COLORS_AC`, `BRAND_KIT_SUGGEST_FONTS_AC`, `BRAND_KIT_SUGGEST_VOICE_AC`, `BRAND_KIT_SUGGEST_IMAGE_STYLE_AC`, `BRAND_KIT_LOGO_VARIANTS_AC`, `BRAND_KIT_LOGO_MOCKUP_AC`, `BRAND_KIT_GUIDELINE_GENERATE_AC`.
 
 See [`BRAND_KIT_API.md`](BRAND_KIT_API.md) for request/response contracts.
 

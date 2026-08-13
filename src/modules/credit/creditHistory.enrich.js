@@ -28,6 +28,7 @@ const FEATURE_LABELS = Object.freeze({
   [BRAND_KIT_FEATURE.SUGGEST_VOICE]: 'Brand kit voice suggestion',
   [BRAND_KIT_FEATURE.SUGGEST_IMAGE_STYLE]: 'Brand kit image style suggestion',
   [BRAND_KIT_FEATURE.LOGO_VARIANTS]: 'Brand kit logo variants',
+  [BRAND_KIT_FEATURE.LOGO_MOCKUP]: 'Brand kit logo mockup',
   [BRAND_KIT_FEATURE.GUIDELINE_GENERATE]: 'Brand guideline deck',
 });
 

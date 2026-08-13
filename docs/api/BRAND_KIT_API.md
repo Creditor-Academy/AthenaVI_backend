@@ -101,11 +101,11 @@ If `brandKitId` is omitted on presentation **create** or **generate**, the works
 | Field | Required | Notes |
 |-------|----------|--------|
 | `file` | yes | jpeg / png / webp / svg, max 50MB |
-| `kind` | yes | `logo` \| `photo` \| `graphic` |
-| `role` | logos only | `primary`, `secondary`, `icon`, `light`, `dark`, `with-name-below`, `with-name-adjacent`, `black`, `white`, … |
+| `kind` | yes | `logo` \| `photo` \| `graphic` \| `mockup` |
+| `role` | logos / mockups | logos: `primary`, … ; mockups: catalog template id |
 | `name` | no | Display label |
 
-Re-uploading a logo with the same `role` replaces the previous asset (no duplicate role rows).
+Re-uploading a logo or mockup with the same `role` replaces the previous asset (no duplicate role rows).
 
 ---
 
@@ -124,6 +124,31 @@ Suggest endpoints return proposals only — client confirms via `PATCH` or `POST
 **Logo variants:** deterministic transforms (light/dark/black/white/lockups) from the primary mark. Omit `applyRoles` for **free preview** (base64 URLs, no S3 upload, no credit charge). Pass `applyRoles` to commit selected roles to the kit in one call (charged only when variants are applied).
 
 Credit feature keys and default AC: see [CREDITS_API.md — Brand Kit AI](CREDITS_API.md#brand-kit-ai-flat-ac). Frontend integration: [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md).
+
+---
+
+## Logo product mockups (Imagery)
+
+AI product scenes with the kit logo as a reference image (OpenAI Images Edit).
+
+| Method | Path | Role | Purpose |
+|--------|------|------|---------|
+| `GET` | `/:brandKitId/mockups/catalog` | member | 10 templates + free-quota billing |
+| `GET` | `/:brandKitId/mockups` | member | Saved `kind: mockup` media + quota |
+| `POST` | `/:brandKitId/mockups/generate` | OWNER/ADMIN | Generate one scene |
+
+**Catalog templates:** `mug`, `tshirt`, `hoodie`, `tote`, `cap`, `business_card`, `laptop_lid`, `phone_case`, `packaging_box`, `storefront_sign` (each has `category`, `preferredLogoRoles`, `size`).
+
+**Generate body:** `{ "templateId": "mug", "logoRole?": "primary", "save?": false }`
+
+- Omitting `logoRole` auto-picks from the template’s `preferredLogoRoles`, then primary/any logo.
+- Preview always uploads to S3 (`mockup-preview/`) and returns a **presigned URL** (no base64).
+- `save: true` stores `kind: mockup`, `role: templateId`, **replace-on-save** for that role.
+- **First 2 successful generates per kit are free** (`data.meta.mockupFreeUsed`). Failures do not consume free slots or credits. After that, flat AC (`brand_kit_logo_mockup`, default **4**).
+- Rate limit: **10 / hour** per user+workspace (429). Env: `BRAND_KIT_MOCKUP_RATE_LIMIT_MAX`, `BRAND_KIT_MOCKUP_RATE_LIMIT_WINDOW_SEC`.
+
+Both catalog and list responses include:
+`billing: { charged, freeUsed, freeLimit: 2, freeRemaining, athenaCredits, feature }`.
 
 ---
 

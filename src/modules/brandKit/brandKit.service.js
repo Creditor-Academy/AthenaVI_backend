@@ -429,14 +429,28 @@ async function uploadMedia({
   }
 
   const mediaKind = String(kind || '').toLowerCase();
-  if (!['logo', 'photo', 'graphic'].includes(mediaKind)) {
-    throw new AppError('kind must be logo, photo, or graphic', 400);
+  if (!['logo', 'photo', 'graphic', 'mockup'].includes(mediaKind)) {
+    throw new AppError('kind must be logo, photo, graphic, or mockup', 400);
   }
 
   let mediaRole = role ? String(role).toLowerCase() : null;
   if (mediaKind === 'logo') {
     if (!mediaRole || !LOGO_ROLES.has(mediaRole)) {
       throw new AppError('logo uploads require a valid role', 400);
+    }
+    const existingRows = await brandKitDao.findAllMediaByKindRole(brandKitId, mediaKind, mediaRole);
+    for (const existing of existingRows) {
+      await brandKitDao.deleteMedia(existing.id);
+      try {
+        await s3Service.deleteFile(existing.s3Key);
+      } catch {
+        // best-effort
+      }
+    }
+  } else if (mediaKind === 'mockup') {
+    const { getTemplate } = require('./brandKit.mockupCatalog');
+    if (!mediaRole || !getTemplate(mediaRole)) {
+      throw new AppError('mockup uploads require a valid template role', 400);
     }
     const existingRows = await brandKitDao.findAllMediaByKindRole(brandKitId, mediaKind, mediaRole);
     for (const existing of existingRows) {

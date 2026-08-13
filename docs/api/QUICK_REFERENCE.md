@@ -68,6 +68,9 @@
 | POST | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` | Bearer + OWNER/ADMIN | AI expand brand voice |
 | POST | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` | Bearer + OWNER/ADMIN | AI suggest image brief + chart colors |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` | Bearer + OWNER/ADMIN | Generate logo variants |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/catalog` | Bearer + member | Logo mockup catalog + free quota |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups` | Bearer + member | Saved logo mockups + free quota |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/generate` | Bearer + OWNER/ADMIN | Generate logo product mockup |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | Bearer + OWNER/ADMIN | Generate 6-slide guideline deck |
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | Bearer + member | Guideline presentation link |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |

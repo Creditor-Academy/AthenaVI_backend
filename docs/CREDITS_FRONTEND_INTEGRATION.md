@@ -108,11 +108,12 @@ flowchart TB
 | Brand kit voice suggest | `brand_kit_suggest_voice` | `POST .../brand-kits/suggest/voice` | Workspace-scoped* |
 | Brand kit image style suggest | `brand_kit_suggest_image_style` | `POST .../brand-kits/suggest/image-style` | Workspace-scoped* |
 | Brand kit logo variants (apply) | `brand_kit_logo_variants` | `POST .../brand-kits/:id/suggest/logo-variants` with `applyRoles` | Workspace-scoped* |
+| Brand kit logo mockup | `brand_kit_logo_mockup` | `POST .../brand-kits/:id/mockups/generate` | Workspace-scoped* (first 2 per kit free) |
 | Brand guideline deck | `brand_kit_guideline_generate` | `POST .../brand-kits/:id/guidelines/generate` | Workspace-scoped* |
 
 \*Workspace-scoped = personal pool if `PRIVATE`, workspace pool if `TEAM`.
 
-**Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge.
+**Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge. Logo mockups: first **2 successful** generates per brand kit are free.
 
 ### Free (no credit charge)
 
@@ -204,6 +205,7 @@ Flat workspace-scoped charges from `src/shared/config/brandKitCreditPricing.js`.
 | `brand_kit_suggest_voice` | 1 | Valid voice returned |
 | `brand_kit_suggest_image_style` | 1 | Valid image brief returned |
 | `brand_kit_logo_variants` | 2 | Only when `applyRoles` commits variants |
+| `brand_kit_logo_mockup` | 4 | After success; first 2 per brand kit free |
 | `brand_kit_guideline_generate` | 3 | Guideline deck created or regenerated |
 
 Env overrides: `BRAND_KIT_*_AC` (see [`ENVIRONMENT.md`](api/ENVIRONMENT.md)). Full API: [`BRAND_KIT_API.md`](api/BRAND_KIT_API.md).
@@ -302,6 +304,7 @@ Each export creates a new `renderId` → new charge on success. `forceRebuild: t
 |--------|-------------------------|-------|
 | Suggest colors/fonts/voice/image-style | `brandKit:{action}:{workspaceId}:{payloadHash}` | Same body → same hash → no double charge on retry |
 | Logo variants (apply) | `brandKit:logo_variants:{workspaceId}:{rolesHash}` | Preview without `applyRoles` is free |
+| Logo mockup | `brandKit:logo_mockup:{workspaceId}:{brandKitId}:{templateId}:{timestamp}` | First 2 per kit free |
 | Guideline generate | `brandKit:guideline:{workspaceId}:{brandKitId}:{timestamp}` | Each regenerate is a new charge |
 
 ---
@@ -673,6 +676,7 @@ Billable routes that may return **402**:
 - `POST /api/credits/:id/allocate` / `deallocate`
 - `POST .../brand-kits/suggest/colors|fonts|voice|image-style`
 - `POST .../brand-kits/:brandKitId/suggest/logo-variants` (when applying with `applyRoles`)
+- `POST .../brand-kits/:brandKitId/mockups/generate` (after first 2 free per kit)
 - `POST .../brand-kits/:brandKitId/guidelines/generate`
 
 ---
@@ -748,10 +752,11 @@ Billable routes that may return **402**:
 
 ### Brand Kit (Virtual Studio)
 
-- [ ] Show flat AC cost before suggest / guideline actions (from config or product copy)
-- [ ] Handle **402** on all Brand Kit billable POSTs
+- [ ] Show flat AC cost before suggest / guideline / mockup actions (from config or product copy)
+- [ ] Handle **402** / **429** on Brand Kit billable POSTs
 - [ ] Logo variant preview (no `applyRoles`) — no credit check required
-- [ ] Refresh balance after suggest / guideline success
+- [ ] Logo mockups: show freeRemaining; first 2 free then 4 AC
+- [ ] Refresh balance after suggest / guideline / mockup success
 
 ### Admin (if building portal)
 

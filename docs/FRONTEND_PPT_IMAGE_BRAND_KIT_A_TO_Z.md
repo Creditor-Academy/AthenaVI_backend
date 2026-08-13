@@ -208,21 +208,33 @@ Canva-style **workspace Brand Kits**. Scoped to one workspace. Used by presentat
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` | OWNER/ADMIN | AI voice (credits) |
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` | OWNER/ADMIN | AI image brief (credits) |
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` | OWNER/ADMIN | Logo variants (credits when applying) |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/catalog` | member | Mockup catalog + free quota |
+| `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups` | member | Saved mockups + free quota |
+| `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/generate` | OWNER/ADMIN | AI logo product mockup |
 | `POST` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | OWNER/ADMIN | 6-slide guideline deck (regenerates in place if linked) |
 | `GET` | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | member | Guideline link |
 
 ### Brand Kit credits
 
-Flat workspace-scoped AC per action (defaults: colors **2**, fonts/voice/image-style **1**, logo variants **2**, guideline **3**). See [`CREDITS_FRONTEND_INTEGRATION.md`](CREDITS_FRONTEND_INTEGRATION.md) and [`CREDITS_API.md`](api/CREDITS_API.md#brand-kit-ai-flat-ac).
+Flat workspace-scoped AC per action (defaults: colors **2**, fonts/voice/image-style **1**, logo variants **2**, logo mockup **4**, guideline **3**). See [`CREDITS_FRONTEND_INTEGRATION.md`](CREDITS_FRONTEND_INTEGRATION.md) and [`CREDITS_API.md`](api/CREDITS_API.md#brand-kit-ai-flat-ac).
 
 | UX | Billing |
 |----|---------|
 | Logo variant preview (no `applyRoles`) | **Free** — base64 previews only |
 | Logo variant apply (`applyRoles: [...]`) | Charged when variants are committed |
+| Logo mockup generate | **First 2 per kit free**, then **4 AC**; regenerate counts as a new generate |
 | Guideline generate | Charged each run; **reuses** existing linked presentation when `guidelineProjectId` is valid |
 | Suggest colors/fonts/voice/image-style | Charged after successful AI response; failed validation = no charge |
 
-Handle **402** before billable Brand Kit POSTs; refresh balance after success.
+Handle **402** / **429** on billable Brand Kit POSTs; refresh balance after success.
+
+### Imagery — Logo in the wild
+
+1. `GET .../mockups/catalog` — show grid (group by `category`); badge `freeRemaining` / `freeLimit`.
+2. Require a kit logo before enabling Generate.
+3. `POST .../mockups/generate` `{ templateId, logoRole?, save? }` — show presigned `mockup.url`.
+4. Optional `save: true` to persist as `kind: mockup` (replace-on-save per template).
+5. Filter kit media with `kind === 'mockup'`.
 
 ### Create body
 
@@ -239,8 +251,8 @@ Handle **402** before billable Brand Kit POSTs; refresh balance after success.
 | Field | Required | Notes |
 |-------|----------|--------|
 | `file` | yes | jpeg / png / webp / svg, max **50MB** |
-| `kind` | yes | `logo` \| `photo` \| `graphic` |
-| `role` | logos | `primary` \| `secondary` \| `icon` \| `light` \| `dark` |
+| `kind` | yes | `logo` \| `photo` \| `graphic` \| `mockup` |
+| `role` | logos / mockups | logos: `primary` \| … ; mockups: catalog `templateId` |
 | `name` | no | Display label |
 
 **UX:** Offer separate upload zones for logos (with role chips), brand photos, and graphics. Preview with returned presigned `url`.
@@ -1331,6 +1343,7 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 - [ ] Full CRUD + media + default  
 - [ ] MEMBER read-only UX  
 - [ ] AI suggest: colors, fonts, voice, image-style, logo variants (preview free; apply charged)
+- [ ] Logo mockups (catalog + generate; first 2 free; save to kit)
 - [ ] Show flat AC cost + handle 402 on billable Brand Kit actions  
 - [ ] Health score on Overview tab  
 - [ ] Generate guideline deck + export PDF/PPTX  
@@ -1377,6 +1390,9 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 | POST | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` |
 | POST | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/catalog` |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups` |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/generate` |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` |
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` |
 

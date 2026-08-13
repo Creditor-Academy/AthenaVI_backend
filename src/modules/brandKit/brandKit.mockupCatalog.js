@@ -1,0 +1,153 @@
+/**
+ * Fixed Brand Kit product-mockup catalog + prompt builder.
+ */
+
+const MOCKUP_FREE_LIMIT = 2;
+
+const SCENE_COPY = Object.freeze({
+  mug: 'A clean ceramic coffee mug on a soft studio surface, logo centered on the mug body, soft natural shadows, product photography.',
+  tshirt: 'A folded or worn crew-neck t-shirt on a neutral backdrop, logo printed clearly on the chest, apparel catalog photography.',
+  hoodie: 'A premium hoodie laid flat or on a hanger, logo on the chest, soft fabric texture, studio lighting.',
+  tote: 'A canvas tote bag standing upright, logo centered on the front panel, lifestyle product shot.',
+  cap: 'A baseball cap angled slightly, logo on the front panel, clean studio background.',
+  business_card: 'A pair of business cards on a desk, logo on the card face with minimal layout, shallow depth of field.',
+  laptop_lid: 'A closed laptop on a desk, logo centered on the lid, modern workspace photography.',
+  phone_case: 'A smartphone in a slim case, logo on the back of the case, clean product photography.',
+  packaging_box: 'A branded shipping or gift box, logo on the lid or front panel, packaging photography.',
+  storefront_sign: 'A storefront or hanging sign above a shop entrance, logo on the signage panel, daytime exterior.',
+});
+
+const MOCKUP_TEMPLATES = Object.freeze([
+  {
+    id: 'mug',
+    label: 'Mug',
+    description: 'Ceramic mug with your logo',
+    category: 'desk',
+    preferredLogoRoles: ['dark', 'black', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'tshirt',
+    label: 'T-Shirt',
+    description: 'Crew-neck tee with chest logo',
+    category: 'apparel',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'hoodie',
+    label: 'Hoodie',
+    description: 'Hoodie with chest logo',
+    category: 'apparel',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'tote',
+    label: 'Tote bag',
+    description: 'Canvas tote with front logo',
+    category: 'apparel',
+    preferredLogoRoles: ['dark', 'black', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'cap',
+    label: 'Cap',
+    description: 'Baseball cap with front logo',
+    category: 'apparel',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'business_card',
+    label: 'Business card',
+    description: 'Business card with logo mark',
+    category: 'desk',
+    preferredLogoRoles: ['primary', 'dark', 'black'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'laptop_lid',
+    label: 'Laptop lid',
+    description: 'Laptop lid with centered logo',
+    category: 'digital',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'phone_case',
+    label: 'Phone case',
+    description: 'Phone case back with logo',
+    category: 'digital',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'packaging_box',
+    label: 'Packaging box',
+    description: 'Branded box with logo',
+    category: 'packaging',
+    preferredLogoRoles: ['primary', 'dark', 'black'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+  {
+    id: 'storefront_sign',
+    label: 'Storefront sign',
+    description: 'Exterior signage with logo',
+    category: 'signage',
+    preferredLogoRoles: ['white', 'light', 'primary'],
+    size: '1024x1024',
+    thumbnailHint: null,
+  },
+]);
+
+const TEMPLATE_BY_ID = Object.freeze(
+  Object.fromEntries(MOCKUP_TEMPLATES.map((t) => [t.id, t]))
+);
+
+function getTemplate(templateId) {
+  return TEMPLATE_BY_ID[String(templateId || '').trim()] || null;
+}
+
+function listTemplates() {
+  return MOCKUP_TEMPLATES.map((t) => ({ ...t }));
+}
+
+function buildMockupPrompt({ template, brandName, tagline, primaryHex, bgHex }) {
+  const scene = SCENE_COPY[template.id] || `A realistic product mockup for ${template.label}.`;
+  const name = String(brandName || 'Brand').slice(0, 80);
+  const tag = tagline ? String(tagline).slice(0, 120) : '';
+  const primary = primaryHex || null;
+  const bg = bgHex || null;
+
+  const parts = [
+    `Create a photorealistic brand application mockup for "${name}".`,
+    scene,
+    'Use the provided reference image as the ONLY logo artwork. Place that exact logo on the product.',
+    'Do not invent, redraw, distort, or replace the logo. Do not add extra slogans, watermarks, or text overlays.',
+    'Keep the logo sharp and legible. No mock UI chrome, no collage.',
+  ];
+
+  if (tag) parts.push(`Brand tagline context (do not print unless naturally on packaging): ${tag}.`);
+  if (primary) parts.push(`Brand primary accent color hint: ${primary} (use subtly on product or set if natural).`);
+  if (bg) parts.push(`Brand background color hint: ${bg} (optional backdrop or fabric tint when appropriate).`);
+
+  return parts.join(' ');
+}
+
+module.exports = {
+  MOCKUP_FREE_LIMIT,
+  MOCKUP_TEMPLATES,
+  getTemplate,
+  listTemplates,
+  buildMockupPrompt,
+};

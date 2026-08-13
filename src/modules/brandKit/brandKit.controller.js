@@ -7,6 +7,7 @@ const brandKitLogoVariantsService = require('./brandKit.logoVariants.service');
 const brandKitHealthService = require('./brandKit.health.service');
 const brandKitGuidelineService = require('./brandKit.guideline.service');
 const brandKitGuidelinePdfService = require('./brandKit.guidelinePdf.service');
+const brandKitMockupService = require('./brandKit.mockup.service');
 const brandKitCredit = require('./brandKitCredit.service');
 const crypto = require('crypto');
 
@@ -211,6 +212,34 @@ const downloadGuidelinePdf = asyncHandler(async (req, res) => {
   return res.status(200).send(buffer);
 });
 
+const listMockupCatalog = asyncHandler(async (req, res) => {
+  const data = await brandKitMockupService.getCatalog(
+    req.params.workspaceId,
+    req.params.brandKitId
+  );
+  return successResponse(req, res, data, 200, messages.BRAND_KIT_MOCKUP_CATALOG);
+});
+
+const listMockups = asyncHandler(async (req, res) => {
+  const data = await brandKitMockupService.listSavedMockups(
+    req.params.workspaceId,
+    req.params.brandKitId
+  );
+  return successResponse(req, res, data, 200, messages.BRAND_KIT_MOCKUPS_FETCHED);
+});
+
+const generateMockup = asyncHandler(async (req, res) => {
+  const data = await brandKitMockupService.generateMockup({
+    workspaceId: req.params.workspaceId,
+    userId: req.user.id,
+    brandKitId: req.params.brandKitId,
+    templateId: req.body.templateId,
+    logoRole: req.body.logoRole,
+    save: req.body.save === true,
+  });
+  return successResponse(req, res, data, 200, messages.BRAND_KIT_MOCKUP_GENERATED);
+});
+
 module.exports = {
   listBrandKits,
   getBrandKit,
@@ -230,4 +259,7 @@ module.exports = {
   generateGuideline,
   getGuideline,
   downloadGuidelinePdf,
+  listMockupCatalog,
+  listMockups,
+  generateMockup,
 };

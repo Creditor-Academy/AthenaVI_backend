@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/mockups/generate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "templateId": "mug",
+      "save": false
+    }
+order: 1190

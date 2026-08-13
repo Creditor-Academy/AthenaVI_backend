@@ -94,6 +94,27 @@ router.post(
   brandKitController.suggestLogoVariants
 );
 
+router.get(
+  '/:brandKitId/mockups/catalog',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.brandKitByIdSchema),
+  brandKitController.listMockupCatalog
+);
+
+router.get(
+  '/:brandKitId/mockups',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.brandKitByIdSchema),
+  brandKitController.listMockups
+);
+
+router.post(
+  '/:brandKitId/mockups/generate',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(brandKitValidations.generateMockupSchema),
+  brandKitController.generateMockup
+);
+
 router.post(
   '/:brandKitId/guidelines/generate',
   requireWorkspaceRole(ownerOrAdmin),

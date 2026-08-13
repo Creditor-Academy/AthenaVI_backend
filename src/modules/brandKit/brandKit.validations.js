@@ -125,7 +125,7 @@ const uploadBrandKitMediaSchema = Joi.object({
     brandKitId: brandKitIdParam,
   }),
   body: Joi.object({
-    kind: Joi.string().valid('logo', 'photo', 'graphic').required(),
+    kind: Joi.string().valid('logo', 'photo', 'graphic', 'mockup').required(),
     role: Joi.string()
       .valid(
         'primary',
@@ -139,7 +139,17 @@ const uploadBrandKitMediaSchema = Joi.object({
         'with-name-below',
         'with-name-adjacent',
         'black',
-        'white'
+        'white',
+        'mug',
+        'tshirt',
+        'hoodie',
+        'tote',
+        'cap',
+        'business_card',
+        'laptop_lid',
+        'phone_case',
+        'packaging_box',
+        'storefront_sign'
       )
       .allow(null, '')
       .optional(),
@@ -250,6 +260,50 @@ const generateGuidelineSchema = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const mockupTemplateIds = [
+  'mug',
+  'tshirt',
+  'hoodie',
+  'tote',
+  'cap',
+  'business_card',
+  'laptop_lid',
+  'phone_case',
+  'packaging_box',
+  'storefront_sign',
+];
+
+const generateMockupSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    brandKitId: brandKitIdParam,
+  }),
+  body: Joi.object({
+    templateId: Joi.string()
+      .valid(...mockupTemplateIds)
+      .required(),
+    logoRole: Joi.string()
+      .valid(
+        'primary',
+        'secondary',
+        'icon',
+        'light',
+        'dark',
+        'main',
+        'light-mode',
+        'dark-mode',
+        'with-name-below',
+        'with-name-adjacent',
+        'black',
+        'white'
+      )
+      .allow('', null)
+      .optional(),
+    save: Joi.boolean().optional(),
+  }).required(),
+  query: Joi.object({}).unknown(false),
+});
+
 module.exports = {
   brandKitDataSchema,
   listBrandKitsSchema,
@@ -264,4 +318,5 @@ module.exports = {
   suggestImageStyleSchema,
   suggestLogoVariantsSchema,
   generateGuidelineSchema,
+  generateMockupSchema,
 };

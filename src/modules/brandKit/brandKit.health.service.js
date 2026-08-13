@@ -21,6 +21,7 @@ function computeBrandKitHealth(kit) {
   const logos = media.filter((m) => m.kind === 'logo');
   const photos = media.filter((m) => m.kind === 'photo');
   const graphics = media.filter((m) => m.kind === 'graphic');
+  const mockups = media.filter((m) => m.kind === 'mockup');
 
   const checks = [
     {
@@ -85,6 +86,12 @@ function computeBrandKitHealth(kit) {
       label: 'Brand graphics',
       weight: 5,
       pass: graphics.length > 0,
+    },
+    {
+      id: 'mockups',
+      label: 'Logo product mockups',
+      weight: 4,
+      pass: mockups.length > 0,
     },
     {
       id: 'tagline',

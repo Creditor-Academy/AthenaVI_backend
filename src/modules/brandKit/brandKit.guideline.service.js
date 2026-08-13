@@ -430,7 +430,22 @@ function buildImagerySlide(kit, themeTokens) {
   }
 
   const photo = (kit.media || []).find((m) => m.kind === 'photo');
-  if (photo?.url) {
+  const mockups = (kit.media || []).filter((m) => m.kind === 'mockup' && m.url).slice(0, 2);
+
+  if (mockups.length > 0) {
+    mockups.forEach((m, idx) => {
+      elements.push(
+        imageEl(`mockup_${idx}`, m.url, {
+          x: MARGIN + idx * (480 + GRID_GAP),
+          y: 460,
+          width: 480,
+          height: 320,
+          rotation: 0,
+          opacity: 1,
+        }, 'image')
+      );
+    });
+  } else if (photo?.url) {
     elements.push(
       imageEl('sample_photo', photo.url, {
         x: MARGIN,
