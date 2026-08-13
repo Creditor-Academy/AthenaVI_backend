@@ -4,12 +4,77 @@ const {
   CANVAS_HEIGHT,
 } = require('./presentation.constants');
 
+function parseRegion(region) {
+  const str = String(region || '');
+  const cols = str.match(/cols\s+(\d+)\s*-\s*(\d+)/i);
+  const rows = str.match(/rows\s+(\d+)\s*-\s*(\d+)/i);
+  if (!cols || !rows) return null;
+  return {
+    c1: Math.max(1, Number(cols[1])),
+    c2: Math.max(Number(cols[1]), Number(cols[2])),
+    r1: Math.max(1, Number(rows[1])),
+    r2: Math.max(Number(rows[1]), Number(rows[2])),
+  };
+}
+
+function shouldSplitSharedRow(upperRole, lowerRole) {
+  const textRoles = new Set([
+    'heading', 'subheading', 'body', 'caption', 'stat', 'stat_label',
+    'quote', 'attribution', 'cta', 'contact', 'eyebrow', 'divider',
+  ]);
+  if (textRoles.has(upperRole) && textRoles.has(lowerRole)) return true;
+  if (upperRole === 'heading' && lowerRole === 'body') return true;
+  if (upperRole === 'chart' && (lowerRole === 'caption' || textRoles.has(lowerRole))) return true;
+  if (upperRole === 'image' && textRoles.has(lowerRole)) return true;
+  return false;
+}
+
+function adjustSlotRegion(reg, slot, allSlots) {
+  const adjusted = { ...reg };
+  const role = slot?.role || 'body';
+  for (const other of allSlots || []) {
+    if (other.id === slot.id) continue;
+    const oreg = parseRegion(other.region);
+    if (!oreg) continue;
+    const otherRole = other.role || 'body';
+    if (oreg.r1 === adjusted.r2 && shouldSplitSharedRow(role, otherRole)) {
+      adjusted.r2 -= 0.42;
+    }
+    if (oreg.r2 === adjusted.r1 && shouldSplitSharedRow(otherRole, role)) {
+      adjusted.r1 += 0.42;
+    }
+  }
+  if (adjusted.r2 < adjusted.r1) adjusted.r2 = adjusted.r1 + 0.5;
+  return adjusted;
+}
+
+function placementFromGrid(reg, canvas = {}) {
+  const width = canvas.width || CANVAS_WIDTH;
+  const height = canvas.height || CANVAS_HEIGHT;
+  const colW = width / 12;
+  const rowH = height / 12;
+  return {
+    x: Math.round((reg.c1 - 1) * colW),
+    y: Math.round((reg.r1 - 1) * rowH),
+    width: Math.max(40, Math.round((reg.c2 - reg.c1 + 1) * colW)),
+    height: Math.max(40, Math.round((reg.r2 - reg.r1 + 1) * rowH)),
+    rotation: 0,
+    opacity: 1,
+  };
+}
+
 /**
  * Parse region strings like "cols 2-11, rows 4-7" into pixel placement on a 12-col / 12-row grid.
  * @param {string} region
  * @param {{ width?: number, height?: number }} canvas
+ * @param {object} [slot]
+ * @param {object[]} [allSlots]
  */
-function regionToPlacement(region, canvas = {}) {
+function regionToPlacement(region, canvas = {}, slot = null, allSlots = null) {
+  const parsed = parseRegion(region);
+  if (parsed && slot && allSlots) {
+    return placementFromGrid(adjustSlotRegion(parsed, slot, allSlots), canvas);
+  }
   const width = canvas.width || CANVAS_WIDTH;
   const height = canvas.height || CANVAS_HEIGHT;
   const colW = width / 12;
@@ -34,8 +99,130 @@ function regionToPlacement(region, canvas = {}) {
   };
 }
 
+function findDeviceFrameSlot(slots, imageSlotId) {
+  const target = String(imageSlotId || '');
+  return (slots || []).find(
+    (slot) => slot?.shapeHint?.pairsWithSlotId && String(slot.shapeHint.pairsWithSlotId) === target
+  ) || null;
+}
+
+function deviceFrameKindFromSlot(slot = {}) {
+  const id = String(slot.id || '').toUpperCase();
+  const hintKind = String(slot.shapeHint?.kind || '');
+  if (/LAPTOP/.test(id) || hintKind === 'laptopFrame') return 'laptop';
+  if (/TABLET/.test(id) || hintKind === 'tabletFrame') return 'tablet';
+  if (/LANDSCAPE/.test(id) || hintKind === 'phoneLandscapeFrame') return 'phone_landscape';
+  if (/WATCH/.test(id) || hintKind === 'watchFrame') return 'watch';
+  return 'phone';
+}
+
+function insetScreenRect(placement, kind) {
+  const x = placement.x ?? 0;
+  const y = placement.y ?? 0;
+  const w = placement.width ?? 400;
+  const h = placement.height ?? 300;
+  if (kind === 'laptop') {
+    const padX = w * 0.05;
+    const padTop = h * 0.06;
+    const padBottom = h * 0.16;
+    return {
+      x: Math.round(x + padX),
+      y: Math.round(y + padTop),
+      width: Math.max(40, Math.round(w - padX * 2)),
+      height: Math.max(40, Math.round(h - padTop - padBottom)),
+    };
+  }
+  const padX = w * 0.21;
+  const padY = h * 0.05;
+  return {
+    x: Math.round(x + padX),
+    y: Math.round(y + padY),
+    width: Math.max(40, Math.round(w - padX * 2)),
+    height: Math.max(40, Math.round(h - padY * 2)),
+  };
+}
+
+function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl, imageMeta = {}) {
+  const kind = deviceFrameKindFromSlot(frameSlot);
+  const screen = insetScreenRect(framePlacement, kind);
+  const radius = kind === 'phone' ? 18 : 10;
+  const elements = [];
+  elements.push({
+    id: newElementId('frm'),
+    slotId: frameSlot.id,
+    type: 'shape',
+    layer: 8,
+    placement: framePlacement,
+    content: {
+      shape: 'rect',
+      fill: { type: 'solid', color: '#f8fafc' },
+      stroke: '#0f172a',
+      strokeWidth: 4,
+      borderRadius: radius,
+      shadow: '0 8px 24px rgba(15,23,42,0.18)',
+      boxShadow: '0 8px 24px rgba(15,23,42,0.18)',
+      deviceFrame: kind,
+    },
+    role: 'device_frame',
+  });
+  const imageInset = {
+    x: screen.x + 3,
+    y: screen.y + 3,
+    width: Math.max(20, screen.width - 6),
+    height: Math.max(20, screen.height - 6),
+  };
+  elements.push({
+    id: newElementId('img'),
+    slotId: imageSlot.id,
+    type: 'image',
+    layer: 10,
+    placement: imageInset,
+    content: {
+      url: imageUrl || null,
+      fit: 'cover',
+      borderRadius: kind === 'phone' ? 14 : 6,
+      ...imageMeta,
+    },
+    role: 'image',
+  });
+  return elements;
+}
+
 function newElementId(prefix = 'el') {
   return `${prefix}_${crypto.randomBytes(6).toString('hex')}`;
+}
+
+const IMAGE_PRESENTATION = {
+  hero: {
+    borderRadius: 18,
+    shadow: '0 14px 40px rgba(15, 23, 42, 0.14), 0 4px 14px rgba(99, 102, 241, 0.12)',
+  },
+  featured: {
+    borderRadius: 14,
+    shadow: '0 10px 28px rgba(15, 23, 42, 0.1), 0 2px 8px rgba(99, 102, 241, 0.08)',
+  },
+  card: {
+    borderRadius: 12,
+    shadow: '0 6px 18px rgba(15, 23, 42, 0.08)',
+  },
+  inset: {
+    borderRadius: 8,
+    shadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
+  },
+  flat: { borderRadius: 0, shadow: null },
+};
+
+function inferImageStyle(slotId) {
+  const id = String(slotId || '').toUpperCase();
+  if (id === 'HERO_IMAGE' || id === 'BACKGROUND_IMAGE') return 'hero';
+  if (/^IMAGE_\d+$|^COL_\d+_IMAGE$|^METRIC_IMAGE/.test(id)) return 'card';
+  if (/^DEVICE_|^PHONE_|^LAPTOP_|^TABLET_|^WATCH_/.test(id)) return 'inset';
+  return 'featured';
+}
+
+function resolveImagePresentation(slot = {}) {
+  const key = slot.imageStyle || inferImageStyle(slot.id);
+  return IMAGE_PRESENTATION[key] || IMAGE_PRESENTATION.inset;
 }
 
 /** Where indexed slots (stat_1, member_2, …) look for their list of entries. */
@@ -54,6 +241,12 @@ const LIST_SOURCE_KEYS = {
 };
 
 const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column|plan|price|tier)_(\d+)$/;
+const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title)$/;
+const PLAN_FIELD_RE = /^plan_(\d+)_(label|name|price|body)$/;
+const AGENDA_ITEM_RE = /^agenda_col_(\d+)_item_(\d+)$/;
+const AGENDA_HEADING_RE = /^agenda_col_(\d+)_heading$/;
+const DEPT_HEADING_RE = /^dept_(\d+)_heading$/;
+const CONTACT_VALUE_RE = /^contact_(address|phone|email)$/;
 const CENTERED_LAYOUT_RE = /centered|thank_you|big_number|banner/;
 
 function itemToText(item) {
@@ -90,6 +283,34 @@ function listForKind(kind, content) {
     if (list.length) return list;
   }
   return [];
+}
+
+function objectListForKind(kind, content) {
+  const keys = LIST_SOURCE_KEYS[kind] || [`${kind}s`];
+  for (const key of keys) {
+    const raw = content[key];
+    if (Array.isArray(raw) && raw.length) return raw;
+  }
+  return [];
+}
+
+function memberAt(content, index) {
+  const list = objectListForKind('member', content);
+  const item = list[index];
+  if (!item) return '';
+  if (typeof item === 'string') return item.trim();
+  return item;
+}
+
+function planAt(content, index) {
+  const list = objectListForKind('plan', content);
+  return list[index] || null;
+}
+
+function agendaColumnAt(content, colIndex) {
+  const columns = content.agenda?.columns;
+  if (!Array.isArray(columns)) return null;
+  return columns[colIndex] || null;
 }
 
 function primaryStat(content) {
@@ -133,6 +354,59 @@ function textForSlot(slotId, content = {}) {
   if (indexed) {
     const index = Number(indexed[2]) - 1;
     return listForKind(indexed[1], content)[index] || bullets[index] || '';
+  }
+
+  const memberField = id.match(MEMBER_FIELD_RE);
+  if (memberField) {
+    const member = memberAt(content, Number(memberField[1]) - 1);
+    if (!member || typeof member !== 'object') return typeof member === 'string' ? member : '';
+    const field = memberField[2];
+    if (field === 'name') return String(member.name ?? '').trim();
+    if (field === 'role' || field === 'title') return String(member.role ?? member.title ?? '').trim();
+    if (field === 'email') return String(member.email ?? '').trim();
+  }
+
+  const planField = id.match(PLAN_FIELD_RE);
+  if (planField) {
+    const plan = planAt(content, Number(planField[1]) - 1);
+    if (!plan) return '';
+    const field = planField[2];
+    if (field === 'label' || field === 'name') return String(plan.label ?? plan.name ?? '').trim();
+    if (field === 'price') return String(plan.price ?? '').trim();
+    if (field === 'body') {
+      const items = Array.isArray(plan.items) ? plan.items : Array.isArray(plan.bullets) ? plan.bullets : [];
+      return items.length ? items.map((item) => String(item ?? '').trim()).filter(Boolean).join('\n') : String(plan.body ?? '').trim();
+    }
+  }
+
+  const agendaHeading = id.match(AGENDA_HEADING_RE);
+  if (agendaHeading) {
+    const col = agendaColumnAt(content, Number(agendaHeading[1]) - 1);
+    return String(col?.heading ?? col?.title ?? '').trim();
+  }
+
+  const agendaItem = id.match(AGENDA_ITEM_RE);
+  if (agendaItem) {
+    const col = agendaColumnAt(content, Number(agendaItem[1]) - 1);
+    const items = Array.isArray(col?.items) ? col.items : [];
+    return String(items[Number(agendaItem[2]) - 1] ?? '').trim();
+  }
+
+  const deptHeading = id.match(DEPT_HEADING_RE);
+  if (deptHeading) {
+    const depts = content.departments || content.agenda?.columns;
+    const dept = Array.isArray(depts) ? depts[Number(deptHeading[1]) - 1] : null;
+    return String(dept?.heading ?? dept?.title ?? '').trim();
+  }
+
+  const contactValue = id.match(CONTACT_VALUE_RE);
+  if (contactValue) {
+    const contact = content.contact && typeof content.contact === 'object' ? content.contact : {};
+    return String(contact[contactValue[1]] ?? '').trim();
+  }
+
+  if (id === 'contact_address_label' || id === 'contact_phone_label' || id === 'contact_email_label') {
+    return id.includes('address') ? 'Address' : id.includes('phone') ? 'Phone' : 'Email';
   }
 
   switch (id) {
@@ -195,7 +469,39 @@ function textForSlot(slotId, content = {}) {
       break;
   }
 
-  if (id.includes('title') && !id.includes('subtitle')) return content.title || '';
+  if (id === 'heading') return String(content.title || '').trim();
+
+  const metricTitle = id.match(/^metric_title_(\d+)$/);
+  if (metricTitle) {
+    const col = content.columns?.[Number(metricTitle[1]) - 1];
+    return String(col?.title ?? col?.heading ?? '').trim();
+  }
+  const metricBody = id.match(/^metric_body_(\d+)$/);
+  if (metricBody) {
+    const col = content.columns?.[Number(metricBody[1]) - 1];
+    return String(col?.body ?? col?.text ?? '').trim();
+  }
+
+  const statValue = id.match(/^stat_(\d+)_value$/);
+  if (statValue) {
+    const stat = content.stats?.[Number(statValue[1]) - 1];
+    return String(stat?.value ?? stat?.number ?? '').trim();
+  }
+  const statLabel = id.match(/^stat_(\d+)_label$/);
+  if (statLabel) {
+    const stat = content.stats?.[Number(statLabel[1]) - 1];
+    return String(stat?.label ?? stat?.title ?? stat?.text ?? '').trim();
+  }
+
+  const bulletSlot = id.match(/^bullet_(\d+)$/);
+  if (bulletSlot) {
+    const items = bulletsOf(content);
+    return items[Number(bulletSlot[1]) - 1] || '';
+  }
+
+  if (id.includes('title') && !id.includes('subtitle') && !/^metric_|^plan_|^col_|^feature_|^point_|^member_/.test(id)) {
+    return content.title || '';
+  }
   if (id.includes('subtitle')) return content.subtitle || '';
   if (id.includes('quote')) return content.quote || content.body || '';
   if (id.includes('bullet')) return bulletBlock(bullets);
@@ -204,7 +510,7 @@ function textForSlot(slotId, content = {}) {
     return bullets.length ? bulletBlock(bullets) : '';
   }
   if (id === 'accent') return '';
-  return content.body || content.title || '';
+  return '';
 }
 
 /**
@@ -218,6 +524,8 @@ function styleForSlot(slotId, layoutSchema) {
 
   if (id === 'stat_value') return { fontSize: 54, bold: true, align: centerable };
   if (id === 'stat_label') return { fontSize: 22, bold: false, align: centerable };
+  if (/^stat_\d+_value$/.test(id)) return { fontSize: 44, bold: true, align: 'left' };
+  if (/^stat_\d+_label$/.test(id)) return { fontSize: 16, bold: false, align: 'left' };
   if (id === 'section_number') return { fontSize: 54, bold: true, align: 'left' };
   if (/^(stat|metric)_\d+$/.test(id)) return { fontSize: 30, bold: true, align: 'left' };
   if (id === 'cta') return { fontSize: 22, bold: true, align: 'center' };
@@ -247,6 +555,46 @@ const ROLE_TYPE_SCALE = {
 function paletteColor(palette, role, fallback) {
   if (!palette || !role) return fallback;
   return palette[role] || fallback;
+}
+
+function isOverlayLayout(layoutSchema, designTokens) {
+  if (designTokens?.backgroundStyle === 'image' || designTokens?.textContrast === 'high') {
+    return true;
+  }
+  const layoutId = String(layoutSchema?.layout_id || '');
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  if (slots.some((s) => s.id === 'BACKGROUND_IMAGE' || /OVERLAY_SCRIM/i.test(String(s.id || '')))) {
+    return true;
+  }
+  if (/full_bg|overlay|statement_top|statement_bottom/i.test(layoutId)) {
+    return true;
+  }
+  return false;
+}
+
+function overlayColorRoleForSlot(role, ty = {}, overlayActive) {
+  if (!overlayActive) return null;
+  if (ty.colorRole === 'textOnImage' || ty.colorRole === 'textOnImageMuted') return ty.colorRole;
+  if (role === 'caption' || role === 'eyebrow' || role === 'subheading' || role === 'body') {
+    return 'textOnImageMuted';
+  }
+  return 'textOnImage';
+}
+
+function mergeDesignTokensWithTheme(designTokens, themeTokens, layoutSchema) {
+  const overlay = isOverlayLayout(layoutSchema, designTokens);
+  const defaults = themeTokens?.overlayDefaults || {};
+  if (!overlay) return designTokens || null;
+  return {
+    backgroundStyle: designTokens?.backgroundStyle || defaults.backgroundStyle || 'image',
+    overlayOpacity:
+      designTokens?.overlayOpacity != null
+        ? designTokens.overlayOpacity
+        : defaults.overlayOpacity != null
+          ? defaults.overlayOpacity
+          : 0.45,
+    textContrast: designTokens?.textContrast || defaults.textContrast || 'high',
+  };
 }
 
 function resolveFill(shapeSpec, palette = {}) {
@@ -291,6 +639,8 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
   const fallback = styleForSlot(slotId, layoutSchema);
   const scale = themeTokens?.typeScale || {};
   const palette = themeTokens?.palette || {};
+  const mergedDesignTokens = mergeDesignTokensWithTheme(designTokens, themeTokens, layoutSchema);
+  const overlayActive = isOverlayLayout(layoutSchema, mergedDesignTokens);
 
   let fontSize = ty.fontSize;
   if (fontSize == null && role && ROLE_TYPE_SCALE[role] && scale[ROLE_TYPE_SCALE[role]] != null) {
@@ -306,7 +656,10 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
   const align = ty.align || fallback.align || 'left';
   let colorRole = ty.colorRole || null;
   if (!colorRole) {
-    if (role === 'stat') colorRole = 'accent';
+    const overlayRole = overlayColorRoleForSlot(role, ty, overlayActive);
+    if (overlayRole) {
+      colorRole = overlayRole;
+    } else if (role === 'stat') colorRole = 'accent';
     else if (
       role === 'caption' ||
       role === 'attribution' ||
@@ -317,8 +670,12 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
     } else if (role === 'cta') colorRole = 'primary';
     else colorRole = 'text';
   }
-  if (designTokens?.textContrast === 'high' && (colorRole === 'text' || colorRole === 'muted')) {
-    colorRole = 'text';
+  if (
+    mergedDesignTokens?.textContrast === 'high' &&
+    !ty.colorRole &&
+    (colorRole === 'text' || colorRole === 'muted')
+  ) {
+    colorRole = overlayActive ? 'textOnImage' : 'text';
   }
 
   return {
@@ -353,6 +710,7 @@ function isMediaImageSlot(slotId, role, slot) {
   const lower = String(slotId || '').toLowerCase();
   const r = String(role || '').toLowerCase();
   if (isLogoSlot(slotId, role)) return false;
+  if (/^text_half_bg$/i.test(lower)) return false;
   if (r === 'background' || r === 'image') return true;
   if (lower.includes('background') || lower.includes('hero')) return true;
   if (lower.includes('image') && !lower.includes('caption')) return true;
@@ -360,10 +718,129 @@ function isMediaImageSlot(slotId, role, slot) {
   return false;
 }
 
+function resolveSlotImageUrl(slotId, content = {}, imageRef = null) {
+  const id = String(slotId || '');
+  const map = content.slotImageUrls;
+  if (map && typeof map === 'object') {
+    if (map[id]) return map[id];
+    if (map[id.toUpperCase()]) return map[id.toUpperCase()];
+    if (map[id.toLowerCase()]) return map[id.toLowerCase()];
+  }
+  return (
+    imageRef?.url
+    || imageRef?.s3Url
+    || (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null)
+    || null
+  );
+}
+
 function isDecorShapeSlot(slotId, role, slot) {
+  if (slot?.aiOnly) return false;
   if (isLogoSlot(slotId, role) || isMediaImageSlot(slotId, role, slot)) return false;
   const r = String(role || '').toLowerCase();
   return r === 'decoration' || r === 'divider' || Boolean(slot?.shape);
+}
+
+/** Layout-authoring chrome — hidden in previews; applied at generation from AI shapeDecisions. */
+function isAiOnlyShapeSlot(slot) {
+  if (!slot) return false;
+  const id = String(slot.id || '');
+  const role = String(slot.role || '').toLowerCase();
+  if (/^METRIC_CARD_\d+_BG$/.test(id)) return false;
+  if (/^TEXT_HALF_BG$/i.test(id)) return false;
+  if (/FRAME$/i.test(id) && slot.shapeHint?.pairsWithSlotId) return true;
+  if (slot.aiOnly === true) return true;
+  if (slot.shapeHint?.aiOnly) return true;
+  if (/_BG$|CARD_BG|OVERLAY_SCRIM|CTA_BG/i.test(id)) return true;
+  if (role === 'divider') return true;
+  if (role === 'decoration' && slot.shape && !isLogoSlot(id, role) && !/FRAME$/i.test(id)) return true;
+  if (role === 'background' && id !== 'BACKGROUND_IMAGE' && slot.shape) return true;
+  if (/^ICON_\d+$/.test(id)) return true;
+  return false;
+}
+
+function resolvePairsWithSlotId(slots, hintSlot) {
+  const hint = hintSlot?.shapeHint || {};
+  if (hint.pairsWithSlotId) return hint.pairsWithSlotId;
+  const idx = slots.indexOf(hintSlot);
+  for (let i = idx + 1; i < slots.length; i += 1) {
+    const r = String(slots[i].role || '').toLowerCase();
+    if (['image', 'cta', 'heading', 'body', 'quote'].includes(r)) return slots[i].id;
+  }
+  return null;
+}
+
+function mergeShapeDecisions(layoutSchema, content) {
+  if (!content?.shapeDecisions || typeof content.shapeDecisions !== 'object') return {};
+  return { ...content.shapeDecisions };
+}
+
+function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, canvas) {
+  if (!doc || !layoutSchema) return doc;
+  const decisions = mergeShapeDecisions(layoutSchema, content);
+  const palette = themeTokens?.palette || {};
+  const slots = Array.isArray(layoutSchema.slots) ? layoutSchema.slots : [];
+  const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
+  const elements = [...(doc.elements || [])];
+
+  const overlayDecision = decisions.__overlay__;
+  if (overlayDecision?.enabled !== false && overlayDecision?.scrim > 0) {
+    const scrimColor = palette.overlayScrim || 'rgba(0,0,0,0.45)';
+    elements.push({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: { x: 0, y: 0, width: canvas.width, height: canvas.height, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', color: scrimColor, colorRole: 'overlayScrim' },
+        opacity: Number(overlayDecision.scrim),
+      },
+      role: 'design_overlay',
+    });
+  }
+
+  for (const [slotId, decision] of Object.entries(decisions)) {
+    if (slotId === '__overlay__') continue;
+    const behind = decision?.behind || 'none';
+    if (behind === 'none') continue;
+
+    const targetSlot = slotById[slotId];
+    const targetEl = elements.find((el) => el.slotId === slotId);
+    if (!targetSlot || !targetEl) continue;
+
+    const placement = targetEl.placement || regionToPlacement(targetSlot.region, canvas);
+    let fillRole = 'cardBg';
+    if (behind === 'pill') fillRole = 'primary';
+    if (behind === 'surface') fillRole = 'surface';
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      slotId: `${slotId}__shape_bg`,
+      layer: Math.max(0, (targetEl.layer || 10) - 2),
+      placement: { ...placement },
+      content: {
+        shape: 'rect',
+        fill: resolveFill(
+          { type: 'rect', fillColorRole: fillRole, borderRadius: decision.borderRadius ?? (behind === 'pill' ? 200 : 10) },
+          palette
+        ),
+        borderRadius: decision.borderRadius ?? (behind === 'pill' ? 200 : 10),
+      },
+      role: 'decoration',
+    });
+
+    if (decision.mask && decision.mask !== 'none' && targetEl.type === 'image') {
+      targetEl.content = {
+        ...(targetEl.content || {}),
+        borderRadius: decision.borderRadius ?? 10,
+      };
+    }
+  }
+
+  doc.elements = elements.sort((a, b) => (a.layer || 0) - (b.layer || 0));
+  return doc;
 }
 
 function isPackPlaceholderText(text) {
@@ -487,6 +964,8 @@ function applyThemeFontsToText(el, themeTokens, role) {
 
 function applyThemeColorsToText(el, themeTokens, role) {
   if (!themeTokens?.palette || (el.type !== 'text' && el.type !== 'textbox')) return;
+  const existingRole = el.content?.colorRole;
+  if (existingRole === 'textOnImage' || existingRole === 'textOnImageMuted') return;
   const palette = themeTokens.palette;
   const r = String(role || '').toLowerCase();
   let colorRole = el.content?.colorRole || 'text';
@@ -604,6 +1083,9 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
   }
 
   if (designTokens.overlayOpacity > 0 && designTokens.backgroundStyle === 'image') {
+    const scrimColor =
+      palette.overlayScrim ||
+      (themeTokens?.appearance === 'light' ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.5)');
     doc.elements.push({
       id: newElementId('ovl'),
       type: 'shape',
@@ -618,7 +1100,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
       },
       content: {
         shape: 'rect',
-        fill: { type: 'solid', color: '#000000', colorRole: 'bg' },
+        fill: { type: 'solid', color: scrimColor, colorRole: 'overlayScrim' },
       },
       role: 'design_overlay',
     });
@@ -643,7 +1125,8 @@ function layoutSlotsToElements(
   opts = {}
 ) {
   const themeTokens = opts.themeTokens || content.themeTokens || null;
-  const designTokens = opts.designTokens || content.designTokens || null;
+  const rawDesignTokens = opts.designTokens || content.designTokens || null;
+  const designTokens = mergeDesignTokensWithTheme(rawDesignTokens, themeTokens, layoutSchema);
   const palette = themeTokens?.palette || {};
 
   const canvas = {
@@ -656,10 +1139,51 @@ function layoutSlotsToElements(
 
   for (const slot of slots) {
     const slotId = slot.id || `slot_${layer}`;
-    const placement = regionToPlacement(slot.region, canvas);
+    if (isAiOnlyShapeSlot(slot)) continue;
+    const placement = regionToPlacement(slot.region, canvas, slot, slots);
     const lower = String(slotId).toLowerCase();
     const role = String(slot.role || '').toLowerCase();
     const slotLayer = slot.layer != null ? Number(slot.layer) : layer++;
+
+    if (/^METRIC_CARD_\d+_BG$/.test(String(slotId))) {
+      const fill = resolveFill(slot.shape || { fillColorRole: 'cardBg' }, palette);
+      elements.push({
+        id: newElementId('shp'),
+        slotId,
+        type: 'shape',
+        layer: slotLayer,
+        placement,
+        content: {
+          shape: 'rect',
+          fill,
+          borderRadius: slot.shape?.borderRadius ?? 12,
+          layoutSurface: true,
+        },
+        role: 'decoration',
+      });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+      continue;
+    }
+
+    if (/^TEXT_HALF_BG$/i.test(String(slotId))) {
+      const fill = resolveFill(slot.shape || { fillColorRole: 'surface' }, palette);
+      elements.push({
+        id: newElementId('shp'),
+        slotId,
+        type: 'shape',
+        layer: slotLayer,
+        placement,
+        content: {
+          shape: 'rect',
+          fill,
+          borderRadius: slot.shape?.borderRadius ?? 0,
+          layoutSurface: true,
+        },
+        role: 'decoration',
+      });
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+      continue;
+    }
 
     if (isLogoSlot(slotId, role)) {
       elements.push({
@@ -679,13 +1203,26 @@ function layoutSlotsToElements(
     }
 
     if (isMediaImageSlot(slotId, role, slot)) {
-      const url =
-        imageRef?.url ||
-        imageRef?.s3Url ||
-        (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
-        null;
+      const url = resolveSlotImageUrl(slotId, content, imageRef);
+      const frameSlot = findDeviceFrameSlot(slots, slotId);
+      if (frameSlot) {
+        const framePlacement = regionToPlacement(frameSlot.region, canvas, frameSlot, slots);
+        const presentation = resolveImagePresentation(slot);
+        const frameEls = buildDeviceFrameElements(frameSlot, slot, framePlacement, url, {
+          ...(presentation.borderRadius != null ? { borderRadius: presentation.borderRadius } : {}),
+          ...(presentation.shadow ? { boxShadow: presentation.shadow, shadow: presentation.shadow } : {}),
+          alt: content.title || '',
+        });
+        elements.push(...frameEls);
+        if (slot.layer == null) layer = Math.max(layer, slotLayer + 3);
+        continue;
+      }
+      const presentation = resolveImagePresentation(slot);
+      const borderRadius = slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
+      const shadow = slot.shadow ?? presentation.shadow;
       elements.push({
         id: newElementId('img'),
+        slotId,
         type: 'image',
         layer: slotLayer,
         placement,
@@ -693,6 +1230,8 @@ function layoutSlotsToElements(
           url,
           fit: slot.fit || 'cover',
           alt: content.title || '',
+          ...(borderRadius != null ? { borderRadius } : {}),
+          ...(shadow ? { boxShadow: shadow, shadow } : {}),
         },
         role: mediaRoleForSlot(slotId, role),
       });
@@ -798,6 +1337,7 @@ function layoutSlotsToElements(
 
     elements.push({
       id: newElementId('txt'),
+      slotId,
       type: 'text',
       layer: slotLayer,
       placement,
@@ -863,6 +1403,14 @@ function layoutSlotsToElements(
 
   let doc = { version: 1, canvas, elements };
   doc = applySlideDesignTokens(doc, designTokens, themeTokens);
+  const hasShapeDecisions =
+    content?.shapeDecisions &&
+    typeof content.shapeDecisions === 'object' &&
+    Object.keys(content.shapeDecisions).length > 0;
+  if (opts.applyShapes !== false && hasShapeDecisions) {
+    doc = applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, canvas);
+  }
+  doc = applyTextOverImageContrast(doc, themeTokens);
   return doc;
 }
 
@@ -966,6 +1514,95 @@ function injectBrandLogo(elementsDoc, logo, opts = {}) {
  * Rebind generated slide content into an existing canvas by element role.
  * Preserves placement/chrome; updates text/image payloads in place.
  */
+function placementOverlapRatio(a, b) {
+  const ax = a?.x ?? 0;
+  const ay = a?.y ?? 0;
+  const aw = a?.width ?? 0;
+  const ah = a?.height ?? 0;
+  const bx = b?.x ?? 0;
+  const by = b?.y ?? 0;
+  const bw = b?.width ?? 0;
+  const bh = b?.height ?? 0;
+  const overlapW = Math.max(0, Math.min(ax + aw, bx + bw) - Math.max(ax, bx));
+  const overlapH = Math.max(0, Math.min(ay + ah, by + bh) - Math.max(ay, by));
+  const textArea = Math.max(1, aw * ah);
+  return (overlapW * overlapH) / textArea;
+}
+
+function hasOverlappingTextPlacements(elementsDoc) {
+  const list = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
+  const textEls = list.filter((el) => el.type === 'text' || el.type === 'textbox');
+  for (let i = 0; i < textEls.length; i += 1) {
+    const a = textEls[i].placement || {};
+    for (let j = i + 1; j < textEls.length; j += 1) {
+      const b = textEls[j].placement || {};
+      const overlapX = (a.x ?? 0) < (b.x ?? 0) + (b.width ?? 0) && (b.x ?? 0) < (a.x ?? 0) + (a.width ?? 0);
+      const overlapY = (a.y ?? 0) < (b.y ?? 0) + (b.height ?? 0) && (b.y ?? 0) < (a.y ?? 0) + (a.height ?? 0);
+      if (overlapX && overlapY) {
+        const overlapArea =
+          Math.max(0, Math.min((a.x ?? 0) + (a.width ?? 0), (b.x ?? 0) + (b.width ?? 0)) - Math.max(a.x ?? 0, b.x ?? 0)) *
+          Math.max(0, Math.min((a.y ?? 0) + (a.height ?? 0), (b.y ?? 0) + (b.height ?? 0)) - Math.max(a.y ?? 0, b.y ?? 0));
+        const minArea = Math.min((a.width ?? 1) * (a.height ?? 1), (b.width ?? 1) * (b.height ?? 1));
+        if (overlapArea > minArea * 0.15) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function applyTextOverImageContrast(elementsDoc, themeTokens = null) {
+  if (!elementsDoc || !Array.isArray(elementsDoc.elements)) return elementsDoc;
+  const palette = themeTokens?.palette || {};
+  const images = elementsDoc.elements.filter((el) => el.type === 'image');
+  if (!images.length) return elementsDoc;
+
+  for (const el of elementsDoc.elements) {
+    if (el.type !== 'text' && el.type !== 'textbox') continue;
+    const placement = el.placement || {};
+    let maxOverlap = 0;
+    for (const img of images) {
+      maxOverlap = Math.max(maxOverlap, placementOverlapRatio(placement, img.placement || {}));
+    }
+    if (maxOverlap <= 0.25) continue;
+
+    const role = String(el.role || '').toLowerCase();
+    const slotId = String(el.slotId || '').toLowerCase();
+    const isMuted =
+      role === 'body' ||
+      role === 'caption' ||
+      role === 'stat_label' ||
+      role === 'subheading' ||
+      role === 'eyebrow' ||
+      slotId.includes('body') ||
+      slotId.includes('bullet');
+    const colorRole = isMuted ? 'textOnImageMuted' : 'textOnImage';
+    el.content = {
+      ...(el.content || {}),
+      colorRole,
+      color: paletteColor(palette, colorRole, el.content?.color || null),
+    };
+  }
+  return elementsDoc;
+}
+
+function shouldRecompileLayout(layoutSchema, elementsDoc = null) {
+  const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
+  if (/grid_metrics|grid_device|device_/.test(layoutId)) return true;
+
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const imageSlots = slots.filter((slot) => isMediaImageSlot(slot.id, slot.role, slot));
+  if (imageSlots.length > 1) return true;
+
+  const textSlots = slots.filter((slot) => {
+    const role = String(slot.role || '').toLowerCase();
+    return ['heading', 'body', 'stat', 'stat_label'].includes(role);
+  });
+  if (textSlots.length > 3) return true;
+
+  if (elementsDoc && hasOverlappingTextPlacements(elementsDoc)) return true;
+  return false;
+}
+
 function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opts = {}) {
   const forceTextReplace = opts.forceTextReplace === true;
   const themeTokens = opts.themeTokens || null;
@@ -999,10 +1636,13 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     const role = resolveElementRole(el);
     const slotId = String(el.slotId || '').toLowerCase();
     const id = String(el.id || '').toLowerCase();
-    const roleOrId = role || slotId || id;
+    const slotKey = slotId || id;
 
     if (el.type === 'text' || el.type === 'textbox') {
-      const text = textForSlot(roleOrId, content);
+      let text = slotKey ? textForSlot(slotKey, content) : '';
+      if ((!text || !String(text).length) && id && id !== slotKey) {
+        text = textForSlot(id, content);
+      }
       if (text != null && String(text).length) {
         applyText(el, text, role);
       } else if (role === 'title' || role === 'heading' || role === 'headline') {
@@ -1044,12 +1684,16 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     if (
       el.type === 'image' &&
       !isLogoLikeElement(el) &&
-      imageUrl &&
       isImageSlot
     ) {
+      const slotKey = String(el.slotId || '').trim();
+      const slotUrl = slotKey
+        ? resolveSlotImageUrl(slotKey, content, imageRef)
+        : imageUrl;
+      if (!slotUrl) continue;
       el.content = {
         ...(el.content || {}),
-        url: imageUrl,
+        url: slotUrl,
         s3Key: imageRef?.s3Key || el.content?.s3Key || null,
         fit: el.content?.fit || 'cover',
         alt: content.title || el.content?.alt || '',
@@ -1059,12 +1703,16 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     if (
       isImagePlaceholderElement(el) &&
       !isLogoLikeElement(el) &&
-      imageUrl &&
       isImageSlot
     ) {
+      const slotKey = String(el.slotId || '').trim();
+      const slotUrl = slotKey
+        ? resolveSlotImageUrl(slotKey, content, imageRef)
+        : imageUrl;
+      if (!slotUrl) continue;
       el.type = 'image';
       el.content = {
-        url: imageUrl,
+        url: slotUrl,
         s3Key: imageRef?.s3Key || null,
         fit: 'cover',
         alt: content.title || '',
@@ -1091,6 +1739,9 @@ module.exports = {
   layoutSlotsToElements,
   rebindContentToElements,
   elementsHaveRebindRoles,
+  shouldRecompileLayout,
+  hasOverlappingTextPlacements,
+  applyTextOverImageContrast,
   applySlideDesignTokens,
   blankCanvas,
   newElementId,

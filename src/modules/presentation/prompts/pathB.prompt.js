@@ -52,7 +52,8 @@ function buildUser(vars = {}) {
   }
 
   return [
-    `Create a clean, professional infographic-style diagram, ${n} panels`,
+    'Create a clean, professional infographic-style diagram, flat vector SaaS deck style,',
+    `${n} panels`,
     `arranged in a grid, ${background}, [${palette}] accent`,
     `colors used consistently (${legend}).`,
     '',

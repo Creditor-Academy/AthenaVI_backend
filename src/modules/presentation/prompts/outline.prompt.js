@@ -6,7 +6,8 @@ const DENSITY_CAPS = {
 
 function buildSystem() {
   return [
-    'You are a presentation strategist. Build a clear narrative outline for a slide deck.',
+    'You are a presentation strategist. Build a clear, executive-grade outline for a slide deck.',
+    'Each slide should work as a designed layout slide (title + visual), not a wall of bullets.',
     'Do NOT write full slide body copy. Do NOT invent layout or design.',
     'Also invent a concise presentation title from the source meaning — not a truncated copy of the prompt.',
     'Return JSON only matching the schema.',
@@ -58,9 +59,13 @@ function buildUser(vars = {}) {
     String(sourceText),
     '',
     'Rules:',
-    '- Strong narrative arc (hook → problem → solution → proof → close)',
+    '- Strong narrative arc: Opening (title) → Agenda/hook → 3–5 proof slides (image+text, stat, quote) → Section dividers between acts → Closing CTA',
+    '- Slide order 1 MUST use suggestedContentType: title',
+    '- Last slide should prefer closing or strong CTA',
     '- One idea per slide',
     '- Slide titles ≤ 8 words; summary ≤ 25 words',
+    '- Cap consecutive bullet_list slides at 2; alternate with image+text, stat, quote, section_divider',
+    '- Prefer image+text for body slides (maps to para/card/image layouts with pre-built shapes)',
     '- Deck `title`: concise natural title (prefer 3–10 words, max 255 chars).',
     '  Derive it from the meaning of the full source. Do NOT paste or truncate the prompt.',
     '  Example good: "AI in Modern Healthcare". Example bad: "Create a presentation about…"',

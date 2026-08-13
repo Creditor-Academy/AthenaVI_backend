@@ -118,7 +118,7 @@ New seed types: `grid`, `pricing`, `device_frames` (3 layouts each). Re-seed: `n
 
 ### Seeded deck packs
 
-`npm run seed:presentation-deck-packs` installs 9 system packs (**schemaVersion 2**). Each pack carries `themeId`,
+`npm run seed:presentation-deck-packs` installs system packs (**schemaVersion 2**). Each pack carries `themeId`,
 `meta`, `narrative`, per-slide `intent` / `designTokens` / `generationHints`, designed placeholders,
 and `generationDefaults` (`layoutWhitelist`, `slideOrder: fixed`, `contentDistribution`).
 
@@ -138,6 +138,7 @@ List packs includes `previewImageUrl` + `media[]` (presigned). **List does not i
 | `executive_review_charcoal` | Charcoal Gold | 8 | QBR / board review |
 | `brand_story_sand` | Warm Sand | 8 | Brand / editorial story |
 | `company_meeting_clean` | Clean Light | 10 | Internal company meeting (title/closing image slots) |
+| `website_launch_paper_v1` | Paper Ink | 7 | Website launch announcement |
 
 List response includes `meta`, `narrative`, `preview`, `previewImageUrl`, `media`, `generationDefaults`.
 

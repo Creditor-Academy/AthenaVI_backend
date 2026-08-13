@@ -101,6 +101,7 @@ async function addSlide({
     ? layoutSlotsToElements(layoutSchema, slideContent, null, canvasSize, {
         themeTokens: deck.themeTokens || null,
         designTokens: slideContent.designTokens || null,
+        applyShapes: false,
       })
     : blankCanvas({
         withDefaultText: true,
@@ -216,6 +217,7 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
     {
       themeTokens: deck.themeTokens || null,
       designTokens: content.designTokens || null,
+      applyShapes: false,
     }
   );
 

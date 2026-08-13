@@ -15,15 +15,57 @@
         "cardBg": "rgba(255,255,255,0.05)",
         "gradientStart": "#0B1220",
         "gradientEnd": "#121A2B",
-        "shadow": "rgba(0,0,0,0.4)"
+        "shadow": "rgba(0,0,0,0.4)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
       },
       "fontPairingId": "inter_space",
-      "fonts": { "heading": "Inter", "body": "Inter", "headingWeight": 800, "bodyWeight": 400 },
-      "typeScale": { "display": 64, "title": 44, "subtitle": 28, "body": 18, "caption": 14, "stat": 72 },
+      "fonts": {
+        "heading": "Inter",
+        "body": "Inter",
+        "headingWeight": 800,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 64,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 72
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "clean corporate photo, soft lighting, no text overlay",
-      "colorTreatment": "cool blue accents"
+      "colorTreatment": "cool blue accents",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "corporate",
+          "dark"
+        ],
+        "useCases": [
+          "pitch",
+          "product"
+        ],
+        "mood": "confident"
+      }
     }
   },
   {
@@ -42,15 +84,57 @@
         "cardBg": "rgba(15,23,42,0.03)",
         "gradientStart": "#FFFFFF",
         "gradientEnd": "#F8FAFC",
-        "shadow": "rgba(15,23,42,0.08)"
+        "shadow": "rgba(15,23,42,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.45)"
       },
       "fontPairingId": "inter_source",
-      "fonts": { "heading": "Inter", "body": "Source Sans 3", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 56, "title": 42, "subtitle": 26, "body": 18, "caption": 14, "stat": 64 },
+      "fonts": {
+        "heading": "Inter",
+        "body": "Source Sans 3",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "bright minimal product photography, airy whitespace",
-      "colorTreatment": "crisp blue on white"
+      "colorTreatment": "crisp blue on white",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "minimal",
+          "light"
+        ],
+        "useCases": [
+          "pitch",
+          "saas"
+        ],
+        "mood": "clear"
+      }
     }
   },
   {
@@ -69,15 +153,57 @@
         "cardBg": "rgba(255,255,255,0.05)",
         "gradientStart": "#0F1A14",
         "gradientEnd": "#16241C",
-        "shadow": "rgba(0,0,0,0.45)"
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
       },
       "fontPairingId": "dm_sans_serif",
-      "fonts": { "heading": "DM Sans", "body": "DM Sans", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 60, "title": 44, "subtitle": 28, "body": 18, "caption": 14, "stat": 68 },
+      "fonts": {
+        "heading": "DM Sans",
+        "body": "DM Sans",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "nature-adjacent workplace, soft green depth, no text overlay",
-      "colorTreatment": "emerald and lime accents on dark slate"
+      "colorTreatment": "emerald and lime accents on dark slate",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "nature",
+          "dark"
+        ],
+        "useCases": [
+          "product",
+          "report"
+        ],
+        "mood": "grounded"
+      }
     }
   },
   {
@@ -96,15 +222,57 @@
         "cardBg": "rgba(28,25,23,0.04)",
         "gradientStart": "#FFFBF5",
         "gradientEnd": "#FFF7ED",
-        "shadow": "rgba(28,25,23,0.1)"
+        "shadow": "rgba(28,25,23,0.1)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.45)"
       },
       "fontPairingId": "fraunces_inter",
-      "fonts": { "heading": "Fraunces", "body": "Inter", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 60, "title": 44, "subtitle": 28, "body": 18, "caption": 14, "stat": 68 },
+      "fonts": {
+        "heading": "Fraunces",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "warm editorial lifestyle photo, natural light",
-      "colorTreatment": "terracotta and amber on sand"
+      "colorTreatment": "terracotta and amber on sand",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "editorial",
+          "light"
+        ],
+        "useCases": [
+          "brand",
+          "story"
+        ],
+        "mood": "warm"
+      }
     }
   },
   {
@@ -123,15 +291,57 @@
         "cardBg": "rgba(255,255,255,0.05)",
         "gradientStart": "#111111",
         "gradientEnd": "#1A1A1A",
-        "shadow": "rgba(0,0,0,0.5)"
+        "shadow": "rgba(0,0,0,0.5)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
       },
       "fontPairingId": "playfair_lato",
-      "fonts": { "heading": "Playfair Display", "body": "Lato", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 64, "title": 46, "subtitle": 28, "body": 18, "caption": 14, "stat": 72 },
+      "fonts": {
+        "heading": "Playfair Display",
+        "body": "Lato",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 64,
+        "title": 46,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 72
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 28 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 28
+      },
       "imageStyle": "luxury brand still life, low-key lighting, no text overlay",
-      "colorTreatment": "gold accents on charcoal"
+      "colorTreatment": "gold accents on charcoal",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "luxury",
+          "dark"
+        ],
+        "useCases": [
+          "pitch",
+          "brand"
+        ],
+        "mood": "premium"
+      }
     }
   },
   {
@@ -150,15 +360,57 @@
         "cardBg": "rgba(3,105,161,0.06)",
         "gradientStart": "#F0F9FF",
         "gradientEnd": "#E0F2FE",
-        "shadow": "rgba(12,74,110,0.1)"
+        "shadow": "rgba(12,74,110,0.1)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.45)"
       },
       "fontPairingId": "nunito_inter",
-      "fonts": { "heading": "Nunito", "body": "Inter", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 56, "title": 42, "subtitle": 26, "body": 18, "caption": 14, "stat": 64 },
+      "fonts": {
+        "heading": "Nunito",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "calm coastal / tech workspace, soft blue haze",
-      "colorTreatment": "sky blue mist with deep ocean text"
+      "colorTreatment": "sky blue mist with deep ocean text",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "calm",
+          "light"
+        ],
+        "useCases": [
+          "product",
+          "health"
+        ],
+        "mood": "serene"
+      }
     }
   },
   {
@@ -177,15 +429,57 @@
         "cardBg": "rgba(255,255,255,0.05)",
         "gradientStart": "#0C0A14",
         "gradientEnd": "#161225",
-        "shadow": "rgba(0,0,0,0.5)"
+        "shadow": "rgba(0,0,0,0.5)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
       },
       "fontPairingId": "space_grotesk",
-      "fonts": { "heading": "Space Grotesk", "body": "Space Grotesk", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 60, "title": 44, "subtitle": 28, "body": 18, "caption": 14, "stat": 70 },
+      "fonts": {
+        "heading": "Space Grotesk",
+        "body": "Space Grotesk",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 70
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "moody abstract tech, subtle neon edges, no text overlay",
-      "colorTreatment": "violet and pink on near-black"
+      "colorTreatment": "violet and pink on near-black",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "tech",
+          "dark"
+        ],
+        "useCases": [
+          "pitch",
+          "product"
+        ],
+        "mood": "bold"
+      }
     }
   },
   {
@@ -204,15 +498,57 @@
         "cardBg": "rgba(9,9,11,0.03)",
         "gradientStart": "#FAFAF9",
         "gradientEnd": "#F5F5F4",
-        "shadow": "rgba(9,9,11,0.08)"
+        "shadow": "rgba(9,9,11,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.45)"
       },
       "fontPairingId": "libre_ibm",
-      "fonts": { "heading": "Libre Baskerville", "body": "IBM Plex Sans", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 56, "title": 44, "subtitle": 26, "body": 17, "caption": 13, "stat": 64 },
+      "fonts": {
+        "heading": "Libre Baskerville",
+        "body": "IBM Plex Sans",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 44,
+        "subtitle": 26,
+        "body": 17,
+        "caption": 13,
+        "stat": 64
+      },
       "scaleRatio": 1.25,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "high-contrast documentary photo, matte print feel",
-      "colorTreatment": "monochrome ink on paper"
+      "colorTreatment": "monochrome ink on paper",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "editorial",
+          "light"
+        ],
+        "useCases": [
+          "report",
+          "story"
+        ],
+        "mood": "classic"
+      }
     }
   },
   {
@@ -231,15 +567,57 @@
         "cardBg": "rgba(255,255,255,0.05)",
         "gradientStart": "#1A0F12",
         "gradientEnd": "#2A151C",
-        "shadow": "rgba(0,0,0,0.45)"
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
       },
       "fontPairingId": "outfit_source",
-      "fonts": { "heading": "Outfit", "body": "Source Sans 3", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 60, "title": 44, "subtitle": 28, "body": 18, "caption": 14, "stat": 68 },
+      "fonts": {
+        "heading": "Outfit",
+        "body": "Source Sans 3",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "warm dusk lifestyle photography, soft gradient light",
-      "colorTreatment": "coral and peach on dusk"
+      "colorTreatment": "coral and peach on dusk",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "lifestyle",
+          "dark"
+        ],
+        "useCases": [
+          "brand",
+          "pitch"
+        ],
+        "mood": "vivid"
+      }
     }
   },
   {
@@ -258,15 +636,57 @@
         "cardBg": "rgba(5,150,105,0.06)",
         "gradientStart": "#F7FFFB",
         "gradientEnd": "#ECFDF5",
-        "shadow": "rgba(6,78,59,0.08)"
+        "shadow": "rgba(6,78,59,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.45)"
       },
       "fontPairingId": "manrope_inter",
-      "fonts": { "heading": "Manrope", "body": "Inter", "headingWeight": 700, "bodyWeight": 400 },
-      "typeScale": { "display": 56, "title": 42, "subtitle": 26, "body": 18, "caption": 14, "stat": 64 },
+      "fonts": {
+        "heading": "Manrope",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
       "scaleRatio": 1.333,
-      "spacingScale": { "xs": 4, "sm": 8, "md": 16, "lg": 24 },
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
       "imageStyle": "clean healthcare / wellness interiors, bright daylight",
-      "colorTreatment": "mint and teal on soft white"
+      "colorTreatment": "mint and teal on soft white",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "image",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": [
+          "health",
+          "light"
+        ],
+        "useCases": [
+          "wellness",
+          "product"
+        ],
+        "mood": "fresh"
+      }
     }
   }
 ]

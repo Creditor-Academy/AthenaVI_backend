@@ -231,6 +231,35 @@ const slideContentSchema = Joi.object({
   stats: Joi.array().items(Joi.object().unknown(true)).optional(),
   quote: Joi.string().allow('', null).optional(),
   chart: Joi.object().unknown(true).allow(null).optional(),
+  table: Joi.object({
+    headers: Joi.array().items(Joi.string()).optional(),
+    rows: Joi.array().items(Joi.array().items(Joi.string())).optional(),
+  }).unknown(true).allow(null).optional(),
+  members: Joi.array().items(Joi.object({
+    name: Joi.string().allow('', null).optional(),
+    role: Joi.string().allow('', null).optional(),
+    title: Joi.string().allow('', null).optional(),
+    email: Joi.string().allow('', null).optional(),
+  }).unknown(true)).optional(),
+  plans: Joi.array().items(Joi.object({
+    label: Joi.string().allow('', null).optional(),
+    name: Joi.string().allow('', null).optional(),
+    price: Joi.string().allow('', null).optional(),
+    items: Joi.array().items(Joi.string()).optional(),
+    bullets: Joi.array().items(Joi.string()).optional(),
+    highlighted: Joi.boolean().optional(),
+  }).unknown(true)).optional(),
+  contact: Joi.object({
+    address: Joi.string().allow('', null).optional(),
+    phone: Joi.string().allow('', null).optional(),
+    email: Joi.string().allow('', null).optional(),
+  }).unknown(true).allow(null).optional(),
+  agenda: Joi.object({
+    columns: Joi.array().items(Joi.object({
+      heading: Joi.string().allow('', null).optional(),
+      items: Joi.array().items(Joi.string()).optional(),
+    }).unknown(true)).optional(),
+  }).unknown(true).allow(null).optional(),
   comparison: Joi.any().optional(),
   timeline: Joi.any().optional(),
   notes: Joi.string().allow('', null).optional(),
@@ -603,7 +632,10 @@ const colorRoleSchema = Joi.string()
     'divider',
     'cardBg',
     'gradientStart',
-    'gradientEnd'
+    'gradientEnd',
+    'textOnImage',
+    'textOnImageMuted',
+    'overlayScrim'
   )
   .optional();
 

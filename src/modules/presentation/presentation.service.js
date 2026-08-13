@@ -279,12 +279,45 @@ async function createPresentation({
       };
       if (!placeholder.title) placeholder.title = displayName;
 
-      const imageRef = await templateMediaService.resolvePackSlideImageRef({
-        packTemplateId: pack.id,
-        slideOrder: ps.order,
-        placeholder,
-        mediaByHint,
-      });
+      const imageSlots = layout?.schema
+        ? templateMediaService.listLayoutImageSlots(layout.schema)
+        : [];
+      const slotImageUrls = {};
+      let imageRef = null;
+
+      for (const slotId of imageSlots) {
+        const hint = templateMediaService.slotHintForSlideSlot(ps.order, slotId);
+        const row = mediaByHint.get(hint);
+        if (!row?.s3Key) continue;
+        const url = await templateMediaService.resolveMediaUrl(row.s3Key);
+        slotImageUrls[slotId] = url;
+        if (!imageRef) {
+          imageRef = {
+            source: 'template',
+            url,
+            s3Key: row.s3Key,
+            mediaId: row.id,
+            status: 'ready',
+            error: null,
+          };
+        }
+      }
+
+      if (!imageRef) {
+        imageRef = await templateMediaService.resolvePackSlideImageRef({
+          packTemplateId: pack.id,
+          slideOrder: ps.order,
+          placeholder,
+          mediaByHint,
+        });
+        if (imageRef?.url && imageSlots[0]) {
+          slotImageUrls[imageSlots[0]] = imageRef.url;
+        }
+      }
+
+      if (Object.keys(slotImageUrls).length) {
+        placeholder.slotImageUrls = slotImageUrls;
+      }
       if (imageRef?.s3Key && !placeholder.imageS3Key) {
         placeholder.imageS3Key = imageRef.s3Key;
       }

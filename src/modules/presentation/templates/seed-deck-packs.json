@@ -1,1 +1,216 @@
-[]
+[
+  {
+    "name": "Website Launch — Paper Ink",
+    "contentType": "pack",
+    "variant": "website_launch_paper_v1",
+    "version": 2,
+    "isActive": true,
+    "schema": {
+      "schemaVersion": 2,
+      "pack_id": "website_launch_paper_v1",
+      "themeId": "paper_ink",
+      "aspectRatio": "16:9",
+      "meta": {
+        "name": "Website Launch — Paper Ink",
+        "description": "7-slide launch deck for announcing a redesigned company website.",
+        "useCase": "website_launch",
+        "audience": "customers, partners, and internal stakeholders",
+        "tone": "muted, professional, confident, clear",
+        "industry": [
+          "saas",
+          "technology"
+        ]
+      },
+      "narrative": {
+        "arc": "announce_discover_experience_prove_content",
+        "summary": "Announce the launch, map the site with a hero agenda, justify the rebuild, show desktop and mobile mockups, highlight pages with metrics, end on rich site content."
+      },
+      "slides": [
+        {
+          "order": 1,
+          "layout_id": "title_image_logo_v1",
+          "contentType": "title",
+          "intent": "Announce the new Atlas website with confidence and clarity",
+          "placeholder": {
+            "title": "Atlas Is Live",
+            "subtitle": "A faster, clearer website built for how you work today",
+            "imagePrompt": "Modern office team reviewing a website launch on a large screen, soft natural light, editorial photography"
+          }
+        },
+        {
+          "order": 2,
+          "layout_id": "agenda_three_columns_hero_v1",
+          "contentType": "agenda",
+          "intent": "Map the site into Discover, Evaluate, and Act paths beneath a wide hero image",
+          "placeholder": {
+            "title": "What You'll Find",
+            "imagePrompt": "Wide panoramic website launch banner, muted editorial photography, team celebrating go-live, no text overlay",
+            "imagePrompts": {
+              "HERO_IMAGE": "Full-width panoramic website launch hero banner, edge to edge, muted editorial photography, team celebrating go-live, no text overlay"
+            },
+            "agenda": {
+              "columns": [
+                {
+                  "heading": "Discover",
+                  "items": [
+                    "Product overview",
+                    "Customer stories",
+                    "Pricing transparency"
+                  ]
+                },
+                {
+                  "heading": "Evaluate",
+                  "items": [
+                    "Feature comparisons",
+                    "Integration docs",
+                    "Security overview"
+                  ]
+                },
+                {
+                  "heading": "Act",
+                  "items": [
+                    "Free trial signup",
+                    "Demo booking",
+                    "Partner portal access"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "order": 3,
+          "layout_id": "para_split_50_50_v1",
+          "contentType": "image+text",
+          "intent": "Explain why the rebuild mattered — problem, then solution",
+          "placeholder": {
+            "title": "Why We Rebuilt",
+            "body": "Our old site could not keep pace — slow pages, buried pricing, and a mobile experience that lost half our visitors. The new Atlas site puts clarity first: faster loads, honest messaging, and paths that match how teams actually buy.",
+            "imagePrompt": "Before-and-after website redesign concept, clean minimal workspace, muted tones"
+          }
+        },
+        {
+          "order": 4,
+          "layout_id": "device_laptop_split_v1",
+          "contentType": "device_frames",
+          "intent": "Show the desktop experience where complex evaluations happen",
+          "placeholder": {
+            "title": "Built for the Desktop",
+            "body": "Spacious layouts, rich product storytelling, and documentation that scales with complex evaluations — all optimized for the screen where decisions get made.",
+            "imagePrompt": "SaaS product homepage UI screenshot, professional layout, muted editorial aesthetic — flat screen content only, no laptop hardware",
+            "imagePrompts": {
+              "DEVICE_IMAGE": "SaaS product homepage UI screenshot, professional layout, muted editorial aesthetic — flat screen content only, no laptop hardware"
+            }
+          }
+        },
+        {
+          "order": 5,
+          "layout_id": "device_phone_vertical_split_v1",
+          "contentType": "device_frames",
+          "intent": "Prove mobile-first design for the majority of traffic",
+          "placeholder": {
+            "title": "Mobile-First, Always",
+            "body": "Over 52% of our traffic arrives on phones. Every page, form, and CTA is touch-friendly, fast, and readable without pinch-zoom.",
+            "imagePrompt": "Mobile website UI screenshot, thumb-friendly navigation, clean SaaS layout — flat screen content only, no phone hardware",
+            "imagePrompts": {
+              "DEVICE_IMAGE": "Mobile website UI screenshot, thumb-friendly navigation, clean SaaS layout — flat screen content only, no phone hardware"
+            }
+          }
+        },
+        {
+          "order": 6,
+          "layout_id": "grid_metrics_masonry_v1",
+          "contentType": "grid",
+          "intent": "Combine flagship page cards with two launch benchmark stats",
+          "placeholder": {
+            "title": "Launch Highlights",
+            "stats": [
+              {
+                "value": "1.2s",
+                "label": "Largest Contentful Paint"
+              },
+              {
+                "value": "98",
+                "label": "Lighthouse accessibility"
+              }
+            ],
+            "body": "Home, Product, and Pricing pages ship with real photography, scannable copy, and proof points visitors can trust.",
+            "columns": [
+              {
+                "title": "Home",
+                "body": "Clear value prop above the fold; social proof within one scroll"
+              },
+              {
+                "title": "Product",
+                "body": "Interactive demos and integration gallery"
+              },
+              {
+                "title": "Pricing",
+                "body": "Transparent tiers with no hidden fees"
+              }
+            ],
+            "imagePrompt": "Three distinct SaaS website page screenshots in a bento grid, muted professional aesthetic",
+            "imagePrompts": {
+              "METRIC_IMAGE_1": "SaaS website homepage screenshot, clean hero section, muted professional aesthetic",
+              "METRIC_IMAGE_2": "SaaS product page screenshot detail, feature highlights, muted professional aesthetic",
+              "METRIC_IMAGE_3": "SaaS pricing page screenshot, transparent tiers, muted professional aesthetic"
+            }
+          }
+        },
+        {
+          "order": 7,
+          "layout_id": "four_para_image_v1",
+          "contentType": "bullet_list",
+          "intent": "Close with rich content on what visitors will find across the site",
+          "placeholder": {
+            "title": "Explore the Site",
+            "bullets": [
+              "Documentation hub with search and versioned API references",
+              "Customer stories filtered by industry and company size",
+              "Integration gallery with live connection status",
+              "Support center with SLA tiers and response-time guarantees"
+            ],
+            "imagePrompt": "Team browsing a modern documentation website on a large monitor, muted editorial photography"
+          }
+        }
+      ],
+      "generationDefaults": {
+        "preferVisuals": true,
+        "slideOrder": "fixed",
+        "imageStyle": "professional editorial photography, muted tones",
+        "imageType": "ai",
+        "density": "balanced",
+        "layoutWhitelist": [
+          "title_image_logo_v1",
+          "agenda_three_columns_hero_v1",
+          "para_split_50_50_v1",
+          "device_laptop_split_v1",
+          "device_phone_vertical_split_v1",
+          "grid_metrics_masonry_v1",
+          "four_para_image_v1"
+        ],
+        "titleSlide": {
+          "layout_id": "title_image_logo_v1",
+          "alwaysFirst": true
+        },
+        "contentDistribution": {
+          "requireImageSlide": true,
+          "requireStatSlide": true,
+          "maxConsecutiveBulletSlides": 1
+        }
+      },
+      "preview": {
+        "label": "Website Launch — Paper Ink",
+        "color": "#FAFAF9",
+        "accentColor": "#3F3F46",
+        "tags": [
+          "website",
+          "launch",
+          "product",
+          "muted theme"
+        ],
+        "slideCount": 7
+      }
+    }
+  }
+]

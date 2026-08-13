@@ -34,7 +34,9 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, isMediaImageSlot, isPackPlaceholderText } = require('./layoutToElements');
+const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout } = require('./layoutToElements');
+const templateMediaService = require('../templates/templateMedia.service');
+const templateMediaDao = require('../templates/templateMedia.dao');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
@@ -709,6 +711,102 @@ async function generateAiImageRef({
   };
 }
 
+function applyDarkExposureOverlay(content, brief, layoutSchema) {
+  if (!content || !brief || String(brief.exposure_hint || '').toLowerCase() !== 'dark') return content;
+  if (!layoutSchema?.slots?.length) return content;
+  const hasImageSlot = layoutSchema.slots.some((slot) => {
+    const id = String(slot.id || '').toUpperCase();
+    const role = String(slot.role || '').toLowerCase();
+    return id === 'BACKGROUND_IMAGE' || id === 'HERO_IMAGE' || role === 'image' || id.includes('IMAGE');
+  });
+  if (!hasImageSlot) return content;
+  return {
+    ...content,
+    shapeDecisions: {
+      ...(content.shapeDecisions || {}),
+      __overlay__: { enabled: true, scrim: 0.45 },
+    },
+  };
+}
+
+async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, imageRef }) {
+  if (!layoutSchema?.slots?.length) return content;
+
+  const slotIds = templateMediaService.listLayoutImageSlots(layoutSchema);
+  if (!slotIds.length) return content;
+
+  const slotImageUrls = {
+    ...(content?.slotImageUrls && typeof content.slotImageUrls === 'object' ? content.slotImageUrls : {}),
+  };
+
+  const packId = ctx.packId || null;
+  if (packId) {
+    const rows = await templateMediaDao.listByTemplateId(packId);
+    const mediaByHint = new Map(
+      (rows || []).filter((row) => row.slotHint).map((row) => [row.slotHint, row])
+    );
+    for (const slotId of slotIds) {
+      if (slotImageUrls[slotId]) continue;
+      const hint = templateMediaService.slotHintForSlideSlot(slide.order, slotId);
+      const row = mediaByHint.get(hint);
+      if (!row?.s3Key) continue;
+      const url = await templateMediaService.resolveMediaUrl(row.s3Key);
+      if (url) slotImageUrls[slotId] = url;
+    }
+  }
+
+  const imagePrompts =
+    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+  let missing = slotIds.filter((slotId) => !slotImageUrls[slotId]);
+
+  if (
+    missing.length &&
+    ctx.imageSource !== 'none' &&
+    ctx.imageSource !== 'placeholder'
+  ) {
+    for (const slotId of [...missing]) {
+      const prompt =
+        imagePrompts[slotId] ||
+        imagePrompts[String(slotId).toUpperCase()] ||
+        null;
+      if (!prompt) continue;
+      const isDeviceSlot = /device_/i.test(String(slotId));
+      const fullPrompt = isDeviceSlot
+        ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
+        : prompt;
+      try {
+        const generated = await generateAiImageRef({
+          prompt: `Professional presentation visual. ${fullPrompt}`,
+          workspaceId: ctx.workspaceId,
+          deckId: ctx.deckId,
+          slideId: slide.id,
+          brief: { subject: prompt },
+          source: 'ai_gen',
+        });
+        if (generated?.url) {
+          slotImageUrls[slotId] = generated.url;
+          missing = missing.filter((id) => id !== slotId);
+        }
+      } catch (err) {
+        logger.warn?.('presentation_slot_image_failed', {
+          slideId: slide.id,
+          slotId,
+          error: err.message,
+        });
+      }
+    }
+  }
+
+  if (missing.length === 1 && imageRef?.url && !slotIds.some((id) => slotImageUrls[id] === imageRef.url)) {
+    slotImageUrls[missing[0]] = imageRef.url;
+  } else if (slotIds.length === 1 && imageRef?.url && !slotImageUrls[slotIds[0]]) {
+    slotImageUrls[slotIds[0]] = imageRef.url;
+  }
+
+  if (!Object.keys(slotImageUrls).length) return content;
+  return { ...content, slotImageUrls };
+}
+
 async function resolveSlideImage({
   ctx,
   slide,
@@ -1163,6 +1261,71 @@ function slotConstraintsFromLayout(layoutSchema) {
     });
 }
 
+function sanitizeShapeDecisions(content, layoutSchema) {
+  if (!content || typeof content !== 'object') return content;
+  const decisions = content.shapeDecisions;
+  if (!decisions || typeof decisions !== 'object') return content;
+  const slotIds = new Set((layoutSchema?.slots || []).map((s) => s.id));
+  const hasBgImage = (layoutSchema?.slots || []).some((s) => {
+    const id = String(s.id || '').toUpperCase();
+    return id === 'BACKGROUND_IMAGE' || id === 'HERO_IMAGE' || String(s.role || '').toLowerCase() === 'image';
+  });
+  const cleaned = {};
+  for (const [key, val] of Object.entries(decisions)) {
+    if (key === '__overlay__') {
+      if (hasBgImage && val && typeof val === 'object') cleaned[key] = val;
+      continue;
+    }
+    if (slotIds.has(key) && val && typeof val === 'object') cleaned[key] = val;
+  }
+  return { ...content, shapeDecisions: Object.keys(cleaned).length ? cleaned : undefined };
+}
+
+function layoutContextFromSchema(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const layoutId = layoutSchema?.layout_id || null;
+  const contentType = layoutSchema?.content_type || null;
+  const hasImageOverlay =
+    slots.some(
+      (s) =>
+        s.id === 'BACKGROUND_IMAGE' ||
+        /OVERLAY_SCRIM/i.test(String(s.id || '')) ||
+        /full.?bleed|overlay/i.test(String(s.id || ''))
+    ) || /full_bg|overlay|statement_top|statement_bottom/i.test(String(layoutId || ''));
+  const hasHeroImage = slots.some((s) => {
+    const id = String(s.id || '').toUpperCase();
+    const role = String(s.role || '').toLowerCase();
+    return role === 'image' || id === 'HERO_IMAGE' || id.includes('IMAGE');
+  });
+  const hasTextOverImageRisk =
+    hasImageOverlay ||
+    (hasHeroImage &&
+      slots.some((s) => {
+        const role = String(s.role || '').toLowerCase();
+        return ['heading', 'body', 'subheading', 'caption'].includes(role);
+      }));
+  const shapeHints = slots
+    .filter((s) => s.shapeHint || s.aiOnly)
+    .map((s) => ({
+      slotId: s.id,
+      role: s.role,
+      pairsWithSlotId: s.shapeHint?.pairsWithSlotId || null,
+      suggestedBehind: s.shapeHint?.suggestedBehind || null,
+      kind: s.shapeHint?.kind || null,
+    }));
+  return {
+    layoutId,
+    hasImageOverlay,
+    hasHeroImage,
+    hasTextOverImageRisk,
+    shapePolicy: layoutSchema?.shapePolicy || 'ai_decides',
+    shapeHints,
+    isSimpleSlide: ['title', 'image+text', 'bullet_list', 'section_divider', 'closing', 'quote', 'grid'].includes(
+      String(contentType || '')
+    ),
+  };
+}
+
 function applyContentDistribution(contentType, ctx) {
   const dist = ctx.contentDistribution;
   if (!dist || typeof dist !== 'object') return contentType;
@@ -1280,6 +1443,8 @@ async function processSlide(ctx, slide) {
               intent: slideIntent,
               generationHints,
               slotConstraints: slotConstraintsFromLayout(earlyLayoutSchema),
+              layoutContext: layoutContextFromSchema(earlyLayoutSchema),
+              layoutId: earlyLayoutSchema?.layout_id || null,
             }),
             model: DEFAULT_SLIDE_MODEL,
           }),
@@ -1458,6 +1623,7 @@ async function processSlide(ctx, slide) {
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
       content.content_type = contentType;
+      content = sanitizeShapeDecisions(content, template?.schema);
     }
 
     // 4) Image brief when needed
@@ -1487,6 +1653,7 @@ async function processSlide(ctx, slide) {
       });
       if (!briefJob.duplicate) {
         try {
+          const layoutCtx = layoutContextFromSchema(template?.schema);
           const briefResult = await chatJson({
             system: briefPrompt.buildSystem(),
             user: briefPrompt.buildUser({
@@ -1496,6 +1663,10 @@ async function processSlide(ctx, slide) {
               themeColorTreatment: imageColorTreatmentForCtx(ctx),
               wizardBrief: ctx.wizardBrief || '',
               authorImagePrompt: resolveAuthorImagePrompt(content),
+              layoutContext: layoutCtx,
+              layoutId: template?.schema?.layout_id || layoutId || null,
+              hasImageOverlay: layoutCtx.hasImageOverlay,
+              visualNeed,
             }),
             model: DEFAULT_SLIDE_MODEL,
             temperature: 0.3,
@@ -1507,6 +1678,7 @@ async function processSlide(ctx, slide) {
             latencyMs: briefResult.latencyMs,
             creditCharged: false,
           });
+          content = applyDarkExposureOverlay(content, brief, template?.schema || null);
         } catch (err) {
           await finishJob(briefJob.job.id, { status: 'FAILED', error: err.message });
           const authorBrief = resolveAuthorImagePrompt(content);
@@ -1547,6 +1719,24 @@ async function processSlide(ctx, slide) {
       );
     }
 
+    const layoutSchema = template?.schema || null;
+    if (layoutSchema?.slots?.length) {
+      try {
+        content = await enrichContentSlotImageUrls({
+          ctx,
+          slide,
+          content,
+          layoutSchema,
+          imageRef,
+        });
+      } catch (slotImgErr) {
+        logger.warn?.('presentation_slot_images_enrich_failed', {
+          slideId: slide.id,
+          error: slotImgErr.message,
+        });
+      }
+    }
+
     const canvasSize = ctx.canvasSize || {};
     const packSnapshot = packMeta?.snapshot?.elements || null;
     const currentElements =
@@ -1557,9 +1747,30 @@ async function processSlide(ctx, slide) {
       (packSnapshot && elementsHaveRebindRoles(packSnapshot) && packSnapshot) ||
       null;
 
+    const useFreshCompile =
+      Boolean(layoutSchema?.slots?.length) &&
+      (ctx.packBound || shouldRecompileLayout(layoutSchema, currentElements));
+
     let elementsDoc;
     const hasBrandKit = Boolean(ctx.themeTokens?.brand?.brandKitId);
-    if (rebindBase) {
+    if (rebindBase && !useFreshCompile) {
+      elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
+        forceTextReplace: Boolean(ctx.forceTextReplace),
+        themeTokens: ctx.themeTokens || null,
+      });
+      elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
+    } else if (layoutSchema?.slots?.length) {
+      elementsDoc = layoutSlotsToElements(
+        layoutSchema,
+        content,
+        imageRef,
+        { width: canvasSize.width, height: canvasSize.height },
+        {
+          themeTokens: ctx.themeTokens || null,
+          designTokens,
+        }
+      );
+    } else if (rebindBase) {
       elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
         forceTextReplace: Boolean(ctx.forceTextReplace),
         themeTokens: ctx.themeTokens || null,
@@ -1567,7 +1778,7 @@ async function processSlide(ctx, slide) {
       elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
     } else {
       elementsDoc = layoutSlotsToElements(
-        template?.schema || { slots: [] },
+        { slots: [] },
         content,
         imageRef,
         { width: canvasSize.width, height: canvasSize.height },
@@ -1666,6 +1877,7 @@ async function processDeckGeneration({
       packSlides: packBrand.packSlides || resolvedFlow.packSlides || [],
       contentDistribution: resolvedFlow.contentDistribution || null,
       packBound: Boolean(packBrand.packId || resolvedFlow.packId),
+      packId: packBrand.packId || resolvedFlow.packId || null,
       forceTextReplace: true,
       forceImageRefresh: Boolean(
         packBrand.packId &&
@@ -2333,6 +2545,7 @@ async function regenerateSlide({
     packSlides: packBrand.packSlides || flowCtx.packSlides || [],
     contentDistribution: flowCtx.contentDistribution || null,
     packBound: Boolean(packBrand.packId),
+    packId: packBrand.packId || flowCtx.packId || null,
     forceTextReplace: true,
     forceImageRefresh: target === 'image' || Boolean(packBrand.packId),
   };
@@ -2375,6 +2588,12 @@ async function regenerateSlide({
           let brief = null;
           try {
             const briefPrompt = getImageBriefPrompt();
+            let layoutSchema = null;
+            if (fresh.layoutId) {
+              const rows = await presentationDao.findLayoutsByLayoutIds([fresh.layoutId]);
+              layoutSchema = rows[0]?.schema || null;
+            }
+            const layoutCtx = layoutContextFromSchema(layoutSchema);
             const briefResult = await chatJson({
               system: briefPrompt.buildSystem(),
               user: briefPrompt.buildUser({
@@ -2384,6 +2603,10 @@ async function regenerateSlide({
                 themeColorTreatment: imageColorTreatmentForCtx(ctx),
                 wizardBrief: ctx.wizardBrief || '',
                 authorImagePrompt: resolveAuthorImagePrompt(content),
+                layoutContext: layoutCtx,
+                layoutId: layoutSchema?.layout_id || fresh.layoutId || null,
+                hasImageOverlay: layoutCtx.hasImageOverlay,
+                visualNeed,
               }),
             });
             brief = briefResult.data;

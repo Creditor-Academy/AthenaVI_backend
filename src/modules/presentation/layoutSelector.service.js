@@ -29,7 +29,15 @@ function contentDensity(content) {
     }
   }
 
-  return { bulletCount, wordCount };
+  const statCount = Array.isArray(content.stats) ? content.stats.length : 0;
+  const memberCount = Array.isArray(content.members) ? content.members.length : 0;
+  const planCount = Array.isArray(content.plans) ? content.plans.length : 0;
+  const hasChart = Boolean(content.chart && (content.chart.labels?.length || content.chart.series?.length));
+  const hasTable = Boolean(content.table && (content.table.headers?.length || content.table.rows?.length));
+  const hasAgenda = Boolean(content.agenda?.columns?.length);
+  const hasContact = Boolean(content.contact && (content.contact.address || content.contact.phone || content.contact.email));
+
+  return { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact };
 }
 
 function layoutCapacity(template) {
@@ -64,7 +72,30 @@ function templateHasImageSlot(template) {
   });
 }
 
-function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId, preferImageSlot) {
+function countImageSlots(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.filter((slot) => {
+    const id = String(slot?.id || '').toLowerCase();
+    return slot?.role === 'image' || id.includes('image') || id.includes('device');
+  }).length;
+}
+
+function countStatSlots(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.filter((slot) => slot?.role === 'stat' || /^stat_\d+_value$/i.test(String(slot?.id || ''))).length;
+}
+
+function countMemberSlots(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.filter((slot) => /^MEMBER_\d+_NAME$/i.test(String(slot?.id || ''))).length;
+}
+
+function countPlanSlots(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.filter((slot) => /^PLAN_\d+_LABEL$/i.test(String(slot?.id || ''))).length;
+}
+
+function scoreTemplate(template, { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact }, previousLayoutId, preferImageSlot) {
   const layoutId =
     template?.schema?.layout_id || template?.id || `${template?.contentType}_${template?.variant}`;
   const capacity = layoutCapacity(template);
@@ -78,6 +109,36 @@ function scoreTemplate(template, { bulletCount, wordCount }, previousLayoutId, p
     if (templateHasImageSlot(template)) score += 50;
     else score -= 40;
   }
+
+  const ct = String(template.contentType || template?.schema?.content_type || '');
+  const imageSlotCount = countImageSlots(template);
+  const statSlotCount = countStatSlots(template);
+
+  if (hasChart && ct === 'chart') score += 40;
+  if (hasTable && ct === 'chart') score += 35;
+  if (hasTable && ct === 'pricing') score += 30;
+  if (planCount > 0 && ct === 'pricing') {
+    score += 30;
+    const planSlots = countPlanSlots(template);
+    if (planSlots === planCount) score += 25;
+    else if (planSlots >= planCount) score += 15;
+  }
+  if (memberCount > 0 && ct === 'team') {
+    score += 30;
+    const memberSlots = countMemberSlots(template);
+    if (memberSlots === memberCount) score += 25;
+    else if (memberSlots >= memberCount) score += 15;
+  }
+  if (hasAgenda && ct === 'agenda') score += 40;
+  if (hasContact && ct === 'team') score += 20;
+  if (ct === 'device_frames') score += 35;
+  if (statCount > 0 && ct === 'stat') {
+    score += 30;
+    if (statSlotCount >= statCount) score += 20;
+    else if (statSlotCount > 0) score += 10;
+  }
+  if (imageSlotCount >= 3 && ct === 'grid') score += 25;
+  if (bulletCount >= 4 && ct === 'grid') score += 15;
 
   if (bulletCount >= 7) {
     if (capacity.maxItems >= bulletCount || capacity.hasDenseVariant) score += 30;

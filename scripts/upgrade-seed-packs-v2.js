@@ -363,6 +363,52 @@ const PACK_META = {
     color: '#FFFBF5',
     accentColor: '#C2410C',
   },
+  website_launch_paper_v1: {
+    meta: {
+      name: 'Website Launch — Paper Ink',
+      description: '7-slide launch deck for announcing a redesigned company website.',
+      useCase: 'website_launch',
+      audience: 'customers, partners, and internal stakeholders',
+      tone: 'muted, professional, confident, clear',
+      industry: ['saas', 'technology'],
+    },
+    narrative: {
+      arc: 'announce_discover_experience_prove_content',
+      summary:
+        'Announce the launch, map the site with a hero agenda, justify the rebuild, show desktop and mobile mockups, highlight pages with metrics, end on rich site content.',
+    },
+    intents: [
+      'Announce the new Atlas website with confidence and clarity',
+      'Map the site into Discover, Evaluate, and Act paths beneath a wide hero image',
+      'Explain why the rebuild mattered — problem, then solution',
+      'Show the desktop experience where complex evaluations happen',
+      'Prove mobile-first design for the majority of traffic',
+      'Combine flagship page cards with two launch benchmark stats',
+      'Close with rich content on what visitors will find across the site',
+    ],
+    design: [
+      { backgroundStyle: 'solid', accentPosition: 'left-bar', imagePosition: 'right-half', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'full-bleed', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'left-half', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'right-half', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'right-half', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'none', textContrast: 'normal' },
+      { backgroundStyle: 'solid', accentPosition: 'none', imagePosition: 'right-half', textContrast: 'normal' },
+    ],
+    hints: [
+      { maxTitleWords: 6, subtitleLength: 'one sentence', imagePromptStyle: 'editorial photography, muted tones' },
+      { itemCountMin: 3, itemCountMax: 4, parallelStructure: 'yes', imagePromptStyle: 'wide launch hero banner, muted tones' },
+      { maxTitleWords: 6, maxBodyWords: 55, imagePromptStyle: 'before-and-after redesign, muted workspace' },
+      { maxTitleWords: 6, maxBodyWords: 40, imagePromptStyle: 'SaaS homepage inside laptop frame mockup' },
+      { maxTitleWords: 5, maxBodyWords: 40, imagePromptStyle: 'mobile website inside phone frame mockup' },
+      { maxTitleWords: 6, statFormat: 'time or score', itemCountMax: 3, imagePromptStyle: 'bento grid of SaaS page screenshots' },
+      { maxTitleWords: 6, itemCountMax: 4, imagePromptStyle: 'team browsing documentation site' },
+    ],
+    tags: ['website', 'launch', 'product', 'muted theme'],
+    color: '#FAFAF9',
+    accentColor: '#3F3F46',
+    preferVisuals: true,
+  },
 };
 
 const upgraded = packs.map((pack) => {

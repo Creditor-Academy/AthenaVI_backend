@@ -21,6 +21,34 @@ function packSlideMediaKey(packId, order, ext = '.jpg') {
   return `presentations/_system/packs/${packId}/slide-${order}${ext}`;
 }
 
+function packSlideSlotMediaKey(packId, order, slotId, ext = '.jpg') {
+  const safeSlot = String(slotId || 'image')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 48);
+  return `presentations/_system/packs/${packId}/slide-${order}-${safeSlot}${ext}`;
+}
+
+function slotHintForSlideSlot(order, slotId) {
+  return `slide:${Number(order) || 1}:${String(slotId || 'image').trim()}`;
+}
+
+function listLayoutImageSlots(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots
+    .filter((slot) => {
+      const id = String(slot.id || '').toLowerCase();
+      const role = String(slot.role || '').toLowerCase();
+      return (
+        role === 'image'
+        || id.includes('image')
+        || id === 'hero'
+        || slot.fit === 'cover'
+      );
+    })
+    .map((slot) => slot.id)
+    .filter(Boolean);
+}
+
 /** System S3 key for VIDEO_SCENE / VIDEO_PACK TemplateMedia (not presentations/). */
 function videoSystemMediaKey(templateId, slotHint, originalName = 'media.bin') {
   const ext = path.extname(originalName) || '.bin';
@@ -312,12 +340,15 @@ module.exports = {
   MEDIA_KINDS,
   systemMediaKey,
   packSlideMediaKey,
+  packSlideSlotMediaKey,
   videoSystemMediaKey,
   videoPackSceneMediaKey,
   resolveMediaUrl,
   attachUrls,
   layoutHasImageSlot,
+  listLayoutImageSlots,
   slotHintForSlideOrder,
+  slotHintForSlideSlot,
   slotHintForSceneOrder,
   listMedia,
   uploadMedia,

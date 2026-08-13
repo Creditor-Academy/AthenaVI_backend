@@ -74,61 +74,84 @@ async function ensurePackSlideMedia(packTemplate) {
 
   for (const slide of slides) {
     const layoutSchema = layoutById.get(slide.layout_id);
-    if (!templateMediaService.layoutHasImageSlot(layoutSchema)) continue;
+    const imageSlots = templateMediaService.listLayoutImageSlots(layoutSchema);
+    if (!imageSlots.length) continue;
 
     const order = slide.order || 1;
-    const slotHint = templateMediaService.slotHintForSlideOrder(order);
-    const key = templateMediaService.packSlideMediaKey(packId, order, '.jpg');
+    const slideHint = templateMediaService.slotHintForSlideOrder(order);
+    const prompts = slide.placeholder?.imagePrompts || {};
+    const defaultPrompt =
+      slide.placeholder?.imagePrompt ||
+      slide.generationHints?.imagePromptStyle ||
+      `${imageStyle}, ${slide.placeholder?.title || slide.contentType || 'presentation'}`;
 
-    let s3Key = key;
-    let mimeType = 'image/jpeg';
+    let firstSlotKey = null;
 
-    if (!(await s3Exists(key))) {
-      const prompt =
-        slide.placeholder?.imagePrompt ||
-        slide.generationHints?.imagePromptStyle ||
-        `${imageStyle}, ${slide.placeholder?.title || slide.contentType || 'presentation'}`;
+    for (let i = 0; i < imageSlots.length; i += 1) {
+      const slotId = imageSlots[i];
+      const slotHint = templateMediaService.slotHintForSlideSlot(order, slotId);
+      const key = templateMediaService.packSlideSlotMediaKey(packId, order, slotId, '.jpg');
 
-      let acquired = await acquireBufferForPrompt(prompt);
-      if (!acquired) {
-        const ph = await generationFlowService.ensurePlaceholderImage();
-        // Copy placeholder bytes into pack key for durable pack-scoped object
-        try {
-          const buf = await s3Service.getObjectBuffer(ph.s3Key);
-          await s3Service.uploadFileToKey(buf, key, 'image/png');
-          s3Key = key;
-          mimeType = 'image/png';
-        } catch {
-          s3Key = ph.s3Key;
-          mimeType = 'image/png';
+      let s3Key = key;
+      let mimeType = 'image/jpeg';
+
+      if (!(await s3Exists(key))) {
+        const prompt = prompts[slotId] || (i === 0 ? defaultPrompt : `${defaultPrompt}, ${slotId.replace(/_/g, ' ').toLowerCase()}`);
+
+        let acquired = await acquireBufferForPrompt(prompt);
+        if (!acquired) {
+          const ph = await generationFlowService.ensurePlaceholderImage();
+          try {
+            const buf = await s3Service.getObjectBuffer(ph.s3Key);
+            await s3Service.uploadFileToKey(buf, key, 'image/png');
+            s3Key = key;
+            mimeType = 'image/png';
+          } catch {
+            s3Key = ph.s3Key;
+            mimeType = 'image/png';
+          }
+          console.log(`  slide ${order}/${slotId}: placeholder fallback`);
+        } else {
+          const uploadKey = templateMediaService.packSlideSlotMediaKey(
+            packId,
+            order,
+            slotId,
+            acquired.ext || '.jpg'
+          );
+          await s3Service.uploadFileToKey(acquired.buffer, uploadKey, acquired.contentType);
+          s3Key = uploadKey;
+          mimeType = acquired.contentType;
+          console.log(`  slide ${order}/${slotId}: stock → ${uploadKey}`);
         }
-        console.log(`  slide ${order}: placeholder fallback`);
       } else {
-        const uploadKey = templateMediaService.packSlideMediaKey(
-          packId,
-          order,
-          acquired.ext || '.jpg'
-        );
-        await s3Service.uploadFileToKey(acquired.buffer, uploadKey, acquired.contentType);
-        s3Key = uploadKey;
-        mimeType = acquired.contentType;
-        console.log(`  slide ${order}: stock → ${uploadKey}`);
+        console.log(`  slide ${order}/${slotId}: reuse ${key}`);
       }
-    } else {
-      console.log(`  slide ${order}: reuse ${key}`);
+
+      await templateMediaDao.upsertBySlotHint({
+        templateId: packTemplate.id,
+        kind: 'photo',
+        slotHint,
+        name: `${packId}-slide-${order}-${slotId}`,
+        s3Key,
+        mimeType,
+        sortOrder: order * 10 + i,
+      });
+      created += 1;
+      if (!firstSlotKey) firstSlotKey = s3Key;
+      if (!firstPhotoKey) firstPhotoKey = s3Key;
     }
 
-    await templateMediaDao.upsertBySlotHint({
-      templateId: packTemplate.id,
-      kind: 'photo',
-      slotHint,
-      name: `${packId}-slide-${order}`,
-      s3Key,
-      mimeType,
-      sortOrder: order,
-    });
-    created += 1;
-    if (!firstPhotoKey) firstPhotoKey = s3Key;
+    if (firstSlotKey) {
+      await templateMediaDao.upsertBySlotHint({
+        templateId: packTemplate.id,
+        kind: 'photo',
+        slotHint: slideHint,
+        name: `${packId}-slide-${order}`,
+        s3Key: firstSlotKey,
+        mimeType: path.extname(firstSlotKey) === '.png' ? 'image/png' : 'image/jpeg',
+        sortOrder: order,
+      });
+    }
   }
 
   if (firstPhotoKey) {
