@@ -20,7 +20,29 @@ const THEME_ID_ALIASES = {
   'modern-professional': 'clean_light',
   midnight_dark: 'midnight_blue',
   'midnight-dark': 'midnight_blue',
+  earthy_sage: 'earthy-sage',
+  'earthy-sage': 'earthy-sage',
+  ocean_breeze: 'ocean-breeze',
+  'ocean-breeze': 'ocean-breeze',
+  vintage_paper: 'vintage-paper',
+  'vintage-paper': 'vintage-paper',
 };
+
+function resolveWizardThemeTokens(themeId) {
+  try {
+    const generationFlowService = require('./generationFlow.service');
+    const raw = String(themeId || '').trim();
+    if (!raw) return null;
+    const candidates = [raw, raw.replace(/_/g, '-'), raw.replace(/-/g, '_')];
+    for (const id of candidates) {
+      const wizardTokens = generationFlowService.resolveWizardThemeTokens(id, null, null);
+      if (wizardTokens?.palette) return wizardTokens;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 function normalizeThemeId(id) {
   const raw = String(id || '').trim();
@@ -128,21 +150,10 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
   } else if (id || (themeId != null && String(themeId).trim() !== '')) {
     const theme = getThemeById(themeId);
     if (!theme) {
-      // Fall back to wizard color themes when FE sends modern-professional etc.
-      try {
-        const generationFlowService = require('./generationFlow.service');
-        const wizardTokens = generationFlowService.resolveWizardThemeTokens(
-          String(themeId).trim(),
-          null,
-          null
-        );
-        if (wizardTokens?.palette) {
-          resolved = wizardTokens;
-        }
-      } catch {
-        resolved = null;
-      }
-      if (!resolved) {
+      const wizardTokens = resolveWizardThemeTokens(themeId);
+      if (wizardTokens?.palette) {
+        resolved = wizardTokens;
+      } else {
         throw new AppError(`Unknown themeId: ${themeId}`, 400);
       }
     } else {

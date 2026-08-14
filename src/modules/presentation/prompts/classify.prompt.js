@@ -41,6 +41,11 @@ function buildUser(vars = {}) {
     'content_type must be one of:',
     'title|agenda|bullet_list|comparison|stat|quote|image+text|timeline|team|chart|closing|section_divider|grid|pricing|device_frames|diagram',
     '',
+    'Pick grid for multi-image galleries or bento card layouts.',
+    'Pick device_frames for app/website/product UI mockups.',
+    'Pick diagram (especially process steps) for numbered workflows, SWOT, funnel, matrix.',
+    'Pick chart when the slide is primarily a data visualization.',
+    '',
     'Output JSON schema:',
     JSON.stringify(
       {

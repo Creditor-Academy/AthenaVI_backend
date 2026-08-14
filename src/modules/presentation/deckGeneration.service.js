@@ -60,6 +60,83 @@ function resolveAuthorImagePrompt(content) {
   return '';
 }
 
+function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
+  const id = String(slotId || '');
+  const imagePrompts =
+    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+  const direct =
+    imagePrompts[id] ||
+    imagePrompts[id.toUpperCase()] ||
+    imagePrompts[id.toLowerCase()] ||
+    null;
+  if (direct) return String(direct).trim();
+
+  const imageMatch = id.match(/^IMAGE_(\d+)$/i);
+  if (imageMatch) {
+    const idx = Number(imageMatch[1]) - 1;
+    const col = (content.columns || content.cards || content.features || [])[idx];
+    if (col && typeof col === 'object') {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      if (title && body) return `${title}: ${body.slice(0, 100)}`;
+      if (title) return title;
+    }
+  }
+
+  const deviceMatch = id.match(/^DEVICE_IMAGE_(\d+)$/i);
+  if (deviceMatch) {
+    const idx = Number(deviceMatch[1]) - 1;
+    const col = (content.columns || content.cards || content.features || [])[idx];
+    const label = col
+      ? String(col.title ?? col.heading ?? col.label ?? '').trim()
+      : '';
+    const base = label || String(content.title || '').trim();
+    if (base) return `${base} — app UI screenshot`;
+  }
+
+  const gridImageMatch = id.match(/^(?:GRID_)?IMAGE_(\d+)$/i);
+  if (gridImageMatch && !imageMatch) {
+    const idx = Number(gridImageMatch[1]) - 1;
+    const col = (content.columns || content.cards || content.features || [])[idx];
+    if (col) {
+      const title = String(col.title ?? col.heading ?? '').trim();
+      if (title) return title;
+    }
+  }
+
+  if (content.title) {
+    const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+    const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
+    if (imageSlots.length > 1) {
+      const slotIndex = imageSlots.findIndex((s) => String(s.id) === id);
+      if (slotIndex >= 0) {
+        return `${content.title} — visual ${slotIndex + 1} of ${imageSlots.length}`;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema }) {
+  const isDeviceSlot = /device_/i.test(String(slotId));
+  const fullPrompt = isDeviceSlot
+    ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
+    : prompt;
+  const slotDef = (layoutSchema?.slots || []).find((s) => String(s.id) === String(slotId));
+  const canvas = ctx.canvasSize || { width: 1920, height: 1080 };
+  const imageSize = slotDef ? resolveImageGenSize(slotDef, canvas) : null;
+  return generateAiImageRef({
+    prompt: `Professional presentation visual. ${fullPrompt}`,
+    workspaceId: ctx.workspaceId,
+    deckId: ctx.deckId,
+    slideId: slide.id,
+    brief: { subject: prompt },
+    source: 'ai_gen',
+    size: imageSize,
+  });
+}
+
 const CONTENT_TIMEOUT_MS =
   Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS) > 0
     ? Number(process.env.PPT_SLIDE_CONTENT_TIMEOUT_MS)
@@ -491,6 +568,8 @@ function applyVisualPolicy({
   let layoutContentType = type;
   if (['grid', 'pricing', 'device_frames'].includes(type)) {
     layoutContentType = type;
+  } else if (respectOutlineType && ['comparison', 'timeline', 'diagram', 'grid', 'device_frames', 'chart'].includes(type)) {
+    layoutContentType = type;
   } else if (['comparison', 'timeline', 'diagram'].includes(type)) {
     layoutContentType = respectOutlineType ? type : 'image+text';
   } else if (
@@ -513,7 +592,13 @@ function applyVisualPolicy({
   // Soft bias from wizard baseTemplate
   if (bias?.preferredContentTypes?.length) {
     const preferred = bias.preferredContentTypes.map((t) => String(t).toLowerCase());
-    if (preferred.includes('image+text') && layoutContentType !== 'chart' && layoutContentType !== 'section_divider') {
+    const preserveTypes = new Set(['chart', 'grid', 'device_frames', 'section_divider', 'diagram', 'timeline', 'comparison']);
+    if (
+      preferred.includes('image+text') &&
+      !preserveTypes.has(layoutContentType) &&
+      layoutContentType !== 'chart' &&
+      layoutContentType !== 'section_divider'
+    ) {
       layoutContentType = 'image+text';
     } else if (preferred.includes(type)) {
       layoutContentType = type;
@@ -832,26 +917,18 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
   ) {
     for (const slotId of [...missing]) {
       const prompt =
+        deriveSlotImagePrompt(slotId, content, layoutSchema) ||
         imagePrompts[slotId] ||
         imagePrompts[String(slotId).toUpperCase()] ||
         null;
       if (!prompt) continue;
-      const isDeviceSlot = /device_/i.test(String(slotId));
-      const fullPrompt = isDeviceSlot
-        ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
-        : prompt;
       try {
-        const slotDef = (layoutSchema.slots || []).find((s) => String(s.id) === String(slotId));
-        const canvas = ctx.canvasSize || { width: 1920, height: 1080 };
-        const imageSize = slotDef ? resolveImageGenSize(slotDef, canvas) : null;
-        const generated = await generateAiImageRef({
-          prompt: `Professional presentation visual. ${fullPrompt}`,
-          workspaceId: ctx.workspaceId,
-          deckId: ctx.deckId,
-          slideId: slide.id,
-          brief: { subject: prompt },
-          source: 'ai_gen',
-          size: imageSize,
+        const generated = await generateSlotImage({
+          ctx,
+          slide,
+          slotId,
+          prompt,
+          layoutSchema,
         });
         if (generated?.url) {
           slotImageUrls[slotId] = generated.url;
@@ -867,7 +944,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     }
   }
 
-  if (missing.length === 1 && imageRef?.url && !slotIds.some((id) => slotImageUrls[id] === imageRef.url)) {
+  if (slotIds.length === 1 && missing.length === 1 && imageRef?.url && !slotIds.some((id) => slotImageUrls[id] === imageRef.url)) {
     slotImageUrls[missing[0]] = imageRef.url;
   } else if (slotIds.length === 1 && imageRef?.url && !slotImageUrls[slotIds[0]]) {
     slotImageUrls[slotIds[0]] = imageRef.url;
@@ -1331,6 +1408,9 @@ function qaNeedsContentRepair(issues) {
     (issue) =>
       issue.repairable === true ||
       issue.rule === 'required_structured' ||
+      issue.rule === 'distinct_titles' ||
+      issue.rule === 'required_chart_data' ||
+      issue.rule === 'placeholder_cta' ||
       (issue.truncated === true && issue.rule === 'max_lines')
   );
 }
@@ -1542,6 +1622,42 @@ function sanitizeShapeDecisions(content, layoutSchema) {
   return { ...content, shapeDecisions: Object.keys(cleaned).length ? cleaned : undefined };
 }
 
+function generationHintsFromLayout(layoutSchema) {
+  if (!layoutSchema) return null;
+  const hints = {};
+  const ct = String(layoutSchema.content_type || '').toLowerCase();
+  const layoutId = String(layoutSchema.layout_id || '');
+  const slots = Array.isArray(layoutSchema.slots) ? layoutSchema.slots : [];
+  const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
+
+  if (ct === 'chart' || /chart/i.test(layoutId)) {
+    hints.chartDataStyle =
+      'Provide 4-6 realistic numeric data points tied to the slide topic; labels short (1-3 words); values plausible integers or percentages.';
+  }
+  if (imageSlots.length > 1) {
+    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual for each slot: ${imageSlots.map((s) => s.id).join(', ')}. No duplicate subjects.`;
+  }
+  if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para/i.test(layoutId)) {
+    hints.parallelStructure =
+      'Each column/card/paragraph needs a distinct title (≤4 words) and body (1-2 lines). Fill columns[] accordingly.';
+  }
+  if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
+    hints.ctaFormat =
+      'Topic-specific CTA — never use generic "Book a demo" unless the deck is explicitly sales/demo.';
+  }
+  if (ct === 'title' || (layoutId.includes('title') && ct === 'title')) {
+    hints.titleTone = 'Require titleRuns with 2-3 segments; accent on final line.';
+  }
+  return Object.keys(hints).length ? hints : null;
+}
+
+function mergeGenerationHints(layoutSchema, packHints) {
+  const fromLayout = generationHintsFromLayout(layoutSchema) || {};
+  const fromPack = packHints && typeof packHints === 'object' ? packHints : {};
+  const merged = { ...fromLayout, ...fromPack };
+  return Object.keys(merged).length ? merged : null;
+}
+
 function layoutContextFromSchema(layoutSchema) {
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const layoutId = layoutSchema?.layout_id || null;
@@ -1678,6 +1794,7 @@ async function processSlide(ctx, slide) {
     }
 
     let contentLayoutSchema = earlyLayoutSchema;
+    const mergedGenerationHints = mergeGenerationHints(contentLayoutSchema, generationHints);
 
     // 1) Content LLM
     const contentPrompt = getSlideContentPrompt();
@@ -1730,7 +1847,7 @@ async function processSlide(ctx, slide) {
               locale: ctx.locale || 'en',
               wizardBrief: ctx.wizardBrief || '',
               intent: slideIntent,
-              generationHints,
+              generationHints: mergedGenerationHints,
               slotConstraints: slotConstraintsFromLayout(contentLayoutSchema),
               layoutContext: layoutContextFromSchema(contentLayoutSchema),
               layoutId: contentLayoutSchema?.layout_id || preSelectedLayoutId || null,
@@ -1741,7 +1858,7 @@ async function processSlide(ctx, slide) {
           'Slide content generation'
         );
         content = { ...(content || {}), ...llmResult.data };
-        content = applyGenerationHints(content, generationHints);
+        content = applyGenerationHints(content, mergedGenerationHints);
         await trackCharge(
           ctx.deckId,
           await presentationCredit.chargeFlat({
@@ -1982,7 +2099,7 @@ async function processSlide(ctx, slide) {
               locale: ctx.locale || 'en',
               wizardBrief: ctx.wizardBrief || '',
               intent: slideIntent,
-              generationHints,
+              generationHints: mergeGenerationHints(template.schema, generationHints),
               slotConstraints: slotConstraintsFromLayout(template.schema),
               layoutContext: layoutContextFromSchema(template.schema),
               layoutId: template.schema.layout_id || layoutId,
@@ -1993,7 +2110,7 @@ async function processSlide(ctx, slide) {
           'Slide content repair'
         );
         content = { ...(content || {}), ...repairResult.data };
-        content = applyGenerationHints(content, generationHints);
+        content = applyGenerationHints(content, mergedGenerationHints);
         qa = validateSlide({ content, layoutSchema: template.schema });
         content = qa.content;
       } catch (repairErr) {

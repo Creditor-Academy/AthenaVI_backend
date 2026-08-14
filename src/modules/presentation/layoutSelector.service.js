@@ -109,7 +109,7 @@ function scoreTemplate(
   let score = 0;
 
   if (preferredLayoutId && String(layoutId) === String(preferredLayoutId)) {
-    score += 80;
+    score += 40;
   }
 
   if (previousLayoutId && String(layoutId) === String(previousLayoutId)) {
@@ -154,6 +154,16 @@ function scoreTemplate(
   }
   if (imageSlotCount >= 3 && ct === 'grid') score += 25;
   if (bulletCount >= 4 && ct === 'grid') score += 15;
+
+  const variant = String(template.variant || template?.schema?.layout_id || '').toLowerCase();
+  if (/two_para|three_para|four_para|intro_four_para|intro_three_para/.test(variant)) {
+    if (wordCount >= 30) score += 25;
+    if (bulletCount >= 2) score += 15;
+  }
+  if (/three_cards|cards_image/.test(variant) && bulletCount >= 2) score += 20;
+  if (/section_with_image|two_para_right|three_para_image|section_left_image|para_split/.test(variant)) {
+    score += 22;
+  }
 
   if (bulletCount >= 7) {
     if (capacity.maxItems >= bulletCount || capacity.hasDenseVariant) score += 30;

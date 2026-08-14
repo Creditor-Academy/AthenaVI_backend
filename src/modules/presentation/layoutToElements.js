@@ -17,6 +17,78 @@ function parseRegion(region) {
   };
 }
 
+const TEXT_SLOT_ROLES = new Set([
+  'heading', 'subheading', 'body', 'caption', 'stat', 'stat_label', 'quote', 'attribution', 'eyebrow',
+]);
+
+/** Split text|image slides — fade photo edge into slide background (editorial bleed). */
+function resolveSplitImageEdgeFade(layoutSchema, slot) {
+  if (!layoutSchema?.slots?.length || !slot) return null;
+  const imgReg = parseRegion(slot.region);
+  if (!imgReg) return null;
+
+  const textSlots = layoutSchema.slots.filter((s) => {
+    if (s.id === slot.id) return false;
+    return TEXT_SLOT_ROLES.has(String(s.role || '').toLowerCase());
+  });
+  if (!textSlots.length) return null;
+
+  let textColSum = 0;
+  let textCount = 0;
+  for (const ts of textSlots) {
+    const tr = parseRegion(ts.region);
+    if (!tr) continue;
+    textColSum += (tr.c1 + tr.c2) / 2;
+    textCount += 1;
+  }
+  if (!textCount) return null;
+
+  const textCenter = textColSum / textCount;
+  const imgCenter = (imgReg.c1 + imgReg.c2) / 2;
+
+  if (imgCenter > textCenter && imgReg.c1 >= 6) {
+    return { side: 'left', width: 0.3 };
+  }
+  if (imgCenter < textCenter && imgReg.c2 <= 7) {
+    return { side: 'right', width: 0.3 };
+  }
+  return null;
+}
+
+function edgeFadeMaskCss(edgeFade) {
+  if (!edgeFade) return null;
+  const width = Math.min(0.45, Math.max(0.12, Number(edgeFade.width) || 0.28));
+  const pct = Math.round(width * 100);
+  const side = String(edgeFade.side || 'left').toLowerCase();
+  if (side === 'right') {
+    return `linear-gradient(to left, transparent 0%, black ${pct}%, black 100%)`;
+  }
+  return `linear-gradient(to right, transparent 0%, black ${pct}%, black 100%)`;
+}
+
+function applySplitImageEdgeFade(doc, layoutSchema) {
+  if (!doc?.elements?.length || !layoutSchema?.slots?.length) return doc;
+  const slotById = Object.fromEntries(layoutSchema.slots.map((s) => [String(s.id), s]));
+  const elements = doc.elements.map((el) => {
+    if (el.type !== 'image' || !el.slotId) return el;
+    const slot = slotById[String(el.slotId)];
+    if (!slot) return el;
+    const edgeFade = resolveSplitImageEdgeFade(layoutSchema, slot);
+    if (!edgeFade) return el;
+    return {
+      ...el,
+      content: {
+        ...(el.content || {}),
+        edgeFade,
+        borderRadius: 0,
+        boxShadow: undefined,
+        shadow: undefined,
+      },
+    };
+  });
+  return { ...doc, elements };
+}
+
 function shouldSplitSharedRow(upperRole, lowerRole) {
   const textRoles = new Set([
     'heading', 'subheading', 'body', 'caption', 'stat', 'stat_label',
@@ -260,7 +332,7 @@ const CONTACT_VALUE_RE = /^contact_(address|phone|email)$/;
 const CENTERED_LAYOUT_RE = /centered|thank_you|big_number|banner/;
 const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
 const INDEXED_BODY_SLOT_RE =
-  /^(body|left_body|right_body|statement|lead|caption|footnote|intro|card_\d+_body|col_\d+_body|feature_\d+_(body|text)|agenda_col_\d+_item_\d+|item_\d+|bullet_\d+)$/;
+  /^(body|left_body|right_body|statement|lead|caption|footnote|intro|body_\d+|bullet_\d+|card_\d+_body|col_\d+_body|feature_\d+_(body|text)|agenda_col_\d+_item_\d+|item_\d+|bullet_\d+)$/;
 
 function itemToText(item) {
   if (item === null || item === undefined) return '';
@@ -660,6 +732,35 @@ function textForSlot(slotId, content = {}) {
   if (id.includes('subtitle')) return content.subtitle || '';
   if (id.includes('quote')) return content.quote || content.body || '';
   if (id === 'bullets' || id === 'bullet_list') return bulletBlock(bullets);
+
+  const indexedBody = id.match(/^body_(\d+)$/);
+  if (indexedBody) {
+    const idx = Number(indexedBody[1]) - 1;
+    const col = structuredColumnAt(content, idx);
+    if (col) {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      if (title && body) return `${title}\n${body}`;
+      return body || title || itemToText(col);
+    }
+    if (bullets[idx]) return bullets[idx];
+    return '';
+  }
+
+  const indexedBullet = id.match(/^bullet_(\d+)$/);
+  if (indexedBullet) {
+    const idx = Number(indexedBullet[1]) - 1;
+    const col = structuredColumnAt(content, idx);
+    if (col) {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      if (title && body) return `${title}\n${body}`;
+      return body || title || itemToText(col);
+    }
+    if (bullets[idx]) return bullets[idx];
+    return '';
+  }
+
   if (INDEXED_BODY_SLOT_RE.test(id)) {
     if (id === 'body' && content.body) return content.body;
     if ((id === 'left_body' || id === 'right_body') && content[id]) return content[id];
@@ -875,7 +976,7 @@ function isMediaImageSlot(slotId, role, slot) {
   return false;
 }
 
-function resolveSlotImageUrl(slotId, content = {}, imageRef = null) {
+function resolveSlotImageUrl(slotId, content = {}, imageRef = null, layoutSchema = null) {
   const id = String(slotId || '');
   const map = content.slotImageUrls;
   if (map && typeof map === 'object') {
@@ -883,6 +984,15 @@ function resolveSlotImageUrl(slotId, content = {}, imageRef = null) {
     if (map[id.toUpperCase()]) return map[id.toUpperCase()];
     if (map[id.toLowerCase()]) return map[id.toLowerCase()];
   }
+
+  let imageSlotCount = 1;
+  if (layoutSchema?.slots?.length) {
+    imageSlotCount = layoutSchema.slots.filter((slot) =>
+      isMediaImageSlot(slot.id, slot.role, slot)
+    ).length;
+  }
+  if (imageSlotCount > 1) return null;
+
   return (
     imageRef?.url
     || imageRef?.s3Url
@@ -1404,7 +1514,7 @@ function layoutSlotsToElements(
     }
 
     if (isMediaImageSlot(slotId, role, slot)) {
-      const url = resolveSlotImageUrl(slotId, content, imageRef);
+      const url = resolveSlotImageUrl(slotId, content, imageRef, layoutSchema);
       const frameSlot = findDeviceFrameSlot(slots, slotId);
       if (frameSlot) {
         const framePlacement = regionToPlacement(frameSlot.region, canvas, frameSlot, slots);
@@ -1419,8 +1529,10 @@ function layoutSlotsToElements(
         continue;
       }
       const presentation = resolveImagePresentation(slot);
-      const borderRadius = slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
-      const shadow = slot.shadow ?? presentation.shadow;
+      const edgeFade = resolveSplitImageEdgeFade(layoutSchema, slot);
+      const borderRadius =
+        edgeFade != null ? 0 : slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
+      const shadow = edgeFade != null ? undefined : slot.shadow ?? presentation.shadow;
       elements.push({
         id: newElementId('img'),
         slotId,
@@ -1433,6 +1545,7 @@ function layoutSlotsToElements(
           alt: content.title || '',
           ...(borderRadius != null ? { borderRadius } : {}),
           ...(shadow ? { boxShadow: shadow, shadow } : {}),
+          ...(edgeFade ? { edgeFade } : {}),
         },
         role: mediaRoleForSlot(slotId, role),
       });
@@ -2067,6 +2180,7 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   }
 
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
+  next = applySplitImageEdgeFade(next, layoutSchema);
   return next;
 }
 
@@ -2091,6 +2205,7 @@ function shouldRecompileLayout(layoutSchema, elementsDoc = null) {
 function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opts = {}) {
   const forceTextReplace = opts.forceTextReplace === true;
   const themeTokens = opts.themeTokens || null;
+  const layoutSchema = opts.layoutSchema || null;
   const doc = {
     version: elementsDoc?.version || 1,
     canvas: elementsDoc?.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
@@ -2178,7 +2293,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     ) {
       const slotKey = String(el.slotId || '').trim();
       const slotUrl = slotKey
-        ? resolveSlotImageUrl(slotKey, content, imageRef)
+        ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
       if (!slotUrl) continue;
       el.content = {
@@ -2197,7 +2312,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     ) {
       const slotKey = String(el.slotId || '').trim();
       const slotUrl = slotKey
-        ? resolveSlotImageUrl(slotKey, content, imageRef)
+        ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
       if (!slotUrl) continue;
       el.type = 'image';

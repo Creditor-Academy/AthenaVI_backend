@@ -40,6 +40,38 @@ function layoutNeedsStructuredColumns(slots) {
   return slots.some((slot) => /^(card|col)_\d+_(title|body)$/i.test(String(slot.id || '')));
 }
 
+function layoutNeedsIndexedColumns(slots) {
+  return slots.some((slot) => /^body_\d+$/i.test(String(slot.id || '')) || /^bullet_\d+$/i.test(String(slot.id || '')));
+}
+
+function layoutNeedsChart(layoutSchema, slots) {
+  const ct = String(layoutSchema?.content_type || '').toLowerCase();
+  return ct === 'chart' || slots.some((slot) => String(slot.role || '').toLowerCase() === 'chart');
+}
+
+function countStructuredColumnSlots(slots) {
+  const cardTitles = slots.filter((s) => /^card_\d+_title$/i.test(String(s.id || ''))).length;
+  const bodySlots = slots.filter((s) => /^body_\d+$/i.test(String(s.id || ''))).length;
+  const bulletSlots = slots.filter((s) => /^bullet_\d+$/i.test(String(s.id || ''))).length;
+  return Math.max(cardTitles, bodySlots, bulletSlots, 0);
+}
+
+function normalizeChartSeries(chart) {
+  if (!chart || typeof chart !== 'object') return { labels: [], values: [] };
+  const labels = Array.isArray(chart.labels) ? chart.labels.filter(Boolean) : [];
+  let values = [];
+  if (Array.isArray(chart.series) && chart.series.length) {
+    const first = chart.series[0];
+    if (Array.isArray(first?.values)) values = first.values;
+    else if (Array.isArray(first?.data)) values = first.data;
+  } else if (Array.isArray(chart.data)) {
+    values = chart.data;
+  }
+  return { labels, values };
+}
+
+const PLACEHOLDER_CTA_RE = /\b(book a demo|schedule a demo|get started today)\b/i;
+
 function layoutNeedsComparison(slots) {
   return slots.some(
     (s) => /^(left|right)_/i.test(String(s.id || '')) || /^(pros|cons)$/i.test(String(s.id || ''))
@@ -62,15 +94,44 @@ function validateStructuredFields(content, layoutSchema, issues) {
     }
   }
 
-  if (layoutNeedsStructuredColumns(slots)) {
+  if (layoutNeedsStructuredColumns(slots) || layoutNeedsIndexedColumns(slots)) {
     const cols = content?.columns || content?.cards || content?.features;
+    const minCols = Math.max(2, countStructuredColumnSlots(slots) || 2);
     const valid =
       Array.isArray(cols) &&
-      cols.length >= 2 &&
+      cols.length >= minCols &&
       cols.filter((col) => String(col?.title ?? col?.heading ?? col?.body ?? col?.text ?? '').trim())
-        .length >= 2;
+        .length >= minCols;
     if (!valid) {
       issues.push({ path: 'columns', rule: 'required_structured', repairable: true });
+    } else {
+      const titles = cols
+        .map((col) => String(col?.title ?? col?.heading ?? col?.label ?? '').trim().toLowerCase())
+        .filter(Boolean);
+      const uniqueTitles = new Set(titles);
+      if (titles.length >= 2 && uniqueTitles.size < Math.min(titles.length, minCols)) {
+        issues.push({ path: 'columns', rule: 'distinct_titles', repairable: true });
+      }
+    }
+  }
+
+  if (layoutNeedsChart(layoutSchema, slots)) {
+    const { labels, values } = normalizeChartSeries(content?.chart);
+    const numericValues = values.filter((v) => v != null && v !== '' && !Number.isNaN(Number(v)));
+    const valid =
+      labels.length >= 3 &&
+      numericValues.length >= 3 &&
+      numericValues.length === labels.length;
+    if (!valid) {
+      issues.push({ path: 'chart', rule: 'required_chart_data', repairable: true });
+    }
+  }
+
+  const ct = String(layoutSchema?.content_type || '').toLowerCase();
+  if (ct === 'closing' || slots.some((s) => String(s.role || '').toLowerCase() === 'cta')) {
+    const ctaText = String(content?.cta ?? content?.callToAction ?? content?.buttonText ?? '').trim();
+    if (ctaText && PLACEHOLDER_CTA_RE.test(ctaText)) {
+      issues.push({ path: 'cta', rule: 'placeholder_cta', repairable: true });
     }
   }
 

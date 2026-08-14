@@ -21,6 +21,53 @@ function buildSystem() {
   ].join(' ');
 }
 
+function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') {
+  const id = String(layoutId || '').toLowerCase();
+  const type = String(suggestedType || '').toLowerCase();
+  const lines = [];
+
+  if (slideOrder === 1 || type === 'title') {
+    lines.push(
+      'Title slide: REQUIRED titleRuns (2-3 segments, accent on final line). Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
+    );
+  }
+
+  if (type === 'closing' || /closing|cta/.test(id)) {
+    lines.push(
+      'Closing slide: CTA must be topic-specific (e.g. "Explore the archive", "Start learning"). NEVER use generic "Book a demo" unless the deck is explicitly a sales/demo pitch.'
+    );
+  }
+
+  if (type === 'chart' || /chart/.test(id)) {
+    lines.push(
+      'Chart slide: REQUIRED chart.labels (4-6 short labels) and chart.series[{ name, values }] with numeric values matching labels length. Use realistic illustrative data tied to the slide topic. Set isIllustrative:true.'
+    );
+  }
+
+  if (/three_cards|cards_image|grid_.*image|device/.test(id)) {
+    lines.push(
+      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, etc.). Each prompt must describe a different scene/object — never repeat the same subject.'
+    );
+    lines.push(
+      'Multi-card layout: REQUIRED columns[] with one entry per card — each { title, body } must have a DISTINCT title (≤4 words) and 1-2 line body.'
+    );
+  }
+
+  if (/section_with_image|two_para_right|three_para_image|section_left_image|para_split/.test(id)) {
+    lines.push(
+      'Split text|image layout: text on one half, hero photo on the other. Photo gets an automatic edge fade into the slide background — keep copy concise on the text side.'
+    );
+  }
+
+  if (/two_para|three_para|four_para|intro_four_para|intro_three_para/.test(id)) {
+    lines.push(
+      'Multi-paragraph layout: REQUIRED columns[] with distinct { title, body } per paragraph/column. Titles are subheadings (≤4 words); bodies are 1-3 lines each.'
+    );
+  }
+
+  return lines.length ? `\n${lines.join('\n')}` : '';
+}
+
 /**
  * @param {object} vars
  */
@@ -100,6 +147,7 @@ function buildUser(vars = {}) {
       ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for METRIC_TITLE_n / METRIC_BODY_n cards (1–2 short lines each). Fill stats[] with { value, label } for STAT_n_VALUE / STAT_n_LABEL. Do NOT put bullets or long body copy into metric or stat slots.'
       : '',
     vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
+    layoutSpecificRules(vars.layoutId, vars.slideOrder, vars.suggestedContentType),
     Array.isArray(vars.layoutContext?.shapeHints) && vars.layoutContext.shapeHints.length
       ? `\nShape hints (suggestions only — you decide in shapeDecisions):\n${vars.layoutContext.shapeHints
           .map(
@@ -114,7 +162,9 @@ function buildUser(vars = {}) {
     '- Replace any template placeholder wording with original content from the brief.',
     '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
-    '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
+    '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
+    '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
+    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one distinct prompt per IMAGE_n / DEVICE_IMAGE_n slot.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',
     '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
@@ -132,12 +182,19 @@ function buildUser(vars = {}) {
         body: null,
         bullets: ['...'],
         stats: [{ label: '...', value: '...' }],
-        columns: [{ title: '...', body: '...' }],
+        columns: [
+          { title: 'Distinct card title A', body: 'Body for column A.' },
+          { title: 'Distinct card title B', body: 'Body for column B.' },
+        ],
+        imagePrompts: {
+          IMAGE_1: 'Concrete unique visual for first card',
+          IMAGE_2: 'Different concrete visual for second card',
+        },
         quote: null,
         chart: {
           type: 'bar',
-          labels: [],
-          series: [],
+          labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+          series: [{ name: 'Growth', values: [12, 19, 24, 31] }],
           isIllustrative: true,
         },
         table: {
@@ -160,7 +217,6 @@ function buildUser(vars = {}) {
           { label: '2020', detail: 'Key event summary' },
           { label: '2022', detail: 'Next milestone' },
         ],
-        columns: [{ title: 'Card title', body: 'Card body' }],
         diagram: {
           type: 'swot',
           cells: [
