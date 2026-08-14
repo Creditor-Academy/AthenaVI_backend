@@ -1058,7 +1058,8 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 |-------|--------|
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
 | `formatId` | **Required** for `social`. Optional aspect for `image` |
-| `prompt` | Required unless `infographic.sections` provided |
+| `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars — full brief, not a one-liner |
+| `infographic` | Optional: `title` 200; 12 sections; section `content` 8,000; bullets 20 × 1,000 |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
 | `brandPalette` | Optional hex list — can mirror Brand Kit colors in UI |
@@ -1092,7 +1093,7 @@ Body fields optional — omitted fields reuse parent request. Creates new genera
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge).
+Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge). `instruction` max **4,000** chars.
 
 ## 3.9 Download
 
@@ -1126,7 +1127,7 @@ Mode `image`, optional `formatId` (`square`/`landscape`/`portrait`), `style`, `p
 
 ### B — Infographic
 
-Mode `infographic`, prefer `gpt-image-1` / HD. Form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + prompt → generate → PNG/PDF.
+Mode `infographic`, prefer `gpt-image-1` / HD. Form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + prompt (max 16,000) → generate → PNG/PDF.
 
 ### C — Social creative
 

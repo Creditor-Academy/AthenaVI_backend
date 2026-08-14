@@ -157,7 +157,8 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 |-------|--------|
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
 | `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). |
-| `prompt` | Required unless `infographic.sections` provided |
+| `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars (image, infographic, and social). Use this for the full brief — audience, story, labels, panel copy. |
+| `infographic` | Optional structured form. `title` max 200; up to **12** sections; section `title` 200; `content` max **8,000**; up to **20** bullets × **1,000** chars. |
 | `style` / `styleId` | Optional vibe from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case, e.g. `cute-coffee-cup-emoji.png`). S3 keys stay UUID-based. |
 | `contextId` | Optional. Uses document text + vision summaries in the prompt; reference images go through `images.edit` |
@@ -213,7 +214,7 @@ If the live context expired, regenerate still applies **text** context from `req
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge). Context bundles are **not** applied on tweak (v1).
+Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge). Context bundles are **not** applied on tweak (v1). `instruction` max **4,000** chars.
 
 ---
 

@@ -1,5 +1,16 @@
 const Joi = require('joi');
 
+/** Freeform generate/regenerate prompt (image, infographic, social). */
+const IMAGE_GEN_PROMPT_MAX = 16_000;
+/** Tweak follow-up instruction. */
+const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 4_000;
+/** Infographic panel body (structured form). */
+const INFOGRAPHIC_SECTION_CONTENT_MAX = 8_000;
+const INFOGRAPHIC_BULLET_MAX = 1_000;
+const INFOGRAPHIC_TITLE_MAX = 200;
+const INFOGRAPHIC_SECTION_MAX = 12;
+const INFOGRAPHIC_BULLETS_PER_SECTION_MAX = 20;
+
 const workspaceParams = Joi.object({
   workspaceId: Joi.string().uuid().required(),
 });
@@ -18,16 +29,19 @@ const infographicSchema = Joi.object({
   layout: Joi.string()
     .valid('process', 'comparison', 'timeline', 'stats', 'hierarchy', 'funnel', 'custom')
     .optional(),
-  title: Joi.string().trim().max(200).allow('', null).optional(),
+  title: Joi.string().trim().max(INFOGRAPHIC_TITLE_MAX).allow('', null).optional(),
   sections: Joi.array()
     .items(
       Joi.object({
-        title: Joi.string().trim().max(200).allow('', null).optional(),
-        bullets: Joi.array().items(Joi.string().trim().max(500)).max(20).optional(),
-        content: Joi.string().trim().max(2000).allow('', null).optional(),
+        title: Joi.string().trim().max(INFOGRAPHIC_TITLE_MAX).allow('', null).optional(),
+        bullets: Joi.array()
+          .items(Joi.string().trim().max(INFOGRAPHIC_BULLET_MAX))
+          .max(INFOGRAPHIC_BULLETS_PER_SECTION_MAX)
+          .optional(),
+        content: Joi.string().trim().max(INFOGRAPHIC_SECTION_CONTENT_MAX).allow('', null).optional(),
       })
     )
-    .max(12)
+    .max(INFOGRAPHIC_SECTION_MAX)
     .optional(),
 }).unknown(true);
 
@@ -37,7 +51,7 @@ const generateBody = Joi.object({
   formatId: Joi.string().trim().max(64).allow(null, '').optional(),
   style: Joi.string().trim().max(64).allow(null, '').optional(),
   styleId: Joi.string().trim().max(64).allow(null, '').optional(),
-  prompt: Joi.string().trim().max(4000).allow('', null).optional(),
+  prompt: Joi.string().trim().max(IMAGE_GEN_PROMPT_MAX).allow('', null).optional(),
   headline: Joi.string().trim().max(200).allow('', null).optional(),
   subheadline: Joi.string().trim().max(300).allow('', null).optional(),
   brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
@@ -70,7 +84,7 @@ const regenerateSchema = Joi.object({
     formatId: Joi.string().trim().max(64).allow(null, '').optional(),
     style: Joi.string().trim().max(64).allow(null, '').optional(),
     styleId: Joi.string().trim().max(64).allow(null, '').optional(),
-    prompt: Joi.string().trim().max(4000).allow('', null).optional(),
+    prompt: Joi.string().trim().max(IMAGE_GEN_PROMPT_MAX).allow('', null).optional(),
     headline: Joi.string().trim().max(200).allow('', null).optional(),
     subheadline: Joi.string().trim().max(300).allow('', null).optional(),
     brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
@@ -83,7 +97,7 @@ const regenerateSchema = Joi.object({
 const tweakSchema = Joi.object({
   params: generationParams,
   body: Joi.object({
-    instruction: Joi.string().trim().min(1).max(2000).required(),
+    instruction: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).required(),
   }),
 });
 
@@ -135,6 +149,13 @@ const deleteContextSchema = Joi.object({
 });
 
 module.exports = {
+  IMAGE_GEN_PROMPT_MAX,
+  IMAGE_GEN_TWEAK_INSTRUCTION_MAX,
+  INFOGRAPHIC_SECTION_CONTENT_MAX,
+  INFOGRAPHIC_BULLET_MAX,
+  INFOGRAPHIC_TITLE_MAX,
+  INFOGRAPHIC_SECTION_MAX,
+  INFOGRAPHIC_BULLETS_PER_SECTION_MAX,
   generateSchema,
   regenerateSchema,
   tweakSchema,

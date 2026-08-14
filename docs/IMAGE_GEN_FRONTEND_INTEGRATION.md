@@ -54,7 +54,7 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 ### B — Infographic
 
 1. Mode `infographic`, prefer `gpt-image-1` / HD.
-2. Structured form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + freeform `prompt`.
+2. Structured form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + freeform `prompt` (max 16,000 — put the full story and labels here).
 3. Optional context PDF/MD for brief text (no auto-structure in v1 — text is injected into the prompt).
 4. Generate → download PNG/PDF for decks/docs.
 
@@ -111,6 +111,9 @@ Successful charges appear in workspace credit history with `metadata.feature` li
 
 | Topic | Hint |
 |-------|------|
+| Prompt | Max **16,000** chars. Show a counter; this is the brief (story, labels, panel copy), not a one-liner. |
+| Infographic sections | Optional structure on top of prompt: 12 panels; panel body 8,000; bullets 1,000 each. |
+| Tweak | `instruction` max **4,000** chars |
 | Sync generate | Loading state + cancel only client-side (request may still complete/charge) |
 | HD (`gpt-image-1-hd`) | Best quality; higher AC — show estimate |
 | DALL·E 3 (`dall-e-3`) | Still offered for UI compat; backend runs GPT Image HD. Hide for `infographic` (`modes` from catalog) |
