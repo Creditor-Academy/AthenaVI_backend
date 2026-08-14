@@ -241,13 +241,26 @@ const LIST_SOURCE_KEYS = {
 };
 
 const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column|plan|price|tier)_(\d+)$/;
-const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title)$/;
+const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title|bio)$/;
 const PLAN_FIELD_RE = /^plan_(\d+)_(label|name|price|body)$/;
 const AGENDA_ITEM_RE = /^agenda_col_(\d+)_item_(\d+)$/;
 const AGENDA_HEADING_RE = /^agenda_col_(\d+)_heading$/;
 const DEPT_HEADING_RE = /^dept_(\d+)_heading$/;
+const CARD_FIELD_RE = /^card_(\d+)_(title|body)$/;
+const COL_FIELD_RE = /^col_(\d+)_(title|body)$/;
+const FEATURE_FIELD_RE = /^feature_(\d+)_(title|body|text)$/;
+const MILESTONE_PART_RE = /^milestone_(\d+)_(label|detail)$/;
+const QUADRANT_FIELD_RE = /^q(\d+)_(title|body)$/;
+const STEP_FIELD_RE = /^step_(\d+)_(title|body)$/;
+const FUNNEL_FIELD_RE = /^funnel_(\d+)_(title|body)$/;
+const ITEM_FIELD_RE = /^item_(\d+)$/i;
+const QUOTE_SLOT_RE = /^quote_(\d+)$/;
+const ATTR_SLOT_RE = /^attr_(\d+)$/;
 const CONTACT_VALUE_RE = /^contact_(address|phone|email)$/;
 const CENTERED_LAYOUT_RE = /centered|thank_you|big_number|banner/;
+const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
+const INDEXED_BODY_SLOT_RE =
+  /^(body|left_body|right_body|statement|lead|caption|footnote|intro|card_\d+_body|col_\d+_body|feature_\d+_(body|text)|agenda_col_\d+_item_\d+|item_\d+|bullet_\d+)$/;
 
 function itemToText(item) {
   if (item === null || item === undefined) return '';
@@ -313,6 +326,24 @@ function agendaColumnAt(content, colIndex) {
   return columns[colIndex] || null;
 }
 
+function structuredColumnAt(content, colIndex) {
+  const lists = [content.columns, content.cards, content.features];
+  for (const list of lists) {
+    if (!Array.isArray(list)) continue;
+    const col = list[colIndex];
+    if (col != null) return col;
+  }
+  return null;
+}
+
+function isMainTitleSlot(slotId, role) {
+  const lower = String(slotId || '').toLowerCase();
+  const r = String(role || '').toLowerCase();
+  if (MAIN_TITLE_SLOT_RE.test(lower)) return true;
+  if (r === 'heading' && MAIN_TITLE_SLOT_RE.test(lower)) return true;
+  return false;
+}
+
 function primaryStat(content) {
   const raw = content.stat || (Array.isArray(content.stats) ? content.stats[0] : null);
   if (!raw) return { value: '', label: '' };
@@ -346,6 +377,17 @@ function tableRowsOf(content) {
   return [...headers, ...rows].map((row) => (Array.isArray(row) ? row.map((c) => String(c ?? '')) : [String(row)]));
 }
 
+function diagramCellAt(content, index) {
+  const cells =
+    content.diagram?.cells ||
+    content.cells ||
+    content.quadrants ||
+    content.steps ||
+    content.funnel ||
+    [];
+  return Array.isArray(cells) ? cells[index] : null;
+}
+
 function textForSlot(slotId, content = {}) {
   const id = String(slotId || '').toLowerCase();
   const bullets = bulletsOf(content);
@@ -364,6 +406,54 @@ function textForSlot(slotId, content = {}) {
     if (field === 'name') return String(member.name ?? '').trim();
     if (field === 'role' || field === 'title') return String(member.role ?? member.title ?? '').trim();
     if (field === 'email') return String(member.email ?? '').trim();
+    if (field === 'bio') return String(member.bio ?? member.body ?? member.description ?? '').trim();
+  }
+
+  const quadrantField = id.match(QUADRANT_FIELD_RE);
+  if (quadrantField) {
+    const cell = diagramCellAt(content, Number(quadrantField[1]) - 1);
+    if (!cell) return '';
+    if (quadrantField[2] === 'title') {
+      return String(cell.title ?? cell.label ?? cell.heading ?? '').trim();
+    }
+    return String(cell.body ?? cell.text ?? cell.detail ?? '').trim();
+  }
+
+  const stepField = id.match(STEP_FIELD_RE);
+  if (stepField) {
+    const cell = diagramCellAt(content, Number(stepField[1]) - 1);
+    if (!cell) return '';
+    if (stepField[2] === 'title') {
+      return String(cell.title ?? cell.label ?? cell.step ?? '').trim();
+    }
+    return String(cell.body ?? cell.text ?? cell.detail ?? '').trim();
+  }
+
+  const funnelField = id.match(FUNNEL_FIELD_RE);
+  if (funnelField) {
+    const list = content.funnel || content.diagram?.cells || content.cells || [];
+    const cell = Array.isArray(list) ? list[Number(funnelField[1]) - 1] : null;
+    if (!cell) return '';
+    if (funnelField[2] === 'title') {
+      return String(cell.title ?? cell.label ?? '').trim();
+    }
+    return String(cell.body ?? cell.text ?? '').trim();
+  }
+
+  const quoteSlot = id.match(QUOTE_SLOT_RE);
+  if (quoteSlot) {
+    const quotes = content.quotes || (content.quote ? [content.quote] : []);
+    const raw = Array.isArray(quotes) ? quotes[Number(quoteSlot[1]) - 1] : null;
+    if (typeof raw === 'string') return raw.trim();
+    return String(raw?.text ?? raw?.quote ?? '').trim();
+  }
+
+  const attrSlot = id.match(ATTR_SLOT_RE);
+  if (attrSlot) {
+    const attrs = content.testimonials || content.attributions || [];
+    const raw = Array.isArray(attrs) ? attrs[Number(attrSlot[1]) - 1] : null;
+    if (typeof raw === 'string') return raw.trim();
+    return String(raw?.name ?? raw?.attribution ?? raw?.author ?? '').trim();
   }
 
   const planField = id.match(PLAN_FIELD_RE);
@@ -392,6 +482,61 @@ function textForSlot(slotId, content = {}) {
     return String(items[Number(agendaItem[2]) - 1] ?? '').trim();
   }
 
+  const cardField = id.match(CARD_FIELD_RE);
+  if (cardField) {
+    const col = structuredColumnAt(content, Number(cardField[1]) - 1);
+    if (!col) return '';
+    if (cardField[2] === 'title') {
+      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const colField = id.match(COL_FIELD_RE);
+  if (colField) {
+    const col = structuredColumnAt(content, Number(colField[1]) - 1);
+    if (!col) return '';
+    if (colField[2] === 'title') {
+      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const featureField = id.match(FEATURE_FIELD_RE);
+  if (featureField) {
+    const col = structuredColumnAt(content, Number(featureField[1]) - 1);
+    if (!col) return '';
+    if (featureField[2] === 'title') {
+      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const milestonePart = id.match(MILESTONE_PART_RE);
+  if (milestonePart) {
+    const milestones = objectListForKind('milestone', content);
+    const raw = milestones[Number(milestonePart[1]) - 1];
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+      return milestonePart[2] === 'label' ? raw.trim() : '';
+    }
+    if (milestonePart[2] === 'label') {
+      return String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? raw.title ?? '').trim();
+    }
+    return String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim();
+  }
+
+  const itemSlot = id.match(ITEM_FIELD_RE);
+  if (itemSlot) {
+    const index = Number(itemSlot[1]) - 1;
+    const fromItems = itemsToTexts(content.items);
+    if (fromItems[index]) return fromItems[index];
+    if (bullets[index]) return bullets[index];
+    const col = structuredColumnAt(content, index);
+    if (col) return itemToText(col);
+    return '';
+  }
+
   const deptHeading = id.match(DEPT_HEADING_RE);
   if (deptHeading) {
     const depts = content.departments || content.agenda?.columns;
@@ -416,6 +561,8 @@ function textForSlot(slotId, content = {}) {
       return primaryStat(content).label;
     case 'lead':
       return itemToText(content.lead) || listForKind('member', content)[0] || '';
+    case 'center_body':
+      return String(content.diagram?.center ?? content.center ?? content.overlap ?? '').trim();
     case 'attribution':
       return String(content.attribution || content.author || content.source || '').trim();
     case 'cta':
@@ -437,6 +584,10 @@ function textForSlot(slotId, content = {}) {
       return sideOf(content, 'left').body;
     case 'right_body':
       return sideOf(content, 'right').body;
+    case 'pros_title':
+      return String(content.prosTitle || content.comparison?.prosTitle || 'Pros').trim();
+    case 'cons_title':
+      return String(content.consTitle || content.comparison?.consTitle || 'Cons').trim();
     case 'pros':
       return bulletBlock(itemsToTexts(content.pros).length ? itemsToTexts(content.pros) : itemsToTexts(content.left?.bullets));
     case 'cons':
@@ -499,15 +650,20 @@ function textForSlot(slotId, content = {}) {
     return items[Number(bulletSlot[1]) - 1] || '';
   }
 
-  if (id.includes('title') && !id.includes('subtitle') && !/^metric_|^plan_|^col_|^feature_|^point_|^member_/.test(id)) {
+  if (
+    id.includes('title') &&
+    !id.includes('subtitle') &&
+    !/^metric_|^plan_|^col_|^card_|^feature_|^point_|^member_|^agenda_col_/.test(id)
+  ) {
     return content.title || '';
   }
   if (id.includes('subtitle')) return content.subtitle || '';
   if (id.includes('quote')) return content.quote || content.body || '';
-  if (id.includes('bullet')) return bulletBlock(bullets);
-  if (id.includes('body') || id.includes('text')) {
-    if (content.body) return content.body;
-    return bullets.length ? bulletBlock(bullets) : '';
+  if (id === 'bullets' || id === 'bullet_list') return bulletBlock(bullets);
+  if (INDEXED_BODY_SLOT_RE.test(id)) {
+    if (id === 'body' && content.body) return content.body;
+    if ((id === 'left_body' || id === 'right_body') && content[id]) return content[id];
+    return '';
   }
   if (id === 'accent') return '';
   return '';
@@ -538,19 +694,10 @@ function styleForSlot(slotId, layoutSchema) {
   return { fontSize: 18, bold: false, align: 'left' };
 }
 
-const ROLE_TYPE_SCALE = {
-  heading: 'title',
-  subheading: 'subtitle',
-  body: 'body',
-  caption: 'caption',
-  eyebrow: 'caption',
-  stat: 'stat',
-  stat_label: 'caption',
-  quote: 'subtitle',
-  attribution: 'caption',
-  cta: 'subtitle',
-  contact: 'body',
-};
+const {
+  fontSizeForTextSlot: canvasFontSizeForTextSlot,
+  resolveTypeScaleFontSize,
+} = require('./canvasTypography');
 
 function paletteColor(palette, role, fallback) {
   if (!palette || !role) return fallback;
@@ -632,7 +779,7 @@ function resolveFill(shapeSpec, palette = {}) {
   return { type: 'solid', colorRole: 'primary' };
 }
 
-function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
+function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens, placement, canvasWidth) {
   const slotId = slot.id || '';
   const role = String(slot.role || '').toLowerCase();
   const ty = slot.typography || {};
@@ -643,11 +790,14 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
   const overlayActive = isOverlayLayout(layoutSchema, mergedDesignTokens);
 
   let fontSize = ty.fontSize;
-  if (fontSize == null && role && ROLE_TYPE_SCALE[role] && scale[ROLE_TYPE_SCALE[role]] != null) {
-    fontSize = scale[ROLE_TYPE_SCALE[role]];
+  if (fontSize == null) {
+    fontSize = resolveTypeScaleFontSize(role, scale);
   }
   if (fontSize == null && role === 'heading' && scale.display != null) {
     fontSize = scale.display;
+  }
+  if (fontSize == null && placement) {
+    fontSize = canvasFontSizeForTextSlot(slot, placement, canvasWidth);
   }
   if (fontSize == null) fontSize = fallback.fontSize;
 
@@ -669,6 +819,13 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens) {
       colorRole = 'muted';
     } else if (role === 'cta') colorRole = 'primary';
     else colorRole = 'text';
+  }
+  if (
+    overlayActive &&
+    (colorRole === 'text' || colorRole === 'muted')
+  ) {
+    const overlayRole = overlayColorRoleForSlot(role, ty, overlayActive);
+    if (overlayRole) colorRole = overlayRole;
   }
   if (
     mergedDesignTokens?.textContrast === 'high' &&
@@ -991,7 +1148,6 @@ function mediaRoleForSlot(slotId, role) {
  * Apply pack/slide designTokens chrome (bg + accent bars) when layout has no background slot.
  */
 function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
-  if (!designTokens || typeof designTokens !== 'object') return elementsDoc;
   const doc = {
     version: elementsDoc?.version || 1,
     canvas: elementsDoc?.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
@@ -1003,7 +1159,31 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
     (e) => e.role === 'background' || e.role === 'design_bg' || String(e.id || '').startsWith('bg_')
   );
 
-  if (!hasBg && (designTokens.backgroundStyle === 'gradient' || designTokens.backgroundStyle === 'solid')) {
+  if (!designTokens || typeof designTokens !== 'object') {
+    if (!hasBg && palette.bg) {
+      doc.elements.unshift({
+        id: newElementId('bg'),
+        type: 'shape',
+        layer: 0,
+        placement: {
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'rect',
+          fill: { type: 'solid', color: palette.bg, colorRole: 'bg' },
+        },
+        role: 'design_bg',
+      });
+    }
+    return doc;
+  }
+
+  if (!hasBg && (designTokens?.backgroundStyle === 'gradient' || designTokens?.backgroundStyle === 'solid')) {
     const fill =
       designTokens.backgroundStyle === 'gradient'
         ? {
@@ -1044,7 +1224,28 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
     });
   }
 
-  const accent = designTokens.accentPosition || 'none';
+  if (!hasBg && palette.bg && !designTokens?.backgroundStyle) {
+    doc.elements.unshift({
+      id: newElementId('bg'),
+      type: 'shape',
+      layer: 0,
+      placement: {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', color: palette.bg, colorRole: 'bg' },
+      },
+      role: 'design_bg',
+    });
+  }
+
+  const accent = designTokens?.accentPosition || 'none';
   const accentColor = palette.accent || palette.primary || '#3B82F6';
   const barBase = {
     type: 'shape',
@@ -1318,10 +1519,18 @@ function layoutSlotsToElements(
     }
 
     const text = textForSlot(slotId, content);
-    const isMainTitle = lower === 'title' || lower === 'headline' || role === 'heading';
-    const style = resolveTextStyle(slot, layoutSchema, themeTokens, designTokens);
-    const textContent = {
-      text: text || (isMainTitle ? content.title || '' : '') || slot.placeholder_text || '',
+    const isMainTitle = isMainTitleSlot(slotId, role);
+    const style = resolveTextStyle(
+      slot,
+      layoutSchema,
+      themeTokens,
+      designTokens,
+      placement,
+      canvas.width
+    );
+    const onImage = layoutRequiresOverlayScrim(layoutSchema);
+    let textContent = {
+      text: text || (isMainTitle ? content.title || '' : ''),
       fontSize: style.fontSize,
       bold: style.bold,
       fontWeight: style.fontWeight,
@@ -1331,6 +1540,7 @@ function layoutSlotsToElements(
     if (style.colorRole) textContent.colorRole = style.colorRole;
     if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
     if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
+    textContent = applyRichTitleToTextContent(textContent, content, slotId, role, onImage);
     const slotRole = elementRoleFromSlot(slot, slotId);
     const fontFamily = fontFamilyForRole(slotRole, themeTokens);
     if (fontFamily) textContent.fontFamily = fontFamily;
@@ -1374,12 +1584,13 @@ function layoutSlotsToElements(
   }
 
   const hasImageEl = elements.some((e) => e.type === 'image');
+  const layoutHasImageSlot = slots.some((s) => isMediaImageSlot(s.id, s.role, s));
   const imageUrl =
     imageRef?.url ||
     imageRef?.s3Url ||
     (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
     null;
-  if (imageUrl && !hasImageEl) {
+  if (imageUrl && !hasImageEl && layoutHasImageSlot) {
     elements.push({
       id: newElementId('img'),
       type: 'image',
@@ -1403,14 +1614,16 @@ function layoutSlotsToElements(
 
   let doc = { version: 1, canvas, elements };
   doc = applySlideDesignTokens(doc, designTokens, themeTokens);
-  const hasShapeDecisions =
-    content?.shapeDecisions &&
-    typeof content.shapeDecisions === 'object' &&
-    Object.keys(content.shapeDecisions).length > 0;
-  if (opts.applyShapes !== false && hasShapeDecisions) {
-    doc = applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, canvas);
+  if (opts.applyShapes !== false) {
+    const hasShapeDecisions =
+      content?.shapeDecisions &&
+      typeof content.shapeDecisions === 'object' &&
+      Object.keys(content.shapeDecisions).length > 0;
+    if (hasShapeDecisions) {
+      doc = applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, canvas);
+    }
+    doc = finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvas);
   }
-  doc = applyTextOverImageContrast(doc, themeTokens);
   return doc;
 }
 
@@ -1550,18 +1763,73 @@ function hasOverlappingTextPlacements(elementsDoc) {
   return false;
 }
 
-function applyTextOverImageContrast(elementsDoc, themeTokens = null) {
+function layoutRequiresOverlayScrim(layoutSchema) {
+  if (!layoutSchema || typeof layoutSchema !== 'object') return false;
+  const layoutId = String(layoutSchema.layout_id || '');
+  const slots = Array.isArray(layoutSchema.slots) ? layoutSchema.slots : [];
+  if (
+    slots.some(
+      (s) =>
+        s.id === 'BACKGROUND_IMAGE' || /OVERLAY_SCRIM/i.test(String(s.id || ''))
+    )
+  ) {
+    return true;
+  }
+  return /full_bg|overlay|statement_top|statement_bottom/i.test(layoutId);
+}
+
+function ensureOverlayScrim(doc, layoutSchema, content, themeTokens, canvas) {
+  if (!doc || !layoutRequiresOverlayScrim(layoutSchema)) return doc;
+  const elements = Array.isArray(doc.elements) ? doc.elements : [];
+  const hasScrim = elements.some(
+    (el) =>
+      el.role === 'design_overlay' ||
+      String(el.slotId || '').toUpperCase() === 'OVERLAY_SCRIM'
+  );
+  if (hasScrim) return doc;
+
+  const overlayDecision = content?.shapeDecisions?.__overlay__;
+  const scrimOpacity =
+    overlayDecision?.scrim != null ? Number(overlayDecision.scrim) : 0.45;
+  const palette = themeTokens?.palette || {};
+  const scrimColor = palette.overlayScrim || 'rgba(0,0,0,0.45)';
+
+  return {
+    ...doc,
+    elements: [
+      ...elements,
+      {
+        id: newElementId('shp'),
+        slotId: 'OVERLAY_SCRIM',
+        type: 'shape',
+        layer: 1,
+        placement: { x: 0, y: 0, width: canvas.width, height: canvas.height, rotation: 0, opacity: 1 },
+        content: {
+          shape: 'rect',
+          fill: { type: 'solid', color: scrimColor, colorRole: 'overlayScrim' },
+          opacity: scrimOpacity,
+        },
+        role: 'design_overlay',
+      },
+    ],
+  };
+}
+
+function applyTextOverImageContrast(elementsDoc, themeTokens = null, layoutSchema = null) {
   if (!elementsDoc || !Array.isArray(elementsDoc.elements)) return elementsDoc;
   const palette = themeTokens?.palette || {};
+  const forceOverlay = layoutRequiresOverlayScrim(layoutSchema);
   const images = elementsDoc.elements.filter((el) => el.type === 'image');
-  if (!images.length) return elementsDoc;
+  if (!images.length && !forceOverlay) return elementsDoc;
 
   for (const el of elementsDoc.elements) {
     if (el.type !== 'text' && el.type !== 'textbox') continue;
     const placement = el.placement || {};
-    let maxOverlap = 0;
-    for (const img of images) {
-      maxOverlap = Math.max(maxOverlap, placementOverlapRatio(placement, img.placement || {}));
+    let maxOverlap = forceOverlay ? 1 : 0;
+    if (!forceOverlay) {
+      for (const img of images) {
+        maxOverlap = Math.max(maxOverlap, placementOverlapRatio(placement, img.placement || {}));
+      }
     }
     if (maxOverlap <= 0.25) continue;
 
@@ -1581,8 +1849,225 @@ function applyTextOverImageContrast(elementsDoc, themeTokens = null) {
       colorRole,
       color: paletteColor(palette, colorRole, el.content?.color || null),
     };
+    if (Array.isArray(el.content?.runs) && el.content.runs.length) {
+      el.content.runs = el.content.runs.map((run, idx, arr) => ({
+        ...run,
+        colorRole:
+          idx === arr.length - 1 && (run.colorRole === 'accent' || run.colorRole === 'primary')
+            ? run.colorRole
+            : isMuted
+              ? 'textOnImageMuted'
+              : 'textOnImage',
+        color: undefined,
+      }));
+    }
   }
   return elementsDoc;
+}
+
+function resolveImageGenSize(slot, canvas = {}) {
+  if (!slot?.region) return '1024x1024';
+  const placement = regionToPlacement(slot.region, canvas, slot, null);
+  const w = Number(placement.width) || 1024;
+  const h = Number(placement.height) || 1024;
+  const ratio = w / Math.max(1, h);
+  if (ratio >= 1.25) return '1536x1024';
+  if (ratio <= 0.8) return '1024x1536';
+  return '1024x1024';
+}
+
+function isRichTitleSlot(slotId, role) {
+  const id = String(slotId || '').toUpperCase();
+  const r = String(role || '').toLowerCase();
+  return (
+    ['MAIN_TITLE', 'HEADLINE', 'TITLE', 'QUOTE', 'STATEMENT'].includes(id) ||
+    r === 'heading' ||
+    r === 'quote'
+  );
+}
+
+function deriveTitleRunsFallback(content, onImage = false) {
+  const title = content?.title || content?.quote || '';
+  if (!title || String(title).length < 20) return null;
+  const parts = String(title).match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [title];
+  if (parts.length < 2) return null;
+  const lead = parts.slice(0, -1).join('');
+  const last = parts[parts.length - 1];
+  return [
+    { text: lead, colorRole: onImage ? 'textOnImage' : 'text' },
+    { text: last, colorRole: 'accent', fontWeight: 700 },
+  ];
+}
+
+function buildRichTitleContent(content, onImage = false) {
+  let runs = Array.isArray(content?.titleRuns) ? content.titleRuns.filter((r) => r?.text) : null;
+  if (!runs?.length) runs = deriveTitleRunsFallback(content, onImage);
+  if (!runs?.length) return null;
+  const text = runs.map((r) => String(r.text || '')).join('');
+  return {
+    text,
+    runs: runs.map((r) => ({
+      text: String(r.text || ''),
+      ...(r.colorRole ? { colorRole: r.colorRole } : {}),
+      ...(r.color ? { color: r.color } : {}),
+      ...(r.fontWeight != null ? { fontWeight: r.fontWeight } : {}),
+      ...(r.italic != null ? { italic: r.italic } : {}),
+      ...(r.fontFamily ? { fontFamily: r.fontFamily } : {}),
+    })),
+  };
+}
+
+function applyRichTitleToTextContent(textContent, content, slotId, role, onImage = false) {
+  if (!isRichTitleSlot(slotId, role)) return textContent;
+  const rich = buildRichTitleContent(content, onImage);
+  if (!rich) return textContent;
+  return { ...textContent, text: rich.text, runs: rich.runs };
+}
+
+function cardGroupKey(slotId) {
+  const id = String(slotId || '');
+  let m = id.match(/^milestone_(\d+)(?:_(label|detail))?$/i);
+  if (m) return `milestone_${m[1]}`;
+  m = id.match(/^step_(\d+)_(title|body)$/i);
+  if (m) return `step_${m[1]}`;
+  m = id.match(/^CARD_(\d+)_(TITLE|BODY)$/i);
+  if (m) return `card_${m[1]}`;
+  m = id.match(/^BULLET_(\d+)$/i);
+  if (m) return `bullet_${m[1]}`;
+  m = id.match(/^ITEM_(\d+)$/i);
+  if (m) return `item_${m[1]}`;
+  m = id.match(/^(LEFT|RIGHT)_(TITLE|BODY)$/i);
+  if (m) return `${m[1].toLowerCase()}_col`;
+  m = id.match(/^(PROS|CONS)(?:_TITLE)?$/i);
+  if (m) return m[1].toLowerCase();
+  return null;
+}
+
+function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas) {
+  if (!doc || !layoutSchema?.slots?.length) return doc;
+  const decisions = content?.shapeDecisions && typeof content.shapeDecisions === 'object'
+    ? content.shapeDecisions
+    : {};
+  const slots = layoutSchema.slots;
+  const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
+  const elements = [...(doc.elements || [])];
+  const groups = new Map();
+
+  for (const slot of slots) {
+    const key = cardGroupKey(slot.id);
+    if (!key) continue;
+    const role = String(slot.role || '').toLowerCase();
+    if (!['heading', 'body', 'subheading', 'stat'].includes(role) && !/^milestone_/i.test(slot.id)) continue;
+    if (decisions[slot.id]?.behind === 'none') continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(slot);
+  }
+
+  for (const groupSlots of groups.values()) {
+    const targetIds = groupSlots.map((s) => s.id);
+    if (targetIds.some((id) => decisions[id]?.behind === 'none')) continue;
+    const placements = targetIds
+      .map((id) => {
+        const el = elements.find((e) => e.slotId === id);
+        if (el?.placement) return el.placement;
+        const slot = slotById[id];
+        return slot ? regionToPlacement(slot.region, canvas, slot, slots) : null;
+      })
+      .filter(Boolean);
+    if (!placements.length) continue;
+
+    const x = Math.min(...placements.map((p) => p.x ?? 0));
+    const y = Math.min(...placements.map((p) => p.y ?? 0));
+    const x2 = Math.max(...placements.map((p) => (p.x ?? 0) + (p.width ?? 0)));
+    const y2 = Math.max(...placements.map((p) => (p.y ?? 0) + (p.height ?? 0)));
+    const pad = 12;
+    const palette = themeTokens?.palette || {};
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 0,
+      placement: {
+        x: Math.max(0, x - pad),
+        y: Math.max(0, y - pad),
+        width: Math.max(40, x2 - x + pad * 2),
+        height: Math.max(40, y2 - y + pad * 2),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'rect',
+        fill: {
+          type: 'solid',
+          colorRole: 'cardBg',
+          color: paletteColor(palette, 'cardBg', null),
+        },
+        borderRadius: 10,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+    });
+  }
+
+  return { ...doc, elements };
+}
+
+function docHasFullBleedBackground(doc, layoutSchema) {
+  if (layoutRequiresOverlayScrim(layoutSchema)) return true;
+  const canvas = doc?.canvas || {};
+  const cw = canvas.width || CANVAS_WIDTH;
+  const ch = canvas.height || CANVAS_HEIGHT;
+  const minArea = cw * ch * 0.85;
+  const elements = Array.isArray(doc?.elements) ? doc.elements : [];
+  return elements.some((el) => {
+    if (el.type !== 'image') return false;
+    if (!el.content?.url) return false;
+    const role = String(el.role || '').toLowerCase();
+    const slotId = String(el.slotId || '').toUpperCase();
+    if (slotId === 'BACKGROUND_IMAGE' || role === 'background' || el.content?.useAsBackground) {
+      return true;
+    }
+    const p = el.placement || {};
+    return (p.width || 0) * (p.height || 0) >= minArea;
+  });
+}
+
+function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}) {
+  if (!doc) return doc;
+  const canvas = {
+    width: canvasSize.width || doc.canvas?.width || CANVAS_WIDTH,
+    height: canvasSize.height || doc.canvas?.height || CANVAS_HEIGHT,
+  };
+  let next = { ...doc, canvas: doc.canvas || canvas };
+
+  const hasShapeDecisions =
+    content?.shapeDecisions &&
+    typeof content.shapeDecisions === 'object' &&
+    Object.keys(content.shapeDecisions).length > 0;
+  if (hasShapeDecisions) {
+    next = applyRuntimeShapeDecisions(next, layoutSchema, content, themeTokens, canvas);
+  }
+
+  next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
+
+  if (docHasFullBleedBackground(next, layoutSchema)) {
+    const enriched = {
+      ...content,
+      shapeDecisions: {
+        ...(content?.shapeDecisions || {}),
+        __overlay__: {
+          enabled: true,
+          scrim: content?.shapeDecisions?.__overlay__?.scrim ?? 0.5,
+        },
+      },
+    };
+    next = ensureOverlayScrim(next, layoutSchema, enriched, themeTokens, canvas);
+  } else {
+    next = ensureOverlayScrim(next, layoutSchema, content, themeTokens, canvas);
+  }
+
+  next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
+  return next;
 }
 
 function shouldRecompileLayout(layoutSchema, elementsDoc = null) {
@@ -1645,7 +2130,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       }
       if (text != null && String(text).length) {
         applyText(el, text, role);
-      } else if (role === 'title' || role === 'heading' || role === 'headline') {
+      } else if (isMainTitleSlot(slotKey, role) || isMainTitleSlot(id, role)) {
         applyText(el, content.title, role);
       } else if (role === 'subtitle' || role === 'subheading') {
         applyText(el, content.subtitle, role);
@@ -1653,15 +2138,20 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
         applyText(el, content.caption || content.footnote || content.note, role);
       } else if (role === 'quote') {
         applyText(el, content.quote || content.body, role);
-      } else if (role === 'body' || role === 'bullets') {
+      } else if (
+        (role === 'body' || role === 'bullets') &&
+        (slotKey === 'body' || slotKey === 'bullets' || slotKey === 'statement' || !slotKey)
+      ) {
         const bullets = bulletsOf(content);
         const body = content.body || (bullets.length ? bulletBlock(bullets) : '');
         applyText(el, body, role);
-      } else if (!role && (slotId.includes('title') || id.includes('title'))) {
+      } else if (isMainTitleSlot(slotKey, null) || isMainTitleSlot(id, null)) {
         applyText(el, content.title, 'title');
-      } else if (!role && (slotId.includes('body') || slotId.includes('bullet'))) {
-        const bullets = bulletsOf(content);
-        applyText(el, content.body || (bullets.length ? bulletBlock(bullets) : ''), 'body');
+      }
+      const onImage = layoutRequiresOverlayScrim(opts.layoutSchema);
+      const rich = buildRichTitleContent(content, onImage);
+      if (rich && (isMainTitleSlot(slotKey, role) || isMainTitleSlot(id, role) || role === 'quote')) {
+        el.content = { ...(el.content || {}), text: rich.text, runs: rich.runs };
       }
     }
 
@@ -1743,6 +2233,8 @@ module.exports = {
   hasOverlappingTextPlacements,
   applyTextOverImageContrast,
   applySlideDesignTokens,
+  finalizeElementsDoc,
+  resolveImageGenSize,
   blankCanvas,
   newElementId,
   injectBrandLogo,

@@ -32,6 +32,70 @@ function cloneContent(content) {
   return JSON.parse(JSON.stringify(content));
 }
 
+function layoutNeedsAgendaColumns(slots) {
+  return slots.some((slot) => /^agenda_col_\d+_heading$/i.test(String(slot.id || '')));
+}
+
+function layoutNeedsStructuredColumns(slots) {
+  return slots.some((slot) => /^(card|col)_\d+_(title|body)$/i.test(String(slot.id || '')));
+}
+
+function layoutNeedsComparison(slots) {
+  return slots.some(
+    (s) => /^(left|right)_/i.test(String(s.id || '')) || /^(pros|cons)$/i.test(String(s.id || ''))
+  );
+}
+
+function validateStructuredFields(content, layoutSchema, issues) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  if (!slots.length) return;
+
+  if (layoutNeedsAgendaColumns(slots)) {
+    const cols = content?.agenda?.columns;
+    const valid =
+      Array.isArray(cols) &&
+      cols.length >= 2 &&
+      cols.some((col) => String(col?.heading ?? col?.title ?? '').trim()) &&
+      cols.some((col) => Array.isArray(col?.items) && col.items.some((item) => String(item ?? '').trim()));
+    if (!valid) {
+      issues.push({ path: 'agenda.columns', rule: 'required_structured', repairable: true });
+    }
+  }
+
+  if (layoutNeedsStructuredColumns(slots)) {
+    const cols = content?.columns || content?.cards || content?.features;
+    const valid =
+      Array.isArray(cols) &&
+      cols.length >= 2 &&
+      cols.filter((col) => String(col?.title ?? col?.heading ?? col?.body ?? col?.text ?? '').trim())
+        .length >= 2;
+    if (!valid) {
+      issues.push({ path: 'columns', rule: 'required_structured', repairable: true });
+    }
+  }
+
+  if (layoutNeedsComparison(slots)) {
+    const hasSideBySide =
+      (content?.left?.title || content?.comparison?.left?.title) &&
+      (content?.right?.title || content?.comparison?.right?.title);
+    const hasProsCons =
+      (Array.isArray(content?.pros) && content.pros.length) ||
+      (Array.isArray(content?.cons) && content.cons.length);
+    if (!hasSideBySide && !hasProsCons) {
+      issues.push({ path: 'comparison', rule: 'required_structured', repairable: true });
+    }
+  }
+
+  const layoutId = String(layoutSchema?.layout_id || '');
+  if (/timeline/i.test(layoutId) || slots.some((s) => /^milestone_/i.test(String(s.id || '')))) {
+    const milestones = content?.timeline || content?.milestones || content?.events;
+    const valid = Array.isArray(milestones) && milestones.filter(Boolean).length >= 2;
+    if (!valid) {
+      issues.push({ path: 'timeline', rule: 'required_structured', repairable: true });
+    }
+  }
+}
+
 function slotFieldMap(slotId) {
   const id = String(slotId || '').toLowerCase();
   if (id === 'title' || id.endsWith('_title') || id === 'left_title' || id === 'right_title') {
@@ -192,6 +256,8 @@ function validateSlide({ content, layoutSchema }) {
       next[targetKey] = applyStringLimits(next[targetKey], slot, issues, targetKey);
     }
   }
+
+  validateStructuredFields(next, schema, issues);
 
   return { content: next, issues };
 }

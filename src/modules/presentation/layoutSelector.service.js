@@ -95,14 +95,29 @@ function countPlanSlots(template) {
   return slots.filter((slot) => /^PLAN_\d+_LABEL$/i.test(String(slot?.id || ''))).length;
 }
 
-function scoreTemplate(template, { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact }, previousLayoutId, preferImageSlot) {
+function scoreTemplate(
+  template,
+  { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact },
+  previousLayoutId,
+  preferImageSlot,
+  usedLayoutIds = null,
+  preferredLayoutId = null
+) {
   const layoutId =
     template?.schema?.layout_id || template?.id || `${template?.contentType}_${template?.variant}`;
   const capacity = layoutCapacity(template);
   let score = 0;
 
+  if (preferredLayoutId && String(layoutId) === String(preferredLayoutId)) {
+    score += 80;
+  }
+
   if (previousLayoutId && String(layoutId) === String(previousLayoutId)) {
     score -= 100;
+  }
+
+  if (usedLayoutIds && typeof usedLayoutIds.has === 'function' && usedLayoutIds.has(String(layoutId))) {
+    score -= 60;
   }
 
   if (preferImageSlot) {
@@ -166,11 +181,39 @@ function scoreTemplate(template, { bulletCount, wordCount, statCount, memberCoun
 }
 
 /**
+ * Exclude title/closing layouts when slide order forbids them.
+ */
+function filterTemplatesForSlideOrder(templates, slideOrder, totalSlides) {
+  const list = Array.isArray(templates) ? templates : [];
+  const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
+  const total = Number(totalSlides) > 0 ? Number(totalSlides) : order;
+  return list.filter((t) => {
+    const ct = String(t.contentType || t.schema?.content_type || '').toLowerCase();
+    if (ct === 'title' && order !== 1) return false;
+    if (ct === 'closing' && order !== total) return false;
+    return true;
+  });
+}
+
+/**
  * Rule-based layout pick: match contentType, prefer by density, avoid previousLayoutId.
  * @returns {{ layoutId: string, template: object|null }}
  */
-function selectLayout({ contentType, content, previousLayoutId, templates, preferImageSlot = false }) {
-  const list = Array.isArray(templates) ? templates : [];
+function selectLayout({
+  contentType,
+  content,
+  previousLayoutId,
+  templates,
+  preferImageSlot = false,
+  usedLayoutIds = null,
+  preferredLayoutId = null,
+  slideOrder = null,
+  totalSlides = null,
+}) {
+  let list = Array.isArray(templates) ? templates : [];
+  if (slideOrder != null) {
+    list = filterTemplatesForSlideOrder(list, slideOrder, totalSlides ?? slideOrder);
+  }
   const type = contentType != null ? String(contentType) : null;
 
   const matched = type
@@ -193,11 +236,26 @@ function selectLayout({ contentType, content, previousLayoutId, templates, prefe
 
   const density = contentDensity(content);
   const scored = pool
-    .map((template) => scoreTemplate(template, density, previousLayoutId, preferImageSlot))
+    .map((template) =>
+      scoreTemplate(
+        template,
+        density,
+        previousLayoutId,
+        preferImageSlot,
+        usedLayoutIds,
+        preferredLayoutId
+      )
+    )
     .sort((a, b) => b.score - a.score || String(a.layoutId).localeCompare(String(b.layoutId)));
 
-  // Prefer non-previous when available even if scores close
+  // Prefer unused layouts when any remain; never repeat if pool has alternatives
+  const unused = scored.filter(
+    (s) =>
+      (!usedLayoutIds?.has?.(String(s.layoutId))) &&
+      (!previousLayoutId || String(s.layoutId) !== String(previousLayoutId))
+  );
   const preferred =
+    unused[0] ||
     scored.find((s) => previousLayoutId && String(s.layoutId) !== String(previousLayoutId)) ||
     scored[0];
 
@@ -209,6 +267,7 @@ function selectLayout({ contentType, content, previousLayoutId, templates, prefe
 
 module.exports = {
   selectLayout,
+  filterTemplatesForSlideOrder,
   contentDensity,
   countWords,
   templateHasImageSlot,

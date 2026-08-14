@@ -208,6 +208,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
 
   const tokens = {
     palette,
+    fontSource: 'brand_kit',
     fontPairingId: heading.fontPairingId || body.fontPairingId || 'inter_space',
     fonts: {
       heading: heading.family || null,

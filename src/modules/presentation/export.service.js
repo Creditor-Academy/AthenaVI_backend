@@ -166,7 +166,19 @@ function mapChartTypeForPptx(chartType) {
   return 'bar';
 }
 
-async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors = []) {
+function resolveExportFontFace(content, el, themeFonts = {}) {
+  if (content.fontFamily) return content.fontFamily;
+  const role = String(el.role || content.role || '').toLowerCase();
+  if (role === 'title' || role === 'heading' || role === 'headline' || role === 'stat_value') {
+    return themeFonts.heading || themeFonts.body || null;
+  }
+  if (role === 'subtitle' || role === 'subheading') {
+    return themeFonts.subheading || themeFonts.heading || themeFonts.body || null;
+  }
+  return themeFonts.body || themeFonts.subheading || themeFonts.heading || null;
+}
+
+async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors = [], themeFonts = {}) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
   const canvasH = doc.canvas?.height || CANVAS_HEIGHT;
@@ -212,7 +224,31 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
       if (content.lineHeight != null) {
         textOpts.lineSpacing = Math.round(Number(content.lineHeight) * (Number(content.fontSize) || 18));
       }
-      s.addText(String(content.text || ''), textOpts);
+      const fontFace = resolveExportFontFace(content, el, themeFonts);
+      if (Array.isArray(content.runs) && content.runs.length) {
+        const runPayload = content.runs.map((run) => ({
+          text: String(run.text || ''),
+          options: {
+            fontSize: Number(content.fontSize) || 18,
+            bold: run.bold === true || Number(run.fontWeight) >= 600,
+            italic: run.italic === true,
+            color: resolveColor(run.color || run.colorRole, palette, textColorResolved),
+            fontFace: run.fontFamily || fontFace || undefined,
+          },
+        }));
+        s.addText(runPayload, {
+          x: box.x,
+          y: box.y,
+          w: box.w,
+          h: box.h,
+          align: content.align || 'left',
+          valign: 'top',
+          rotate,
+        });
+      } else {
+        if (fontFace) textOpts.fontFace = fontFace;
+        s.addText(String(content.text || ''), textOpts);
+      }
     } else if (el.type === 'image' || el.type === 'icon') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
@@ -494,6 +530,7 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
 
   const palette = deck.themeTokens?.palette || {};
   const brandChartColors = deck.themeTokens?.brand?.chartColors || [];
+  const themeFonts = deck.themeTokens?.fonts || {};
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (slideId) slides = slides.filter((s) => s.id === slideId);
   const bgColor = String(palette.bg || 'FFFFFF').replace(/^#/, '');
@@ -508,7 +545,7 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
       background: { color: String(slideBg).replace(/^#/, '') },
     });
     if (slideHasElements(slide)) {
-      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors);
+      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts);
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
     }

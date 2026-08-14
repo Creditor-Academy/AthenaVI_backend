@@ -4751,3 +4751,180 @@
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T08:59:21.615Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T08:59:23.991Z"}
 {"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:623:26)\n    at TLSSocket.emit (node:events:520:35)\n    at node:net:346:12\n    at TCP.done (node:internal/tls/wrap:666:7)","timestamp":"2026-08-14T09:02:25.861Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:14:42.678Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:14:42.743Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:14:42.924Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:14:42.946Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:14:42.954Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:14:45.378Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:15:17.645Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:15:17.657Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:15:17.756Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:15:17.758Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:15:17.761Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:15:20.018Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:16:00.669Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:16:00.678Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:16:00.745Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:16:00.747Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:16:00.749Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:16:02.954Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:20:59.400Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:20:59.406Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:20:59.457Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:20:59.459Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:20:59.460Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:21:01.496Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:21:43.573Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:21:43.580Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:21:43.639Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:21:43.640Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:21:43.642Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:21:45.922Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:22:27.731Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:22:27.737Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:22:27.781Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:22:27.783Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:22:27.784Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:22:29.747Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:22:59.580Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:22:59.585Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:22:59.634Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:22:59.635Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:22:59.637Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:23:01.558Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:23:09.089Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:23:09.096Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:23:09.146Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:23:09.147Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:23:09.149Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:23:11.176Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:23:18.178Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:23:18.183Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:23:18.225Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:23:18.227Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:23:18.229Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:23:20.396Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:24:09.728Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:24:09.733Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:24:09.784Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:24:09.786Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:24:09.788Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:24:11.873Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:24:28.890Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:24:28.897Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:24:28.945Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:24:28.946Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:24:28.948Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:24:31.009Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:24:43.142Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:24:43.148Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:24:43.201Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:24:43.203Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:24:43.205Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:24:45.188Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:24:55.803Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:24:55.808Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:24:55.848Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:24:55.849Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:24:55.851Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:24:57.880Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:25:17.154Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:25:17.160Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:25:17.210Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:25:17.211Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:25:17.213Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:25:19.316Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:25:41.006Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:25:41.012Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:25:41.068Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:25:41.069Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:25:41.071Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:25:43.061Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:25:59.619Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:25:59.631Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:25:59.684Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:25:59.685Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:25:59.688Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:26:02.095Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:26:27.561Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:26:27.567Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:26:27.611Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:26:27.612Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:26:27.614Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:26:30.031Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:27:07.588Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:27:07.597Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:27:07.659Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:27:07.661Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:27:07.664Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:27:09.660Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:30:12.690Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:30:12.698Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:30:12.757Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:30:12.759Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:30:12.766Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:30:15.489Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:30:34.521Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:30:34.527Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:30:34.578Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:30:34.579Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:30:34.581Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:30:36.805Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:41:33.826Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:41:33.835Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:41:33.901Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:41:33.902Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:41:33.904Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:41:36.131Z"}
+{"athenaCredits":181,"deckId":"cmssrg1ho0000c4vq2z89g78o","estimateAc":286,"feature":"ppt_outline","inputTokens":1353,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.012924,"outputTokens":591,"timestamp":"2026-08-14T09:44:37.778Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjwz0003c4vqfpvjkuyv","timestamp":"2026-08-14T09:44:59.539Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjwz0002c4vqh1dbpxln","timestamp":"2026-08-14T09:44:59.558Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00004c4vqe6yi6hzc","timestamp":"2026-08-14T09:44:59.689Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00005c4vqc6rhz4d8","timestamp":"2026-08-14T09:45:00.445Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjwz0002c4vqh1dbpxln","timestamp":"2026-08-14T09:45:27.741Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00005c4vqc6rhz4d8","timestamp":"2026-08-14T09:45:29.263Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00004c4vqe6yi6hzc","timestamp":"2026-08-14T09:45:31.682Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjwz0003c4vqfpvjkuyv","timestamp":"2026-08-14T09:45:32.707Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00006c4vqpebz6bal","timestamp":"2026-08-14T09:45:35.101Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00007c4vqztxgb2vc","timestamp":"2026-08-14T09:45:36.050Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00009c4vqbhbct9lq","timestamp":"2026-08-14T09:45:40.157Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00008c4vqfi2onk2g","timestamp":"2026-08-14T09:45:41.055Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00008c4vqfi2onk2g","timestamp":"2026-08-14T09:46:06.292Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00007c4vqztxgb2vc","timestamp":"2026-08-14T09:46:09.819Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00006c4vqpebz6bal","timestamp":"2026-08-14T09:46:10.853Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx0000ac4vq66seoc68","timestamp":"2026-08-14T09:46:13.536Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx0000bc4vq9opaom4s","timestamp":"2026-08-14T09:46:19.643Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx00009c4vqbhbct9lq","timestamp":"2026-08-14T09:46:36.984Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx0000ac4vq66seoc68","timestamp":"2026-08-14T09:46:48.630Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrgjx0000bc4vq9opaom4s","timestamp":"2026-08-14T09:46:56.088Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-14T09:48:15.880Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-14T09:48:15.881Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-14T09:48:55.920Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-14T09:48:55.934Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-14T09:48:55.982Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-14T09:48:55.983Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-14T09:48:55.985Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":47.78,"timestamp":"2026-08-14T09:48:58.059Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40001ywvqwtmfp221","timestamp":"2026-08-14T09:50:10.075Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40003ywvqjd6vu5ww","timestamp":"2026-08-14T09:50:10.933Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z30000ywvqb6kwqv9j","timestamp":"2026-08-14T09:50:10.977Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40002ywvq9t6nylzs","timestamp":"2026-08-14T09:50:12.473Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40001ywvqwtmfp221","timestamp":"2026-08-14T09:50:33.770Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z30000ywvqb6kwqv9j","timestamp":"2026-08-14T09:50:35.474Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40002ywvq9t6nylzs","timestamp":"2026-08-14T09:50:40.136Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40004ywvqdepowgbk","timestamp":"2026-08-14T09:50:40.440Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40003ywvqjd6vu5ww","timestamp":"2026-08-14T09:50:41.608Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40005ywvqktmcn64l","timestamp":"2026-08-14T09:50:42.279Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40007ywvqctqrsf6l","timestamp":"2026-08-14T09:50:47.445Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40006ywvq6r6i3odh","timestamp":"2026-08-14T09:50:48.766Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40007ywvqctqrsf6l","timestamp":"2026-08-14T09:51:13.483Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40006ywvq6r6i3odh","timestamp":"2026-08-14T09:51:16.765Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40005ywvqktmcn64l","timestamp":"2026-08-14T09:51:17.469Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40008ywvqmn9aq0j7","timestamp":"2026-08-14T09:51:19.768Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40004ywvqdepowgbk","timestamp":"2026-08-14T09:51:20.354Z"}
+{"athenaCredits":2,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40009ywvqew5pfj71","timestamp":"2026-08-14T09:51:24.871Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40008ywvqmn9aq0j7","timestamp":"2026-08-14T09:51:51.360Z"}
+{"athenaCredits":4,"deckId":"cmssrg1ho0000c4vq2z89g78o","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmssrn8z40009ywvqew5pfj71","timestamp":"2026-08-14T09:51:53.172Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-14T09:55:57.947Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-14T09:55:57.952Z"}

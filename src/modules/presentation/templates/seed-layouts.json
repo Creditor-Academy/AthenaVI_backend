@@ -3,8 +3,6 @@
     "name": "Title Centered",
     "contentType": "title",
     "variant": "title_centered_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "title_centered_v1",
       "content_type": "title",
@@ -64,8 +62,6 @@
     "name": "Title Image Logo",
     "contentType": "title",
     "variant": "title_image_logo_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "title_image_logo_v1",
       "content_type": "title",
@@ -132,8 +128,6 @@
     "name": "Title With Logo",
     "contentType": "title",
     "variant": "title_with_logo_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "title_with_logo_v1",
       "content_type": "title",
@@ -206,8 +200,6 @@
     "name": "Section Divider Centered",
     "contentType": "section_divider",
     "variant": "section_divider_centered_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "section_divider_centered_v1",
       "content_type": "section_divider",
@@ -287,8 +279,6 @@
     "name": "Section With Image",
     "contentType": "image+text",
     "variant": "section_with_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "section_with_image_v1",
       "content_type": "image+text",
@@ -363,8 +353,6 @@
     "name": "Section Right Image",
     "contentType": "image+text",
     "variant": "section_right_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "section_right_image_v1",
       "content_type": "image+text",
@@ -439,8 +427,6 @@
     "name": "Section Left Image",
     "contentType": "image+text",
     "variant": "section_left_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "section_left_image_v1",
       "content_type": "image+text",
@@ -515,8 +501,6 @@
     "name": "Wide Image Statement Top",
     "contentType": "image+text",
     "variant": "wide_image_statement_top_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "wide_image_statement_top_v1",
       "content_type": "image+text",
@@ -587,8 +571,6 @@
     "name": "Wide Image Statement Bottom",
     "contentType": "image+text",
     "variant": "wide_image_statement_bottom_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "wide_image_statement_bottom_v1",
       "content_type": "image+text",
@@ -659,8 +641,6 @@
     "name": "Statement Left",
     "contentType": "quote",
     "variant": "statement_left_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "statement_left_v1",
       "content_type": "quote",
@@ -723,8 +703,6 @@
     "name": "Statement Large",
     "contentType": "quote",
     "variant": "statement_large_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "statement_large_v1",
       "content_type": "quote",
@@ -765,8 +743,6 @@
     "name": "Para Title Left Image Boxed",
     "contentType": "image+text",
     "variant": "para_title_left_image_boxed_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_title_left_image_boxed_v1",
       "content_type": "image+text",
@@ -860,8 +836,6 @@
     "name": "Para Title Right Image Boxed",
     "contentType": "image+text",
     "variant": "para_title_right_image_boxed_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_title_right_image_boxed_v1",
       "content_type": "image+text",
@@ -955,8 +929,6 @@
     "name": "Para Landscape Image",
     "contentType": "image+text",
     "variant": "para_landscape_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_landscape_image_v1",
       "content_type": "image+text",
@@ -1028,8 +1000,6 @@
     "name": "Para Split 50 50",
     "contentType": "image+text",
     "variant": "para_split_50_50_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_split_50_50_v1",
       "content_type": "image+text",
@@ -1121,8 +1091,6 @@
     "name": "Two Para Right Image",
     "contentType": "image+text",
     "variant": "two_para_right_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "two_para_right_image_v1",
       "content_type": "image+text",
@@ -1197,8 +1165,6 @@
     "name": "Three Para Image",
     "contentType": "image+text",
     "variant": "three_para_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "three_para_image_v1",
       "content_type": "image+text",
@@ -1294,8 +1260,6 @@
     "name": "Four Para Image",
     "contentType": "bullet_list",
     "variant": "four_para_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "four_para_image_v1",
       "content_type": "bullet_list",
@@ -1433,8 +1397,6 @@
     "name": "Para Two Images",
     "contentType": "image+text",
     "variant": "para_two_images_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_two_images_v1",
       "content_type": "image+text",
@@ -1516,8 +1478,6 @@
     "name": "Para Three Images",
     "contentType": "image+text",
     "variant": "para_three_images_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_three_images_v1",
       "content_type": "image+text",
@@ -1588,8 +1548,6 @@
     "name": "Para Image Cta",
     "contentType": "closing",
     "variant": "para_image_cta_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "para_image_cta_v1",
       "content_type": "closing",
@@ -1681,8 +1639,6 @@
     "name": "Three Cards Image Text",
     "contentType": "image+text",
     "variant": "three_cards_image_text_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "three_cards_image_text_v1",
       "content_type": "image+text",
@@ -1876,8 +1832,6 @@
     "name": "Two Cards Image Text",
     "contentType": "image+text",
     "variant": "two_cards_image_text_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "two_cards_image_text_v1",
       "content_type": "image+text",
@@ -2019,8 +1973,6 @@
     "name": "Two Large Image Cards",
     "contentType": "image+text",
     "variant": "two_large_image_cards_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "two_large_image_cards_v1",
       "content_type": "image+text",
@@ -2142,8 +2094,6 @@
     "name": "Four Images Text",
     "contentType": "image+text",
     "variant": "four_images_text_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "four_images_text_v1",
       "content_type": "image+text",
@@ -2304,8 +2254,6 @@
     "name": "Eight Short Texts Image",
     "contentType": "grid",
     "variant": "eight_short_texts_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "eight_short_texts_image_v1",
       "content_type": "grid",
@@ -2527,8 +2475,6 @@
     "name": "Headline Centered",
     "contentType": "title",
     "variant": "headline_centered_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "headline_centered_v1",
       "content_type": "title",
@@ -2601,8 +2547,6 @@
     "name": "Intro Four Para",
     "contentType": "bullet_list",
     "variant": "intro_four_para_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "intro_four_para_v1",
       "content_type": "bullet_list",
@@ -2726,8 +2670,6 @@
     "name": "Intro Three Para Icons",
     "contentType": "grid",
     "variant": "intro_three_para_icons_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "intro_three_para_icons_v1",
       "content_type": "grid",
@@ -2890,8 +2832,6 @@
     "name": "Centered Text Cta",
     "contentType": "closing",
     "variant": "centered_text_cta_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "centered_text_cta_v1",
       "content_type": "closing",
@@ -3009,8 +2949,6 @@
     "name": "Headline Right Text",
     "contentType": "image+text",
     "variant": "headline_right_text_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "headline_right_text_v1",
       "content_type": "image+text",
@@ -3072,8 +3010,6 @@
     "name": "Large Image",
     "contentType": "image+text",
     "variant": "large_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "large_image_v1",
       "content_type": "image+text",
@@ -3123,8 +3059,6 @@
     "name": "Full Bg Image Overlay",
     "contentType": "image+text",
     "variant": "full_bg_image_overlay_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "full_bg_image_overlay_v1",
       "content_type": "image+text",
@@ -3235,11 +3169,867 @@
     }
   },
   {
+    "name": "Title Minimal",
+    "contentType": "title",
+    "variant": "title_minimal_v1",
+    "schema": {
+      "layout_id": "title_minimal_v1",
+      "content_type": "title",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "MAIN_TITLE",
+          "region": "cols 2-11, rows 4-6",
+          "role": "heading",
+          "placeholder_text": "Minimal title slide",
+          "layer": 10,
+          "typography": {
+            "fontSize": 52,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 3-10, rows 6-7",
+          "role": "subheading",
+          "placeholder_text": "Optional tagline",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.4
+          }
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "MAIN_TITLE": {
+            "text": "Minimal title slide",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBTITLE": {
+            "text": "Optional tagline",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Title Statement",
+    "contentType": "title",
+    "variant": "title_statement_v1",
+    "schema": {
+      "layout_id": "title_statement_v1",
+      "content_type": "title",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADLINE",
+          "region": "cols 2-10, rows 3-6",
+          "role": "heading",
+          "placeholder_text": "Bold opening statement",
+          "layer": 10,
+          "typography": {
+            "fontSize": 48,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "BODY",
+          "region": "cols 2-8, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADLINE": {
+            "text": "Bold opening statement",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Section Divider Band",
+    "contentType": "section_divider",
+    "variant": "section_divider_band_v1",
+    "schema": {
+      "layout_id": "section_divider_band_v1",
+      "content_type": "section_divider",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "BAND",
+          "region": "cols 1-12, rows 4-6",
+          "role": "decoration",
+          "layer": 1,
+          "shape": {
+            "fillColorRole": "primary"
+          }
+        },
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 4-6",
+          "role": "heading",
+          "placeholder_text": "Section break",
+          "layer": 10,
+          "typography": {
+            "fontSize": 40,
+            "fontWeight": 800,
+            "colorRole": "textOnImage",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Section break",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Section Divider Split",
+    "contentType": "section_divider",
+    "variant": "section_divider_split_v1",
+    "schema": {
+      "layout_id": "section_divider_split_v1",
+      "content_type": "section_divider",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 1-6, rows 3-6",
+          "role": "heading",
+          "placeholder_text": "Next section",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "BODY",
+          "region": "cols 7-11, rows 3-7",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Next section",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Bullet List Dense",
+    "contentType": "bullet_list",
+    "variant": "bullet_list_dense_v1",
+    "schema": {
+      "layout_id": "bullet_list_dense_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key takeaways",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "BULLETS",
+          "region": "cols 2-10, rows 2-9",
+          "role": "body",
+          "placeholder_text": "• Point one\n• Point two\n• Point three\n• Point four\n• Point five\n• Point six",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 8
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Key takeaways",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BULLETS": {
+            "text": "• Point one\n• Point two\n• Point three\n• Point four\n• Point five\n• Point six",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Bullet List Numbered",
+    "contentType": "bullet_list",
+    "variant": "bullet_list_numbered_v1",
+    "schema": {
+      "layout_id": "bullet_list_numbered_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Numbered list",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_1",
+          "region": "cols 2-10, rows 2-3",
+          "role": "body",
+          "placeholder_text": "1. First priority",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_2",
+          "region": "cols 2-10, rows 3-4",
+          "role": "body",
+          "placeholder_text": "2. Second priority",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_3",
+          "region": "cols 2-10, rows 4-5",
+          "role": "body",
+          "placeholder_text": "3. Third priority",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_4",
+          "region": "cols 2-10, rows 5-6",
+          "role": "body",
+          "placeholder_text": "4. Fourth priority",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_5",
+          "region": "cols 2-10, rows 6-7",
+          "role": "body",
+          "placeholder_text": "5. Fifth priority",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Numbered list",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_1": {
+            "text": "1. First priority",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_2": {
+            "text": "2. Second priority",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_3": {
+            "text": "3. Third priority",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_4": {
+            "text": "4. Fourth priority",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_5": {
+            "text": "5. Fifth priority",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Bullet List Two Column",
+    "contentType": "bullet_list",
+    "variant": "bullet_list_two_column_v1",
+    "schema": {
+      "layout_id": "bullet_list_two_column_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Two-column points",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "LEFT_BODY",
+          "region": "cols 1-6, rows 2-9",
+          "role": "body",
+          "placeholder_text": "• Left column point\n• Another left point\n• Third left point",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        },
+        {
+          "id": "RIGHT_BODY",
+          "region": "cols 7-12, rows 2-9",
+          "role": "body",
+          "placeholder_text": "• Right column point\n• Another right point\n• Third right point",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Two-column points",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_BODY": {
+            "text": "• Left column point\n• Another left point\n• Third left point",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "RIGHT_BODY": {
+            "text": "• Right column point\n• Another right point\n• Third right point",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Text Only Centered",
+    "contentType": "bullet_list",
+    "variant": "text_only_centered_v1",
+    "schema": {
+      "layout_id": "text_only_centered_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 2-4",
+          "role": "heading",
+          "placeholder_text": "Centered message",
+          "layer": 10,
+          "typography": {
+            "fontSize": 40,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "BODY",
+          "region": "cols 3-10, rows 4-7",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Centered message",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Text Two Column",
+    "contentType": "bullet_list",
+    "variant": "text_two_column_v1",
+    "schema": {
+      "layout_id": "text_two_column_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Two perspectives",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "LEFT_TITLE",
+          "region": "cols 1-6, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Column A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "LEFT_BODY",
+          "region": "cols 1-6, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        },
+        {
+          "id": "RIGHT_TITLE",
+          "region": "cols 7-12, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Column B",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "RIGHT_BODY",
+          "region": "cols 7-12, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "HEADING": {
+            "text": "Two perspectives",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_TITLE": {
+            "text": "Column A",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "RIGHT_TITLE": {
+            "text": "Column B",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "RIGHT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Closing Thank You",
+    "contentType": "closing",
+    "variant": "closing_thank_you_v1",
+    "schema": {
+      "layout_id": "closing_thank_you_v1",
+      "content_type": "closing",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 4-6",
+          "role": "heading",
+          "placeholder_text": "Thank you",
+          "layer": 10,
+          "typography": {
+            "fontSize": 56,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 3-10, rows 6-7",
+          "role": "subheading",
+          "placeholder_text": "Questions?",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.4
+          }
+        }
+      ],
+      "preview": {
+        "mode": "closing_cta",
+        "slots": {
+          "HEADING": {
+            "text": "Thank you",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBTITLE": {
+            "text": "Questions?",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Closing Contact Cta",
+    "contentType": "closing",
+    "variant": "closing_contact_cta_v1",
+    "schema": {
+      "layout_id": "closing_contact_cta_v1",
+      "content_type": "closing",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 2-4",
+          "role": "heading",
+          "placeholder_text": "Let's connect",
+          "layer": 10,
+          "typography": {
+            "fontSize": 40,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CONTACT",
+          "region": "cols 3-10, rows 4-6",
+          "role": "contact",
+          "placeholder_text": "hello@company.com",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          }
+        },
+        {
+          "id": "CTA_BG",
+          "region": "cols 4-9, rows 6-7",
+          "role": "decoration",
+          "layer": 5,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "ctaPill",
+            "suggestedBehind": "pill",
+            "pairsWithSlotId": "CTA"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "primary",
+            "borderRadius": 200
+          }
+        },
+        {
+          "id": "CTA",
+          "region": "cols 4-9, rows 6-7",
+          "role": "cta",
+          "placeholder_text": "Get in touch",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        }
+      ],
+      "preview": {
+        "mode": "closing_cta",
+        "slots": {
+          "HEADING": {
+            "text": "Let's connect",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CONTACT": {
+            "text": "hello@company.com",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CTA": {
+            "text": "Get in touch",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "Grid Bento Three",
     "contentType": "grid",
     "variant": "grid_bento_three_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_bento_three_v1",
       "content_type": "grid",
@@ -3298,8 +4088,6 @@
     "name": "Grid Bento Four",
     "contentType": "grid",
     "variant": "grid_bento_four_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_bento_four_v1",
       "content_type": "grid",
@@ -3371,8 +4159,6 @@
     "name": "Grid Six Images",
     "contentType": "grid",
     "variant": "grid_six_images_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_six_images_v1",
       "content_type": "grid",
@@ -3470,8 +4256,6 @@
     "name": "Grid Text Image Cards",
     "contentType": "grid",
     "variant": "grid_text_image_cards_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_text_image_cards_v1",
       "content_type": "grid",
@@ -3624,8 +4408,6 @@
     "name": "Grid Three Images Text",
     "contentType": "grid",
     "variant": "grid_three_images_text_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_three_images_text_v1",
       "content_type": "grid",
@@ -3747,8 +4529,6 @@
     "name": "Grid Images Text Cards",
     "contentType": "grid",
     "variant": "grid_images_text_cards_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_images_text_cards_v1",
       "content_type": "grid",
@@ -3924,8 +4704,6 @@
     "name": "Grid Insights Chart",
     "contentType": "grid",
     "variant": "grid_insights_chart_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_insights_chart_v1",
       "content_type": "grid",
@@ -4238,8 +5016,6 @@
     "name": "Grid Metrics Mobile",
     "contentType": "grid",
     "variant": "grid_metrics_mobile_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_metrics_mobile_v1",
       "content_type": "grid",
@@ -4408,8 +5184,6 @@
     "name": "Grid Metrics Masonry",
     "contentType": "grid",
     "variant": "grid_metrics_masonry_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_metrics_masonry_v1",
       "content_type": "grid",
@@ -4746,8 +5520,6 @@
     "name": "Grid Device Mockups",
     "contentType": "grid",
     "variant": "grid_device_mockups_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "grid_device_mockups_v1",
       "content_type": "grid",
@@ -4917,11 +5689,189 @@
     }
   },
   {
+    "name": "Logo Wall",
+    "contentType": "grid",
+    "variant": "logo_wall_v1",
+    "schema": {
+      "layout_id": "logo_wall_v1",
+      "content_type": "grid",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Trusted by leading teams",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "IMAGE_1",
+          "region": "cols 1-3, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_2",
+          "region": "cols 4-6, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_3",
+          "region": "cols 7-9, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_4",
+          "region": "cols 10-12, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_5",
+          "region": "cols 2-4, rows 5-7",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_6",
+          "region": "cols 5-7, rows 5-7",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_7",
+          "region": "cols 8-10, rows 5-7",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        }
+      ],
+      "preview": {
+        "mode": "grid_six_images",
+        "slots": {
+          "HEADING": {
+            "text": "Trusted by leading teams",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "IMAGE_1": {
+            "variant": "image"
+          },
+          "IMAGE_2": {
+            "variant": "image"
+          },
+          "IMAGE_3": {
+            "variant": "image"
+          },
+          "IMAGE_4": {
+            "variant": "image"
+          },
+          "IMAGE_5": {
+            "variant": "image"
+          },
+          "IMAGE_6": {
+            "variant": "image"
+          },
+          "IMAGE_7": {
+            "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Logo Partner Strip",
+    "contentType": "grid",
+    "variant": "logo_partner_strip_v1",
+    "schema": {
+      "layout_id": "logo_partner_strip_v1",
+      "content_type": "grid",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Partners",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "IMAGE_1",
+          "region": "cols 2-4, rows 4-6",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_2",
+          "region": "cols 5-7, rows 4-6",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        },
+        {
+          "id": "IMAGE_3",
+          "region": "cols 8-10, rows 4-6",
+          "role": "image",
+          "layer": 2,
+          "fit": "contain"
+        }
+      ],
+      "preview": {
+        "mode": "grid_three_images",
+        "slots": {
+          "HEADING": {
+            "text": "Partners",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "IMAGE_1": {
+            "variant": "image"
+          },
+          "IMAGE_2": {
+            "variant": "image"
+          },
+          "IMAGE_3": {
+            "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "Chart Single",
     "contentType": "chart",
     "variant": "chart_single_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_single_v1",
       "content_type": "chart",
@@ -4968,8 +5918,6 @@
     "name": "Chart Exponential Desc",
     "contentType": "chart",
     "variant": "chart_exponential_desc_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_exponential_desc_v1",
       "content_type": "chart",
@@ -5039,8 +5987,6 @@
     "name": "Chart With Description",
     "contentType": "chart",
     "variant": "chart_with_description_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_with_description_v1",
       "content_type": "chart",
@@ -5108,8 +6054,6 @@
     "name": "Chart Two",
     "contentType": "chart",
     "variant": "chart_two_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_two_v1",
       "content_type": "chart",
@@ -5162,8 +6106,6 @@
     "name": "Chart Three",
     "contentType": "chart",
     "variant": "chart_three_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_three_v1",
       "content_type": "chart",
@@ -5222,8 +6164,6 @@
     "name": "Chart Two Cards",
     "contentType": "chart",
     "variant": "chart_two_cards_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_two_cards_v1",
       "content_type": "chart",
@@ -5375,8 +6315,6 @@
     "name": "Chart Three Context",
     "contentType": "chart",
     "variant": "chart_three_context_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_three_context_v1",
       "content_type": "chart",
@@ -5498,8 +6436,6 @@
     "name": "Chart Donut Context",
     "contentType": "chart",
     "variant": "chart_donut_context_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_donut_context_v1",
       "content_type": "chart",
@@ -5568,8 +6504,6 @@
     "name": "Chart Three Donut",
     "contentType": "chart",
     "variant": "chart_three_donut_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "chart_three_donut_v1",
       "content_type": "chart",
@@ -5631,8 +6565,6 @@
     "name": "Table Single",
     "contentType": "chart",
     "variant": "table_single_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "table_single_v1",
       "content_type": "chart",
@@ -5679,8 +6611,6 @@
     "name": "Table With Description",
     "contentType": "chart",
     "variant": "table_with_description_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "table_with_description_v1",
       "content_type": "chart",
@@ -5748,8 +6678,6 @@
     "name": "Table Two Desc",
     "contentType": "chart",
     "variant": "table_two_desc_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "table_two_desc_v1",
       "content_type": "chart",
@@ -5844,8 +6772,6 @@
     "name": "Table Two Same Header",
     "contentType": "chart",
     "variant": "table_two_same_header_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "table_two_same_header_v1",
       "content_type": "chart",
@@ -5918,8 +6844,6 @@
     "name": "Process Linear",
     "contentType": "chart",
     "variant": "process_linear_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "process_linear_v1",
       "content_type": "chart",
@@ -6119,8 +7043,6 @@
     "name": "Metric Single",
     "contentType": "stat",
     "variant": "metric_single_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_single_v1",
       "content_type": "stat",
@@ -6182,8 +7104,6 @@
     "name": "Metric Two",
     "contentType": "stat",
     "variant": "metric_two_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_two_v1",
       "content_type": "stat",
@@ -6308,8 +7228,6 @@
     "name": "Metric Three",
     "contentType": "stat",
     "variant": "metric_three_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_three_v1",
       "content_type": "stat",
@@ -6476,8 +7394,6 @@
     "name": "Metric Four",
     "contentType": "stat",
     "variant": "metric_four_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_four_v1",
       "content_type": "stat",
@@ -6686,8 +7602,6 @@
     "name": "Metric Five",
     "contentType": "stat",
     "variant": "metric_five_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_five_v1",
       "content_type": "stat",
@@ -6938,8 +7852,6 @@
     "name": "Metric Six Para",
     "contentType": "stat",
     "variant": "metric_six_para_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_six_para_v1",
       "content_type": "stat",
@@ -7232,8 +8144,6 @@
     "name": "Metric Three Vertical",
     "contentType": "stat",
     "variant": "metric_three_vertical_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "metric_three_vertical_v1",
       "content_type": "stat",
@@ -7400,8 +8310,6 @@
     "name": "Pricing Three Plans",
     "contentType": "pricing",
     "variant": "pricing_three_plans_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "pricing_three_plans_v1",
       "content_type": "pricing",
@@ -7631,8 +8539,6 @@
     "name": "Pricing Three Highlight",
     "contentType": "pricing",
     "variant": "pricing_three_highlight_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "pricing_three_highlight_v1",
       "content_type": "pricing",
@@ -7863,8 +8769,6 @@
     "name": "Pricing Four Plans",
     "contentType": "pricing",
     "variant": "pricing_four_plans_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "pricing_four_plans_v1",
       "content_type": "pricing",
@@ -8157,8 +9061,6 @@
     "name": "Pricing Four Para",
     "contentType": "pricing",
     "variant": "pricing_four_para_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "pricing_four_para_v1",
       "content_type": "pricing",
@@ -8472,8 +9374,6 @@
     "name": "Pricing Comparison Table",
     "contentType": "pricing",
     "variant": "pricing_comparison_table_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "pricing_comparison_table_v1",
       "content_type": "pricing",
@@ -8520,8 +9420,6 @@
     "name": "Agenda Three Columns",
     "contentType": "agenda",
     "variant": "agenda_three_columns_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "agenda_three_columns_v1",
       "content_type": "agenda",
@@ -8877,8 +9775,6 @@
     "name": "Agenda Three Columns Hero",
     "contentType": "agenda",
     "variant": "agenda_three_columns_hero_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "agenda_three_columns_hero_v1",
       "content_type": "agenda",
@@ -9244,11 +10140,564 @@
     }
   },
   {
+    "name": "Agenda Numbered",
+    "contentType": "agenda",
+    "variant": "agenda_numbered_v1",
+    "schema": {
+      "layout_id": "agenda_numbered_v1",
+      "content_type": "agenda",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Today's agenda",
+          "layer": 10,
+          "typography": {
+            "fontSize": 34,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_1",
+          "region": "cols 3-10, rows 3-4",
+          "role": "body",
+          "placeholder_text": "01 · Opening and goals",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_2",
+          "region": "cols 3-10, rows 4-5",
+          "role": "body",
+          "placeholder_text": "02 · Market context",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_3",
+          "region": "cols 3-10, rows 5-6",
+          "role": "body",
+          "placeholder_text": "03 · Product demo",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_4",
+          "region": "cols 3-10, rows 6-7",
+          "role": "body",
+          "placeholder_text": "04 · Q&A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 1
+        }
+      ],
+      "preview": {
+        "mode": "agenda_numbered",
+        "slots": {
+          "HEADING": {
+            "text": "Today's agenda",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_1": {
+            "text": "01 · Opening and goals",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_2": {
+            "text": "02 · Market context",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_3": {
+            "text": "03 · Product demo",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_4": {
+            "text": "04 · Q&A",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Agenda Minimal",
+    "contentType": "agenda",
+    "variant": "agenda_minimal_v1",
+    "schema": {
+      "layout_id": "agenda_minimal_v1",
+      "content_type": "agenda",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 2-4",
+          "role": "heading",
+          "placeholder_text": "Agenda",
+          "layer": 10,
+          "typography": {
+            "fontSize": 40,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "BODY",
+          "region": "cols 3-10, rows 4-8",
+          "role": "body",
+          "placeholder_text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        }
+      ],
+      "preview": {
+        "mode": "agenda_minimal",
+        "slots": {
+          "HEADING": {
+            "text": "Agenda",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "Topic one\nTopic two\nTopic three\nTopic four",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Agenda Two Column",
+    "contentType": "agenda",
+    "variant": "agenda_two_column_v1",
+    "schema": {
+      "layout_id": "agenda_two_column_v1",
+      "content_type": "agenda",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Session overview",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_1_HEADING",
+          "region": "cols 1-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Morning",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_1_ITEM_1",
+          "region": "cols 1-6, rows 4-5",
+          "role": "body",
+          "placeholder_text": "1.1 Opening remarks",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_1_ITEM_2",
+          "region": "cols 1-6, rows 5-6",
+          "role": "body",
+          "placeholder_text": "1.2 Key topic",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_1_ITEM_3",
+          "region": "cols 1-6, rows 6-7",
+          "role": "body",
+          "placeholder_text": "1.3 Discussion",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_1_ITEM_4",
+          "region": "cols 1-6, rows 7-8",
+          "role": "body",
+          "placeholder_text": "1.4 Q&A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_2_HEADING",
+          "region": "cols 7-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Afternoon",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_2_ITEM_1",
+          "region": "cols 7-12, rows 4-5",
+          "role": "body",
+          "placeholder_text": "2.1 Opening remarks",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_2_ITEM_2",
+          "region": "cols 7-12, rows 5-6",
+          "role": "body",
+          "placeholder_text": "2.2 Key topic",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_2_ITEM_3",
+          "region": "cols 7-12, rows 6-7",
+          "role": "body",
+          "placeholder_text": "2.3 Discussion",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AGENDA_COL_2_ITEM_4",
+          "region": "cols 7-12, rows 7-8",
+          "role": "body",
+          "placeholder_text": "2.4 Q&A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "agenda_two_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Session overview",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "AGENDA_COL_1_HEADING": {
+            "text": "Morning",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "AGENDA_COL_1_ITEM_1": {
+            "text": "1.1 Opening remarks",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_1_ITEM_2": {
+            "text": "1.2 Key topic",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_1_ITEM_3": {
+            "text": "1.3 Discussion",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_1_ITEM_4": {
+            "text": "1.4 Q&A",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_2_HEADING": {
+            "text": "Afternoon",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "AGENDA_COL_2_ITEM_1": {
+            "text": "2.1 Opening remarks",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_2_ITEM_2": {
+            "text": "2.2 Key topic",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_2_ITEM_3": {
+            "text": "2.3 Discussion",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "AGENDA_COL_2_ITEM_4": {
+            "text": "2.4 Q&A",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Agenda Timeline Preview",
+    "contentType": "agenda",
+    "variant": "agenda_timeline_preview_v1",
+    "schema": {
+      "layout_id": "agenda_timeline_preview_v1",
+      "content_type": "agenda",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Roadmap preview",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 1-3, rows 4-5",
+          "role": "subheading",
+          "placeholder_text": "Phase 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-6, rows 4-5",
+          "role": "subheading",
+          "placeholder_text": "Phase 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 7-9, rows 4-5",
+          "role": "subheading",
+          "placeholder_text": "Phase 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 10-12, rows 4-5",
+          "role": "subheading",
+          "placeholder_text": "Phase 4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          }
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "Roadmap preview",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Phase 1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Phase 2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Phase 3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "Phase 4",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "Contact Left Image",
     "contentType": "team",
     "variant": "contact_left_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "contact_left_image_v1",
       "content_type": "team",
@@ -9422,8 +10871,6 @@
     "name": "Contact Right Image",
     "contentType": "team",
     "variant": "contact_right_image_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "contact_right_image_v1",
       "content_type": "team",
@@ -9597,8 +11044,6 @@
     "name": "Team Three Horizontal",
     "contentType": "team",
     "variant": "team_three_horizontal_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_three_horizontal_v1",
       "content_type": "team",
@@ -9858,8 +11303,6 @@
     "name": "Team Three Vertical",
     "contentType": "team",
     "variant": "team_three_vertical_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_three_vertical_v1",
       "content_type": "team",
@@ -10119,8 +11562,6 @@
     "name": "Team Four",
     "contentType": "team",
     "variant": "team_four_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_four_v1",
       "content_type": "team",
@@ -10453,8 +11894,6 @@
     "name": "Team Five",
     "contentType": "team",
     "variant": "team_five_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_five_v1",
       "content_type": "team",
@@ -10860,8 +12299,6 @@
     "name": "Team Six",
     "contentType": "team",
     "variant": "team_six_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_six_v1",
       "content_type": "team",
@@ -11340,8 +12777,6 @@
     "name": "Team Three Full Cards",
     "contentType": "team",
     "variant": "team_three_full_cards_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_three_full_cards_v1",
       "content_type": "team",
@@ -11532,8 +12967,6 @@
     "name": "Team By Department",
     "contentType": "team",
     "variant": "team_by_department_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "team_by_department_v1",
       "content_type": "team",
@@ -12072,11 +13505,390 @@
     }
   },
   {
+    "name": "Team Featured Lead",
+    "contentType": "team",
+    "variant": "team_featured_lead_v1",
+    "schema": {
+      "layout_id": "team_featured_lead_v1",
+      "content_type": "team",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Leadership",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "MEMBER_1_IMAGE",
+          "region": "cols 2-5, rows 2-8",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MEMBER_1_NAME",
+          "region": "cols 6-11, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Founder name",
+          "layer": 10,
+          "typography": {
+            "fontSize": 32,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_1_ROLE",
+          "region": "cols 6-11, rows 4-5",
+          "role": "subheading",
+          "placeholder_text": "CEO & Co-founder",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.4
+          }
+        },
+        {
+          "id": "MEMBER_1_BIO",
+          "region": "cols 6-11, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Short bio highlighting experience and vision.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "team_featured_lead",
+        "slots": {
+          "HEADING": {
+            "text": "Leadership",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_1_IMAGE": {
+            "variant": "image"
+          },
+          "MEMBER_1_NAME": {
+            "text": "Founder name",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_1_ROLE": {
+            "text": "CEO & Co-founder",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_1_BIO": {
+            "text": "Short bio highlighting experience and vision.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Team Speaker Bio",
+    "contentType": "team",
+    "variant": "team_speaker_bio_v1",
+    "schema": {
+      "layout_id": "team_speaker_bio_v1",
+      "content_type": "team",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "MEMBER_1_IMAGE",
+          "region": "cols 1-5, rows 2-9",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MEMBER_1_NAME",
+          "region": "cols 6-11, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Speaker name",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_1_ROLE",
+          "region": "cols 6-11, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Title · Organization",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.4
+          }
+        },
+        {
+          "id": "MEMBER_1_BIO",
+          "region": "cols 6-11, rows 4-9",
+          "role": "body",
+          "placeholder_text": "Speaker bio with credentials and talk focus.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        }
+      ],
+      "preview": {
+        "mode": "team_speaker_bio",
+        "slots": {
+          "MEMBER_1_IMAGE": {
+            "variant": "image"
+          },
+          "MEMBER_1_NAME": {
+            "text": "Speaker name",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_1_ROLE": {
+            "text": "Title · Organization",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_1_BIO": {
+            "text": "Speaker bio with credentials and talk focus.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Team Org Simple",
+    "contentType": "team",
+    "variant": "team_org_simple_v1",
+    "schema": {
+      "layout_id": "team_org_simple_v1",
+      "content_type": "team",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Organization",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "MEMBER_1_NAME",
+          "region": "cols 5-8, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "CEO",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_2_NAME",
+          "region": "cols 2-4, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Engineering",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_3_NAME",
+          "region": "cols 5-7, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Product",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_4_NAME",
+          "region": "cols 8-10, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Design",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_5_NAME",
+          "region": "cols 2-4, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Sales",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_6_NAME",
+          "region": "cols 5-7, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Marketing",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "MEMBER_7_NAME",
+          "region": "cols 8-10, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Ops",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        }
+      ],
+      "preview": {
+        "mode": "team_org_simple",
+        "slots": {
+          "HEADING": {
+            "text": "Organization",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_1_NAME": {
+            "text": "CEO",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_2_NAME": {
+            "text": "Engineering",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_3_NAME": {
+            "text": "Product",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_4_NAME": {
+            "text": "Design",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_5_NAME": {
+            "text": "Sales",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_6_NAME": {
+            "text": "Marketing",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_7_NAME": {
+            "text": "Ops",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "Device Phone Horizontal",
     "contentType": "device_frames",
     "variant": "device_phone_horizontal_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_phone_horizontal_v1",
       "content_type": "device_frames",
@@ -12164,8 +13976,6 @@
     "name": "Device Phone Vertical Split",
     "contentType": "device_frames",
     "variant": "device_phone_vertical_split_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_phone_vertical_split_v1",
       "content_type": "device_frames",
@@ -12253,8 +14063,6 @@
     "name": "Device Phone Highlights",
     "contentType": "device_frames",
     "variant": "device_phone_highlights_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_phone_highlights_v1",
       "content_type": "device_frames",
@@ -12384,8 +14192,6 @@
     "name": "Device Phone Triple",
     "contentType": "device_frames",
     "variant": "device_phone_triple_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_phone_triple_v1",
       "content_type": "device_frames",
@@ -12525,8 +14331,6 @@
     "name": "Device Multi Cluster",
     "contentType": "device_frames",
     "variant": "device_multi_cluster_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_multi_cluster_v1",
       "content_type": "device_frames",
@@ -12650,8 +14454,6 @@
     "name": "Device Tablet Centered",
     "contentType": "device_frames",
     "variant": "device_tablet_centered_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_tablet_centered_v1",
       "content_type": "device_frames",
@@ -12718,8 +14520,6 @@
     "name": "Device Tablet Split",
     "contentType": "device_frames",
     "variant": "device_tablet_split_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_tablet_split_v1",
       "content_type": "device_frames",
@@ -12807,8 +14607,6 @@
     "name": "Device Laptop Split",
     "contentType": "device_frames",
     "variant": "device_laptop_split_v1",
-    "version": 2,
-    "isActive": true,
     "schema": {
       "layout_id": "device_laptop_split_v1",
       "content_type": "device_frames",
@@ -12887,6 +14685,3557 @@
           },
           "DEVICE_IMAGE": {
             "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Comparison Side By Side",
+    "contentType": "comparison",
+    "variant": "comparison_side_by_side_v1",
+    "schema": {
+      "layout_id": "comparison_side_by_side_v1",
+      "content_type": "comparison",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Compare options",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "LEFT_TITLE",
+          "region": "cols 1-6, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Option A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "RIGHT_TITLE",
+          "region": "cols 7-12, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Option B",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "LEFT_BODY",
+          "region": "cols 1-6, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        },
+        {
+          "id": "RIGHT_BODY",
+          "region": "cols 7-12, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        }
+      ],
+      "preview": {
+        "mode": "comparison_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Compare options",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_TITLE": {
+            "text": "Option A",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "RIGHT_TITLE": {
+            "text": "Option B",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "RIGHT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Comparison Pros Cons",
+    "contentType": "comparison",
+    "variant": "comparison_pros_cons_v1",
+    "schema": {
+      "layout_id": "comparison_pros_cons_v1",
+      "content_type": "comparison",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Pros and cons",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "PROS_TITLE",
+          "region": "cols 1-6, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Pros",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CONS_TITLE",
+          "region": "cols 7-12, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Cons",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "PROS",
+          "region": "cols 1-6, rows 3-9",
+          "role": "body",
+          "placeholder_text": "• Advantage one\n• Advantage two",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        },
+        {
+          "id": "CONS",
+          "region": "cols 7-12, rows 3-9",
+          "role": "body",
+          "placeholder_text": "• Risk one\n• Risk two",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 6
+        }
+      ],
+      "preview": {
+        "mode": "comparison_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Pros and cons",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "PROS_TITLE": {
+            "text": "Pros",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CONS_TITLE": {
+            "text": "Cons",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "PROS": {
+            "text": "• Advantage one\n• Advantage two",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CONS": {
+            "text": "• Risk one\n• Risk two",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Horizontal",
+    "contentType": "timeline",
+    "variant": "timeline_horizontal_v1",
+    "schema": {
+      "layout_id": "timeline_horizontal_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Timeline",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1",
+          "region": "cols 2-3, rows 4-5",
+          "role": "body",
+          "placeholder_text": "1. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_2",
+          "region": "cols 4-5, rows 4-5",
+          "role": "body",
+          "placeholder_text": "2. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_3",
+          "region": "cols 6-7, rows 4-5",
+          "role": "body",
+          "placeholder_text": "3. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4",
+          "region": "cols 8-9, rows 4-5",
+          "role": "body",
+          "placeholder_text": "4. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "Timeline",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1": {
+            "text": "1. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2": {
+            "text": "2. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3": {
+            "text": "3. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4": {
+            "text": "4. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Milestones",
+    "contentType": "timeline",
+    "variant": "timeline_milestones_v1",
+    "schema": {
+      "layout_id": "timeline_milestones_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key milestones",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "MILESTONE_1_CARD_BG",
+          "region": "cols 2-3, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_1_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_2_CARD_BG",
+          "region": "cols 4-5, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_2_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-5, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-5, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_3_CARD_BG",
+          "region": "cols 6-7, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_3_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 6-7, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 6-7, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_4_CARD_BG",
+          "region": "cols 8-9, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_4_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 8-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 8-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "Key milestones",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Vertical",
+    "contentType": "timeline",
+    "variant": "timeline_vertical_v1",
+    "schema": {
+      "layout_id": "timeline_vertical_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Project phases",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-4, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "Phase 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-4, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Discovery and planning",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 2-4, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "Phase 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 2-4, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Build and iterate",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 2-4, rows 8-9",
+          "role": "subheading",
+          "placeholder_text": "Phase 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 2-4, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Launch and scale",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 6-8, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "2024 Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 6-8, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_5_label",
+          "region": "cols 6-8, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2024 Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_5_detail",
+          "region": "cols 6-8, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "Project phases",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Phase 1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Discovery and planning",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Phase 2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Build and iterate",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Phase 3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Launch and scale",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2024 Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_label": {
+            "text": "2024 Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Roadmap",
+    "contentType": "timeline",
+    "variant": "timeline_roadmap_v1",
+    "schema": {
+      "layout_id": "timeline_roadmap_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Product roadmap",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 1-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Foundation release",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-6, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Growth features",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 7-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Enterprise push",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 10-12, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Scale and optimize",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "Product roadmap",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Foundation release",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Q2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Growth features",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Enterprise push",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "Q4",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Scale and optimize",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Process Steps",
+    "contentType": "timeline",
+    "variant": "timeline_process_steps_v1",
+    "schema": {
+      "layout_id": "timeline_process_steps_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "How it works",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "step_1_title",
+          "region": "cols 1-3, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "1. Discover",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_1_body",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Understand the problem",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_2_title",
+          "region": "cols 4-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "2. Design",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_2_body",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Shape the solution",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_3_title",
+          "region": "cols 7-9, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "3. Build",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_3_body",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Ship the MVP",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_4_title",
+          "region": "cols 10-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "4. Launch",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_4_body",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Go to market",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "process_flow",
+        "slots": {
+          "HEADING": {
+            "text": "How it works",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_title": {
+            "text": "1. Discover",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_body": {
+            "text": "Understand the problem",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_2_title": {
+            "text": "2. Design",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_2_body": {
+            "text": "Shape the solution",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_3_title": {
+            "text": "3. Build",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_3_body": {
+            "text": "Ship the MVP",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_4_title": {
+            "text": "4. Launch",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_4_body": {
+            "text": "Go to market",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Comparison Table",
+    "contentType": "comparison",
+    "variant": "comparison_table_v1",
+    "schema": {
+      "layout_id": "comparison_table_v1",
+      "content_type": "comparison",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Feature comparison",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "TABLE",
+          "region": "cols 1-12, rows 2-9",
+          "role": "table",
+          "layer": 10
+        }
+      ],
+      "preview": {
+        "mode": "comparison_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Feature comparison",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Comparison Before After",
+    "contentType": "comparison",
+    "variant": "comparison_before_after_v1",
+    "schema": {
+      "layout_id": "comparison_before_after_v1",
+      "content_type": "comparison",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Before and after",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "LEFT_TITLE",
+          "region": "cols 1-6, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Before",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "RIGHT_TITLE",
+          "region": "cols 7-12, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "After",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "LEFT_BODY",
+          "region": "cols 1-6, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        },
+        {
+          "id": "RIGHT_BODY",
+          "region": "cols 7-12, rows 3-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
+        }
+      ],
+      "preview": {
+        "mode": "comparison_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Before and after",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_TITLE": {
+            "text": "Before",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "RIGHT_TITLE": {
+            "text": "After",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "LEFT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "RIGHT_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Bullet List Cards",
+    "contentType": "bullet_list",
+    "variant": "bullet_list_cards_v1",
+    "schema": {
+      "layout_id": "bullet_list_cards_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key points",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "CARD_1_BG",
+          "region": "cols 1-4, rows 2-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "CARD_1_TITLE"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "CARD_1_TITLE",
+          "region": "cols 1-4, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Point one",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CARD_1_BODY",
+          "region": "cols 1-4, rows 3-6",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "CARD_2_BG",
+          "region": "cols 5-8, rows 2-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "CARD_2_TITLE"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "CARD_2_TITLE",
+          "region": "cols 5-8, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Point two",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CARD_2_BODY",
+          "region": "cols 5-8, rows 3-6",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "CARD_3_BG",
+          "region": "cols 9-12, rows 2-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "CARD_3_TITLE"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "CARD_3_TITLE",
+          "region": "cols 9-12, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Point three",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CARD_3_BODY",
+          "region": "cols 9-12, rows 3-6",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "two_image_columns",
+        "slots": {
+          "HEADING": {
+            "text": "Key points",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CARD_1_TITLE": {
+            "text": "Point one",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CARD_1_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CARD_2_TITLE": {
+            "text": "Point two",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CARD_2_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CARD_3_TITLE": {
+            "text": "Point three",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CARD_3_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Section Divider Numbered",
+    "contentType": "section_divider",
+    "variant": "section_divider_numbered_v1",
+    "schema": {
+      "layout_id": "section_divider_numbered_v1",
+      "content_type": "section_divider",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "SECTION_NUMBER",
+          "region": "cols 5-8, rows 3-4",
+          "role": "stat",
+          "placeholder_text": "02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 56,
+            "fontWeight": 900,
+            "colorRole": "accent",
+            "align": "center",
+            "lineHeight": 1
+          }
+        },
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 4-6",
+          "role": "heading",
+          "placeholder_text": "Next chapter",
+          "layer": 10,
+          "typography": {
+            "fontSize": 40,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 3-10, rows 6-7",
+          "role": "subheading",
+          "placeholder_text": "What we cover in this section",
+          "layer": 10,
+          "typography": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.4
+          }
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "SECTION_NUMBER": {
+            "text": "02",
+            "variant": "stat",
+            "bold": true,
+            "uppercase": false
+          },
+          "HEADING": {
+            "text": "Next chapter",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBTITLE": {
+            "text": "What we cover in this section",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Quote Portrait",
+    "contentType": "quote",
+    "variant": "quote_portrait_v1",
+    "schema": {
+      "layout_id": "quote_portrait_v1",
+      "content_type": "quote",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "QUOTE",
+          "region": "cols 5-11, rows 2-6",
+          "role": "quote",
+          "placeholder_text": "Customer quote goes here — keep it under 25 words.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "ATTRIBUTION",
+          "region": "cols 5-11, rows 6-7",
+          "role": "attribution",
+          "placeholder_text": "Name, Title",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "PORTRAIT_IMAGE",
+          "region": "cols 1-4, rows 2-8",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover",
+          "imageStyle": "card",
+          "borderRadius": 12,
+          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+        }
+      ],
+      "preview": {
+        "mode": "quote_attribution",
+        "slots": {
+          "QUOTE": {
+            "text": "Customer quote goes here — keep it under 25 words.",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ATTRIBUTION": {
+            "text": "Name, Title",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "PORTRAIT_IMAGE": {
+            "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Quote Testimonial Card",
+    "contentType": "quote",
+    "variant": "quote_testimonial_card_v1",
+    "schema": {
+      "layout_id": "quote_testimonial_card_v1",
+      "content_type": "quote",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "What customers say",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "QUOTE",
+          "region": "cols 2-11, rows 3-5",
+          "role": "quote",
+          "placeholder_text": "Testimonial quote in a card-friendly length.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 26,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "ATTRIBUTION",
+          "region": "cols 2-11, rows 5-6",
+          "role": "attribution",
+          "placeholder_text": "Customer name · Role · Company",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "BODY",
+          "region": "cols 3-10, rows 6-8",
+          "role": "body",
+          "placeholder_text": "A concise testimonial or supporting line that reinforces credibility without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "quote_attribution",
+        "slots": {
+          "HEADING": {
+            "text": "What customers say",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "QUOTE": {
+            "text": "Testimonial quote in a card-friendly length.",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ATTRIBUTION": {
+            "text": "Customer name · Role · Company",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "A concise testimonial or supporting line that reinforces credibility without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Quote Grid",
+    "contentType": "quote",
+    "variant": "quote_grid_v1",
+    "schema": {
+      "layout_id": "quote_grid_v1",
+      "content_type": "quote",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Voices from our users",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "QUOTE_1",
+          "region": "cols 1-4, rows 2-5",
+          "role": "quote",
+          "placeholder_text": "Short quote one",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45,
+            "fontStyle": "italic"
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "ATTR_1",
+          "region": "cols 1-4, rows 5-6",
+          "role": "attribution",
+          "placeholder_text": "Name · Role",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "QUOTE_2",
+          "region": "cols 5-8, rows 2-5",
+          "role": "quote",
+          "placeholder_text": "Short quote two",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45,
+            "fontStyle": "italic"
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "ATTR_2",
+          "region": "cols 5-8, rows 5-6",
+          "role": "attribution",
+          "placeholder_text": "Name · Role",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "QUOTE_3",
+          "region": "cols 9-12, rows 2-5",
+          "role": "quote",
+          "placeholder_text": "Short quote three",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45,
+            "fontStyle": "italic"
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "ATTR_3",
+          "region": "cols 9-12, rows 5-6",
+          "role": "attribution",
+          "placeholder_text": "Name · Role",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        }
+      ],
+      "preview": {
+        "mode": "quote_attribution",
+        "slots": {
+          "HEADING": {
+            "text": "Voices from our users",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "QUOTE_1": {
+            "text": "Short quote one",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ATTR_1": {
+            "text": "Name · Role",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "QUOTE_2": {
+            "text": "Short quote two",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ATTR_2": {
+            "text": "Name · Role",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "QUOTE_3": {
+            "text": "Short quote three",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "ATTR_3": {
+            "text": "Name · Role",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Swot",
+    "contentType": "diagram",
+    "variant": "diagram_swot_v1",
+    "schema": {
+      "layout_id": "diagram_swot_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "SWOT analysis",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "Q1_TITLE",
+          "region": "cols 1-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Strengths",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q1_BODY",
+          "region": "cols 1-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key strengths",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q2_TITLE",
+          "region": "cols 7-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Weaknesses",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q2_BODY",
+          "region": "cols 7-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Areas to improve",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q3_TITLE",
+          "region": "cols 1-6, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Opportunities",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q3_BODY",
+          "region": "cols 1-6, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Market opportunities",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q4_TITLE",
+          "region": "cols 7-12, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Threats",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q4_BODY",
+          "region": "cols 7-12, rows 8-10",
+          "role": "body",
+          "placeholder_text": "External risks",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "diagram_quadrants",
+        "slots": {
+          "HEADING": {
+            "text": "SWOT analysis",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_TITLE": {
+            "text": "Strengths",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_BODY": {
+            "text": "Key strengths",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q2_TITLE": {
+            "text": "Weaknesses",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q2_BODY": {
+            "text": "Areas to improve",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q3_TITLE": {
+            "text": "Opportunities",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q3_BODY": {
+            "text": "Market opportunities",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q4_TITLE": {
+            "text": "Threats",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q4_BODY": {
+            "text": "External risks",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Funnel",
+    "contentType": "diagram",
+    "variant": "diagram_funnel_v1",
+    "schema": {
+      "layout_id": "diagram_funnel_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Conversion funnel",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_1_title",
+          "region": "cols 4-9, rows 3-3",
+          "role": "heading",
+          "placeholder_text": "Stage 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_1_body",
+          "region": "cols 4-9, rows 4-4",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_2_title",
+          "region": "cols 3-10, rows 5-5",
+          "role": "heading",
+          "placeholder_text": "Stage 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_2_body",
+          "region": "cols 3-10, rows 6-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_3_title",
+          "region": "cols 2-11, rows 7-7",
+          "role": "heading",
+          "placeholder_text": "Stage 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_3_body",
+          "region": "cols 2-11, rows 8-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_4_title",
+          "region": "cols 1-12, rows 9-9",
+          "role": "heading",
+          "placeholder_text": "Stage 4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_4_body",
+          "region": "cols 1-12, rows 10-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "diagram_funnel",
+        "slots": {
+          "HEADING": {
+            "text": "Conversion funnel",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_1_title": {
+            "text": "Stage 1",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_1_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_2_title": {
+            "text": "Stage 2",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_2_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_3_title": {
+            "text": "Stage 3",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_3_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_4_title": {
+            "text": "Stage 4",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_4_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Matrix",
+    "contentType": "diagram",
+    "variant": "diagram_matrix_v1",
+    "schema": {
+      "layout_id": "diagram_matrix_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "2×2 matrix",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "Q1_TITLE",
+          "region": "cols 1-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "High impact · Easy",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q1_BODY",
+          "region": "cols 1-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q2_TITLE",
+          "region": "cols 7-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "High impact · Hard",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q2_BODY",
+          "region": "cols 7-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q3_TITLE",
+          "region": "cols 1-6, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Low impact · Easy",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q3_BODY",
+          "region": "cols 1-6, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q4_TITLE",
+          "region": "cols 7-12, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Low impact · Hard",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q4_BODY",
+          "region": "cols 7-12, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "diagram_quadrants",
+        "slots": {
+          "HEADING": {
+            "text": "2×2 matrix",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_TITLE": {
+            "text": "High impact · Easy",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q2_TITLE": {
+            "text": "High impact · Hard",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q2_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q3_TITLE": {
+            "text": "Low impact · Easy",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q3_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q4_TITLE": {
+            "text": "Low impact · Hard",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q4_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Process Steps",
+    "contentType": "diagram",
+    "variant": "diagram_process_steps_v1",
+    "schema": {
+      "layout_id": "diagram_process_steps_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Process steps",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "step_1_title",
+          "region": "cols 1-3, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "1. Step 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "step_1_body",
+          "region": "cols 1-3, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_2_title",
+          "region": "cols 4-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "2. Step 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "step_2_body",
+          "region": "cols 4-6, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_3_title",
+          "region": "cols 7-9, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "3. Step 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "step_3_body",
+          "region": "cols 7-9, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_4_title",
+          "region": "cols 10-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "4. Step 4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "step_4_body",
+          "region": "cols 10-12, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "diagram_process_steps",
+        "slots": {
+          "HEADING": {
+            "text": "Process steps",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_title": {
+            "text": "1. Step 1",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_2_title": {
+            "text": "2. Step 2",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_2_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_3_title": {
+            "text": "3. Step 3",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_3_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_4_title": {
+            "text": "4. Step 4",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_4_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Cycle",
+    "contentType": "diagram",
+    "variant": "diagram_cycle_v1",
+    "schema": {
+      "layout_id": "diagram_cycle_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Continuous cycle",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "Q1_TITLE",
+          "region": "cols 1-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Plan",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q1_BODY",
+          "region": "cols 1-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q2_TITLE",
+          "region": "cols 7-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Do",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q2_BODY",
+          "region": "cols 7-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q3_TITLE",
+          "region": "cols 7-12, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Check",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q3_BODY",
+          "region": "cols 7-12, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "Q4_TITLE",
+          "region": "cols 1-6, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Act",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "Q4_BODY",
+          "region": "cols 1-6, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "diagram_quadrants",
+        "diagramVariant": "cycle",
+        "slots": {
+          "HEADING": {
+            "text": "Continuous cycle",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_TITLE": {
+            "text": "Plan",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q2_TITLE": {
+            "text": "Do",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q2_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q3_TITLE": {
+            "text": "Check",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q3_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q4_TITLE": {
+            "text": "Act",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q4_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Venn",
+    "contentType": "diagram",
+    "variant": "diagram_venn_v1",
+    "schema": {
+      "layout_id": "diagram_venn_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Overlap model",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "Q1_TITLE",
+          "region": "cols 1-4, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Set A",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "Q1_BODY",
+          "region": "cols 1-4, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "Q2_TITLE",
+          "region": "cols 5-8, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Set B",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "Q2_BODY",
+          "region": "cols 5-8, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "Q3_TITLE",
+          "region": "cols 9-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Set C",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "Q3_BODY",
+          "region": "cols 9-12, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "CENTER_BODY",
+          "region": "cols 5-8, rows 6-7",
+          "role": "body",
+          "placeholder_text": "Shared overlap",
+          "layer": 11,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "diagram_venn",
+        "slots": {
+          "HEADING": {
+            "text": "Overlap model",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_TITLE": {
+            "text": "Set A",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q1_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q2_TITLE": {
+            "text": "Set B",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q2_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "Q3_TITLE": {
+            "text": "Set C",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "Q3_BODY": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CENTER_BODY": {
+            "text": "Shared overlap",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Diagram Pyramid",
+    "contentType": "diagram",
+    "variant": "diagram_pyramid_v1",
+    "schema": {
+      "layout_id": "diagram_pyramid_v1",
+      "content_type": "diagram",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Priority pyramid",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_1_title",
+          "region": "cols 5-8, rows 3-3",
+          "role": "heading",
+          "placeholder_text": "Stage 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_1_body",
+          "region": "cols 5-8, rows 4-4",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_2_title",
+          "region": "cols 4-9, rows 5-5",
+          "role": "heading",
+          "placeholder_text": "Stage 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_2_body",
+          "region": "cols 4-9, rows 6-6",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_3_title",
+          "region": "cols 3-10, rows 7-7",
+          "role": "heading",
+          "placeholder_text": "Stage 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_3_body",
+          "region": "cols 3-10, rows 8-8",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "funnel_4_title",
+          "region": "cols 2-11, rows 9-9",
+          "role": "heading",
+          "placeholder_text": "Stage 4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_4_body",
+          "region": "cols 2-11, rows 10-10",
+          "role": "body",
+          "placeholder_text": "Two to three lines explaining this section.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "diagram_funnel",
+        "diagramVariant": "pyramid",
+        "slots": {
+          "HEADING": {
+            "text": "Priority pyramid",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_1_title": {
+            "text": "Stage 1",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_1_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_2_title": {
+            "text": "Stage 2",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_2_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_3_title": {
+            "text": "Stage 3",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_3_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_4_title": {
+            "text": "Stage 4",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_4_body": {
+            "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
           }
         }
       }

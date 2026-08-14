@@ -55,6 +55,11 @@ const LAYOUT_CATEGORIES = [
     contentTypes: ['device_frames'],
   },
   {
+    id: 'diagrams',
+    label: 'Diagrams',
+    contentTypes: ['diagram'],
+  },
+  {
     id: 'closing',
     label: 'Closing',
     contentTypes: ['closing'],
@@ -77,6 +82,7 @@ const LAYOUT_CONTENT_TYPES = [
   'grid',
   'pricing',
   'device_frames',
+  'diagram',
 ];
 
 function listLayoutCategories() {

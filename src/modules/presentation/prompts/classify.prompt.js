@@ -6,6 +6,8 @@ function buildSystem() {
     'Use path_b only for bespoke multi-panel architecture/ERD/process infographics that cannot be templated.',
     'DEFAULT: prefer visual_need "photo" or "illustration" for nearly every content slide so the deck has real imagery.',
     'Use visual_need "none" only for pure section dividers with no figurative need.',
+    'Reserve content_type "title" for slide 1 only. Chapter/section headers → section_divider.',
+    'Reserve content_type "closing" for the final slide only.',
     'Use visual_need "chart" only when the slide is primarily a data chart (content_type chart).',
     'Return JSON only.',
   ].join(' ');
@@ -37,7 +39,7 @@ function buildUser(vars = {}) {
     content,
     '',
     'content_type must be one of:',
-    'title|agenda|bullet_list|comparison|stat|quote|image+text|timeline|team|chart|closing|section_divider|grid|pricing|device_frames',
+    'title|agenda|bullet_list|comparison|stat|quote|image+text|timeline|team|chart|closing|section_divider|grid|pricing|device_frames|diagram',
     '',
     'Output JSON schema:',
     JSON.stringify(

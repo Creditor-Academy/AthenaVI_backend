@@ -161,6 +161,11 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
   }
 
   assertContrast(resolved.palette);
+
+  if (id || (themeId != null && String(themeId).trim() !== '' && getThemeById(themeId))) {
+    return { ...resolved, fontSource: resolved.fontSource || 'catalog' };
+  }
+
   return resolved;
 }
 

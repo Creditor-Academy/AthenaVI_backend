@@ -17,7 +17,11 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { selectLayout } = require('./layoutSelector.service');
+const { selectLayout, filterTemplatesForSlideOrder } = require('./layoutSelector.service');
+const {
+  enrichOutlineWithArrangement,
+  preferredLayoutForSlide,
+} = require('./slideArrangementPlan.service');
 const { validateSlide } = require('./layoutQa.service');
 const imageCache = require('./imageCache.service');
 const documentParse = require('./documentParse.service');
@@ -34,12 +38,13 @@ const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout } = require('./layoutToElements');
+const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
 const templateMediaService = require('../templates/templateMedia.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
+const fontPairingService = require('./fontPairing.service');
 
 /** Prefer pack/slide author image brief when present. */
 function resolveAuthorImagePrompt(content) {
@@ -262,6 +267,25 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     flowCtx.themeTokens = wizardThemeTokens;
   }
 
+  flowCtx.themeTokens = fontPairingService.mergeThemeTokensPreservingFonts(
+    deck.themeTokens,
+    flowCtx.themeTokens
+  );
+
+  try {
+    flowCtx.themeTokens = await fontPairingService.ensureThemeFonts(flowCtx.themeTokens, {
+      prompt: flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
+      wizardBrief: flowCtx.wizardBrief || '',
+      tone: flowCtx.generationFlow?.selections?.voiceAndTone || null,
+      audience: flowCtx.generationFlow?.selections?.audience || null,
+      purpose: flowCtx.generationFlow?.selections?.purpose || null,
+      style: flowCtx.generationFlow?.selections?.style || null,
+      brandKitId,
+    });
+  } catch (err) {
+    logger.warn('ensureThemeFonts failed during generate', { error: err.message });
+  }
+
   return {
     pack,
     packId: pack?.id || null,
@@ -428,7 +452,13 @@ function detectPreferVisuals(text) {
  * Force photo/illustration visuals for most slides when preferVisuals is on.
  * Chart / path_b keep their specialized modes.
  */
-function applyVisualPolicy({ visualNeed, contentType, preferVisuals, baseTemplateBias: bias }) {
+function applyVisualPolicy({
+  visualNeed,
+  contentType,
+  preferVisuals,
+  baseTemplateBias: bias,
+  respectOutlineType = false,
+}) {
   const type = String(contentType || 'bullet_list').toLowerCase();
   let need = String(visualNeed || 'none').toLowerCase();
 
@@ -461,8 +491,17 @@ function applyVisualPolicy({ visualNeed, contentType, preferVisuals, baseTemplat
   let layoutContentType = type;
   if (['grid', 'pricing', 'device_frames'].includes(type)) {
     layoutContentType = type;
-  } else if (['bullet_list', 'comparison', 'stat', 'timeline', 'team', 'section_divider'].includes(type)) {
+  } else if (['comparison', 'timeline', 'diagram'].includes(type)) {
+    layoutContentType = respectOutlineType ? type : 'image+text';
+  } else if (
+    respectOutlineType &&
+    ['bullet_list', 'stat', 'team', 'section_divider', 'agenda', 'quote', 'title', 'closing', 'diagram'].includes(type)
+  ) {
+    layoutContentType = type;
+  } else if (['bullet_list', 'comparison', 'stat', 'timeline', 'team'].includes(type)) {
     layoutContentType = 'image+text';
+  } else if (type === 'section_divider') {
+    layoutContentType = 'section_divider';
   } else if (type === 'title' || type === 'agenda' || type === 'closing' || type === 'quote') {
     layoutContentType = type;
   } else if (type === 'image+text') {
@@ -474,7 +513,7 @@ function applyVisualPolicy({ visualNeed, contentType, preferVisuals, baseTemplat
   // Soft bias from wizard baseTemplate
   if (bias?.preferredContentTypes?.length) {
     const preferred = bias.preferredContentTypes.map((t) => String(t).toLowerCase());
-    if (preferred.includes('image+text') && layoutContentType !== 'chart') {
+    if (preferred.includes('image+text') && layoutContentType !== 'chart' && layoutContentType !== 'section_divider') {
       layoutContentType = 'image+text';
     } else if (preferred.includes(type)) {
       layoutContentType = type;
@@ -485,8 +524,34 @@ function applyVisualPolicy({ visualNeed, contentType, preferVisuals, baseTemplat
     visualNeed: need,
     contentType: type === 'image+text' ? 'image+text' : type,
     layoutContentType,
-    preferImageSlot: bias?.preferImageSlot !== false,
+    preferImageSlot:
+      bias?.preferImageSlot !== false &&
+      !['comparison', 'timeline', 'diagram', 'bullet_list', 'section_divider', 'chart', 'agenda', 'quote', 'closing'].includes(
+        layoutContentType
+      ),
   };
+}
+
+/**
+ * Slide 1 only → title; slide N only → closing; never title/closing elsewhere.
+ */
+function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, outlineSlide = {}) {
+  const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
+  const total = Number(totalSlides) > 0 ? Number(totalSlides) : order;
+  let type = String(contentType || 'bullet_list').toLowerCase();
+
+  if (order === 1) return 'title';
+
+  if (type === 'title') {
+    const hasBody = Boolean(String(outlineSlide?.summary || '').trim());
+    return hasBody ? 'image+text' : 'section_divider';
+  }
+
+  if (type === 'closing' && order !== total) {
+    return 'section_divider';
+  }
+
+  return type;
 }
 
 function withImageStatus(imageRef, status, extra = {}) {
@@ -689,8 +754,9 @@ async function generateAiImageRef({
   brief,
   source = 'ai_gen',
   quality = 'standard',
+  size = null,
 }) {
-  const image = await generateImage({ prompt, quality });
+  const image = await generateImage({ prompt, quality, size: size || undefined });
   const uploaded = await uploadPresentationImage({
     workspaceId,
     deckId,
@@ -775,6 +841,9 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
         ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
         : prompt;
       try {
+        const slotDef = (layoutSchema.slots || []).find((s) => String(s.id) === String(slotId));
+        const canvas = ctx.canvasSize || { width: 1920, height: 1080 };
+        const imageSize = slotDef ? resolveImageGenSize(slotDef, canvas) : null;
         const generated = await generateAiImageRef({
           prompt: `Professional presentation visual. ${fullPrompt}`,
           workspaceId: ctx.workspaceId,
@@ -782,6 +851,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
           slideId: slide.id,
           brief: { subject: prompt },
           source: 'ai_gen',
+          size: imageSize,
         });
         if (generated?.url) {
           slotImageUrls[slotId] = generated.url;
@@ -1149,8 +1219,9 @@ async function resolveSlideImage({
             briefSubject: brief?.subject || searchQuery,
           });
           visionScore = vision.score;
+          if (!vision.relevant) imageRef = null;
         } catch {
-          // ignore
+          // ignore vision errors — keep image only when relevance was not evaluated
         }
       }
     }
@@ -1236,6 +1307,196 @@ function applyGenerationHints(content, hints) {
     next.stats = next.stats.slice(0, hints.itemCountMax);
   }
   return next;
+}
+
+function applyDefaultOverlayDecisions(content, layoutSchema) {
+  if (!content || !layoutSchema) return content;
+  const layoutCtx = layoutContextFromSchema(layoutSchema);
+  if (!layoutCtx.hasImageOverlay) return content;
+  return {
+    ...content,
+    shapeDecisions: {
+      ...(content.shapeDecisions || {}),
+      __overlay__: {
+        enabled: true,
+        scrim: content.shapeDecisions?.__overlay__?.scrim ?? 0.45,
+      },
+    },
+  };
+}
+
+function qaNeedsContentRepair(issues) {
+  if (!Array.isArray(issues) || !issues.length) return false;
+  return issues.some(
+    (issue) =>
+      issue.repairable === true ||
+      issue.rule === 'required_structured' ||
+      (issue.truncated === true && issue.rule === 'max_lines')
+  );
+}
+
+async function planDeckLayouts(ctx, slides) {
+  if (ctx.packBound || !Array.isArray(slides) || slides.length === 0) {
+    return {};
+  }
+
+  const outlineSlides = (ctx.outline?.slides || []).slice().sort((a, b) => a.order - b.order);
+  const orderedSlides = slides.slice().sort((a, b) => Number(a.order) - Number(b.order));
+  const totalSlides = orderedSlides.length || ctx.outline?.slideCount || outlineSlides.length || 1;
+  const planned = {};
+  const usedLayoutIds = new Set();
+  let fullBleedUsed = false;
+  let previousLayoutId = null;
+  const contentTypeHistory = [];
+
+  for (const slide of orderedSlides) {
+    const outlineSlide =
+      outlineSlides.find((s) => Number(s.order) === Number(slide.order)) ||
+      outlineSlides[Number(slide.order) - 1] ||
+      {};
+
+    let contentType = outlineSlide.suggestedContentType || slide.contentType || 'bullet_list';
+    contentType = guardContentTypeForSlideOrder(contentType, slide.order, totalSlides, outlineSlide);
+
+    const preferVisuals = ctx.preferVisuals !== false;
+    const policy = applyVisualPolicy({
+      visualNeed: preferVisuals ? 'photo' : 'none',
+      contentType,
+      preferVisuals,
+      baseTemplateBias: ctx.baseTemplateBias || null,
+      respectOutlineType: true,
+    });
+
+    ctx.contentTypeHistory = contentTypeHistory.slice();
+    const layoutContentType = applyContentDistribution(policy.contentType, ctx);
+    contentTypeHistory.push(layoutContentType);
+
+    let templates = await resolveLayoutTemplates(layoutContentType, {
+      layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+    });
+    templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
+    if (fullBleedUsed) {
+      templates = templates.filter(
+        (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
+      );
+    }
+
+    const stubContent = {
+      title: outlineSlide.title || slide.content?.title || '',
+      summary: outlineSlide.summary || '',
+      body: outlineSlide.summary || '',
+      bullets: outlineSlide.summary
+        ? String(outlineSlide.summary)
+            .split(/[.;]\s+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, 6)
+        : [],
+    };
+
+    ctx.outlineExplicitType = Boolean(outlineSlide.suggestedContentType || outlineSlide.arrangementHint);
+    ctx.respectOutlineTypes = true;
+    const { layoutId, template } = selectLayout({
+      contentType: layoutContentType,
+      content: stubContent,
+      previousLayoutId,
+      usedLayoutIds,
+      templates,
+      preferImageSlot: policy.preferImageSlot,
+      preferredLayoutId: preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, slide.order),
+      slideOrder: slide.order,
+      totalSlides,
+    });
+
+    if (layoutId && template) {
+      planned[Number(slide.order)] = {
+        layoutId,
+        template,
+        schema: template.schema || null,
+        layoutContentType,
+        policy,
+      };
+      usedLayoutIds.add(String(layoutId));
+      if (String(layoutId) === 'full_bg_image_overlay_v1') fullBleedUsed = true;
+      previousLayoutId = layoutId;
+    }
+  }
+
+  ctx.plannedLayouts = planned;
+  ctx.fullBleedUsed = fullBleedUsed;
+  ctx.layoutIdByOrder = Object.fromEntries(
+    Object.entries(planned).map(([order, entry]) => [order, entry.layoutId])
+  );
+  ctx.usedLayoutIds = usedLayoutIds;
+  return planned;
+}
+
+async function resolvePreGenerationLayout({
+  ctx,
+  slide,
+  outlineSlide,
+  resolvedTitle,
+  resolvedSummary,
+  preferVisuals,
+}) {
+  const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
+  if (plannedEntry?.schema) {
+    return {
+      layoutId: plannedEntry.layoutId,
+      template: plannedEntry.template,
+      schema: plannedEntry.schema,
+      layoutContentType: plannedEntry.layoutContentType,
+      policy: plannedEntry.policy,
+    };
+  }
+
+  let contentType = outlineSlide.suggestedContentType || slide.contentType || 'bullet_list';
+  const totalSlides = ctx.outline?.slideCount || ctx.slideTotal || 1;
+  contentType = guardContentTypeForSlideOrder(contentType, slide.order, totalSlides, outlineSlide);
+
+  const policy = applyVisualPolicy({
+    visualNeed: preferVisuals ? 'photo' : 'none',
+    contentType,
+    preferVisuals,
+    baseTemplateBias: ctx.baseTemplateBias || null,
+    respectOutlineType: true,
+  });
+  const layoutContentType = applyContentDistribution(policy.contentType, ctx);
+
+  let templates = await resolveLayoutTemplates(layoutContentType, {
+    layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+  });
+  templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
+  if (ctx.fullBleedUsed) {
+    templates = templates.filter(
+      (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
+    );
+  }
+
+  const previousLayoutId = ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null;
+  const stubContent = {
+    title: resolvedTitle || outlineSlide.title || '',
+    summary: resolvedSummary,
+    bullets: [],
+  };
+  const { layoutId, template } = selectLayout({
+    contentType: layoutContentType,
+    content: stubContent,
+    previousLayoutId,
+    usedLayoutIds: ctx.usedLayoutIds || null,
+    templates,
+    preferImageSlot: policy.preferImageSlot,
+    slideOrder: slide.order,
+    totalSlides,
+  });
+
+  return {
+    layoutId,
+    template,
+    schema: template?.schema || null,
+    layoutContentType,
+    policy,
+  };
 }
 
 function slotConstraintsFromLayout(layoutSchema) {
@@ -1329,6 +1590,9 @@ function layoutContextFromSchema(layoutSchema) {
 function applyContentDistribution(contentType, ctx) {
   const dist = ctx.contentDistribution;
   if (!dist || typeof dist !== 'object') return contentType;
+  if (ctx.respectOutlineTypes && ctx.outlineExplicitType) {
+    return contentType;
+  }
   let next = contentType;
   const history = Array.isArray(ctx.contentTypeHistory) ? ctx.contentTypeHistory : [];
   const maxBullet = dist.maxConsecutiveBulletSlides;
@@ -1380,19 +1644,43 @@ async function processSlide(ctx, slide) {
 
     // Prefer pack layout schema early for slot constraints when fixed pack layout
     let earlyLayoutSchema = null;
+    let preSelectedTemplate = null;
+    let preSelectedLayoutId = null;
+    let preLayoutContentType = null;
     if (packMeta?.layout_id) {
       const early = await presentationDao.findLayoutsByLayoutIds([packMeta.layout_id]);
       earlyLayoutSchema = early[0]?.schema || null;
+      preSelectedTemplate = early[0] || null;
+      preSelectedLayoutId = packMeta.layout_id;
     }
 
-    // 1) Content LLM
-    const contentPrompt = getSlideContentPrompt();
+    const preferVisuals = ctx.preferVisuals !== false;
     const resolvedTitle =
       outlineSlide.title ||
       (slide.content && slide.content.title) ||
       ctx.userPrompt ||
       '';
     const resolvedSummary = outlineSlide.summary || ctx.userPrompt || '';
+
+    if (!earlyLayoutSchema && !ctx.packBound) {
+      const pre = await resolvePreGenerationLayout({
+        ctx,
+        slide,
+        outlineSlide,
+        resolvedTitle,
+        resolvedSummary,
+        preferVisuals,
+      });
+      earlyLayoutSchema = pre.schema;
+      preSelectedTemplate = pre.template;
+      preSelectedLayoutId = pre.layoutId;
+      preLayoutContentType = pre.layoutContentType;
+    }
+
+    let contentLayoutSchema = earlyLayoutSchema;
+
+    // 1) Content LLM
+    const contentPrompt = getSlideContentPrompt();
 
     const contentHash = hashPayload([
       'CONTENT',
@@ -1404,6 +1692,7 @@ async function processSlide(ctx, slide) {
       outlineSlide.suggestedContentType,
       ctx.userPrompt || '',
       slideIntent || '',
+      contentLayoutSchema?.layout_id || '',
     ]);
     const contentJob = await beginJob({
       slideId: slide.id,
@@ -1442,9 +1731,9 @@ async function processSlide(ctx, slide) {
               wizardBrief: ctx.wizardBrief || '',
               intent: slideIntent,
               generationHints,
-              slotConstraints: slotConstraintsFromLayout(earlyLayoutSchema),
-              layoutContext: layoutContextFromSchema(earlyLayoutSchema),
-              layoutId: earlyLayoutSchema?.layout_id || null,
+              slotConstraints: slotConstraintsFromLayout(contentLayoutSchema),
+              layoutContext: layoutContextFromSchema(contentLayoutSchema),
+              layoutId: contentLayoutSchema?.layout_id || preSelectedLayoutId || null,
             }),
             model: DEFAULT_SLIDE_MODEL,
           }),
@@ -1493,7 +1782,6 @@ async function processSlide(ctx, slide) {
     // 2) Classify
     let contentType = content?.content_type || slide.contentType || outlineSlide.suggestedContentType;
     let visualNeed = content?.visual_need || null;
-    const preferVisuals = ctx.preferVisuals !== false;
 
     const classifyPrompt = getClassifyPrompt();
     const classifyHash = hashPayload([
@@ -1559,11 +1847,19 @@ async function processSlide(ctx, slide) {
       }
     }
 
+    const slideTotal =
+      (ctx.outline?.slides || []).length ||
+      ctx.outline?.slideCount ||
+      ctx.slideTotal ||
+      Number(slide.order);
+    contentType = guardContentTypeForSlideOrder(contentType, slide.order, slideTotal, outlineSlide);
+
     const policy = applyVisualPolicy({
       visualNeed,
       contentType,
       preferVisuals,
       baseTemplateBias: ctx.baseTemplateBias || null,
+      respectOutlineType: !ctx.packBound,
     });
     visualNeed = policy.visualNeed;
     contentType = applyContentDistribution(policy.contentType, ctx);
@@ -1601,28 +1897,122 @@ async function processSlide(ctx, slide) {
       layoutId = existingLayoutId;
     }
     if (!template && !willRebind) {
-      const templates = await resolveLayoutTemplates(policy.layoutContentType, {
-        layoutIdWhitelist: ctx.layoutIdWhitelist || null,
-      });
-      ({ layoutId, template } = selectLayout({
-        contentType: policy.layoutContentType,
-        content,
-        previousLayoutId: ctx.previousLayoutId || null,
-        templates,
-        preferImageSlot: policy.preferImageSlot,
-      }));
+      const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
+      const plannedMatches =
+        plannedEntry?.template &&
+        plannedEntry?.layoutId &&
+        String(plannedEntry.layoutContentType || '') === String(policy.layoutContentType);
+      const preselectedMatches =
+        preSelectedTemplate &&
+        preSelectedLayoutId &&
+        String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
+          String(policy.layoutContentType);
+      const canReusePreselected = plannedMatches || preselectedMatches;
+
+      if (canReusePreselected) {
+        template = plannedEntry?.template || preSelectedTemplate;
+        layoutId = plannedEntry?.layoutId || preSelectedLayoutId;
+      } else {
+        let templates = await resolveLayoutTemplates(policy.layoutContentType, {
+          layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+        });
+        templates = filterTemplatesForSlideOrder(templates, slide.order, slideTotal);
+        if (ctx.fullBleedUsed) {
+          templates = templates.filter(
+            (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
+          );
+        }
+        ({ layoutId, template } = selectLayout({
+          contentType: policy.layoutContentType,
+          content,
+          previousLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
+          usedLayoutIds: ctx.usedLayoutIds || null,
+          templates,
+          preferImageSlot: policy.preferImageSlot,
+          preferredLayoutId: preferredLayoutForSlide(
+            ctx,
+            policy.layoutContentType,
+            ctx.usedLayoutIds || new Set(),
+            slide.order
+          ),
+          slideOrder: slide.order,
+          totalSlides: slideTotal,
+        }));
+      }
     }
     if (!layoutId && existingLayoutId) layoutId = existingLayoutId;
-    ctx.previousLayoutId = layoutId;
+    if (layoutId) {
+      ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
+      ctx.layoutIdByOrder[Number(slide.order)] = layoutId;
+      if (String(layoutId) === 'full_bg_image_overlay_v1') {
+        ctx.fullBleedUsed = true;
+      }
+    }
 
-    const qa = validateSlide({
+    let qa = validateSlide({
       content,
       layoutSchema: template?.schema || null,
     });
     content = qa.content;
+
+    if (qaNeedsContentRepair(qa.issues) && template?.schema) {
+      logger.warn?.('presentation_slide_qa_issues', {
+        slideId: slide.id,
+        layoutId: template.schema.layout_id || layoutId,
+        issues: qa.issues,
+      });
+      try {
+        const repairResult = await withTimeout(
+          chatJson({
+            system: contentPrompt.buildSystem(),
+            user: contentPrompt.buildUser({
+              deckTitle: ctx.outline?.title || ctx.projectName,
+              themeTone:
+                ctx.themeTokens?.brand?.voice?.tone ||
+                ctx.themeTokens?.imageStyle ||
+                'professional',
+              density: ctx.density || 'balanced',
+              slideOrder: slide.order,
+              slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
+              title: resolvedTitle || content?.title,
+              summary: resolvedSummary,
+              suggestedContentType: contentType,
+              previousSlideTitle: prev?.title,
+              nextSlideTitle: next?.title,
+              locale: ctx.locale || 'en',
+              wizardBrief: ctx.wizardBrief || '',
+              intent: slideIntent,
+              generationHints,
+              slotConstraints: slotConstraintsFromLayout(template.schema),
+              layoutContext: layoutContextFromSchema(template.schema),
+              layoutId: template.schema.layout_id || layoutId,
+            }),
+            model: DEFAULT_SLIDE_MODEL,
+          }),
+          CONTENT_TIMEOUT_MS,
+          'Slide content repair'
+        );
+        content = { ...(content || {}), ...repairResult.data };
+        content = applyGenerationHints(content, generationHints);
+        qa = validateSlide({ content, layoutSchema: template.schema });
+        content = qa.content;
+      } catch (repairErr) {
+        logger.warn?.('presentation_slide_qa_repair_failed', {
+          slideId: slide.id,
+          error: repairErr.message,
+        });
+      }
+    } else if (qa.issues?.length) {
+      logger.warn?.('presentation_slide_qa_issues', {
+        slideId: slide.id,
+        layoutId: template?.schema?.layout_id || layoutId,
+        issues: qa.issues,
+      });
+    }
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
       content.content_type = contentType;
+      content = applyDefaultOverlayDecisions(content, template?.schema || null);
       content = sanitizeShapeDecisions(content, template?.schema);
     }
 
@@ -1757,6 +2147,7 @@ async function processSlide(ctx, slide) {
       elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
         forceTextReplace: Boolean(ctx.forceTextReplace),
         themeTokens: ctx.themeTokens || null,
+        layoutSchema,
       });
       elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
     } else if (layoutSchema?.slots?.length) {
@@ -1768,12 +2159,14 @@ async function processSlide(ctx, slide) {
         {
           themeTokens: ctx.themeTokens || null,
           designTokens,
+          applyShapes: false,
         }
       );
     } else if (rebindBase) {
       elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
         forceTextReplace: Boolean(ctx.forceTextReplace),
         themeTokens: ctx.themeTokens || null,
+        layoutSchema,
       });
       elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
     } else {
@@ -1785,9 +2178,20 @@ async function processSlide(ctx, slide) {
         {
           themeTokens: ctx.themeTokens || null,
           designTokens,
+          applyShapes: false,
         }
       );
     }
+
+    elementsDoc = finalizeElementsDoc(elementsDoc, layoutSchema, content, ctx.themeTokens || null, {
+      width: canvasSize.width,
+      height: canvasSize.height,
+    });
+
+    if (ctx.themeTokens?.palette?.bg) {
+      elementsDoc.backgroundColor = ctx.themeTokens.palette.bg;
+    }
+
     const logo = brandKitService.pickLogoForBackground(ctx.themeTokens);
     elementsDoc = injectBrandLogo(elementsDoc, logo, {
       contentType,
@@ -1865,6 +2269,8 @@ async function processDeckGeneration({
       projectName,
       projectId: projectId || deck.projectId,
       previousLayoutId: null,
+      layoutIdByOrder: {},
+      fullBleedUsed: false,
       userPrompt: resolvedFlow.userPrompt || deck.outline?.sourcePrompt || null,
       preferVisuals,
       wizardBrief: resolvedFlow.wizardBrief || '',
@@ -1894,6 +2300,10 @@ async function processDeckGeneration({
     const pending = (deck.slides || []).filter(
       (s) => s.status === 'PENDING' || s.status === 'GENERATING'
     );
+
+    if (!ctx.packBound && pending.length > 0) {
+      await planDeckLayouts(ctx, pending);
+    }
 
     await mapPool(pending, PPT_SLIDE_CONCURRENCY, async (slide) => processSlide(ctx, slide));
 
@@ -2102,6 +2512,10 @@ async function generateOutline({
       density,
       locale,
       sourceText,
+    });
+    outline = enrichOutlineWithArrangement(outline, {
+      sourceText,
+      userPrompt: sourceText,
     });
 
     chargeResult = await presentationCredit.chargeOutlineReconcile({
@@ -2532,6 +2946,8 @@ async function regenerateSlide({
     projectName: project.name,
     projectId: project.id,
     previousLayoutId: null,
+    layoutIdByOrder: {},
+    fullBleedUsed: false,
     regenerateTarget: target,
     userPrompt: userPrompt || existingTitle || flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
     preferVisuals,
