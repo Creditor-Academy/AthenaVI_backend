@@ -25,6 +25,7 @@ const { buildInfographicPrompt } = require('./prompts/infographic.prompt');
 const { buildSocialPrompt } = require('./prompts/social.prompt');
 const { cropToFormat } = require('./socialCrop.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
+const { resolveAssetFilename } = require('./imageGenFilename');
 const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
 
 const MODES = new Set(['image', 'infographic', 'social']);
@@ -217,17 +218,21 @@ async function runPipeline({
 
   const cropped = await cropToFormat(generated.buffer, format);
   const generationId = uuidv4();
-  const assetName =
-    (name && String(name).trim()) ||
-    `ai-${mode}-${format?.id || 'square'}-${generationId.slice(0, 8)}.png`;
+  const assetName = resolveAssetFilename({
+    name,
+    prompt,
+    mode,
+    headline,
+    infographic,
+  });
 
   const asset = await persistWorkspaceAsset({
     userId,
     workspace,
     buffer: cropped.buffer,
     contentType: 'image/png',
-    originalName: assetName.endsWith('.png') ? assetName : `${assetName}.png`,
-    name: assetName.endsWith('.png') ? assetName : `${assetName}.png`,
+    originalName: assetName,
+    name: assetName,
     source: 'ai_gen',
     stockMetadata: {
       generationId,
@@ -418,7 +423,13 @@ async function tweak({ userId, workspace, generationId, instruction }) {
 
   const cropped = await cropToFormat(edited.buffer, format);
   const generationIdNew = uuidv4();
-  const assetName = `ai-tweak-${generationIdNew.slice(0, 8)}.png`;
+  const assetName = resolveAssetFilename({
+    prompt: parent.prompt,
+    mode: parent.mode,
+    headline: parent.request?.headline,
+    infographic: parent.request?.infographic,
+    instruction: String(instruction).trim(),
+  });
 
   const asset = await persistWorkspaceAsset({
     userId,

@@ -1060,6 +1060,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 | `formatId` | **Required** for `social`. Optional aspect for `image` |
 | `prompt` | Required unless `infographic.sections` provided |
 | `style` / `styleId` | Optional from `/styles` |
+| `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
 | `brandPalette` | Optional hex list — can mirror Brand Kit colors in UI |
 | `contextId` | Optional context bundle from §3.4b |
 
@@ -1097,7 +1098,7 @@ Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge).
 
 `GET .../generations/:generationId/download?format=png|jpg|jpeg|pdf`
 
-Returns file attachment (`Content-Disposition: attachment`). **No credit charge.**
+Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.**
 
 | format | Content-Type |
 |--------|----------------|
@@ -1105,7 +1106,7 @@ Returns file attachment (`Content-Disposition: attachment`). **No credit charge.
 | `jpg` / `jpeg` | `image/jpeg` |
 | `pdf` | `application/pdf` (single page) |
 
-Use blob download with filename from `Content-Disposition`.
+Use blob download with filename from `Content-Disposition` (prompt-derived kebab-case unless generate `name` was sent).
 
 ## 3.10 Assets library
 

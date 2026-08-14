@@ -87,7 +87,9 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 GET .../generations/:id/download?format=png|jpg|jpeg|pdf
 ```
 
-Use blob download with filename from `Content-Disposition`. No credits.
+Use blob download with filename from `Content-Disposition` (prompt-derived kebab-case, e.g. `cute-coffee-cup-emoji.png`). Optional generate `name` overrides that. Do not invent technical names client-side. No credits.
+
+Library and history should show `asset.name` / `generation.request.name`. `stockMetadata.generationId` is unchanged for internal linking.
 
 ---
 

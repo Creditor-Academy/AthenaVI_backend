@@ -159,6 +159,7 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 | `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). |
 | `prompt` | Required unless `infographic.sections` provided |
 | `style` / `styleId` | Optional vibe from `/styles` |
+| `name` | Optional display filename. If omitted, derived from the prompt (kebab-case, e.g. `cute-coffee-cup-emoji.png`). S3 keys stay UUID-based. |
 | `contextId` | Optional. Uses document text + vision summaries in the prompt; reference images go through `images.edit` |
 
 **Response `data`:** `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`.
@@ -224,7 +225,7 @@ Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharg
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` |
 | **Query** | `format=png` \| `jpg` \| `jpeg` \| `pdf` (default **png**) |
 
-Returns file attachment (`Content-Disposition: attachment`). **No credit charge.**
+Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.**
 
 | format | Content-Type |
 |--------|----------------|
