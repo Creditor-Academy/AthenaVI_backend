@@ -357,6 +357,67 @@ function bulletBlock(list) {
   return list.map((line) => `• ${line}`).join('\n');
 }
 
+function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
+  const raw = typeof line === 'string' ? line.trim() : itemToText(line);
+  if (!raw) return null;
+  const cleaned = raw.replace(/^•\s*/, '');
+  const mdMatch = cleaned.match(/^\*\*(.+?)\*\*:\s*(.+)$/);
+  if (mdMatch) {
+    return [
+      { text: '• ', colorRole: textRole },
+      { text: `${mdMatch[1]}:`, fontWeight: 700, colorRole: textRole },
+      { text: ` ${mdMatch[2]}`, colorRole: mutedRole },
+    ];
+  }
+  const colonMatch = cleaned.match(/^([^:]{2,40}):\s*(.+)$/);
+  if (colonMatch) {
+    return [
+      { text: '• ', colorRole: textRole },
+      { text: `${colonMatch[1]}:`, fontWeight: 700, colorRole: textRole },
+      { text: ` ${colonMatch[2]}`, colorRole: mutedRole },
+    ];
+  }
+  if (line && typeof line === 'object' && (line.topic || line.label)) {
+    const topic = String(line.topic ?? line.label ?? '').trim();
+    const detail = String(line.text ?? line.body ?? '').trim();
+    if (topic && detail) {
+      return [
+        { text: '• ', colorRole: textRole },
+        { text: `${topic}:`, fontWeight: 700, colorRole: textRole },
+        { text: ` ${detail}`, colorRole: mutedRole },
+      ];
+    }
+  }
+  return [{ text: `• ${cleaned}`, colorRole: mutedRole }];
+}
+
+function buildBulletListRuns(content, onImage = false) {
+  const items = bulletsOf(content);
+  if (!items.length) return null;
+  const textRole = onImage ? 'textOnImage' : 'text';
+  const mutedRole = onImage ? 'textOnImageMuted' : 'muted';
+  const runs = [];
+  items.forEach((item, index) => {
+    const lineRuns = parseBulletLineRuns(item, mutedRole, textRole);
+    if (!lineRuns) return;
+    if (index > 0) runs.push({ text: '\n', colorRole: mutedRole });
+    runs.push(...lineRuns);
+  });
+  if (!runs.length) return null;
+  return {
+    text: bulletBlock(items),
+    runs,
+  };
+}
+
+function applyRichBulletsToTextContent(textContent, content, slotId, onImage = false) {
+  const id = String(slotId || '').toLowerCase();
+  if (id !== 'bullets' && id !== 'bullet_list') return textContent;
+  const rich = buildBulletListRuns(content, onImage);
+  if (!rich) return textContent;
+  return { ...textContent, text: rich.text, runs: rich.runs };
+}
+
 function bulletsOf(content) {
   return itemsToTexts(content.bullets);
 }
@@ -1654,6 +1715,7 @@ function layoutSlotsToElements(
     if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
     if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
     textContent = applyRichTitleToTextContent(textContent, content, slotId, role, onImage);
+    textContent = applyRichBulletsToTextContent(textContent, content, slotId, onImage);
     const slotRole = elementRoleFromSlot(slot, slotId);
     const fontFamily = fontFamilyForRole(slotRole, themeTokens);
     if (fontFamily) textContent.fontFamily = fontFamily;
@@ -2125,6 +2187,55 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
   return { ...doc, elements };
 }
 
+function applySplitHeroDecorShape(doc, layoutSchema, themeTokens, canvas) {
+  if (!doc || !layoutSchema?.slots?.length) return doc;
+  const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
+  const slots = layoutSchema.slots;
+  const heroSlot = slots.find((s) => String(s.id || '').toUpperCase() === 'HERO_IMAGE');
+  if (!heroSlot) return doc;
+
+  const hasDecorSlot = slots.some((s) => /HERO_DECOR|IMAGE_DECOR|DECOR_SHAPE/i.test(String(s.id || '')));
+  if (!hasDecorSlot && !/bullet_split_image/.test(layoutId)) return doc;
+
+  const elements = [...(doc.elements || [])];
+  const heroEl = elements.find((el) => el.slotId === heroSlot.id || el.slotId === 'HERO_IMAGE');
+  const placement = heroEl?.placement || regionToPlacement(heroSlot.region, canvas, heroSlot, slots);
+  if (!placement) return doc;
+
+  const palette = themeTokens?.palette || {};
+  const accent = paletteColor(palette, 'accent', paletteColor(palette, 'secondary', '#E8A798'));
+  const decorWidth = Math.max(120, (placement.width || 400) * 1.35);
+  const decorHeight = Math.max(120, (placement.height || 500) * 1.15);
+  const decorX = (placement.x ?? 0) - decorWidth * 0.18;
+  const decorY = (placement.y ?? 0) + (placement.height || 0) * 0.08;
+
+  elements.unshift({
+    id: newElementId('shp'),
+    type: 'shape',
+    layer: Math.max(0, (heroSlot.layer || 2) - 1),
+    placement: {
+      x: Math.max(0, decorX),
+      y: Math.max(0, decorY),
+      width: decorWidth,
+      height: decorHeight,
+      rotation: 0,
+      opacity: 0.35,
+    },
+    content: {
+      shape: 'ellipse',
+      fill: {
+        type: 'solid',
+        colorRole: 'accent',
+        color: accent,
+      },
+      layoutSurface: true,
+    },
+    role: 'decoration',
+  });
+
+  return { ...doc, elements };
+}
+
 function docHasFullBleedBackground(doc, layoutSchema) {
   if (layoutRequiresOverlayScrim(layoutSchema)) return true;
   const canvas = doc?.canvas || {};
@@ -2162,6 +2273,7 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   }
 
   next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
+  next = applySplitHeroDecorShape(next, layoutSchema, themeTokens, canvas);
 
   if (docHasFullBleedBackground(next, layoutSchema)) {
     const enriched = {

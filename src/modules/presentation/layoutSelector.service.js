@@ -1,3 +1,33 @@
+const LAYOUT_FAMILIES = {
+  centered_text: [
+    'title_centered_v1',
+    'title_minimal_v1',
+    'headline_centered_v1',
+    'closing_thank_you_v1',
+    'text_only_centered_v1',
+    'centered_text_cta_v1',
+    'title_statement_v1',
+  ],
+  full_bleed_overlay: [
+    'full_bg_image_overlay_v1',
+    'closing_thank_you_fullbleed_v1',
+    'title_image_logo_v1',
+    'agenda_three_columns_hero_v1',
+  ],
+};
+
+function layoutFamilyExcludeIds(layoutId) {
+  const id = String(layoutId || '').trim();
+  if (!id) return [];
+  const related = new Set([id]);
+  for (const ids of Object.values(LAYOUT_FAMILIES)) {
+    if (ids.includes(id)) {
+      ids.forEach((entry) => related.add(entry));
+    }
+  }
+  return [...related];
+}
+
 function countWords(text) {
   if (text == null) return 0;
   const s = String(text).trim();
@@ -219,10 +249,22 @@ function selectLayout({
   preferredLayoutId = null,
   slideOrder = null,
   totalSlides = null,
+  excludeLayoutIds = null,
 }) {
   let list = Array.isArray(templates) ? templates : [];
   if (slideOrder != null) {
     list = filterTemplatesForSlideOrder(list, slideOrder, totalSlides ?? slideOrder);
+  }
+  const excluded = new Set(
+    (Array.isArray(excludeLayoutIds) ? excludeLayoutIds : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean)
+  );
+  if (excluded.size) {
+    list = list.filter((t) => {
+      const layoutId = String(t?.schema?.layout_id || t?.variant || t?.id || '');
+      return !excluded.has(layoutId);
+    });
   }
   const type = contentType != null ? String(contentType) : null;
 
@@ -281,4 +323,6 @@ module.exports = {
   contentDensity,
   countWords,
   templateHasImageSlot,
+  layoutFamilyExcludeIds,
+  LAYOUT_FAMILIES,
 };

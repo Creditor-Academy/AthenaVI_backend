@@ -6028,6 +6028,7 @@
           "id": "MAIN_CHART",
           "region": "cols 7-11, rows 2-10",
           "role": "chart",
+          "chartType": "column-grouped",
           "layer": 10
         }
       ],
@@ -18235,6 +18236,216 @@
             "text": "Two to three lines explaining this section.",
             "variant": "body",
             "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Bullet Split Image",
+    "contentType": "bullet_list",
+    "variant": "bullet_split_image_v1",
+    "schema": {
+      "layout_id": "bullet_split_image_v1",
+      "content_type": "bullet_list",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "SUBHEADING",
+          "region": "cols 2-6, rows 1-2",
+          "role": "eyebrow",
+          "placeholder_text": "Section label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.2,
+            "letterSpacing": 0.08,
+            "uppercase": true
+          }
+        },
+        {
+          "id": "HEADING",
+          "region": "cols 2-6, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Key points",
+          "layer": 10,
+          "typography": {
+            "fontSize": 32,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "BULLETS",
+          "region": "cols 2-6, rows 3-9",
+          "role": "body",
+          "placeholder_text": "• **Topic:** Supporting detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.55
+          },
+          "max_lines": 8
+        },
+        {
+          "id": "HERO_DECOR_SHAPE",
+          "region": "cols 7-12, rows 2-10",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "heroDecor",
+            "pairsWithSlotId": "HERO_IMAGE"
+          },
+          "shape": {
+            "type": "ellipse",
+            "fillColorRole": "accent"
+          }
+        },
+        {
+          "id": "HERO_IMAGE",
+          "region": "cols 7-11, rows 2-9",
+          "role": "image",
+          "layer": 3,
+          "fit": "cover",
+          "imageStyle": "featured",
+          "borderRadius": 12
+        }
+      ],
+      "preview": {
+        "mode": null,
+        "slots": {
+          "SUBHEADING": {
+            "text": "Section label",
+            "variant": "eyebrow",
+            "bold": true,
+            "uppercase": true
+          },
+          "HEADING": {
+            "text": "Key points",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BULLETS": {
+            "text": "• **Topic:** Supporting detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "HERO_IMAGE": {
+            "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Closing Thank You Fullbleed",
+    "contentType": "closing",
+    "variant": "closing_thank_you_fullbleed_v1",
+    "schema": {
+      "layout_id": "closing_thank_you_fullbleed_v1",
+      "content_type": "closing",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "BACKGROUND_IMAGE",
+          "region": "cols 1-12, rows 1-10",
+          "role": "background",
+          "layer": 0,
+          "fit": "cover"
+        },
+        {
+          "id": "OVERLAY_SCRIM",
+          "region": "cols 1-12, rows 1-12",
+          "role": "background",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "overlayScrim",
+            "overlay": true,
+            "suggestedScrim": 0.5
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "overlayScrim",
+            "fill": {
+              "type": "solid",
+              "colorRole": "overlayScrim",
+              "color": "rgba(0,0,0,0.5)"
+            }
+          }
+        },
+        {
+          "id": "DECOR_LINE",
+          "region": "cols 2-4, rows 2-2",
+          "role": "decoration",
+          "layer": 10,
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "textOnImage"
+          }
+        },
+        {
+          "id": "QUOTE",
+          "region": "cols 2-8, rows 2-4",
+          "role": "quote",
+          "placeholder_text": "A memorable quote for your audience.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 400,
+            "colorRole": "textOnImage",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MAIN_TITLE",
+          "region": "cols 2-9, rows 7-9",
+          "role": "heading",
+          "placeholder_text": "Thank you",
+          "layer": 10,
+          "typography": {
+            "fontSize": 64,
+            "fontWeight": 800,
+            "colorRole": "textOnImage",
+            "align": "left",
+            "lineHeight": 1.1
+          }
+        }
+      ],
+      "preview": {
+        "mode": "closing_cta",
+        "slots": {
+          "QUOTE": {
+            "text": "A memorable quote for your audience.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "MAIN_TITLE": {
+            "text": "Thank you",
+            "variant": "title",
+            "bold": true,
             "uppercase": false
           }
         }

@@ -17,7 +17,7 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { selectLayout, filterTemplatesForSlideOrder } = require('./layoutSelector.service');
+const { selectLayout, filterTemplatesForSlideOrder, layoutFamilyExcludeIds } = require('./layoutSelector.service');
 const {
   enrichOutlineWithArrangement,
   preferredLayoutForSlide,
@@ -116,6 +116,156 @@ function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
   }
 
   return null;
+}
+
+function titleWordsFromBody(body, fallback) {
+  const words = String(body || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length >= 2) return words.slice(0, 4).join(' ');
+  return fallback;
+}
+
+function normalizeMultiColumnContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const slots = layoutSchema.slots;
+  const needsColumns = slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || '')));
+  if (!needsColumns) return content;
+
+  const colsKey = Array.isArray(content.columns)
+    ? 'columns'
+    : Array.isArray(content.cards)
+      ? 'cards'
+      : Array.isArray(content.features)
+        ? 'features'
+        : null;
+  if (!colsKey) return content;
+
+  const next = { ...content, [colsKey]: [...content[colsKey]] };
+  const slideTitle = String(next.title || '').trim().toLowerCase();
+  const seen = new Set();
+
+  next[colsKey] = next[colsKey].map((col, index) => {
+    if (!col || typeof col !== 'object') return col;
+    const copy = { ...col };
+    let title = String(copy.title ?? copy.heading ?? copy.label ?? '').trim();
+    const body = String(copy.body ?? copy.text ?? '').trim();
+    const titleLower = title.toLowerCase();
+
+    if (!title || titleLower === slideTitle || seen.has(titleLower)) {
+      title = titleWordsFromBody(body, `Aspect ${index + 1}`);
+      copy.title = title;
+      if (copy.heading != null) copy.heading = title;
+      if (copy.label != null) copy.label = title;
+    }
+    seen.add(String(copy.title ?? copy.heading ?? '').trim().toLowerCase());
+    return copy;
+  });
+
+  const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
+  if (imageSlots.length > 1) {
+    const imagePrompts = {
+      ...(next.imagePrompts && typeof next.imagePrompts === 'object' ? next.imagePrompts : {}),
+    };
+    const usedPrompts = new Set();
+    imageSlots.forEach((slot, index) => {
+      const slotId = String(slot.id);
+      let prompt =
+        imagePrompts[slotId] ||
+        imagePrompts[slotId.toUpperCase()] ||
+        deriveSlotImagePrompt(slotId, next, layoutSchema) ||
+        '';
+      prompt = String(prompt).trim();
+      const col = next[colsKey][index];
+      const colTitle = col ? String(col.title ?? col.heading ?? '').trim() : '';
+      if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
+        prompt = colTitle
+          ? `${colTitle} — distinct visual ${index + 1}`
+          : `${next.title || 'Slide topic'} — visual ${index + 1}`;
+      }
+      usedPrompts.add(prompt.toLowerCase());
+      imagePrompts[slotId] = prompt;
+    });
+    next.imagePrompts = imagePrompts;
+  }
+
+  return next;
+}
+
+async function repairSlideContentFromQa({
+  ctx,
+  slide,
+  content,
+  template,
+  layoutId,
+  contentType,
+  resolvedTitle,
+  resolvedSummary,
+  slideIntent,
+  generationHints,
+  mergedGenerationHints,
+  contentPrompt,
+  neighbors = {},
+}) {
+  let nextContent = content;
+  let qa = validateSlide({ content: nextContent, layoutSchema: template?.schema || null });
+  nextContent = qa.content;
+
+  for (let attempt = 0; attempt < 2 && qaNeedsContentRepair(qa.issues); attempt += 1) {
+    logger.warn?.('presentation_slide_qa_issues', {
+      slideId: slide.id,
+      layoutId: template.schema.layout_id || layoutId,
+      issues: qa.issues,
+      attempt: attempt + 1,
+    });
+    try {
+      const repairResult = await withTimeout(
+        chatJson({
+          system: contentPrompt.buildSystem(),
+          user: contentPrompt.buildUser({
+            deckTitle: ctx.outline?.title || ctx.projectName,
+            themeTone:
+              ctx.themeTokens?.brand?.voice?.tone ||
+              ctx.themeTokens?.imageStyle ||
+              'professional',
+            density: ctx.density || 'balanced',
+            slideOrder: slide.order,
+            slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
+            title: resolvedTitle || nextContent?.title,
+            summary: resolvedSummary,
+            suggestedContentType: contentType,
+            previousSlideTitle: neighbors.prev?.title,
+            nextSlideTitle: neighbors.next?.title,
+            locale: ctx.locale || 'en',
+            wizardBrief: ctx.wizardBrief || '',
+            intent: slideIntent,
+            generationHints: mergeGenerationHints(template.schema, generationHints),
+            slotConstraints: slotConstraintsFromLayout(template.schema),
+            layoutContext: layoutContextFromSchema(template.schema),
+            layoutId: template.schema.layout_id || layoutId,
+          }),
+          model: DEFAULT_SLIDE_MODEL,
+        }),
+        CONTENT_TIMEOUT_MS,
+        'Slide content repair'
+      );
+      nextContent = { ...(nextContent || {}), ...repairResult.data };
+      nextContent = applyGenerationHints(nextContent, mergedGenerationHints);
+      nextContent = normalizeMultiColumnContent(nextContent, template.schema);
+      qa = validateSlide({ content: nextContent, layoutSchema: template.schema });
+      nextContent = qa.content;
+    } catch (repairErr) {
+      logger.warn?.('presentation_slide_qa_repair_failed', {
+        slideId: slide.id,
+        error: repairErr.message,
+        attempt: attempt + 1,
+      });
+      break;
+    }
+  }
+
+  return { content: nextContent, qa };
 }
 
 async function generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema }) {
@@ -345,8 +495,8 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   }
 
   flowCtx.themeTokens = fontPairingService.mergeThemeTokensPreservingFonts(
-    deck.themeTokens,
-    flowCtx.themeTokens
+    flowCtx.themeTokens?.wizardColorThemeId ? {} : deck.themeTokens,
+    flowCtx.themeTokens || deck.themeTokens
   );
 
   try {
@@ -951,6 +1101,49 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
   }
 
   if (!Object.keys(slotImageUrls).length) return content;
+
+  const urlCounts = new Map();
+  for (const url of Object.values(slotImageUrls)) {
+    if (!url) continue;
+    urlCounts.set(url, (urlCounts.get(url) || 0) + 1);
+  }
+  for (const [slotId, url] of Object.entries(slotImageUrls)) {
+    if (url && (urlCounts.get(url) || 0) > 1 && slotIds.length > 1) {
+      delete slotImageUrls[slotId];
+    }
+  }
+
+  const regenMissing = slotIds.filter((slotId) => !slotImageUrls[slotId]);
+  if (
+    regenMissing.length &&
+    ctx.imageSource !== 'none' &&
+    ctx.imageSource !== 'placeholder'
+  ) {
+    for (const slotId of regenMissing) {
+      const prompt =
+        deriveSlotImagePrompt(slotId, content, layoutSchema) ||
+        imagePrompts[slotId] ||
+        imagePrompts[String(slotId).toUpperCase()] ||
+        `${content?.title || 'Slide'} — alternate visual for ${slotId}`;
+      try {
+        const generated = await generateSlotImage({
+          ctx,
+          slide,
+          slotId,
+          prompt: `${prompt} (distinct variation)`,
+          layoutSchema,
+        });
+        if (generated?.url) slotImageUrls[slotId] = generated.url;
+      } catch (err) {
+        logger.warn?.('presentation_slot_image_regen_failed', {
+          slideId: slide.id,
+          slotId,
+          error: err.message,
+        });
+      }
+    }
+  }
+
   return { ...content, slotImageUrls };
 }
 
@@ -1409,7 +1602,11 @@ function qaNeedsContentRepair(issues) {
       issue.repairable === true ||
       issue.rule === 'required_structured' ||
       issue.rule === 'distinct_titles' ||
+      issue.rule === 'column_title_matches_slide_title' ||
+      issue.rule === 'duplicate_image_prompts' ||
       issue.rule === 'required_chart_data' ||
+      issue.rule === 'generic_chart_labels' ||
+      issue.rule === 'placeholder_chart_subtitle' ||
       issue.rule === 'placeholder_cta' ||
       (issue.truncated === true && issue.rule === 'max_lines')
   );
@@ -1476,6 +1673,10 @@ async function planDeckLayouts(ctx, slides) {
 
     ctx.outlineExplicitType = Boolean(outlineSlide.suggestedContentType || outlineSlide.arrangementHint);
     ctx.respectOutlineTypes = true;
+    const excludeLayoutIds =
+      Number(slide.order) === totalSlides && ctx.titleLayoutId
+        ? layoutFamilyExcludeIds(ctx.titleLayoutId)
+        : null;
     const { layoutId, template } = selectLayout({
       contentType: layoutContentType,
       content: stubContent,
@@ -1486,6 +1687,7 @@ async function planDeckLayouts(ctx, slides) {
       preferredLayoutId: preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, slide.order),
       slideOrder: slide.order,
       totalSlides,
+      excludeLayoutIds,
     });
 
     if (layoutId && template) {
@@ -1497,6 +1699,9 @@ async function planDeckLayouts(ctx, slides) {
         policy,
       };
       usedLayoutIds.add(String(layoutId));
+      if (Number(slide.order) === 1) {
+        ctx.titleLayoutId = String(layoutId);
+      }
       if (String(layoutId) === 'full_bg_image_overlay_v1') fullBleedUsed = true;
       previousLayoutId = layoutId;
     }
@@ -1631,8 +1836,15 @@ function generationHintsFromLayout(layoutSchema) {
   const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
 
   if (ct === 'chart' || /chart/i.test(layoutId)) {
+    const chartSlot = slots.find((s) => String(s.role || '').toLowerCase() === 'chart');
+    const slotChartType = chartSlot?.chartType || chartSlot?.chart_type || null;
     hints.chartDataStyle =
-      'Provide 4-6 realistic numeric data points tied to the slide topic; labels short (1-3 words); values plausible integers or percentages.';
+      'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) — never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
+    if (slotChartType) {
+      hints.chartType = slotChartType.includes('line') ? 'line' : slotChartType.includes('donut') ? 'donut' : 'bar';
+    } else if (!/exponential|line/i.test(layoutId)) {
+      hints.chartType = 'bar';
+    }
   }
   if (imageSlots.length > 1) {
     hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual for each slot: ${imageSlots.map((s) => s.id).join(', ')}. No duplicate subjects.`;
@@ -2039,6 +2251,10 @@ async function processSlide(ctx, slide) {
             (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
           );
         }
+        const excludeLayoutIds =
+          Number(slide.order) === slideTotal && ctx.titleLayoutId
+            ? layoutFamilyExcludeIds(ctx.titleLayoutId)
+            : null;
         ({ layoutId, template } = selectLayout({
           contentType: policy.layoutContentType,
           content,
@@ -2054,6 +2270,7 @@ async function processSlide(ctx, slide) {
           ),
           slideOrder: slide.order,
           totalSlides: slideTotal,
+          excludeLayoutIds,
         }));
       }
     }
@@ -2061,9 +2278,16 @@ async function processSlide(ctx, slide) {
     if (layoutId) {
       ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
       ctx.layoutIdByOrder[Number(slide.order)] = layoutId;
+      if (Number(slide.order) === 1) {
+        ctx.titleLayoutId = String(layoutId);
+      }
       if (String(layoutId) === 'full_bg_image_overlay_v1') {
         ctx.fullBleedUsed = true;
       }
+    }
+
+    if (template?.schema) {
+      content = normalizeMultiColumnContent(content, template.schema);
     }
 
     let qa = validateSlide({
@@ -2073,52 +2297,23 @@ async function processSlide(ctx, slide) {
     content = qa.content;
 
     if (qaNeedsContentRepair(qa.issues) && template?.schema) {
-      logger.warn?.('presentation_slide_qa_issues', {
-        slideId: slide.id,
-        layoutId: template.schema.layout_id || layoutId,
-        issues: qa.issues,
+      const repaired = await repairSlideContentFromQa({
+        ctx,
+        slide,
+        content,
+        template,
+        layoutId,
+        contentType,
+        resolvedTitle,
+        resolvedSummary,
+        slideIntent,
+        generationHints,
+        mergedGenerationHints,
+        contentPrompt,
+        neighbors: { prev, next, length: neighbors.length },
       });
-      try {
-        const repairResult = await withTimeout(
-          chatJson({
-            system: contentPrompt.buildSystem(),
-            user: contentPrompt.buildUser({
-              deckTitle: ctx.outline?.title || ctx.projectName,
-              themeTone:
-                ctx.themeTokens?.brand?.voice?.tone ||
-                ctx.themeTokens?.imageStyle ||
-                'professional',
-              density: ctx.density || 'balanced',
-              slideOrder: slide.order,
-              slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
-              title: resolvedTitle || content?.title,
-              summary: resolvedSummary,
-              suggestedContentType: contentType,
-              previousSlideTitle: prev?.title,
-              nextSlideTitle: next?.title,
-              locale: ctx.locale || 'en',
-              wizardBrief: ctx.wizardBrief || '',
-              intent: slideIntent,
-              generationHints: mergeGenerationHints(template.schema, generationHints),
-              slotConstraints: slotConstraintsFromLayout(template.schema),
-              layoutContext: layoutContextFromSchema(template.schema),
-              layoutId: template.schema.layout_id || layoutId,
-            }),
-            model: DEFAULT_SLIDE_MODEL,
-          }),
-          CONTENT_TIMEOUT_MS,
-          'Slide content repair'
-        );
-        content = { ...(content || {}), ...repairResult.data };
-        content = applyGenerationHints(content, mergedGenerationHints);
-        qa = validateSlide({ content, layoutSchema: template.schema });
-        content = qa.content;
-      } catch (repairErr) {
-        logger.warn?.('presentation_slide_qa_repair_failed', {
-          slideId: slide.id,
-          error: repairErr.message,
-        });
-      }
+      content = repaired.content;
+      qa = repaired.qa;
     } else if (qa.issues?.length) {
       logger.warn?.('presentation_slide_qa_issues', {
         slideId: slide.id,

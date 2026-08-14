@@ -71,6 +71,18 @@ function normalizeChartSeries(chart) {
 }
 
 const PLACEHOLDER_CTA_RE = /\b(book a demo|schedule a demo|get started today)\b/i;
+const GENERIC_CHART_LABEL_RE = /^(q[1-4]|quarter\s*[1-4]|series\s*1|period\s*[1-4])$/i;
+const PLACEHOLDER_CHART_SUBTITLE_RE = /this chart has a subtitle|chart subtitle|sample data/i;
+
+function layoutImageSlotIds(slots) {
+  return slots
+    .filter((slot) => {
+      const id = String(slot.id || '').toLowerCase();
+      const role = String(slot.role || '').toLowerCase();
+      return role === 'image' || id.includes('image');
+    })
+    .map((slot) => String(slot.id || ''));
+}
 
 function layoutNeedsComparison(slots) {
   return slots.some(
@@ -112,6 +124,26 @@ function validateStructuredFields(content, layoutSchema, issues) {
       if (titles.length >= 2 && uniqueTitles.size < Math.min(titles.length, minCols)) {
         issues.push({ path: 'columns', rule: 'distinct_titles', repairable: true });
       }
+      const slideTitle = String(content?.title || '').trim().toLowerCase();
+      if (slideTitle && titles.some((t) => t === slideTitle)) {
+        issues.push({ path: 'columns', rule: 'column_title_matches_slide_title', repairable: true });
+      }
+    }
+  }
+
+  const imageSlotIds = layoutImageSlotIds(slots);
+  if (imageSlotIds.length > 1) {
+    const prompts = content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+    const normalized = imageSlotIds
+      .map((slotId) =>
+        String(
+          prompts[slotId] || prompts[slotId.toUpperCase()] || prompts[slotId.toLowerCase()] || ''
+        ).trim()
+      )
+      .filter(Boolean);
+    const uniquePrompts = new Set(normalized.map((p) => p.toLowerCase()));
+    if (normalized.length >= 2 && uniquePrompts.size < normalized.length) {
+      issues.push({ path: 'imagePrompts', rule: 'duplicate_image_prompts', repairable: true });
     }
   }
 
@@ -124,6 +156,15 @@ function validateStructuredFields(content, layoutSchema, issues) {
       numericValues.length === labels.length;
     if (!valid) {
       issues.push({ path: 'chart', rule: 'required_chart_data', repairable: true });
+    } else {
+      const genericLabels = labels.filter((label) => GENERIC_CHART_LABEL_RE.test(String(label || '').trim()));
+      if (genericLabels.length >= Math.min(3, labels.length)) {
+        issues.push({ path: 'chart.labels', rule: 'generic_chart_labels', repairable: true });
+      }
+    }
+    const subtitle = String(content?.subtitle || content?.chart?.subtitle || '').trim();
+    if (subtitle && PLACEHOLDER_CHART_SUBTITLE_RE.test(subtitle)) {
+      issues.push({ path: 'subtitle', rule: 'placeholder_chart_subtitle', repairable: true });
     }
   }
 

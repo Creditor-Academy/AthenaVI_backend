@@ -40,7 +40,19 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (type === 'chart' || /chart/.test(id)) {
     lines.push(
-      'Chart slide: REQUIRED chart.labels (4-6 short labels) and chart.series[{ name, values }] with numeric values matching labels length. Use realistic illustrative data tied to the slide topic. Set isIllustrative:true.'
+      'Chart slide: REQUIRED chart.type ("bar" unless layout specifies line/donut), chart.labels (4-6 topic-specific labels — years, categories, or regions; never Q1/Q2/Q3/Q4 unless quarterly deck), and chart.series[{ name, values }] with numeric values matching labels length. Set isIllustrative:true.'
+    );
+  }
+
+  if (/bullet_split_image|split.*bullet/i.test(id)) {
+    lines.push(
+      'Split bullet slide: bullets must use "**Topic:** description" format (bold topic + colon + detail). 4-6 points max.'
+    );
+  }
+
+  if (/closing_thank_you_fullbleed|fullbleed.*thank/i.test(id)) {
+    lines.push(
+      'Full-bleed thank-you slide: REQUIRED quote (≤25 words, attribution optional), titleRuns for "Thank you" bottom-left, shapeDecisions.__overlay__.enabled true.'
     );
   }
 
@@ -163,8 +175,9 @@ function buildUser(vars = {}) {
     '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
     '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
-    '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
+    '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
     '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one distinct prompt per IMAGE_n / DEVICE_IMAGE_n slot.',
+    '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',
     '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
@@ -180,7 +193,7 @@ function buildUser(vars = {}) {
         ],
         subtitle: null,
         body: null,
-        bullets: ['...'],
+        bullets: ['**Topic one:** Supporting detail.', '**Topic two:** Supporting detail.'],
         stats: [{ label: '...', value: '...' }],
         columns: [
           { title: 'Distinct card title A', body: 'Body for column A.' },
@@ -193,7 +206,7 @@ function buildUser(vars = {}) {
         quote: null,
         chart: {
           type: 'bar',
-          labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+          labels: ['2022', '2023', '2024', '2025'],
           series: [{ name: 'Growth', values: [12, 19, 24, 31] }],
           isIllustrative: true,
         },
