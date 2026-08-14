@@ -145,7 +145,7 @@ AI product scenes with the kit logo as a reference image (OpenAI Images Edit).
 - Preview always uploads to S3 (`mockup-preview/`) and returns a **presigned URL** (no base64).
 - `save: true` stores `kind: mockup`, `role: templateId`, **replace-on-save** for that role.
 - **First 2 successful generates per kit are free** (`data.meta.mockupFreeUsed`). Failures do not consume free slots or credits. After that, flat AC (`brand_kit_logo_mockup`, default **4**).
-- Rate limit: **10 / hour** per user+workspace (429). Env: `BRAND_KIT_MOCKUP_RATE_LIMIT_MAX`, `BRAND_KIT_MOCKUP_RATE_LIMIT_WINDOW_SEC`.
+- Rate limit: **20 / hour** per user+workspace (429). Env: `BRAND_KIT_MOCKUP_RATE_LIMIT_MAX`, `BRAND_KIT_MOCKUP_RATE_LIMIT_WINDOW_SEC`.
 
 Both catalog and list responses include:
 `billing: { charged, freeUsed, freeLimit: 2, freeRemaining, athenaCredits, feature }`.

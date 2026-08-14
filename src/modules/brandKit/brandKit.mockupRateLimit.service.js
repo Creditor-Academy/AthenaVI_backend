@@ -11,7 +11,7 @@ const WINDOW_SEC =
 const MAX =
   Number(process.env.BRAND_KIT_MOCKUP_RATE_LIMIT_MAX) > 0
     ? Number(process.env.BRAND_KIT_MOCKUP_RATE_LIMIT_MAX)
-    : 10;
+    : 20;
 
 const userKey = (userId) => `brandKit:mockup:user:${userId || 'unknown'}`;
 const workspaceKey = (workspaceId) =>
