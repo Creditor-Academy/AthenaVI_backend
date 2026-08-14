@@ -90,6 +90,83 @@ function buildPaletteFromRoles(map, roles, prefix = '') {
   };
 }
 
+function contrastInkForHex(hex) {
+  return relativeLuminance(hex) > 0.55 ? '#0F172A' : '#FFFFFF';
+}
+
+function resolveOneButtonToken(style = {}, map, roles, kind = 'primary') {
+  const primaryId = roles.primary;
+  const bgId = roles.bg;
+  const textId = roles.text;
+  const defaults =
+    kind === 'secondary'
+      ? {
+          label: 'Secondary',
+          backgroundColorId: bgId,
+          textColorId: primaryId,
+          borderColorId: primaryId,
+          borderWidthPx: 1,
+          borderRadiusPx: 10,
+          paddingXPx: 20,
+          paddingYPx: 10,
+          fontWeight: 600,
+          fontSizePx: 14,
+        }
+      : {
+          label: 'Primary',
+          backgroundColorId: primaryId,
+          textColorId: null,
+          borderColorId: null,
+          borderWidthPx: 0,
+          borderRadiusPx: 10,
+          paddingXPx: 20,
+          paddingYPx: 10,
+          fontWeight: 600,
+          fontSizePx: 14,
+        };
+
+  const merged = { ...defaults, ...(style || {}) };
+  const background = resolveHex(
+    map,
+    merged.backgroundColorId,
+    kind === 'secondary' ? '#F8FAFC' : '#2563EB'
+  );
+  const text = resolveHex(
+    map,
+    merged.textColorId,
+    kind === 'secondary' ? resolveHex(map, primaryId, '#2563EB') : contrastInkForHex(background)
+  );
+  const border = resolveHex(
+    map,
+    merged.borderColorId,
+    kind === 'secondary' ? resolveHex(map, primaryId, '#2563EB') : background
+  );
+
+  return {
+    label: merged.label || defaults.label,
+    background,
+    text,
+    border,
+    borderWidthPx: Number(merged.borderWidthPx) || 0,
+    borderRadiusPx: Number(merged.borderRadiusPx) || 0,
+    paddingXPx: Number(merged.paddingXPx) || 16,
+    paddingYPx: Number(merged.paddingYPx) || 10,
+    fontWeight: Number(merged.fontWeight) || 600,
+    fontSizePx: Number(merged.fontSizePx) || 14,
+    backgroundColorId: merged.backgroundColorId || null,
+    textColorId: merged.textColorId || null,
+    borderColorId: merged.borderColorId || null,
+  };
+}
+
+function resolveButtonTokens(data, map, roles) {
+  const buttons = data?.buttons || {};
+  return {
+    primary: resolveOneButtonToken(buttons.primary, map, roles, 'primary'),
+    secondary: resolveOneButtonToken(buttons.secondary, map, roles, 'secondary'),
+  };
+}
+
 function validateBrandKitData(data) {
   if (!data || typeof data !== 'object') {
     throw new AppError('Brand kit data is required', 400);
@@ -117,6 +194,16 @@ function validateBrandKitData(data) {
     for (const id of data.chartStyles.colorIds) {
       if (!map.has(String(id))) {
         throw new AppError(`chartStyles.colorIds contains unknown id: ${id}`, 400);
+      }
+    }
+  }
+  for (const kind of ['primary', 'secondary']) {
+    const style = data.buttons?.[kind];
+    if (!style || typeof style !== 'object') continue;
+    for (const key of ['backgroundColorId', 'textColorId', 'borderColorId']) {
+      const id = style[key];
+      if (id && !map.has(String(id))) {
+        throw new AppError(`buttons.${kind}.${key} must reference a color id`, 400);
       }
     }
   }
@@ -223,6 +310,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
       bodyLineHeight: body.lineHeight ?? 1.6,
     },
     typeScale: buildTypeScale(data.fonts),
+    buttons: resolveButtonTokens(data, map, roles),
     scaleRatio: 1.333,
     spacingScale: { xs: 4, sm: 8, md: 16, lg: 24 },
     imageStyle: data.imageStyle || 'brand-safe professional photography, no text overlay',
@@ -238,6 +326,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
       photos,
       graphics,
       namedColors: data.colors || [],
+      buttons: data.buttons || null,
     },
   };
 
@@ -267,6 +356,7 @@ function mergeBrandKitWithThemeTokens(wizardTokens, kitTokens) {
       ...(wizardTokens.fonts || {}),
       ...(kitTokens.fonts || {}),
     },
+    buttons: kitTokens.buttons || wizardTokens.buttons,
     typeScale: kitTokens.typeScale || wizardTokens.typeScale,
     brand: kitTokens.brand || wizardTokens.brand,
     imageStyle: kitTokens.imageStyle || wizardTokens.imageStyle,

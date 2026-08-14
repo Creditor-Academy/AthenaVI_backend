@@ -17,10 +17,11 @@ async function bufferToDataUrl(buffer, mimeType) {
   return `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`;
 }
 
-async function loadLogoDataUrls(media = []) {
-  const logos = [];
+async function loadMediaDataUrls(media = [], kind) {
+  const items = [];
+  const wanted = String(kind || '').toLowerCase();
   for (const m of media) {
-    if (String(m.kind || '').toLowerCase() !== 'logo') continue;
+    if (String(m.kind || '').toLowerCase() !== wanted) continue;
     let dataUrl = null;
     if (m.s3Key) {
       try {
@@ -30,14 +31,15 @@ async function loadLogoDataUrls(media = []) {
         dataUrl = null;
       }
     }
-    logos.push({
+    items.push({
       id: m.id,
-      role: String(m.role || 'primary').toLowerCase(),
+      role: String(m.role || '').toLowerCase() || null,
       name: m.name || null,
+      templateId: m.templateId || m.meta?.templateId || null,
       dataUrl,
     });
   }
-  return logos;
+  return items;
 }
 
 async function withBrowserPage(fn) {
@@ -69,11 +71,16 @@ async function generateGuidelinePdf({ workspaceId, brandKitId }) {
   const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
 
-  const logos = await loadLogoDataUrls(kit.media || []);
+  const media = kit.media || [];
+  const [logos, mockups] = await Promise.all([
+    loadMediaDataUrls(media, 'logo'),
+    loadMediaDataUrls(media, 'mockup'),
+  ]);
   const html = buildGuidelinePdfHtml({
     kitName: kit.name || 'Brand Kit',
     data: kit.data || {},
     logos,
+    mockups,
     subtitle: kit.data?.meta?.tagline || '',
   });
 

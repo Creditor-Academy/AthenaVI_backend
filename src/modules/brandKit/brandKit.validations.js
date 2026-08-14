@@ -23,6 +23,21 @@ const fontFaceSchema = Joi.object({
   lineHeight: Joi.number().min(0.8).max(3).optional(),
 }).optional();
 
+const buttonStyleSchema = Joi.object({
+  label: Joi.string().trim().max(64).allow('', null).optional(),
+  backgroundColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+  textColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+  borderColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+  borderWidthPx: Joi.number().integer().min(0).max(12).optional(),
+  borderRadiusPx: Joi.number().integer().min(0).max(64).optional(),
+  paddingXPx: Joi.number().integer().min(0).max(80).optional(),
+  paddingYPx: Joi.number().integer().min(0).max(48).optional(),
+  fontWeight: Joi.number().integer().min(100).max(900).optional(),
+  fontSizePx: Joi.number().integer().min(10).max(32).optional(),
+})
+  .unknown(true)
+  .optional();
+
 const brandKitDataSchema = Joi.object({
   meta: Joi.object({
     tagline: Joi.string().trim().max(256).allow('', null).optional(),
@@ -50,6 +65,12 @@ const brandKitDataSchema = Joi.object({
     subheading: fontFaceSchema,
     body: fontFaceSchema,
     tertiary: fontFaceSchema,
+  })
+    .unknown(true)
+    .optional(),
+  buttons: Joi.object({
+    primary: buttonStyleSchema,
+    secondary: buttonStyleSchema,
   })
     .unknown(true)
     .optional(),

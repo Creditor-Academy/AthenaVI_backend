@@ -47,6 +47,32 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
     "subheading": { "fontPairingId": "outfit_source", "family": "Space Grotesk", "weight": 600, "sizePx": 20, "lineHeight": 1.4 },
     "body": { "fontPairingId": "outfit_source", "family": "Inter", "weight": 400, "sizePx": 14, "lineHeight": 1.6 }
   },
+  "buttons": {
+    "primary": {
+      "label": "Primary",
+      "backgroundColorId": "c1",
+      "textColorId": null,
+      "borderColorId": null,
+      "borderWidthPx": 0,
+      "borderRadiusPx": 10,
+      "paddingXPx": 20,
+      "paddingYPx": 10,
+      "fontWeight": 600,
+      "fontSizePx": 14
+    },
+    "secondary": {
+      "label": "Secondary",
+      "backgroundColorId": "c2",
+      "textColorId": "c1",
+      "borderColorId": "c1",
+      "borderWidthPx": 1,
+      "borderRadiusPx": 10,
+      "paddingXPx": 20,
+      "paddingYPx": 10,
+      "fontWeight": 600,
+      "fontSizePx": 14
+    }
+  },
   "voice": {
     "tone": "Professional, confident",
     "audience": "Enterprise buyers",
@@ -66,7 +92,9 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 
 `colorRoles.bg` / `text` / `primary` are required and must reference color ids. Light and dark pairs are contrast-checked (WCAG AA) when creating/updating or when applying AI color suggestions.
 
-When mapped to presentations, kits produce `themeTokens` with `palette`, optional `paletteDark`, font weights/sizes, and `brand.chartColors`.
+When mapped to presentations, kits produce `themeTokens` with `palette`, optional `paletteDark`, font weights/sizes, `buttons` (resolved primary/secondary styles), and `brand.chartColors`.
+
+`buttons.primary` / `buttons.secondary` are optional. Color fields reference palette `id`s (`backgroundColorId`, `textColorId`, `borderColorId`). If `textColorId` is omitted on primary, text ink is auto-contrasted against the background.
 
 ---
 
