@@ -1,3 +1,5 @@
+const { analyzeChartStory, chartDatasetCount: countChartDatasets } = require('./chartStory.util');
+
 const LAYOUT_FAMILIES = {
   centered_text: [
     'title_centered_v1',
@@ -11,8 +13,16 @@ const LAYOUT_FAMILIES = {
   full_bleed_overlay: [
     'full_bg_image_overlay_v1',
     'closing_thank_you_fullbleed_v1',
+    'title_fullbleed_v1',
     'title_image_logo_v1',
     'agenda_three_columns_hero_v1',
+  ],
+  split_hero_title: [
+    'title_image_logo_v1',
+    'title_hero_left_blob_v1',
+    'title_hero_right_oval_v1',
+    'title_hero_left_fade_v1',
+    'title_hero_right_fade_v1',
   ],
   split_hero_right: [
     'title_image_logo_v1',
@@ -39,7 +49,9 @@ function layoutFamilyExcludeIds(layoutId) {
 
 function isSplitHeroLayout(layoutId) {
   const id = String(layoutId || '').trim();
-  return Boolean(id && LAYOUT_FAMILIES.split_hero_right.includes(id));
+  if (!id) return false;
+  if (LAYOUT_FAMILIES.split_hero_title.includes(id)) return true;
+  return Boolean(LAYOUT_FAMILIES.split_hero_right.includes(id));
 }
 
 function closingLayoutExcludeIds(titleLayoutId) {
@@ -91,7 +103,23 @@ function contentDensity(content) {
   const hasAgenda = Boolean(content.agenda?.columns?.length);
   const hasContact = Boolean(content.contact && (content.contact.address || content.contact.phone || content.contact.email));
 
-  return { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact };
+  let chartDatasetCountVal = countChartDatasets(content);
+  const chartAnalysis = hasChart ? analyzeChartStory(content) : null;
+
+  return {
+    bulletCount,
+    wordCount,
+    statCount,
+    memberCount,
+    planCount,
+    hasChart,
+    hasTable,
+    hasAgenda,
+    hasContact,
+    chartDatasetCount: chartDatasetCountVal,
+    chartStory: chartAnalysis?.story || null,
+    chartPreferredLayout: chartAnalysis?.layoutId || null,
+  };
 }
 
 function layoutCapacity(template) {
@@ -149,9 +177,27 @@ function countPlanSlots(template) {
   return slots.filter((slot) => /^PLAN_\d+_LABEL$/i.test(String(slot?.id || ''))).length;
 }
 
+function countChartSlots(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.filter((slot) => String(slot.role || '').toLowerCase() === 'chart').length;
+}
+
 function scoreTemplate(
   template,
-  { bulletCount, wordCount, statCount, memberCount, planCount, hasChart, hasTable, hasAgenda, hasContact },
+  {
+    bulletCount,
+    wordCount,
+    statCount,
+    memberCount,
+    planCount,
+    hasChart,
+    hasTable,
+    hasAgenda,
+    hasContact,
+    chartDatasetCount,
+    chartStory,
+    chartPreferredLayout,
+  },
   previousLayoutId,
   preferImageSlot,
   usedLayoutIds = null,
@@ -182,8 +228,35 @@ function scoreTemplate(
   const ct = String(template.contentType || template?.schema?.content_type || '');
   const imageSlotCount = countImageSlots(template);
   const statSlotCount = countStatSlots(template);
+  const variant = String(template.variant || template?.schema?.layout_id || '').toLowerCase();
 
-  if (hasChart && ct === 'chart') score += 40;
+  if (hasChart && ct === 'chart') {
+    score += 40;
+    const chartSlots = countChartSlots(template);
+    if (chartPreferredLayout && String(layoutId) === String(chartPreferredLayout)) {
+      score += 45;
+    }
+    if (/chart_two|chart_three|chart_triple/.test(variant)) {
+      if ((chartDatasetCount || 0) >= 2 || chartStory === 'dual_metrics') score += 25;
+      else score -= 55;
+    }
+    if (/chart_donut_context/.test(variant)) {
+      if (chartStory === 'composition') score += 35;
+      else score -= 20;
+    }
+    if (/chart_exponential_desc/.test(variant)) {
+      if (chartStory === 'trend') score += 35;
+      else score -= 15;
+    }
+    if (/chart_with_description/.test(variant)) {
+      if (chartStory === 'ranking') score += 28;
+      else if (chartStory === 'composition' || chartStory === 'trend') score -= 10;
+    }
+    if (/chart_single|chart_full/.test(variant)) {
+      if (chartStory === 'simple') score += 25;
+      else if (chartStory === 'ranking' || chartStory === 'composition') score -= 8;
+    }
+  }
   if (hasTable && ct === 'chart') score += 35;
   if (hasTable && ct === 'pricing') score += 30;
   if (planCount > 0 && ct === 'pricing') {
@@ -207,9 +280,12 @@ function scoreTemplate(
     else if (statSlotCount > 0) score += 10;
   }
   if (imageSlotCount >= 3 && ct === 'grid') score += 25;
+  if (ct === 'timeline' && preferImageSlot && /timeline_milestones_image|_image_/.test(variant)) {
+    score += 40;
+  }
+  if (ct === 'timeline' && !preferImageSlot && !/image/.test(variant)) score += 12;
   if (bulletCount >= 4 && ct === 'grid') score += 15;
 
-  const variant = String(template.variant || template?.schema?.layout_id || '').toLowerCase();
   if (/two_para|three_para|four_para|intro_four_para|intro_three_para/.test(variant)) {
     if (wordCount >= 30) score += 25;
     if (bulletCount >= 2) score += 15;

@@ -38,12 +38,16 @@ function listLayoutImageSlots(layoutSchema) {
     .filter((slot) => {
       const id = String(slot.id || '').toLowerCase();
       const role = String(slot.role || '').toLowerCase();
-      return (
-        role === 'image'
-        || id.includes('image')
-        || id === 'hero'
-        || slot.fit === 'cover'
-      );
+      if (role === 'logo' || id === 'logo') return false;
+      if (/^text_half_bg$/i.test(id)) return false;
+      if (/_label$/i.test(id) || role === 'caption') return false;
+      if (role === 'image') return true;
+      if (role === 'background') return true;
+      if (/^image_\d+$/i.test(id)) return true;
+      if (id.includes('background') || id.includes('hero')) return true;
+      if (id.includes('image') && !id.includes('caption')) return true;
+      if (slot?.fit === 'cover' && role !== 'body') return true;
+      return false;
     })
     .map((slot) => slot.id)
     .filter(Boolean);

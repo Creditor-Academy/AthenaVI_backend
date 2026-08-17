@@ -86,6 +86,7 @@ function buildUser(vars = {}) {
     '- Include at least one grid slide (multi-image gallery or bento cards) in decks of 5+ slides.',
     '- Include at least one grid or device_frames slide in decks of 8+ slides when visuals matter.',
     '- Use chart only when the slide is primarily quantitative.',
+    '- Chart slides: analyze what the data shows before picking layout — trends → line; part-of-whole shares → donut/pie; rankings → bar; two metrics → dual chart. Vary chart layouts across the deck; do not default every chart to the same template.',
     '',
     'Output JSON schema:',
     JSON.stringify(

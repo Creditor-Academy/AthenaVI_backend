@@ -34,13 +34,31 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (type === 'closing' || /closing|cta/.test(id)) {
     lines.push(
-      'Closing slide: CTA must be topic-specific (e.g. "Explore the archive", "Start learning"). NEVER use generic "Book a demo" unless the deck is explicitly a sales/demo pitch.'
+      'Closing slide: REQUIRED subtitle (1 line), cta (short action phrase), and contact when layout has CONTACT slot. CTA must be topic-specific (e.g. "Explore the archive", "Start learning"). NEVER use generic "Book a demo" unless the deck is explicitly a sales/demo pitch.'
     );
   }
 
   if (type === 'chart' || /chart/.test(id)) {
     lines.push(
-      'Chart slide: REQUIRED chart.type ("bar" unless layout specifies line/donut), chart.labels (4-6 topic-specific labels — years, categories, or regions; never Q1/Q2/Q3/Q4 unless quarterly deck), and chart.series[{ name, values }] with numeric values matching labels length. Set isIllustrative:true.'
+      'Chart slide: analyze the data story FIRST, then pick chart.type and fill data. Never duplicate the same chart twice on one slide.'
+    );
+    lines.push(
+      'Story → type: time-series labels or trend narrative → "line"; values that sum to ~100% or part-of-whole share → "donut"/"pie"; ranked categories or absolute volumes → "bar". Only use chart2/charts[] when comparing two distinct metrics.'
+    );
+    lines.push(
+      'REQUIRED chart.labels (4-6 topic-specific labels) and chart.series[{ name, values }] with numeric values matching labels length. Set isIllustrative:true. Add body (3-4 lines) only when the layout has a BODY slot and insight adds value.'
+    );
+  }
+
+  if (/chart_with_description|chart_donut_context|donut|chart_split/.test(id)) {
+    lines.push(
+      'Chart + paragraph layout: fill body with a 3-4 line insight explaining the chart takeaway — do not repeat the title or raw numbers verbatim.'
+    );
+  }
+
+  if (/chart_two|chart_three|chart_dual/.test(id)) {
+    lines.push(
+      'Dual/triple chart layout: ONLY when comparing two or three distinct datasets. Provide chart + chart2 (or charts[]) with different labels/metrics — never the same data in both charts.'
     );
   }
 
@@ -62,24 +80,39 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
     );
   }
 
-  if (/three_cards|cards_image|grid_.*image|device/.test(id)) {
+  if (/three_cards|four_images|cards_image|grid_.*image|device|timeline_milestones_image/.test(id)) {
     lines.push(
       'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, etc.). Each prompt must describe ONE isolated subject matching columns[n].title — explicitly forbid collages, triptychs, and multi-panel images.'
     );
     lines.push(
-      'Multi-card layout: REQUIRED columns[] with one entry per card — each { title, body } must have a DISTINCT title (≤4 words) and 1-2 line body.'
+      'Multi-card/gallery layout: REQUIRED columns[] with one entry per image — each { title, body } must have a DISTINCT title (≤4 words) naming a single visual subject. Titles map to IMAGE_n_LABEL captions.'
+    );
+  }
+
+  if (/^title_hero_|^title_fullbleed|^title_image_logo/.test(id)) {
+    lines.push(
+      'Title hero layout: concise title (≤8 words) + short subtitle/tagline. One strong hero imagePrompt matching the deck topic — no collage. Shaped/fade/full-bleed variants use the same copy rules.'
     );
   }
 
   if (/section_with_image|two_para_right|three_para_image|section_left_image|para_split/.test(id)) {
     lines.push(
-      'Split text|image layout: text on one half, hero photo on the other. Photo gets an automatic edge fade into the slide background — keep copy concise on the text side.'
+      'Split text|image layout: text on one half, hero photo on the other. Only title slides get an automatic edge fade on the photo — keep copy concise on the text side.'
     );
   }
 
   if (/two_para|three_para|four_para|intro_four_para|intro_three_para/.test(id)) {
     lines.push(
       'Multi-paragraph layout: REQUIRED columns[] with distinct { title, body } per paragraph/column. Titles are subheadings (≤4 words); bodies are 1-3 lines each.'
+    );
+    lines.push(
+      'Four-paragraph + image layouts (four_para_image_v1): fill columns[0..3] — each entry maps to BULLET_1..BULLET_4. Never leave paragraph slots empty.'
+    );
+  }
+
+  if (/diagram_|swot|matrix|funnel|process_step/.test(id)) {
+    lines.push(
+      'Diagram layout: REQUIRED diagram.cells[] (or quadrants[]) with one { title, body } entry per quadrant/step/funnel tier. Each body must be 1-3 original lines about the slide topic. Replace ALL template placeholder wording — never echo "Two to three lines explaining this section."'
     );
   }
 
@@ -183,6 +216,7 @@ function buildUser(vars = {}) {
     '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
     '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
     '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated single-subject prompt per IMAGE_n / DEVICE_IMAGE_n slot (no collages or triptychs).',
+    '- Chart slides: analyze the data story first — line for trends, donut/pie only for true part-of-whole (~100% total), bar for rankings; dual-chart only for two distinct metrics. Never duplicate identical chart data.',
     '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',

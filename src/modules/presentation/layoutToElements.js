@@ -3,6 +3,8 @@ const {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
 } = require('./presentation.constants');
+const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const { normalizeChartContent } = require('./chartContentNormalize');
 
 function parseRegion(region) {
   const str = String(region || '');
@@ -24,6 +26,10 @@ const TEXT_SLOT_ROLES = new Set([
 /** Split text|image slides — fade photo edge into slide background (editorial bleed). */
 function resolveSplitImageEdgeFade(layoutSchema, slot) {
   if (!layoutSchema?.slots?.length || !slot) return null;
+  const contentType = String(layoutSchema?.content_type || '').toLowerCase();
+  const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
+  if (contentType !== 'title' && !/^title_/.test(layoutId)) return null;
+
   const imgReg = parseRegion(slot.region);
   if (!imgReg) return null;
 
@@ -510,6 +516,49 @@ function tableRowsOf(content) {
   return [...headers, ...rows].map((row) => (Array.isArray(row) ? row.map((c) => String(c ?? '')) : [String(row)]));
 }
 
+function chartDatasetAt(content, index) {
+  if (!content || typeof content !== 'object') return null;
+  if (Array.isArray(content.charts) && content.charts[index]) return content.charts[index];
+  if (index === 0 && content.chart) return content.chart;
+  if (index === 1 && content.chart2) return content.chart2;
+  return null;
+}
+
+function chartForSlot(slotId, content = {}) {
+  const id = String(slotId || '').toUpperCase();
+  const chartMatch = id.match(/^CHART_(\d+)$/);
+  if (chartMatch) {
+    return chartDatasetAt(content, Number(chartMatch[1]) - 1);
+  }
+  if (/^(MAIN_CHART|DONUT_CHART|LINE_CHART|BAR_CHART|KPI_CHART)/.test(id)) {
+    return content.chart || null;
+  }
+  return content.chart || null;
+}
+
+function resolveChartTypeForSlot(slot, chartData, content, layoutSchema) {
+  const explicit = String(chartData?.type || chartData?.chartType || '').trim().toLowerCase();
+  if (explicit) return explicit;
+  const slotType = String(slot?.chartType || slot?.chart_type || '').trim().toLowerCase();
+  if (slotType) return slotType;
+  const slotId = String(slot?.id || '').toUpperCase();
+  const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
+  if (/^DONUT/.test(slotId) || /donut|pie/.test(layoutId)) return 'donut';
+  if (/^LINE/.test(slotId) || /line|exponential|area/.test(layoutId)) return 'line';
+  const title = `${content?.title || ''} ${content?.summary || ''} ${content?.body || ''}`.toLowerCase();
+  const values = chartData?.series?.[0]?.values || chartData?.data || chartData?.values || [];
+  const nums = (Array.isArray(values) ? values : []).map(Number).filter((value) => !Number.isNaN(value));
+  const sum = nums.reduce((total, value) => total + value, 0);
+  if (
+    /share|percent|distribution|breakdown|producing|market share|composition|mix|split|portion/.test(title) ||
+    (nums.length >= 3 && sum >= 85 && sum <= 115)
+  ) {
+    return 'donut';
+  }
+  if (/trend|growth|over time|trajectory|year-over-year|yoy/.test(title)) return 'line';
+  return 'column-grouped';
+}
+
 function diagramCellAt(content, index) {
   const cells =
     content.diagram?.cells ||
@@ -721,7 +770,13 @@ function textForSlot(slotId, content = {}) {
     case 'attribution':
       return String(content.attribution || content.author || content.source || '').trim();
     case 'cta':
-      return String(content.cta || content.callToAction || '').trim();
+      return String(
+        content.cta ||
+          content.callToAction ||
+          content.closingCta ||
+          (content.title ? `Explore ${String(content.title).split(/\s+/).slice(0, 3).join(' ')}` : '') ||
+          'Learn more'
+      ).trim();
     case 'contact':
       return linesOf(content.contact);
     case 'caption':
@@ -799,10 +854,29 @@ function textForSlot(slotId, content = {}) {
     return String(stat?.label ?? stat?.title ?? stat?.text ?? '').trim();
   }
 
+  const imageLabelSlot = id.match(/^image_(\d+)_label$/);
+  if (imageLabelSlot) {
+    const idx = Number(imageLabelSlot[1]) - 1;
+    const col = structuredColumnAt(content, idx);
+    if (col) return String(col.title ?? col.heading ?? col.label ?? '').trim();
+    const items = Array.isArray(content.items) ? content.items : [];
+    const item = items[idx];
+    if (typeof item === 'string') return item.trim();
+    if (item) return String(item.title ?? item.label ?? item.heading ?? '').trim();
+    return '';
+  }
+
   const bulletSlot = id.match(/^bullet_(\d+)$/);
   if (bulletSlot) {
-    const items = bulletsOf(content);
-    return items[Number(bulletSlot[1]) - 1] || '';
+    const idx = Number(bulletSlot[1]) - 1;
+    const col = structuredColumnAt(content, idx);
+    if (col) {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      if (title && body) return `${title}\n${body}`;
+      return body || title || itemToText(col);
+    }
+    return bullets[idx] || '';
   }
 
   if (
@@ -812,7 +886,14 @@ function textForSlot(slotId, content = {}) {
   ) {
     return content.title || '';
   }
-  if (id.includes('subtitle')) return content.subtitle || '';
+  if (id.includes('subtitle')) {
+    return (
+      content.subtitle ||
+      content.summary ||
+      (typeof content.body === 'string' ? content.body.split(/[.!?]/)[0]?.trim() : '') ||
+      ''
+    );
+  }
   if (id.includes('quote')) return content.quote || content.body || '';
   if (id === 'bullets' || id === 'bullet_list') return bulletBlock(bullets);
 
@@ -830,22 +911,13 @@ function textForSlot(slotId, content = {}) {
     return '';
   }
 
-  const indexedBullet = id.match(/^bullet_(\d+)$/);
-  if (indexedBullet) {
-    const idx = Number(indexedBullet[1]) - 1;
-    const col = structuredColumnAt(content, idx);
-    if (col) {
-      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
-      const body = String(col.body ?? col.text ?? '').trim();
-      if (title && body) return `${title}\n${body}`;
-      return body || title || itemToText(col);
-    }
-    if (bullets[idx]) return bullets[idx];
-    return '';
-  }
-
   if (INDEXED_BODY_SLOT_RE.test(id)) {
-    if (id === 'body' && content.body) return content.body;
+    if (id === 'body') {
+      if (content.body) return content.body;
+      if (content.summary) return String(content.summary).trim();
+      if (bullets.length) return bulletBlock(bullets);
+      return '';
+    }
     if ((id === 'left_body' || id === 'right_body') && content[id]) return content[id];
     return '';
   }
@@ -1052,6 +1124,7 @@ function isMediaImageSlot(slotId, role, slot) {
   const r = String(role || '').toLowerCase();
   if (isLogoSlot(slotId, role)) return false;
   if (/^text_half_bg$/i.test(lower)) return false;
+  if (/_label$/i.test(lower) || r === 'caption') return false;
   if (r === 'background' || r === 'image') return true;
   if (lower.includes('background') || lower.includes('hero')) return true;
   if (lower.includes('image') && !lower.includes('caption')) return true;
@@ -1196,11 +1269,13 @@ function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, can
 function isPackPlaceholderText(text) {
   const t = String(text || '').trim().toLowerCase();
   if (!t) return false;
+  if (isCatalogPlaceholderText(text)) return true;
   return (
     /^your (title|subtitle|heading|headline|name|company|tagline|text|quote)/.test(t) ||
     t === 'insert text' ||
     t.startsWith('lorem ipsum') ||
-    t === 'double-click to edit'
+    t === 'double-click to edit' ||
+    t === 'double click to edit'
   );
 }
 
@@ -1619,9 +1694,11 @@ function layoutSlotsToElements(
       }
       const presentation = resolveImagePresentation(slot);
       const edgeFade = resolveSplitImageEdgeFade(layoutSchema, slot);
+      const imageMask = slot.imageMask && typeof slot.imageMask === 'object' ? slot.imageMask : null;
+      const shaped = Boolean(imageMask && imageMask.type && imageMask.type !== 'edgeFade');
       const borderRadius =
-        edgeFade != null ? 0 : slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
-      const shadow = edgeFade != null ? undefined : slot.shadow ?? presentation.shadow;
+        edgeFade != null || shaped ? 0 : slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
+      const shadow = edgeFade != null || shaped ? undefined : slot.shadow ?? presentation.shadow;
       elements.push({
         id: newElementId('img'),
         slotId,
@@ -1635,6 +1712,7 @@ function layoutSlotsToElements(
           ...(borderRadius != null ? { borderRadius } : {}),
           ...(shadow ? { boxShadow: shadow, shadow } : {}),
           ...(edgeFade ? { edgeFade } : {}),
+          ...(imageMask && !edgeFade ? { imageMask } : {}),
         },
         role: mediaRoleForSlot(slotId, role),
       });
@@ -1697,23 +1775,30 @@ function layoutSlotsToElements(
     }
 
     if (lower.includes('chart') || lower.includes('graph') || role === 'chart') {
+      const chartData = chartForSlot(slotId, content);
+      if (!chartData && /^CHART_[2-9]$/i.test(String(slotId))) {
+        if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+        continue;
+      }
       const brandChartColors = themeTokens?.brand?.chartColors;
+      const rawChart = {
+        chartType: resolveChartTypeForSlot(slot, chartData || content.chart || {}, content, layoutSchema),
+        labels: chartData?.labels || content.chart?.labels || [],
+        series: chartData?.series || chartData?.data || content.chart?.series || content.chart?.data || [],
+        values: chartData?.values || content.chart?.values,
+        colors:
+          (Array.isArray(chartData?.colors) && chartData.colors.length ? chartData.colors : null) ||
+          (Array.isArray(content.chart?.colors) && content.chart.colors.length ? content.chart.colors : null) ||
+          (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
+          (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : []),
+      };
       elements.push({
         id: newElementId('cht'),
         type: 'chart',
         layer: slotLayer,
         placement,
-        content: {
-          chartType: content.chart?.type || 'bar',
-          series: content.chart?.series || content.chart?.data || [],
-          labels: content.chart?.labels || [],
-          colors:
-            (Array.isArray(content.chart?.colors) && content.chart.colors.length
-              ? content.chart.colors
-              : null) ||
-            (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
-            (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : []),
-        },
+        slotId,
+        content: normalizeChartContent(rawChart, themeTokens?.palette || {}),
         role: 'chart',
       });
       if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
@@ -2274,39 +2359,48 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, _canvas) {
   const accent = paletteColor(palette, 'accent', paletteColor(palette, 'primary', '#6366F1'));
   const muted = paletteColor(palette, 'muted', '#94A3B8');
 
-  const milestoneEls = elements
+  const imageEls = elements.filter(
+    (el) => el.type === 'image' && /^IMAGE_\d+$/i.test(String(el.slotId || ''))
+  );
+  const labelEls = elements
     .filter((el) => {
       if (el.type !== 'text' && el.type !== 'textbox') return false;
-      const sid = String(el.slotId || '').toLowerCase();
-      return /^milestone_\d+(_label)?$/i.test(sid);
+      return /^milestone_\d+_label$/i.test(String(el.slotId || '').toLowerCase());
     })
     .sort((a, b) => (a.placement?.x ?? 0) - (b.placement?.x ?? 0));
 
-  if (milestoneEls.length < 2) return doc;
+  if (labelEls.length < 2) return doc;
 
-  const centers = milestoneEls.map((el) => {
+  const columnCenters = labelEls.map((el) => {
     const p = el.placement || {};
     return {
       x: (p.x ?? 0) + (p.width ?? 0) / 2,
-      y: (p.y ?? 0) + (p.height ?? 0) / 2,
+      labelTop: p.y ?? 0,
     };
   });
 
-  const axisY = Math.min(...centers.map((c) => c.y)) - 28;
-  const lineX1 = centers[0].x;
-  const lineX2 = centers[centers.length - 1].x;
+  let axisY;
+  if (/timeline_milestones_image/.test(layoutId) && imageEls.length) {
+    axisY =
+      Math.max(...imageEls.map((el) => (el.placement?.y ?? 0) + (el.placement?.height ?? 0))) + 12;
+  } else {
+    axisY = Math.min(...columnCenters.map((c) => c.labelTop)) - 20;
+  }
+
+  const lineX1 = columnCenters[0].x;
+  const lineX2 = columnCenters[columnCenters.length - 1].x;
 
   elements.unshift({
     id: newElementId('shp'),
     type: 'shape',
-    layer: 1,
+    layer: 0,
     placement: {
       x: lineX1,
       y: axisY,
       width: Math.max(40, lineX2 - lineX1),
-      height: 3,
+      height: 4,
       rotation: 0,
-      opacity: 0.85,
+      opacity: 0.9,
     },
     content: {
       shape: 'rect',
@@ -2317,15 +2411,15 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, _canvas) {
     role: 'decoration',
   });
 
-  centers.forEach((c) => {
-    const dotSize = 12;
+  columnCenters.forEach((c) => {
+    const dotSize = 14;
     elements.unshift({
       id: newElementId('shp'),
       type: 'shape',
-      layer: 2,
+      layer: 3,
       placement: {
         x: c.x - dotSize / 2,
-        y: axisY - dotSize / 2 + 1.5,
+        y: axisY - dotSize / 2 + 2,
         width: dotSize,
         height: dotSize,
         rotation: 0,
@@ -2440,6 +2534,12 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
     null;
 
+  const layoutSlots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const multiImageSlotCount = layoutSlots.filter((slot) =>
+    isMediaImageSlot(slot.id, slot.role, slot)
+  ).length;
+  const usedMultiImageUrls = new Set();
+
   const applyText = (el, nextText, role) => {
     if (nextText == null) return;
     const value = String(nextText);
@@ -2512,9 +2612,13 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       isImageSlot
     ) {
       const slotKey = String(el.slotId || '').trim();
-      const slotUrl = slotKey
+      let slotUrl = slotKey
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
+      if (slotUrl && multiImageSlotCount > 1) {
+        if (usedMultiImageUrls.has(slotUrl)) slotUrl = null;
+        else usedMultiImageUrls.add(slotUrl);
+      }
       if (!slotUrl) continue;
       el.content = {
         ...(el.content || {}),
@@ -2531,9 +2635,13 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       isImageSlot
     ) {
       const slotKey = String(el.slotId || '').trim();
-      const slotUrl = slotKey
+      let slotUrl = slotKey
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
+      if (slotUrl && multiImageSlotCount > 1) {
+        if (usedMultiImageUrls.has(slotUrl)) slotUrl = null;
+        else usedMultiImageUrls.add(slotUrl);
+      }
       if (!slotUrl) continue;
       el.type = 'image';
       el.content = {

@@ -23,6 +23,12 @@ const {
   preferredLayoutForSlide,
 } = require('./slideArrangementPlan.service');
 const { validateSlide } = require('./layoutQa.service');
+const {
+  analyzeChartStory,
+  chartDatasetCount: countChartDatasets,
+  inferChartTypeFromStory,
+} = require('./chartStory.util');
+const { resolveTitlePreferredLayoutId } = require('./titleLayout.util');
 const imageCache = require('./imageCache.service');
 const documentParse = require('./documentParse.service');
 const themeService = require('./theme.service');
@@ -39,6 +45,7 @@ const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
 const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
+const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
 const templateMediaService = require('../templates/templateMedia.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
@@ -61,7 +68,7 @@ function resolveAuthorImagePrompt(content) {
 }
 
 const SINGLE_SUBJECT_NEGATIVES =
-  'no triptych, no multi-panel, no split image, no collage, no diptych';
+  'no triptych, no multi-panel, no split image, no collage, no diptych, no grid, no multiple cups, no comparison sheet, no split frame';
 
 function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null) {
   const id = String(slotId || '');
@@ -128,10 +135,11 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
   const imageMatch = id.match(/^IMAGE_(\d+)$/i);
   if (imageMatch) {
     const idx = Number(imageMatch[1]) - 1;
-    const col = (content.columns || content.cards || content.features || [])[idx];
+    const col =
+      (content.columns || content.cards || content.features || content.items || [])[idx];
     if (col && typeof col === 'object') {
       const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
-      const body = String(col.body ?? col.text ?? '').trim();
+      const body = String(col.body ?? col.text ?? col.description ?? '').trim();
       if (title) {
         subject = body ? `${title}: ${body.slice(0, 80)}` : title;
       }
@@ -145,12 +153,19 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
   const slotIndex = Math.max(0, imageSlots.findIndex((s) => String(s.id) === id));
+  const layoutId = String(layoutSchema?.layout_id || '').trim();
 
   return [
+    `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single object on plain background`,
+    /four_images|grid_.*images|three_cards_image/i.test(layoutId)
+      ? 'Gallery slot — ONE single object fills the entire frame edge to edge'
+      : null,
     `Single photograph, ONE subject only, no collage: ${subject}`,
     `(variation ${slotIndex + 1})`,
     SINGLE_SUBJECT_NEGATIVES,
-  ].join('. ');
+  ]
+    .filter(Boolean)
+    .join('. ');
 }
 
 function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
@@ -169,19 +184,77 @@ function titleWordsFromBody(body, fallback) {
 function normalizeMultiColumnContent(content, layoutSchema) {
   if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
   const slots = layoutSchema.slots;
-  const needsColumns = slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || '')));
+  const needsColumns =
+    slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^body_\d+$/i.test(String(s.id || '')));
   if (!needsColumns) return content;
 
-  const colsKey = Array.isArray(content.columns)
+  let colsKey = Array.isArray(content.columns)
     ? 'columns'
     : Array.isArray(content.cards)
       ? 'cards'
       : Array.isArray(content.features)
         ? 'features'
         : null;
+
+  const next = { ...content };
+
+  if (!colsKey) {
+    const bullets = Array.isArray(content.bullets) ? content.bullets : [];
+    const items = Array.isArray(content.items) ? content.items : [];
+    const indexedSlotCount = Math.max(
+      slots.filter((s) => /^bullet_\d+$/i.test(String(s.id || ''))).length,
+      slots.filter((s) => /^body_\d+$/i.test(String(s.id || ''))).length,
+      slots.filter((s) => /^IMAGE_\d+$/i.test(String(s.id || ''))).length
+    );
+    if (items.length >= 2) {
+      next.columns = items.map((item, index) => {
+        if (typeof item === 'string') {
+          const text = item.trim();
+          const split = text.split(/[:\-—–]\s*/);
+          return {
+            title: split.length > 1 ? split[0].trim() : titleWordsFromBody(text, `Item ${index + 1}`),
+            body: split.length > 1 ? split.slice(1).join(' ').trim() : text,
+          };
+        }
+        return {
+          title: String(item.title ?? item.heading ?? item.label ?? titleWordsFromBody(item.body ?? item.text ?? '', `Item ${index + 1}`)).trim(),
+          body: String(item.body ?? item.text ?? item.description ?? '').trim(),
+        };
+      });
+      colsKey = 'columns';
+    } else if (bullets.length >= 2) {
+      next.columns = bullets.map((bullet, index) => {
+        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
+        const split = text.split(/[:\-—–]\s*/);
+        const inlineTitle = split.length > 1 ? split[0].trim() : '';
+        const body = split.length > 1 ? split.slice(1).join(' ').trim() : text;
+        return {
+          title: inlineTitle || titleWordsFromBody(body, `Point ${index + 1}`),
+          body,
+        };
+      });
+      colsKey = 'columns';
+    } else if (indexedSlotCount >= 2) {
+      const summary = String(content.summary || content.body || content.subtitle || '').trim();
+      const parts = summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        next.columns = Array.from({ length: indexedSlotCount }, (_, index) => {
+          const body = parts[index] || parts[index % parts.length] || summary.slice(0, 120);
+          return {
+            title: titleWordsFromBody(body, `Point ${index + 1}`),
+            body,
+          };
+        });
+        colsKey = 'columns';
+      }
+    }
+  }
+
   if (!colsKey) return content;
 
-  const next = { ...content, [colsKey]: [...content[colsKey]] };
+  next[colsKey] = [...next[colsKey]];
   const slideTitle = String(next.title || '').trim().toLowerCase();
   const seen = new Set();
 
@@ -229,6 +302,133 @@ function normalizeMultiColumnContent(content, layoutSchema) {
     });
     next.imagePrompts = imagePrompts;
   }
+
+  return next;
+}
+
+function listGalleryImageSlots(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots
+    .filter((s) => {
+      const id = String(s.id || '').toUpperCase();
+      return String(s.role || '').toLowerCase() === 'image' && /^IMAGE_\d+$/.test(id);
+    })
+    .sort(
+      (a, b) =>
+        Number(String(a.id).match(/\d+/)?.[0] || 0) - Number(String(b.id).match(/\d+/)?.[0] || 0)
+    );
+}
+
+function layoutUsesPerSlotGalleryImages(layoutSchema) {
+  const gallerySlots = listGalleryImageSlots(layoutSchema);
+  if (gallerySlots.length < 2) return false;
+  const slots = layoutSchema?.slots || [];
+  const hasSingleHero = slots.some((s) => {
+    const id = String(s.id || '').toUpperCase();
+    return id === 'HERO_IMAGE' || id === 'BACKGROUND_IMAGE';
+  });
+  return !hasSingleHero;
+}
+
+function normalizeGalleryImageContent(content, layoutSchema) {
+  const gallerySlots = listGalleryImageSlots(layoutSchema);
+  if (gallerySlots.length < 2 || !content || typeof content !== 'object') return content;
+
+  const needed = gallerySlots.length;
+  const next = { ...content };
+  let columns = Array.isArray(content.columns) ? [...content.columns] : [];
+
+  if (columns.length < needed) {
+    const items = Array.isArray(content.items) ? content.items : [];
+    const bullets = Array.isArray(content.bullets) ? content.bullets : [];
+    const summary = String(content.summary || content.body || content.subtitle || '').trim();
+    const parts = summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean);
+
+    if (items.length >= needed) {
+      columns = items.slice(0, needed).map((item, index) => {
+        if (typeof item === 'string') {
+          const text = item.trim();
+          const split = text.split(/[:\-—–]\s*/);
+          return {
+            title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
+            body: split.slice(1).join(' ').trim() || text,
+          };
+        }
+        return {
+          title: String(item.title ?? item.label ?? item.heading ?? `Item ${index + 1}`).trim(),
+          body: String(item.body ?? item.text ?? '').trim(),
+        };
+      });
+    } else if (bullets.length >= 2) {
+      columns = bullets.slice(0, needed).map((bullet, index) => {
+        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
+        const split = text.split(/[:\-—–]\s*/);
+        return {
+          title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
+          body: split.slice(1).join(' ').trim() || text,
+        };
+      });
+    } else if (parts.length >= 2) {
+      columns = Array.from({ length: needed }, (_, index) => {
+        const body = parts[index] || parts[index % parts.length] || summary.slice(0, 100);
+        return {
+          title: titleWordsFromBody(body, `Gallery ${index + 1}`),
+          body,
+        };
+      });
+    } else {
+      const slideTitle = String(content.title || 'Topic').trim();
+      columns = Array.from({ length: needed }, (_, index) => ({
+        title: titleWordsFromBody(`${slideTitle} aspect ${index + 1}`, `Gallery ${index + 1}`),
+        body: `Visual ${index + 1} illustrating ${slideTitle}`,
+      }));
+    }
+  }
+
+  const slideTitleLower = String(next.title || '').trim().toLowerCase();
+  const seenTitles = new Set();
+  next.columns = columns.slice(0, needed).map((col, index) => {
+    const copy = col && typeof col === 'object' ? { ...col } : { title: '', body: '' };
+    let title = String(copy.title ?? copy.heading ?? copy.label ?? '').trim();
+    const body = String(copy.body ?? copy.text ?? '').trim();
+    const titleLower = title.toLowerCase();
+    if (!title || titleLower === slideTitleLower || seenTitles.has(titleLower)) {
+      title = titleWordsFromBody(body, `Gallery ${index + 1}`);
+      copy.title = title;
+    }
+    seenTitles.add(String(copy.title ?? title).trim().toLowerCase());
+    if (body) copy.body = body;
+    return copy;
+  });
+
+  const imagePrompts = {
+    ...(next.imagePrompts && typeof next.imagePrompts === 'object' ? next.imagePrompts : {}),
+  };
+  const usedPrompts = new Set();
+  gallerySlots.forEach((slot, index) => {
+    const slotId = String(slot.id);
+    const col = next.columns[index];
+    const colTitle = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
+    let prompt = String(
+      imagePrompts[slotId] || imagePrompts[slotId.toUpperCase()] || imagePrompts[slotId.toLowerCase()] || ''
+    ).trim();
+    if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
+      prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
+    }
+    if (!prompt && colTitle) {
+      prompt = [
+        `${slotId}: single photograph of ONE ${colTitle} only`,
+        `One isolated ${colTitle}, plain background, centered composition`,
+        `(variation ${index + 1})`,
+        SINGLE_SUBJECT_NEGATIVES,
+      ].join('. ');
+    }
+    if (prompt) {
+      usedPrompts.add(prompt.toLowerCase());
+      imagePrompts[slotId] = prompt;
+    }
+  });
+  next.imagePrompts = imagePrompts;
 
   return next;
 }
@@ -305,14 +505,216 @@ function normalizeTimelineContent(content, layoutSchema) {
     });
   }
 
-  return {
+  const imageSlots = slots.filter((s) => {
+    const id = String(s.id || '').toUpperCase();
+    return String(s.role || '').toLowerCase() === 'image' || /^IMAGE_\d+$/.test(id);
+  });
+
+  const next = {
     ...content,
     [key]: normalized,
     timeline: key === 'timeline' ? normalized : content.timeline || normalized,
   };
+
+  if (
+    imageSlots.length > 1 &&
+    (!Array.isArray(content.columns) || content.columns.length < imageSlots.length)
+  ) {
+    next.columns = normalized.slice(0, imageSlots.length).map((item) => ({
+      title: String(item.label ?? item.title ?? item.period ?? '').trim(),
+      body: String(item.detail ?? item.body ?? item.text ?? '').trim(),
+    }));
+  }
+
+  return next;
+}
+
+function layoutNeedsDiagramCellsFromSchema(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots.some((slot) => {
+    const id = String(slot.id || '').toLowerCase();
+    return /^q\d+_body$/i.test(id) || /^funnel_\d+_body$/i.test(id) || /^step_\d+_body$/i.test(id);
+  });
+}
+
+function countDiagramCellSlotsFromSchema(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const quadrantBodies = slots.filter((s) => /^q\d+_body$/i.test(String(s.id || ''))).length;
+  const funnelBodies = slots.filter((s) => /^funnel_\d+_body$/i.test(String(s.id || ''))).length;
+  const stepBodies = slots.filter((s) => /^step_\d+_body$/i.test(String(s.id || ''))).length;
+  return Math.max(quadrantBodies, funnelBodies, stepBodies, 0);
+}
+
+function schemaTitleForDiagramSlot(slots, index, kind) {
+  if (kind === 'quadrant') {
+    const slot = slots.find((s) => String(s.id).toUpperCase() === `Q${index + 1}_TITLE`);
+    return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
+  }
+  if (kind === 'funnel') {
+    const slot = slots.find((s) => String(s.id).toLowerCase() === `funnel_${index + 1}_title`);
+    return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
+  }
+  const slot = slots.find((s) => String(s.id).toLowerCase() === `step_${index + 1}_title`);
+  return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
+}
+
+function normalizeDiagramContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const slots = layoutSchema.slots;
+  if (!layoutNeedsDiagramCellsFromSchema(layoutSchema)) return content;
+
+  const existing =
+    content.diagram?.cells ||
+    content.cells ||
+    content.quadrants ||
+    content.steps ||
+    content.funnel;
+  const hasValidCells =
+    Array.isArray(existing) &&
+    existing.some((cell) => {
+      const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
+      return body && !isCatalogPlaceholderText(body);
+    });
+  if (hasValidCells) {
+    const cells = [...existing];
+    return {
+      ...content,
+      diagram: { ...(content.diagram || {}), type: content.diagram?.type || 'diagram', cells },
+      cells,
+    };
+  }
+
+  const needed = Math.max(2, countDiagramCellSlotsFromSchema(layoutSchema) || 4);
+  const kind = slots.some((s) => /^q\d+_body$/i.test(String(s.id || '')))
+    ? 'quadrant'
+    : slots.some((s) => /^funnel_\d+_body$/i.test(String(s.id || '')))
+      ? 'funnel'
+      : 'step';
+
+  const sourceCols = content.columns || content.cards || content.features || [];
+  const sourceBullets = Array.isArray(content.bullets) ? content.bullets : [];
+  const sourceItems = Array.isArray(content.items) ? content.items : [];
+  const summaryParts = String(content.summary || content.body || content.subtitle || '')
+    .split(/[.;]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const cells = [];
+  for (let i = 0; i < needed; i += 1) {
+    const schemaTitle = schemaTitleForDiagramSlot(slots, i, kind);
+    let title = schemaTitle;
+    let body = '';
+
+    const col = sourceCols[i];
+    if (col && typeof col === 'object') {
+      title = String(col.title ?? col.heading ?? col.label ?? schemaTitle).trim() || schemaTitle;
+      body = String(col.body ?? col.text ?? '').trim();
+    } else if (sourceItems[i]) {
+      const item = sourceItems[i];
+      if (typeof item === 'string') {
+        body = item.trim();
+        title = titleWordsFromBody(body, schemaTitle || `Point ${i + 1}`);
+      } else {
+        title = String(item.title ?? item.heading ?? item.label ?? schemaTitle).trim();
+        body = String(item.body ?? item.text ?? item.detail ?? '').trim();
+      }
+    } else if (sourceBullets[i]) {
+      const bullet = sourceBullets[i];
+      body = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
+      title = titleWordsFromBody(body, schemaTitle || `Point ${i + 1}`);
+    }
+
+    if (!body) {
+      body = summaryParts[i % Math.max(summaryParts.length, 1)] || '';
+    }
+    if (!title) title = schemaTitle || `Section ${i + 1}`;
+
+    cells.push({ title, body });
+  }
+
+  return {
+    ...content,
+    diagram: { ...(content.diagram || {}), type: content.diagram?.type || kind, cells },
+    cells,
+  };
 }
 
 async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, slotImageUrls }) {
+  const slotIds = templateMediaService.listLayoutImageSlots(layoutSchema);
+  if (slotIds.length <= 1) return slotImageUrls;
+
+  let next = { ...(slotImageUrls || {}) };
+  if (ctx.imageSource === 'none' || ctx.imageSource === 'placeholder') return next;
+
+  const maxPasses = 3;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const urlToSlots = new Map();
+    for (const slotId of slotIds) {
+      const url = next[slotId];
+      if (!url) continue;
+      if (!urlToSlots.has(url)) urlToSlots.set(url, []);
+      urlToSlots.get(url).push(slotId);
+    }
+
+    let fixedAny = false;
+    for (const [url, slotsWithUrl] of urlToSlots) {
+      if (slotsWithUrl.length <= 1) continue;
+      for (let i = 1; i < slotsWithUrl.length; i += 1) {
+        const slotId = slotsWithUrl[i];
+        delete next[slotId];
+        const basePrompt = buildSlotImagePrompt(slotId, content, layoutSchema);
+        const prompt = `${basePrompt} (variation ${pass + i + 1}, completely different subject)`;
+        try {
+          const generated = await generateSlotImage({
+            ctx,
+            slide,
+            slotId,
+            prompt,
+            layoutSchema,
+          });
+          if (generated?.url && generated.url !== url) {
+            next[slotId] = generated.url;
+            fixedAny = true;
+          }
+        } catch (err) {
+          logger.warn?.('presentation_slot_image_distinct_regen_failed', {
+            slideId: slide.id,
+            slotId,
+            pass: pass + 1,
+            error: err.message,
+          });
+        }
+      }
+    }
+    if (!fixedAny) break;
+  }
+
+  const remainingDupes = new Set();
+  const seen = new Set();
+  for (const slotId of slotIds) {
+    const url = next[slotId];
+    if (!url) continue;
+    if (seen.has(url)) remainingDupes.add(url);
+    seen.add(url);
+  }
+  if (remainingDupes.size) {
+    logger.warn?.('presentation_slot_image_duplicates_remain', {
+      slideId: slide.id,
+      duplicateCount: remainingDupes.size,
+    });
+    const seenUrls = new Set();
+    for (const slotId of slotIds) {
+      const url = next[slotId];
+      if (!url) continue;
+      if (seenUrls.has(url)) delete next[slotId];
+      else seenUrls.add(url);
+    }
+  }
+
+  return next;
+}
+
+async function repairSlotImagesFromQa({ ctx, slide, content, layoutSchema, slotImageUrls }) {
   const slotIds = templateMediaService.listLayoutImageSlots(layoutSchema);
   if (slotIds.length <= 1) return slotImageUrls;
 
@@ -332,21 +734,14 @@ async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, 
     for (let i = 1; i < slotsWithUrl.length; i += 1) {
       const slotId = slotsWithUrl[i];
       delete next[slotId];
-      const basePrompt = buildSlotImagePrompt(slotId, content, layoutSchema);
-      const prompt = `${basePrompt} (variation ${i + 1}, different angle/subject)`;
+      const prompt = `${buildSlotImagePrompt(slotId, content, layoutSchema)} (unique subject ${i + 1}, must differ from other slots)`;
       try {
-        const generated = await generateSlotImage({
-          ctx,
-          slide,
-          slotId,
-          prompt,
-          layoutSchema,
-        });
+        const generated = await generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema });
         if (generated?.url && generated.url !== url) {
           next[slotId] = generated.url;
         }
       } catch (err) {
-        logger.warn?.('presentation_slot_image_distinct_regen_failed', {
+        logger.warn?.('presentation_slot_image_qa_repair_failed', {
           slideId: slide.id,
           slotId,
           error: err.message,
@@ -418,7 +813,10 @@ async function repairSlideContentFromQa({
       nextContent = { ...(nextContent || {}), ...repairResult.data };
       nextContent = applyGenerationHints(nextContent, mergedGenerationHints);
       nextContent = normalizeMultiColumnContent(nextContent, template.schema);
+      nextContent = normalizeGalleryImageContent(nextContent, template.schema);
+      nextContent = normalizeChartContent(nextContent, template.schema);
       nextContent = normalizeTimelineContent(nextContent, template.schema);
+      nextContent = normalizeDiagramContent(nextContent, template.schema);
       qa = validateSlide({ content: nextContent, layoutSchema: template.schema });
       nextContent = qa.content;
     } catch (repairErr) {
@@ -559,12 +957,74 @@ function isBlankStarterSlide(slide) {
   });
 }
 
-function contentNeedsFreshGeneration(content) {
+function contentNeedsFreshGeneration(content, layoutSchema = null) {
   if (!content || typeof content !== 'object') return true;
   const title = String(content.title || '').trim();
   if (!title) return true;
   if (isPackPlaceholderText(title)) return true;
   if (title === 'Untitled Presentation') return true;
+
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+
+  if (slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || '')))) {
+    const cols = content.columns || content.cards || content.features || [];
+    const minCols =
+      slots.filter((s) => /^card_\d+_title$/i.test(String(s.id || ''))).length || 2;
+    const validCols = cols.filter((col) => {
+      const body = String(col?.body ?? col?.text ?? '').trim();
+      return body && !isCatalogPlaceholderText(body);
+    });
+    if (validCols.length < minCols) return true;
+  }
+
+  if (layoutNeedsDiagramCellsFromSchema(layoutSchema)) {
+    const cells = content.diagram?.cells || content.cells || content.quadrants || [];
+    const minCells = countDiagramCellSlotsFromSchema(layoutSchema) || 2;
+    const validCells = cells.filter((cell) => {
+      const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
+      return body && !isCatalogPlaceholderText(body);
+    });
+    if (validCells.length < minCells) return true;
+  }
+
+  if (slots.some((s) => /^bullet_\d+$/i.test(String(s.id || '')) || /^body_\d+$/i.test(String(s.id || '')))) {
+    const cols = content.columns || [];
+    const minSlots = slots.filter(
+      (s) => /^bullet_\d+$/i.test(String(s.id || '')) || /^body_\d+$/i.test(String(s.id || ''))
+    ).length;
+    if (cols.length < minSlots) {
+      const bullets = Array.isArray(content.bullets) ? content.bullets : [];
+      const validBullets = bullets.filter((b) => {
+        const t = typeof b === 'string' ? b : b?.text || '';
+        return t && !isCatalogPlaceholderText(t);
+      });
+      if (validBullets.length < Math.min(minSlots, 2)) return true;
+    }
+  }
+
+  if (slots.some((s) => /^item_\d+$/i.test(String(s.id || '')))) {
+    const items = content.items || [];
+    const minItems = slots.filter((s) => /^item_\d+$/i.test(String(s.id || ''))).length;
+    const validItems = items.filter((item) => {
+      const t = typeof item === 'string' ? item : String(item?.title ?? item?.text ?? item?.body ?? '');
+      return t && !isCatalogPlaceholderText(t);
+    });
+    if (validItems.length < minItems) return true;
+  }
+
+  const gallerySlots = slots.filter(
+    (s) => String(s.role || '').toLowerCase() === 'image' && /^IMAGE_\d+$/i.test(String(s.id || ''))
+  );
+  if (gallerySlots.length >= 2) {
+    const cols = content.columns || [];
+    if (cols.length < gallerySlots.length) return true;
+    const validCols = cols.filter((col) => {
+      const title = String(col?.title ?? col?.heading ?? col?.label ?? '').trim();
+      return title && !isCatalogPlaceholderText(title);
+    });
+    if (validCols.length < gallerySlots.length) return true;
+  }
+
   const bullets = Array.isArray(content.bullets) ? content.bullets : [];
   const hasBullets = bullets.some((b) => {
     const t = typeof b === 'string' ? b : b?.text || '';
@@ -572,6 +1032,17 @@ function contentNeedsFreshGeneration(content) {
   });
   const body = String(content.body || '').trim();
   if (hasBullets || (body && !isPackPlaceholderText(body))) return false;
+
+  if (
+    slots.some((s) =>
+      /^(card|col)_\d+|^q\d+_body|^funnel_\d+_body|^step_\d+_body|^bullet_\d+|^item_\d+/i.test(
+        String(s.id || '')
+      )
+    )
+  ) {
+    return true;
+  }
+
   return !title || isPackPlaceholderText(title);
 }
 
@@ -694,6 +1165,26 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     layoutIdWhitelist,
     packSlides: pack?.schema?.slides || [],
   };
+}
+
+async function reconcileStaleGeneratingDeck(deck) {
+  if (!deck || deck.status !== 'GENERATING') return deck;
+
+  const slides = deck.slides || [];
+  if (!slides.length) {
+    const updated = await presentationDao.updateDeck(deck.id, { status: 'DRAFT' });
+    return { ...deck, ...updated, status: 'DRAFT' };
+  }
+
+  const hasActive = slides.some(
+    (s) => s.status === 'PENDING' || s.status === 'GENERATING'
+  );
+  if (hasActive) return deck;
+
+  const failedCount = slides.filter((s) => s.status === 'FAILED').length;
+  const status = failedCount === slides.length ? 'FAILED' : 'READY';
+  const updated = await presentationDao.updateDeck(deck.id, { status });
+  return { ...deck, ...updated, status };
 }
 
 async function loadPresentationDeck(presentationId, { requireWorkspaceId } = {}) {
@@ -939,6 +1430,134 @@ function applyVisualPolicy({
         layoutContentType
       ),
   };
+}
+
+function templateHasImageSlot(template) {
+  const slots = Array.isArray(template?.schema?.slots) ? template.schema.slots : [];
+  return slots.some((slot) => {
+    const id = String(slot?.id || '').toUpperCase();
+    const role = String(slot?.role || '').toLowerCase();
+    return role === 'image' || id.includes('IMAGE') || id === 'HERO_IMAGE' || id === 'BACKGROUND_IMAGE';
+  });
+}
+
+const OUTLINE_TYPES_USUALLY_WITHOUT_IMAGES = new Set([
+  'bullet_list',
+  'comparison',
+  'timeline',
+  'stat',
+  'chart',
+  'diagram',
+  'table',
+  'pricing',
+  'agenda',
+]);
+
+function neighborLikelyWithoutImages(outlineSlide, plannedEntry) {
+  if (plannedEntry?.template) return !templateHasImageSlot(plannedEntry.template);
+  const type = String(outlineSlide?.suggestedContentType || '').toLowerCase();
+  if (OUTLINE_TYPES_USUALLY_WITHOUT_IMAGES.has(type)) return true;
+  return (
+    type !== 'image+text' &&
+    type !== 'grid' &&
+    type !== 'device_frames' &&
+    type !== 'title' &&
+    type !== 'closing' &&
+    type !== 'section_divider'
+  );
+}
+
+function resolveTimelinePreferredLayoutId(slide, outlineSlides, planned, layoutContentType) {
+  if (String(layoutContentType || '').toLowerCase() !== 'timeline') return null;
+
+  const order = Number(slide.order);
+  const prev = outlineSlides.find((s) => Number(s.order) === order - 1);
+  const next = outlineSlides.find((s) => Number(s.order) === order + 1);
+  if (!prev && !next) return null;
+
+  const prevPlanned = prev ? planned[Number(prev.order)] : null;
+  const nextPlanned = next ? planned[Number(next.order)] : null;
+
+  const prevNoImage = prev ? neighborLikelyWithoutImages(prev, prevPlanned) : true;
+  const nextNoImage = next ? neighborLikelyWithoutImages(next, nextPlanned) : true;
+
+  if (prevNoImage && nextNoImage) {
+    return 'timeline_milestones_image_v1';
+  }
+  return null;
+}
+
+function chartInsightBody(content = {}, chart = {}) {
+  const labels = Array.isArray(chart.labels) ? chart.labels : [];
+  const values = chart.series?.[0]?.values || chart.data || chart.values || [];
+  const lead = labels[0] ? String(labels[0]) : 'The leading category';
+  const topValue = values[0] != null ? String(values[0]) : '';
+  const topic = String(content.title || 'this topic').trim();
+  if (lead && topValue) {
+    return `${lead} leads ${topic.toLowerCase()} at ${topValue}, with the remaining categories spread across the chart. Use this split to highlight concentration and opportunity.`;
+  }
+  return `This chart summarizes the key quantitative story behind ${topic}. Keep the insight scannable in three to four lines.`;
+}
+
+function normalizeChartContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const slots = layoutSchema.slots;
+  const chartSlots = slots.filter((slot) => String(slot.role || '').toLowerCase() === 'chart');
+  if (!chartSlots.length || !content.chart || typeof content.chart !== 'object') return content;
+
+  const next = { ...content };
+  const chart = { ...next.chart };
+  chart.type = inferChartTypeFromStory(chart, next, layoutSchema);
+  next.chart = chart;
+
+  const hasBodySlot = slots.some((slot) => String(slot.role || '').toLowerCase() === 'body');
+  const analysis = analyzeChartStory(next);
+  if (hasBodySlot && chartSlots.length === 1 && analysis.needsBody && !String(next.body || '').trim()) {
+    next.body = chartInsightBody(next, chart);
+  }
+
+  return next;
+}
+
+function resolveChartPreferredLayoutId(content, layoutContentType) {
+  if (String(layoutContentType || '').toLowerCase() !== 'chart') return null;
+  return analyzeChartStory(content).layoutId;
+}
+
+const FULL_BLEED_LAYOUT_IDS = new Set(['full_bg_image_overlay_v1', 'title_fullbleed_v1']);
+
+function isFullBleedLayoutId(layoutId) {
+  return FULL_BLEED_LAYOUT_IDS.has(String(layoutId || '').trim());
+}
+
+function resolvePreferredLayoutIdForSlide({
+  ctx,
+  slide,
+  outlineSlides,
+  planned,
+  layoutContentType,
+  content,
+  usedLayoutIds,
+  preferVisuals,
+  slideOrder,
+}) {
+  const chart = resolveChartPreferredLayoutId(content, layoutContentType);
+  if (chart) return chart;
+
+  const timeline = resolveTimelinePreferredLayoutId(
+    slide,
+    outlineSlides,
+    planned,
+    layoutContentType
+  );
+  if (timeline) return timeline;
+
+  const order = Number(slideOrder) > 0 ? Number(slideOrder) : Number(slide?.order) || 1;
+  if (order === 1 && String(layoutContentType || '').toLowerCase() === 'title') {
+    return resolveTitlePreferredLayoutId(ctx, preferVisuals !== false, usedLayoutIds);
+  }
+
+  return preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, order);
 }
 
 /**
@@ -1214,6 +1833,22 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     ...(content?.slotImageUrls && typeof content.slotImageUrls === 'object' ? content.slotImageUrls : {}),
   };
 
+  if (slotIds.length > 1) {
+    const assigned = slotIds.map((id) => slotImageUrls[id]).filter(Boolean);
+    if (assigned.length === slotIds.length && new Set(assigned).size === 1) {
+      slotIds.forEach((id) => {
+        delete slotImageUrls[id];
+      });
+    } else if (imageRef?.url) {
+      const sharedRef = slotIds.filter((id) => slotImageUrls[id] === imageRef.url);
+      if (sharedRef.length > 1) {
+        sharedRef.slice(1).forEach((id) => {
+          delete slotImageUrls[id];
+        });
+      }
+    }
+  }
+
   const packId = ctx.packId || null;
   if (packId) {
     const rows = await templateMediaDao.listByTemplateId(packId);
@@ -1239,6 +1874,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     ctx.imageSource !== 'none' &&
     ctx.imageSource !== 'placeholder'
   ) {
+    const usedUrls = new Set(Object.values(slotImageUrls).filter(Boolean));
     for (const slotId of [...missing]) {
       const prompt =
         buildSlotImagePrompt(slotId, content, layoutSchema) ||
@@ -1246,24 +1882,35 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
         imagePrompts[String(slotId).toUpperCase()] ||
         null;
       if (!prompt) continue;
-      try {
-        const generated = await generateSlotImage({
-          ctx,
-          slide,
-          slotId,
-          prompt,
-          layoutSchema,
-        });
-        if (generated?.url) {
-          slotImageUrls[slotId] = generated.url;
-          missing = missing.filter((id) => id !== slotId);
+
+      let assigned = false;
+      for (let attempt = 0; attempt < 3 && !assigned; attempt += 1) {
+        try {
+          const variationPrompt =
+            attempt === 0
+              ? prompt
+              : `${prompt} (variation ${attempt + 1}, completely different subject)`;
+          const generated = await generateSlotImage({
+            ctx,
+            slide,
+            slotId,
+            prompt: variationPrompt,
+            layoutSchema,
+          });
+          if (generated?.url && !usedUrls.has(generated.url)) {
+            slotImageUrls[slotId] = generated.url;
+            usedUrls.add(generated.url);
+            missing = missing.filter((id) => id !== slotId);
+            assigned = true;
+          }
+        } catch (err) {
+          logger.warn?.('presentation_slot_image_failed', {
+            slideId: slide.id,
+            slotId,
+            attempt: attempt + 1,
+            error: err.message,
+          });
         }
-      } catch (err) {
-        logger.warn?.('presentation_slot_image_failed', {
-          slideId: slide.id,
-          slotId,
-          error: err.message,
-        });
       }
     }
   }
@@ -1284,7 +1931,15 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     slotImageUrls,
   });
 
-  return { ...content, slotImageUrls: distinctUrls };
+  const repairedUrls = await repairSlotImagesFromQa({
+    ctx,
+    slide,
+    content,
+    layoutSchema,
+    slotImageUrls: distinctUrls,
+  });
+
+  return { ...content, slotImageUrls: repairedUrls };
 }
 
 async function resolveSlideImage({
@@ -1750,6 +2405,7 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'placeholder_chart_subtitle' ||
       issue.rule === 'placeholder_cta' ||
       issue.rule === 'placeholder_body' ||
+      issue.rule === 'placeholder_diagram_body' ||
       issue.rule === 'timeline_missing_details' ||
       (issue.truncated === true && issue.rule === 'max_lines')
   );
@@ -1820,9 +2476,23 @@ async function planDeckLayouts(ctx, slides) {
       Number(slide.order) === totalSlides && ctx.titleLayoutId
         ? closingLayoutExcludeIds(ctx.titleLayoutId)
         : null;
-    let preferredLayoutId = preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, slide.order);
+    let preferredLayoutId = resolvePreferredLayoutIdForSlide({
+      ctx,
+      slide,
+      outlineSlides,
+      planned,
+      layoutContentType,
+      content: stubContent,
+      usedLayoutIds,
+      preferVisuals,
+      slideOrder: slide.order,
+    });
     if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
       preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+    }
+    let preferImageSlot = policy.preferImageSlot;
+    if (preferredLayoutId === 'timeline_milestones_image_v1') {
+      preferImageSlot = true;
     }
     const { layoutId, template } = selectLayout({
       contentType: layoutContentType,
@@ -1830,7 +2500,7 @@ async function planDeckLayouts(ctx, slides) {
       previousLayoutId,
       usedLayoutIds,
       templates,
-      preferImageSlot: policy.preferImageSlot,
+      preferImageSlot,
       preferredLayoutId,
       slideOrder: slide.order,
       totalSlides,
@@ -1849,7 +2519,7 @@ async function planDeckLayouts(ctx, slides) {
       if (Number(slide.order) === 1) {
         ctx.titleLayoutId = String(layoutId);
       }
-      if (String(layoutId) === 'full_bg_image_overlay_v1') fullBleedUsed = true;
+      if (isFullBleedLayoutId(layoutId)) fullBleedUsed = true;
       previousLayoutId = layoutId;
     }
   }
@@ -1905,19 +2575,36 @@ async function resolvePreGenerationLayout({
     );
   }
 
+  const outlineSlides = (ctx.outline?.slides || []).slice().sort((a, b) => a.order - b.order);
   const previousLayoutId = ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null;
   const stubContent = {
     title: resolvedTitle || outlineSlide.title || '',
     summary: resolvedSummary,
     bullets: [],
   };
+  let preferredLayoutId = resolvePreferredLayoutIdForSlide({
+    ctx,
+    slide,
+    outlineSlides,
+    planned: ctx.plannedLayouts || {},
+    layoutContentType,
+    content: stubContent,
+    usedLayoutIds: ctx.usedLayoutIds || new Set(),
+    preferVisuals,
+    slideOrder: slide.order,
+  });
+  let preferImageSlot = policy.preferImageSlot;
+  if (preferredLayoutId === 'timeline_milestones_image_v1') {
+    preferImageSlot = true;
+  }
   const { layoutId, template } = selectLayout({
     contentType: layoutContentType,
     content: stubContent,
     previousLayoutId,
     usedLayoutIds: ctx.usedLayoutIds || null,
     templates,
-    preferImageSlot: policy.preferImageSlot,
+    preferImageSlot,
+    preferredLayoutId,
     slideOrder: slide.order,
     totalSlides,
   });
@@ -1987,6 +2674,8 @@ function generationHintsFromLayout(layoutSchema) {
     const slotChartType = chartSlot?.chartType || chartSlot?.chart_type || null;
     hints.chartDataStyle =
       'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) — never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
+    hints.chartLayoutStyle =
+      'Analyze the data story first, then pick chart.type and layout: line/area for time series; donut/pie only when values represent parts of a whole (~100% total); bar for rankings or absolute comparisons; dual-chart only for two distinct metrics. One dataset per chart slot — never duplicate identical data.';
     if (slotChartType) {
       hints.chartType = slotChartType.includes('line') ? 'line' : slotChartType.includes('donut') ? 'donut' : 'bar';
     } else if (!/exponential|line/i.test(layoutId)) {
@@ -1996,9 +2685,13 @@ function generationHintsFromLayout(layoutSchema) {
   if (imageSlots.length > 1) {
     hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual for each slot: ${imageSlots.map((s) => s.id).join(', ')}. No duplicate subjects.`;
   }
-  if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para/i.test(layoutId)) {
+  if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
     hints.parallelStructure =
-      'Each column/card/paragraph needs a distinct title (≤4 words) and body (1-2 lines). Fill columns[] accordingly.';
+      'Each column/card/gallery image needs a distinct title (≤4 words) and optional body. Fill columns[] accordingly — titles map to IMAGE_n_LABEL captions.';
+  }
+  if (/diagram_|swot|matrix|funnel|process_step/i.test(layoutId) || layoutNeedsDiagramCellsFromSchema(layoutSchema)) {
+    hints.parallelStructure =
+      'Fill diagram.cells[] with one { title, body } per quadrant/step/tier. Replace all template placeholder text with original topic-specific copy.';
   }
   if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
     hints.ctaFormat =
@@ -2179,8 +2872,8 @@ async function processSlide(ctx, slide) {
     });
 
     let content = slide.content && typeof slide.content === 'object' ? { ...slide.content } : null;
-    const needsFreshContent = contentNeedsFreshGeneration(content);
-    if (!contentJob.duplicate || (needsFreshContent && (ctx.packBound || ctx.forceTextReplace))) {
+    const needsFreshContent = contentNeedsFreshGeneration(content, contentLayoutSchema);
+    if (!contentJob.duplicate || needsFreshContent || ctx.forceTextReplace) {
       const contentStarted = Date.now();
       try {
         const llmResult = await withTimeout(
@@ -2218,6 +2911,12 @@ async function processSlide(ctx, slide) {
         );
         content = { ...(content || {}), ...llmResult.data };
         content = applyGenerationHints(content, mergedGenerationHints);
+        if (contentLayoutSchema) {
+          content = normalizeMultiColumnContent(content, contentLayoutSchema);
+          content = normalizeGalleryImageContent(content, contentLayoutSchema);
+          content = normalizeTimelineContent(content, contentLayoutSchema);
+          content = normalizeDiagramContent(content, contentLayoutSchema);
+        }
         await trackCharge(
           ctx.deckId,
           await presentationCredit.chargeFlat({
@@ -2431,14 +3130,23 @@ async function processSlide(ctx, slide) {
           Number(slide.order) === slideTotal && ctx.titleLayoutId
             ? closingLayoutExcludeIds(ctx.titleLayoutId)
             : null;
-        let preferredLayoutId = preferredLayoutForSlide(
+        let preferredLayoutId = resolvePreferredLayoutIdForSlide({
           ctx,
-          policy.layoutContentType,
-          ctx.usedLayoutIds || new Set(),
-          slide.order
-        );
+          slide,
+          outlineSlides: neighbors,
+          planned: ctx.plannedLayouts || {},
+          layoutContentType: policy.layoutContentType,
+          content,
+          usedLayoutIds: ctx.usedLayoutIds || new Set(),
+          preferVisuals,
+          slideOrder: slide.order,
+        });
         if (Number(slide.order) === slideTotal && isSplitHeroLayout(ctx.titleLayoutId)) {
           preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+        }
+        let preferImageSlot = policy.preferImageSlot;
+        if (preferredLayoutId === 'timeline_milestones_image_v1') {
+          preferImageSlot = true;
         }
         ({ layoutId, template } = selectLayout({
           contentType: policy.layoutContentType,
@@ -2446,7 +3154,7 @@ async function processSlide(ctx, slide) {
           previousLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
           usedLayoutIds: ctx.usedLayoutIds || null,
           templates,
-          preferImageSlot: policy.preferImageSlot,
+          preferImageSlot,
           preferredLayoutId,
           slideOrder: slide.order,
           totalSlides: slideTotal,
@@ -2461,14 +3169,17 @@ async function processSlide(ctx, slide) {
       if (Number(slide.order) === 1) {
         ctx.titleLayoutId = String(layoutId);
       }
-      if (String(layoutId) === 'full_bg_image_overlay_v1') {
+      if (isFullBleedLayoutId(layoutId)) {
         ctx.fullBleedUsed = true;
       }
     }
 
     if (template?.schema) {
       content = normalizeMultiColumnContent(content, template.schema);
+      content = normalizeGalleryImageContent(content, template.schema);
+      content = normalizeChartContent(content, template.schema);
       content = normalizeTimelineContent(content, template.schema);
+      content = normalizeDiagramContent(content, template.schema);
     }
 
     let qa = validateSlide({
@@ -2507,6 +3218,15 @@ async function processSlide(ctx, slide) {
       content.content_type = contentType;
       content = applyDefaultOverlayDecisions(content, template?.schema || null);
       content = sanitizeShapeDecisions(content, template?.schema);
+    }
+
+    const layoutSchemaForImages = template?.schema || null;
+    if (layoutUsesPerSlotGalleryImages(layoutSchemaForImages)) {
+      visualNeed = 'none';
+      if (content && typeof content === 'object') {
+        content.visual_need = 'none';
+        content = normalizeGalleryImageContent(content, layoutSchemaForImages);
+      }
     }
 
     // 4) Image brief when needed
@@ -2605,7 +3325,10 @@ async function processSlide(ctx, slide) {
     const layoutSchema = template?.schema || null;
     if (layoutSchema?.slots?.length) {
       content = normalizeMultiColumnContent(content, layoutSchema);
+      content = normalizeGalleryImageContent(content, layoutSchema);
+      content = normalizeChartContent(content, layoutSchema);
       content = normalizeTimelineContent(content, layoutSchema);
+      content = normalizeDiagramContent(content, layoutSchema);
       try {
         content = await enrichContentSlotImageUrls({
           ctx,
@@ -3047,9 +3770,10 @@ async function generateOutline({
 }
 
 async function updateOutline({ presentationId, outline, workspaceId }) {
-  const { deck } = await loadPresentationDeck(presentationId, {
+  let { deck } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
+  deck = await reconcileStaleGeneratingDeck(deck);
   if (deck.status === 'GENERATING') {
     throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
   }
@@ -3111,13 +3835,14 @@ async function startGenerate({
   requestHash,
   generationFlow = null,
 }) {
-  const { deck, project } = await loadPresentationDeck(presentationId, {
+  let { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
-
+  deck = await reconcileStaleGeneratingDeck(deck);
   if (deck.status === 'GENERATING') {
     throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
   }
+
   if (!deck.outline || !Array.isArray(deck.outline.slides) || deck.outline.slides.length === 0) {
     throw new AppError(messages.PRESENTATION_OUTLINE_REQUIRED, 400);
   }

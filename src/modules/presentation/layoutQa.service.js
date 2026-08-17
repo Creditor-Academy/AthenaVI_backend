@@ -5,6 +5,8 @@ function countWords(text) {
   return s.split(/\s+/).filter(Boolean).length;
 }
 
+const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+
 function truncateToWords(text, maxWords) {
   const raw = String(text ?? '');
   const words = raw.trim().split(/\s+/).filter(Boolean);
@@ -41,7 +43,35 @@ function layoutNeedsStructuredColumns(slots) {
 }
 
 function layoutNeedsIndexedColumns(slots) {
-  return slots.some((slot) => /^body_\d+$/i.test(String(slot.id || '')) || /^bullet_\d+$/i.test(String(slot.id || '')));
+  return slots.some((slot) => {
+    const id = String(slot.id || '');
+    return /^body_\d+$/i.test(id) || /^bullet_\d+$/i.test(id);
+  });
+}
+
+function layoutNeedsDiagramCells(slots) {
+  return slots.some((slot) => {
+    const id = String(slot.id || '').toLowerCase();
+    return /^q\d+_body$/i.test(id) || /^funnel_\d+_body$/i.test(id) || /^step_\d+_body$/i.test(id);
+  });
+}
+
+function countDiagramCellSlots(slots) {
+  const quadrantBodies = slots.filter((s) => /^q\d+_body$/i.test(String(s.id || ''))).length;
+  const funnelBodies = slots.filter((s) => /^funnel_\d+_body$/i.test(String(s.id || ''))).length;
+  const stepBodies = slots.filter((s) => /^step_\d+_body$/i.test(String(s.id || ''))).length;
+  return Math.max(quadrantBodies, funnelBodies, stepBodies, 0);
+}
+
+function diagramCellsFromContent(content) {
+  const cells =
+    content?.diagram?.cells ||
+    content?.cells ||
+    content?.quadrants ||
+    content?.steps ||
+    content?.funnel ||
+    [];
+  return Array.isArray(cells) ? cells : [];
 }
 
 function layoutNeedsChart(layoutSchema, slots) {
@@ -193,8 +223,22 @@ function validateStructuredFields(content, layoutSchema, issues) {
 
   for (const bodyKey of ['body', 'left_body', 'right_body']) {
     const bodyText = String(content?.[bodyKey] ?? '').trim();
-    if (bodyText && PLACEHOLDER_BODY_RE.test(bodyText)) {
+    if (bodyText && (PLACEHOLDER_BODY_RE.test(bodyText) || isCatalogPlaceholderText(bodyText))) {
       issues.push({ path: bodyKey, rule: 'placeholder_body', repairable: true });
+    }
+  }
+
+  if (layoutNeedsDiagramCells(slots)) {
+    const minCells = Math.max(2, countDiagramCellSlots(slots) || 4);
+    const cells = diagramCellsFromContent(content);
+    const validCells = cells.filter((cell) => {
+      const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
+      return body && !isCatalogPlaceholderText(body);
+    });
+    if (validCells.length < minCells) {
+      issues.push({ path: 'diagram.cells', rule: 'required_structured', repairable: true });
+    } else if (cells.some((cell) => isCatalogPlaceholderText(cell?.body ?? cell?.text ?? cell?.detail ?? ''))) {
+      issues.push({ path: 'diagram.cells', rule: 'placeholder_diagram_body', repairable: true });
     }
   }
 

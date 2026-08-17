@@ -5408,3 +5408,103 @@
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T10:09:54.678Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T10:09:54.679Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":42.78,"timestamp":"2026-08-17T10:09:56.932Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:35:15.543Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:35:15.547Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:35:15.578Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:35:15.579Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:35:15.580Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":42.78,"timestamp":"2026-08-17T11:35:17.464Z"}
+{"level":"error","message":"Error: Unauthorized\n    at D:\\Athena VS\\AthenaVI_backend\\src\\middlewares\\auth.middlware.js:11:11\n    at D:\\Athena VS\\AthenaVI_backend\\src\\shared\\utils\\asyncHandler.js:2:19\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:297:9\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:582:12)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)\n    at Function.handle (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:186:3)\n    at router (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:60:12)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:297:9\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:582:12)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)\n    at logger (D:\\Athena VS\\AthenaVI_backend\\node_modules\\morgan\\index.js:170:5)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)","timestamp":"2026-08-17T11:35:55.902Z"}
+{"athenaCredits":153,"deckId":"cmsx5uuyc0000i0vqiibwvlel","estimateAc":286,"feature":"ppt_outline","inputTokens":1135,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.01089,"outputTokens":499,"timestamp":"2026-08-17T11:39:09.034Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0004i0vqk617angp","timestamp":"2026-08-17T11:39:36.282Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6s0002i0vqtx0m2ulp","timestamp":"2026-08-17T11:39:36.411Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0003i0vqpwv7thh8","timestamp":"2026-08-17T11:39:38.114Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0005i0vqkfx92s0j","timestamp":"2026-08-17T11:39:39.155Z"}
+{"attempt":1,"issues":[{"path":"agenda.columns","repairable":true,"rule":"required_structured"}],"layoutId":"agenda_three_columns_hero_v1","level":"warn","message":"presentation_slide_qa_issues","slideId":"cmsx5vi6t0003i0vqpwv7thh8","timestamp":"2026-08-17T11:39:40.901Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6s0002i0vqtx0m2ulp","timestamp":"2026-08-17T11:40:19.963Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0003i0vqpwv7thh8","timestamp":"2026-08-17T11:40:25.912Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0004i0vqk617angp","timestamp":"2026-08-17T11:40:28.327Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0005i0vqkfx92s0j","timestamp":"2026-08-17T11:40:30.270Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0006i0vqbcfbg5uk","timestamp":"2026-08-17T11:40:37.123Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0007i0vq1zlixr55","timestamp":"2026-08-17T11:40:44.942Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0008i0vq8iq8abf8","timestamp":"2026-08-17T11:40:48.418Z"}
+{"athenaCredits":2,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0009i0vqz6bp84lf","timestamp":"2026-08-17T11:41:04.168Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0008i0vq8iq8abf8","timestamp":"2026-08-17T11:41:23.063Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0007i0vq1zlixr55","timestamp":"2026-08-17T11:41:23.515Z"}
+{"athenaCredits":4,"deckId":"cmsx5uuyc0000i0vqiibwvlel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx5vi6t0009i0vqz6bp84lf","timestamp":"2026-08-17T11:41:50.705Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:57:43.906Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:57:43.909Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:57:43.940Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:57:43.945Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:57:43.953Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:57:45.966Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:58:01.754Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:58:01.760Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:58:01.804Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:58:01.805Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:58:01.806Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:58:03.917Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:58:19.852Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:58:19.855Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:58:19.884Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:58:19.884Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:58:19.886Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:58:22.304Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:58:35.805Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:58:35.810Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:58:35.852Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:58:35.853Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:58:35.855Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:58:37.742Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:58:51.993Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:58:51.997Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:58:52.024Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:58:52.025Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:58:52.026Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:58:53.843Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T11:59:02.210Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T11:59:02.213Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T11:59:02.245Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T11:59:02.246Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T11:59:02.247Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T11:59:04.136Z"}
+{"athenaCredits":117,"deckId":"cmsx6mui40000ogvq5y217ivv","estimateAc":286,"feature":"ppt_outline","inputTokens":1222,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.008331,"outputTokens":311,"timestamp":"2026-08-17T12:00:50.252Z"}
+{"athenaCredits":2,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0004ogvquoiklzl3","timestamp":"2026-08-17T12:01:12.813Z"}
+{"athenaCredits":2,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0002ogvq39amffs3","timestamp":"2026-08-17T12:01:13.374Z"}
+{"athenaCredits":2,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0003ogvq19huc7sn","timestamp":"2026-08-17T12:01:13.969Z"}
+{"athenaCredits":2,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0005ogvqxfvv1x8n","timestamp":"2026-08-17T12:01:15.636Z"}
+{"athenaCredits":2,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0006ogvqk7oq3wrw","timestamp":"2026-08-17T12:01:27.114Z"}
+{"athenaCredits":4,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0002ogvq39amffs3","timestamp":"2026-08-17T12:01:53.590Z"}
+{"athenaCredits":4,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0006ogvqk7oq3wrw","timestamp":"2026-08-17T12:02:00.166Z"}
+{"athenaCredits":4,"deckId":"cmsx6mui40000ogvq5y217ivv","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx6nc3m0003ogvq19huc7sn","timestamp":"2026-08-17T12:02:07.663Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-17T12:12:32.762Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-17T12:12:32.765Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-17T12:12:32.790Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-17T12:12:32.791Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-17T12:12:32.792Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":40.78,"timestamp":"2026-08-17T12:12:34.879Z"}
+{"athenaCredits":179,"deckId":"cmsx78nqy0000fkvq91ytigy9","estimateAc":286,"feature":"ppt_outline","inputTokens":1221,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.012768,"outputTokens":607,"timestamp":"2026-08-17T12:17:53.253Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0002fkvqayr5so8f","timestamp":"2026-08-17T12:18:19.639Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0005fkvqd48gvltg","timestamp":"2026-08-17T12:18:20.807Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0004fkvqlrbjs8hx","timestamp":"2026-08-17T12:18:21.125Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0003fkvqzyzxzf22","timestamp":"2026-08-17T12:18:23.696Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0002fkvqayr5so8f","timestamp":"2026-08-17T12:19:00.553Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0004fkvqlrbjs8hx","timestamp":"2026-08-17T12:19:05.546Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0003fkvqzyzxzf22","timestamp":"2026-08-17T12:19:06.796Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0005fkvqd48gvltg","timestamp":"2026-08-17T12:19:07.291Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0006fkvqr6flg6a2","timestamp":"2026-08-17T12:19:15.483Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0007fkvq4vlwesyh","timestamp":"2026-08-17T12:19:32.173Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0008fkvqe7ol1fld","timestamp":"2026-08-17T12:19:38.124Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asz0009fkvqdi1bnbiw","timestamp":"2026-08-17T12:19:39.571Z"}
+{"athenaCredits":2,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asz000afkvq09yoo34d","timestamp":"2026-08-17T12:19:50.872Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0006fkvqr6flg6a2","timestamp":"2026-08-17T12:20:11.485Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asy0007fkvq4vlwesyh","timestamp":"2026-08-17T12:20:16.177Z"}
+{"athenaCredits":4,"deckId":"cmsx78nqy0000fkvq91ytigy9","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx79asz000afkvq09yoo34d","timestamp":"2026-08-17T12:20:47.737Z"}
+{"athenaCredits":127,"deckId":"cmsx7i4j3001efkvqgigome5c","estimateAc":286,"feature":"ppt_outline","inputTokens":1120,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.00906,"outputTokens":380,"timestamp":"2026-08-17T12:25:12.210Z"}
+{"athenaCredits":2,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001gfkvqqszzagu6","timestamp":"2026-08-17T12:25:38.892Z"}
+{"athenaCredits":2,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001jfkvqlyf6k6ml","timestamp":"2026-08-17T12:25:39.813Z"}
+{"athenaCredits":2,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001ifkvqk4k75qyt","timestamp":"2026-08-17T12:25:40.971Z"}
+{"athenaCredits":2,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001hfkvqbpizn6jv","timestamp":"2026-08-17T12:25:41.501Z"}
+{"athenaCredits":2,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001kfkvqtp41p6gm","timestamp":"2026-08-17T12:25:51.058Z"}
+{"athenaCredits":4,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001gfkvqqszzagu6","timestamp":"2026-08-17T12:26:22.947Z"}
+{"athenaCredits":4,"deckId":"cmsx7i4j3001efkvqgigome5c","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmsx7iowz001kfkvqtp41p6gm","timestamp":"2026-08-17T12:26:30.764Z"}

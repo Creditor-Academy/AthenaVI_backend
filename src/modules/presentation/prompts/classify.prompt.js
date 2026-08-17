@@ -48,6 +48,7 @@ function buildUser(vars = {}) {
     'Pick device_frames for app/website/product UI mockups.',
     'Pick diagram (especially process steps) for numbered workflows, SWOT, funnel, matrix.',
     'Pick chart when the slide is primarily a data visualization.',
+    'For chart outline slides: note the data story in summary (trend, share/breakdown, ranking, or metric comparison) so generation can pick the right chart type and layout.',
     '',
     'Output JSON schema:',
     JSON.stringify(
