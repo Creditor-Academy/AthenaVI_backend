@@ -188,7 +188,15 @@ function findLogoByRoles(logos = [], roles = []) {
 
 function logoCellNeedsDarkBg(role) {
   const r = String(role || '').toLowerCase();
-  return r === 'light' || r === 'light-mode' || r === 'white';
+  return (
+    r === 'light' ||
+    r === 'light-mode' ||
+    r === 'white' ||
+    r === 'dark' ||
+    r === 'dark-mode' ||
+    r === 'with-name-below-dark' ||
+    r === 'with-name-adjacent-dark'
+  );
 }
 
 function buildLogoCell(logo, fallbackLabel, extraClass = '') {
@@ -212,34 +220,47 @@ function buildLogoCell(logo, fallbackLabel, extraClass = '') {
 }
 
 /**
- * Bento logo layout (matches guideline mock):
- * Top: large primary (left) + with-name-below / with-name-adjacent stacked (right)
- * Bottom: dark | light | white | black in one equal row (1:1 frames)
+ * Logo layout:
+ * Top: primary (left) + 2×2 wordmark grid (light + dark lockups)
+ * Bottom: dark | light | white | black
  */
 function buildLogoLayout(logos) {
   const primary = findLogoByRoles(logos, LOGO_ROLE_ALIASES.primary);
-  const nameBelow = findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-below']);
-  const nameAdjacent = findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-adjacent']);
+  const wordmarkSlots = [
+    ['with-name-below', findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-below'])],
+    ['with-name-adjacent', findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-adjacent'])],
+    ['with-name-below-dark', findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-below-dark'])],
+    [
+      'with-name-adjacent-dark',
+      findLogoByRoles(logos, LOGO_ROLE_ALIASES['with-name-adjacent-dark']),
+    ],
+  ];
   const dark = findLogoByRoles(logos, LOGO_ROLE_ALIASES.dark);
   const light = findLogoByRoles(logos, LOGO_ROLE_ALIASES.light);
   const white = findLogoByRoles(logos, LOGO_ROLE_ALIASES.white);
   const black = findLogoByRoles(logos, LOGO_ROLE_ALIASES.black);
 
-  const hasAny = [primary, nameBelow, nameAdjacent, dark, light, white, black].some(
+  const hasAny = [primary, ...wordmarkSlots.map(([, l]) => l), dark, light, white, black].some(
     (l) => l?.dataUrl
   );
   if (!hasAny && !(logos || []).length) {
     return `<div class="empty-note">No logo variants uploaded yet.</div>`;
   }
 
+  const wordmarkHtml = wordmarkSlots
+    .filter(([, logo]) => logo)
+    .map(([role, logo]) => buildLogoCell(logo, role))
+    .join('');
+
   return `
     <div class="logos-layout">
       <div class="logos-top">
         ${buildLogoCell(primary, 'primary', 'logo-cell--primary')}
-        <div class="logo-col logo-col--named">
-          ${buildLogoCell(nameBelow, 'with-name-below')}
-          ${buildLogoCell(nameAdjacent, 'with-name-adjacent')}
-        </div>
+        ${
+          wordmarkHtml
+            ? `<div class="logo-wordmark-grid">${wordmarkHtml}</div>`
+            : `<div class="logo-wordmark-grid logo-wordmark-grid--empty"><div class="empty-note">No wordmark lockups yet.</div></div>`
+        }
       </div>
       <div class="logos-bottom">
         ${buildLogoCell(dark, 'dark')}
@@ -376,92 +397,113 @@ function buildPaletteSwatches(data) {
     .join('');
 }
 
-function buildTypeCardInner(role, { watermark = false } = {}) {
-  const sampleSize = Math.min(Math.max(role.sizePx * 0.55, 12), 28);
+function buildTypeCardInner(role, data) {
+  const sampleSize = Math.min(Math.max(role.sizePx * 0.42, 10), 18);
   const fontStack = `'${escapeHtml(role.family)}', Inter, Helvetica, Arial, sans-serif`;
+  const lightBg = resolveRoleHex(data, 'bg', '#FFFFFF');
+  const darkBg = resolveRoleHex(data, 'bgDark', '#0F172A');
+  const lightColor = normalizeHex(role.lightTextColor, '#0F172A');
+  const darkColor = normalizeHex(role.darkTextColor, '#F8FAFC');
+
   return `
-    ${
-      watermark
-        ? `<div
-            class="type-card__watermark"
-            aria-hidden="true"
-            style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))};"
-          >Aa</div>`
-        : ''
-    }
     <div class="type-card__body">
       <div class="type-card__head">
         <span class="type-card__role">${escapeHtml(role.label)}</span>
-        <span class="type-card__specs">
-          ${escapeHtml(role.family)} · ${escapeHtml(String(role.weight))} ·
-          ${escapeHtml(String(role.sizePx))}px · LH ${escapeHtml(String(role.lineHeight))}
-          · Light ${escapeHtml(role.lightTextColor || '#0F172A')} · Dark ${escapeHtml(role.darkTextColor || '#F8FAFC')}
-        </span>
+      </div>
+      <div class="type-card__meta">
+        <span>${escapeHtml(role.family)}</span>
+        <span>${escapeHtml(String(role.weight))}</span>
+        <span>${escapeHtml(String(role.sizePx))}px</span>
+        <span>LH ${escapeHtml(String(role.lineHeight))}</span>
       </div>
       <div
         class="type-card__aa"
         style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))};"
       >Aa</div>
-      <div
-        class="type-card__sample"
-        style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))}; font-size:${sampleSize}px; line-height:${escapeHtml(String(role.lineHeight))}; color:${escapeHtml(role.lightTextColor || '#0F172A')};"
-      >${escapeHtml(role.sample)}</div>
+      <div class="type-theme-row">
+        <div class="type-theme type-theme--light" style="background:${escapeHtml(lightBg)};">
+          <span class="type-theme__label">Light</span>
+          <p
+            class="type-theme__sample"
+            style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))}; font-size:${sampleSize}px; line-height:${escapeHtml(String(role.lineHeight))}; color:${escapeHtml(lightColor)};"
+          >${escapeHtml(role.sample)}</p>
+          <span class="type-theme__hex">${escapeHtml(lightColor)}</span>
+        </div>
+        <div class="type-theme type-theme--dark" style="background:${escapeHtml(darkBg)};">
+          <span class="type-theme__label">Dark</span>
+          <p
+            class="type-theme__sample"
+            style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))}; font-size:${sampleSize}px; line-height:${escapeHtml(String(role.lineHeight))}; color:${escapeHtml(darkColor)};"
+          >${escapeHtml(role.sample)}</p>
+          <span class="type-theme__hex">${escapeHtml(darkColor)}</span>
+        </div>
+      </div>
       <div class="type-card__alphabet" style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))};">
         AaBbCcDdEeFf · 0123456789
       </div>
     </div>`;
 }
 
-/**
- * Typography bento:
- * Col 1 — Heading (tall card, large faint "Aa" watermark bottom-right)
- * Col 2 — two equal-height rows (Subheading + Body by default) matching col 1 height
- * Extra roles (e.g. Tertiary) stack below full-width.
- */
-function buildTypographyCards(fontRoles) {
+function buildTypographyCards(fontRoles, data) {
   if (!fontRoles.length) {
     return `<div class="empty-note">No typography roles defined.</div>`;
   }
 
-  const heading =
-    fontRoles.find((r) => r.key === 'heading') || fontRoles[0];
-  const rest = fontRoles.filter((r) => r !== heading);
-  const rightTop = rest[0] || null;
-  const rightBottom = rest[1] || null;
-  const extras = rest.slice(2);
-
-  const rightCards = [rightTop, rightBottom]
-    .filter(Boolean)
-    .map(
-      (role) => `
-        <div class="type-card type-card--stack avoid-break">
-          ${buildTypeCardInner(role)}
-        </div>`
-    )
-    .join('');
-
-  const extrasHtml = extras
-    .map(
-      (role) => `
+  return `
+    <div class="type-stack">
+      ${fontRoles
+        .map(
+          (role) => `
         <div class="type-card avoid-break">
-          ${buildTypeCardInner(role)}
+          ${buildTypeCardInner(role, data)}
         </div>`
-    )
-    .join('');
+        )
+        .join('')}
+    </div>`;
+}
+
+function buildColorThemesSection(data) {
+  const bg = resolveRoleHex(data, 'bg', '#F8FAFC');
+  const text = resolveRoleHex(data, 'text', '#0F172A');
+  const primary = resolveRoleHex(data, 'primary', '#2563EB');
+  const accent = resolveRoleHex(data, 'accent', primary);
+  const bgDark = resolveRoleHex(data, 'bgDark', '#0F172A');
+  const textDark = resolveRoleHex(data, 'textDark', '#F8FAFC');
+  const primaryDark = resolveRoleHex(data, 'primaryDark', primary);
+
+  const swatch = (hex, label, fg) => {
+    const ink = fg || contrastInk(hex);
+    return `
+      <div class="theme-swatch avoid-break">
+        <div class="theme-swatch__chip" style="background:${escapeHtml(hex)}; color:${escapeHtml(ink)};">
+          <span>${escapeHtml(label)}</span>
+        </div>
+        <div class="theme-swatch__hex">${escapeHtml(hex)}</div>
+      </div>`;
+  };
 
   return `
-    <div class="type-layout avoid-break">
-      <div class="type-card type-card--heading avoid-break">
-        ${buildTypeCardInner(heading, { watermark: true })}
+    <div class="theme-panels">
+      <div class="theme-panel avoid-break" style="background:${escapeHtml(bg)}; color:${escapeHtml(text)};">
+        <div class="theme-panel__title">Light theme</div>
+        <div class="theme-panel__swatches">
+          ${swatch(bg, 'bg', text)}
+          ${swatch(text, 'text', bg)}
+          ${swatch(primary, 'primary', contrastInk(primary))}
+          ${swatch(accent, 'accent', contrastInk(accent))}
+        </div>
+        <p class="theme-panel__sample">Sample text on the light background for UI and print.</p>
       </div>
-      <div class="type-col-stack">
-        ${
-          rightCards ||
-          `<div class="type-card type-card--stack"><div class="empty-note">Add more type roles</div></div>`
-        }
+      <div class="theme-panel theme-panel--dark avoid-break" style="background:${escapeHtml(bgDark)}; color:${escapeHtml(textDark)};">
+        <div class="theme-panel__title">Dark theme</div>
+        <div class="theme-panel__swatches">
+          ${swatch(bgDark, 'bg', textDark)}
+          ${swatch(textDark, 'text', bgDark)}
+          ${swatch(primaryDark, 'primary', contrastInk(primaryDark))}
+        </div>
+        <p class="theme-panel__sample">Sample text on the dark background for UI and print.</p>
       </div>
-    </div>
-    ${extrasHtml ? `<div class="type-extras">${extrasHtml}</div>` : ''}`;
+    </div>`;
 }
 
 function buildTokenPills(data) {
@@ -673,75 +715,26 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
     .swatch__hex {
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-    .type-layout {
-      display: grid;
-      grid-template-columns: 1.45fr 1fr;
-      gap: 5mm;
-      align-items: stretch;
-    }
-    .type-col-stack {
-      display: grid;
-      grid-template-rows: 1fr 1fr;
-      gap: 5mm;
-      min-height: 100%;
-    }
-    .type-extras {
+    .type-stack {
       display: flex;
       flex-direction: column;
-      gap: 4mm;
-      margin-top: 5mm;
+      gap: 5mm;
     }
     .type-card {
-      position: relative;
       background: #FAFAFA;
       border: 1px solid rgba(15, 23, 42, 0.08);
       border-radius: 5mm;
       padding: 5mm 6mm;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .type-card--heading {
-      min-height: 78mm;
-      height: 100%;
-    }
-    .type-card--stack {
-      min-height: 0;
-      height: 100%;
     }
     .type-card__body {
-      position: relative;
-      z-index: 1;
       display: flex;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
-    }
-    .type-card__watermark {
-      position: absolute;
-      right: 0;
-      bottom: 0;
-      margin: 0;
-      padding: 0;
-      font-size: 34mm;
-      line-height: 0.72;
-      letter-spacing: -0.06em;
-      /* rgba (not opacity) so Puppeteer/PDF keeps the watermark visible */
-      color: ${escapeHtml(text)}29;
-      pointer-events: none;
-      user-select: none;
-      z-index: 0;
-      /* Pull glyph into the corner; card overflow:hidden clips flush to edges */
-      transform: translate(14%, 26%);
-      transform-origin: bottom right;
-      white-space: nowrap;
+      gap: 2.5mm;
     }
     .type-card__head {
       display: flex;
-      flex-wrap: wrap;
-      gap: 2mm 4mm;
       align-items: baseline;
-      margin-bottom: 3mm;
     }
     .type-card__role {
       font-size: 11px;
@@ -750,28 +743,105 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
       text-transform: uppercase;
       color: ${escapeHtml(primary)};
     }
-    .type-card__specs {
-      font-size: 11px;
+    .type-card__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2mm 4mm;
+      font-size: 10px;
       color: ${escapeHtml(muted)};
     }
     .type-card__aa {
-      font-size: 42px;
+      font-size: 36px;
       line-height: 1;
       letter-spacing: -0.03em;
       color: ${escapeHtml(text)};
-      margin-bottom: 2mm;
     }
-    .type-card--stack .type-card__aa {
-      font-size: 28px;
+    .type-theme-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
+      margin: 1mm 0 2mm;
     }
-    .type-card__sample {
-      color: ${escapeHtml(text)};
-      margin-bottom: 2mm;
+    .type-theme {
+      border-radius: 3mm;
+      padding: 3mm 4mm;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      min-height: 22mm;
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+    }
+    .type-theme__label {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.72;
+    }
+    .type-theme__sample {
+      margin: 0;
+      flex: 1;
+      word-break: break-word;
+    }
+    .type-theme__hex {
+      font-size: 9px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      opacity: 0.8;
     }
     .type-card__alphabet {
-      font-size: 12px;
+      font-size: 11px;
       color: ${escapeHtml(muted)};
-      margin-top: auto;
+    }
+    .theme-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      margin-bottom: 6mm;
+    }
+    .theme-panel {
+      border-radius: 5mm;
+      padding: 5mm 6mm;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+    .theme-panel__title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4mm;
+      opacity: 0.85;
+    }
+    .theme-panel__swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3mm;
+      margin-bottom: 4mm;
+    }
+    .theme-swatch {
+      width: 22mm;
+    }
+    .theme-swatch__chip {
+      height: 14mm;
+      border-radius: 3mm;
+      display: flex;
+      align-items: flex-end;
+      padding: 2mm;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .theme-swatch__hex {
+      margin-top: 1.5mm;
+      font-size: 9px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      opacity: 0.85;
+    }
+    .theme-panel__sample {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.45;
     }
     .tokens {
       display: flex;
@@ -836,15 +906,25 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
     }
     .logos-top {
       display: grid;
-      grid-template-columns: 1.6fr 1fr;
+      grid-template-columns: 1.35fr 1fr;
       gap: 5mm;
-      align-items: stretch;
+      align-items: start;
     }
-    .logo-col--named {
-      display: flex;
-      flex-direction: column;
-      gap: 5mm;
+    .logo-wordmark-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4mm;
       min-width: 0;
+    }
+    .logo-wordmark-grid--empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40mm;
+      background: #FAFAFA;
+      border: 1px dashed rgba(15, 23, 42, 0.12);
+      border-radius: 5mm;
+      padding: 4mm;
     }
     .logos-bottom {
       display: grid;
@@ -875,8 +955,12 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
     }
     .logo-cell--primary .logo-cell__frame {
       aspect-ratio: auto;
-      flex: 1 1 auto;
-      min-height: 52mm;
+      min-height: 48mm;
+      max-height: 72mm;
+    }
+    .logo-wordmark-grid .logo-cell__frame {
+      aspect-ratio: 4 / 3;
+      min-height: 0;
     }
     .logo-cell--dark .logo-cell__frame {
       background: #0F172A;
@@ -964,7 +1048,9 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
 
     <div class="content">
       <section class="section">
-        <h2 class="section__label">Palette</h2>
+        <h2 class="section__label">Color themes</h2>
+        ${buildColorThemesSection(data)}
+        <h2 class="section__label" style="margin-top: 6mm;">Palette</h2>
         <div class="palette">
           ${buildPaletteSwatches(data)}
         </div>
@@ -972,7 +1058,7 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
 
       <section class="section">
         <h2 class="section__label">Typography</h2>
-        ${buildTypographyCards(fontRoles)}
+        ${buildTypographyCards(fontRoles, data)}
       </section>
 
       <section class="section">
