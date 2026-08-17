@@ -15,7 +15,7 @@ const ARCHETYPES = {
       );
     },
     preferredLayouts: {
-      title: ['title_centered_v1', 'title_minimal_v1', 'title_image_logo_v1', 'headline_centered_v1', 'title_statement_v1'],
+      title: ['title_centered_v1', 'title_minimal_v1', 'headline_centered_v1', 'title_statement_v1', 'title_image_logo_v1'],
       agenda: ['agenda_three_columns_v1', 'agenda_numbered_v1', 'agenda_three_columns_hero_v1', 'agenda_minimal_v1'],
       'image+text': [
         'section_with_image_v1',
@@ -33,7 +33,7 @@ const ARCHETYPES = {
       device_frames: ['grid_device_mockups_v1'],
       quote: ['statement_left_v1', 'quote_portrait_v1', 'statement_large_v1', 'quote_testimonial_card_v1'],
       comparison: ['comparison_side_by_side_v1', 'comparison_pros_cons_v1', 'comparison_before_after_v1', 'comparison_table_v1'],
-      timeline: ['timeline_horizontal_v1', 'timeline_milestones_v1', 'timeline_roadmap_v1', 'timeline_process_steps_v1'],
+      timeline: ['timeline_milestones_v1', 'timeline_roadmap_v1', 'timeline_process_steps_v1', 'timeline_horizontal_v1'],
       diagram: ['diagram_process_steps_v1', 'diagram_swot_v1', 'diagram_matrix_v1', 'diagram_funnel_v1'],
       section_divider: ['section_divider_split_v1', 'section_divider_numbered_v1', 'section_divider_band_v1', 'section_divider_centered_v1'],
       closing: ['closing_thank_you_fullbleed_v1', 'closing_thank_you_v1', 'closing_contact_cta_v1', 'centered_text_cta_v1', 'para_image_cta_v1'],
@@ -50,7 +50,7 @@ const ARCHETYPES = {
       );
     },
     preferredLayouts: {
-      title: ['title_statement_v1', 'title_image_logo_v1', 'title_centered_v1'],
+      title: ['title_centered_v1', 'title_statement_v1', 'title_image_logo_v1'],
       section_divider: ['section_divider_split_v1', 'section_divider_numbered_v1', 'section_divider_band_v1'],
       grid: ['grid_bento_three_v1', 'grid_text_image_cards_v1', 'grid_three_images_text_v1'],
       agenda: ['agenda_three_columns_hero_v1', 'agenda_numbered_v1'],
@@ -75,9 +75,9 @@ const ARCHETYPES = {
       );
     },
     preferredLayouts: {
-      title: ['title_centered_v1', 'title_minimal_v1', 'title_image_logo_v1'],
+      title: ['title_centered_v1', 'title_minimal_v1', 'title_statement_v1', 'title_image_logo_v1'],
       agenda: ['agenda_three_columns_v1', 'agenda_timeline_preview_v1'],
-      timeline: ['timeline_horizontal_v1', 'timeline_milestones_v1', 'timeline_vertical_v1', 'timeline_process_steps_v1'],
+      timeline: ['timeline_milestones_v1', 'timeline_process_steps_v1', 'timeline_vertical_v1', 'timeline_horizontal_v1'],
       'image+text': ['three_para_image_v1', 'two_para_right_image_v1', 'section_with_image_v1', 'three_cards_image_text_v1'],
       diagram: ['diagram_process_steps_v1', 'diagram_cycle_v1', 'diagram_swot_v1'],
       grid: ['grid_bento_three_v1', 'grid_three_images_text_v1'],
@@ -96,7 +96,7 @@ const ARCHETYPES = {
       );
     },
     preferredLayouts: {
-      title: ['title_image_logo_v1', 'title_statement_v1', 'title_centered_v1'],
+      title: ['title_centered_v1', 'title_statement_v1', 'title_image_logo_v1'],
       section_divider: ['section_divider_split_v1', 'section_divider_numbered_v1'],
       agenda: ['agenda_three_columns_hero_v1', 'agenda_two_column_v1'],
       comparison: ['comparison_pros_cons_v1', 'comparison_side_by_side_v1', 'comparison_table_v1'],

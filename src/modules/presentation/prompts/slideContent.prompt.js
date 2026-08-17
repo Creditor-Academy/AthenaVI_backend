@@ -44,6 +44,12 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
     );
   }
 
+  if (type === 'timeline' || /timeline/.test(id)) {
+    lines.push(
+      'Timeline slide: REQUIRED timeline[] (or milestones[]) with at least 2 entries. Each entry MUST have label (year/phase) AND detail (1-2 lines describing the milestone). Never output year-only entries without detail.'
+    );
+  }
+
   if (/bullet_split_image|split.*bullet/i.test(id)) {
     lines.push(
       'Split bullet slide: bullets must use "**Topic:** description" format (bold topic + colon + detail). 4-6 points max.'
@@ -58,7 +64,7 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (/three_cards|cards_image|grid_.*image|device/.test(id)) {
     lines.push(
-      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, etc.). Each prompt must describe a different scene/object — never repeat the same subject.'
+      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, etc.). Each prompt must describe ONE isolated subject matching columns[n].title — explicitly forbid collages, triptychs, and multi-panel images.'
     );
     lines.push(
       'Multi-card layout: REQUIRED columns[] with one entry per card — each { title, body } must have a DISTINCT title (≤4 words) and 1-2 line body.'
@@ -176,7 +182,7 @@ function buildUser(vars = {}) {
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
     '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
     '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
-    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one distinct prompt per IMAGE_n / DEVICE_IMAGE_n slot.',
+    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated single-subject prompt per IMAGE_n / DEVICE_IMAGE_n slot (no collages or triptychs).',
     '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',

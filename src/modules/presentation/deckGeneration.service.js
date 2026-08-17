@@ -17,7 +17,7 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { selectLayout, filterTemplatesForSlideOrder, layoutFamilyExcludeIds } = require('./layoutSelector.service');
+const { selectLayout, filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
 const {
   enrichOutlineWithArrangement,
   preferredLayoutForSlide,
@@ -60,7 +60,10 @@ function resolveAuthorImagePrompt(content) {
   return '';
 }
 
-function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
+const SINGLE_SUBJECT_NEGATIVES =
+  'no triptych, no multi-panel, no split image, no collage, no diptych';
+
+function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null) {
   const id = String(slotId || '');
   const imagePrompts =
     content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
@@ -116,6 +119,42 @@ function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
   }
 
   return null;
+}
+
+function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
+  const id = String(slotId || '');
+  let subject = deriveSlotImagePromptBase(id, content, layoutSchema) || '';
+
+  const imageMatch = id.match(/^IMAGE_(\d+)$/i);
+  if (imageMatch) {
+    const idx = Number(imageMatch[1]) - 1;
+    const col = (content.columns || content.cards || content.features || [])[idx];
+    if (col && typeof col === 'object') {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      if (title) {
+        subject = body ? `${title}: ${body.slice(0, 80)}` : title;
+      }
+    }
+  }
+
+  if (!subject) {
+    subject = String(content?.title || 'Slide topic').trim();
+  }
+
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
+  const slotIndex = Math.max(0, imageSlots.findIndex((s) => String(s.id) === id));
+
+  return [
+    `Single photograph, ONE subject only, no collage: ${subject}`,
+    `(variation ${slotIndex + 1})`,
+    SINGLE_SUBJECT_NEGATIVES,
+  ].join('. ');
+}
+
+function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
+  return buildSlotImagePrompt(slotId, content, layoutSchema);
 }
 
 function titleWordsFromBody(body, fallback) {
@@ -174,20 +213,146 @@ function normalizeMultiColumnContent(content, layoutSchema) {
       let prompt =
         imagePrompts[slotId] ||
         imagePrompts[slotId.toUpperCase()] ||
-        deriveSlotImagePrompt(slotId, next, layoutSchema) ||
+        buildSlotImagePrompt(slotId, next, layoutSchema) ||
         '';
       prompt = String(prompt).trim();
       const col = next[colsKey][index];
       const colTitle = col ? String(col.title ?? col.heading ?? '').trim() : '';
       if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
-        prompt = colTitle
-          ? `${colTitle} — distinct visual ${index + 1}`
-          : `${next.title || 'Slide topic'} — visual ${index + 1}`;
+        prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
+        if (!prompt && colTitle) {
+          prompt = `Single photograph, ONE subject only: ${colTitle} (variation ${index + 1}). ${SINGLE_SUBJECT_NEGATIVES}`;
+        }
       }
       usedPrompts.add(prompt.toLowerCase());
       imagePrompts[slotId] = prompt;
     });
     next.imagePrompts = imagePrompts;
+  }
+
+  return next;
+}
+
+function normalizeTimelineContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+
+  const slots = layoutSchema.slots;
+  const layoutId = String(layoutSchema.layout_id || '');
+  const isTimeline =
+    /timeline/i.test(layoutId) || slots.some((s) => /^milestone_/i.test(String(s.id || '')));
+  if (!isTimeline) return content;
+
+  const key = Array.isArray(content.timeline)
+    ? 'timeline'
+    : Array.isArray(content.milestones)
+      ? 'milestones'
+      : Array.isArray(content.events)
+        ? 'events'
+        : 'timeline';
+
+  let items = Array.isArray(content[key]) ? [...content[key]] : [];
+  if (items.length < 2 && Array.isArray(content.bullets) && content.bullets.length) {
+    items = content.bullets.map((bullet) => {
+      const text = typeof bullet === 'string' ? bullet : String(bullet?.text ?? bullet?.label ?? '');
+      return text.trim();
+    }).filter(Boolean);
+  }
+
+  const milestoneSlots = slots.filter(
+    (s) => /^milestone_\d+$/i.test(String(s.id || '')) || /^milestone_\d+_label$/i.test(String(s.id || ''))
+  );
+  const needed = Math.max(2, milestoneSlots.length || 4);
+  const summary = String(content.summary || content.body || content.subtitle || '').trim();
+  const summaryParts = summary
+    ? summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean)
+    : [];
+
+  const normalized = items.map((item, index) => {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      const yearOnly = /^\d{4}$/.test(trimmed);
+      const split = trimmed.split(/[:\-—–]\s*/);
+      const label = yearOnly ? trimmed : (split[0] || trimmed).trim();
+      const inlineDetail = yearOnly ? '' : split.slice(1).join(' ').trim();
+      const detail =
+        inlineDetail ||
+        summaryParts[index % Math.max(summaryParts.length, 1)] ||
+        (summary ? summary.slice(0, 120) : `Key milestone ${index + 1}`);
+      return { label, detail };
+    }
+
+    const copy = { ...item };
+    let label = String(
+      copy.label ?? copy.date ?? copy.year ?? copy.period ?? copy.title ?? copy.name ?? ''
+    ).trim();
+    let detail = String(copy.detail ?? copy.body ?? copy.text ?? copy.description ?? copy.summary ?? '').trim();
+    if (!label) {
+      label = String(copy.value ?? copy.head ?? `Phase ${index + 1}`).trim();
+    }
+    if (!detail) {
+      detail =
+        summaryParts[index % Math.max(summaryParts.length, 1)] ||
+        (summary ? summary.slice(0, 120) : `Key development for ${label || `milestone ${index + 1}`}`);
+    }
+    return { ...copy, label, detail };
+  });
+
+  while (normalized.length < needed) {
+    const n = normalized.length + 1;
+    normalized.push({
+      label: String(2010 + n * 3),
+      detail: summaryParts[n % Math.max(summaryParts.length, 1)] || summary.slice(0, 100) || `Milestone ${n}`,
+    });
+  }
+
+  return {
+    ...content,
+    [key]: normalized,
+    timeline: key === 'timeline' ? normalized : content.timeline || normalized,
+  };
+}
+
+async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, slotImageUrls }) {
+  const slotIds = templateMediaService.listLayoutImageSlots(layoutSchema);
+  if (slotIds.length <= 1) return slotImageUrls;
+
+  let next = { ...(slotImageUrls || {}) };
+  if (ctx.imageSource === 'none' || ctx.imageSource === 'placeholder') return next;
+
+  const urlToSlots = new Map();
+  for (const slotId of slotIds) {
+    const url = next[slotId];
+    if (!url) continue;
+    if (!urlToSlots.has(url)) urlToSlots.set(url, []);
+    urlToSlots.get(url).push(slotId);
+  }
+
+  for (const [url, slotsWithUrl] of urlToSlots) {
+    if (slotsWithUrl.length <= 1) continue;
+    for (let i = 1; i < slotsWithUrl.length; i += 1) {
+      const slotId = slotsWithUrl[i];
+      delete next[slotId];
+      const basePrompt = buildSlotImagePrompt(slotId, content, layoutSchema);
+      const prompt = `${basePrompt} (variation ${i + 1}, different angle/subject)`;
+      try {
+        const generated = await generateSlotImage({
+          ctx,
+          slide,
+          slotId,
+          prompt,
+          layoutSchema,
+        });
+        if (generated?.url && generated.url !== url) {
+          next[slotId] = generated.url;
+        }
+      } catch (err) {
+        logger.warn?.('presentation_slot_image_distinct_regen_failed', {
+          slideId: slide.id,
+          slotId,
+          error: err.message,
+        });
+      }
+    }
   }
 
   return next;
@@ -253,6 +418,7 @@ async function repairSlideContentFromQa({
       nextContent = { ...(nextContent || {}), ...repairResult.data };
       nextContent = applyGenerationHints(nextContent, mergedGenerationHints);
       nextContent = normalizeMultiColumnContent(nextContent, template.schema);
+      nextContent = normalizeTimelineContent(nextContent, template.schema);
       qa = validateSlide({ content: nextContent, layoutSchema: template.schema });
       nextContent = qa.content;
     } catch (repairErr) {
@@ -417,8 +583,14 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
 
   const packId = flowCtx.packId || metricsPack?.packId || null;
   const brandKitId = flowCtx.brandKitId || metricsPack?.brandKitId || null;
+  const themeMode = String(
+    flowCtx.themeMode || flowCtx.generationFlow?.selections?.themeMode || ''
+  ).toLowerCase();
+  const paletteMode = themeMode === 'palette' || (!themeMode && !packId && !brandKitId);
   const wizardThemeTokens =
-    flowCtx.themeTokens && typeof flowCtx.themeTokens === 'object' ? { ...flowCtx.themeTokens } : null;
+    paletteMode && flowCtx.themeTokens && typeof flowCtx.themeTokens === 'object'
+      ? { ...flowCtx.themeTokens }
+      : null;
 
   let pack = null;
   let layoutIdWhitelist = null;
@@ -490,12 +662,14 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     } catch (err) {
       logger.warn('Brand kit resolve failed during generate', { brandKitId, error: err.message });
     }
-  } else if (wizardThemeTokens && !flowCtx.themeTokens) {
+  } else if (wizardThemeTokens) {
     flowCtx.themeTokens = wizardThemeTokens;
+  } else if (!flowCtx.themeTokens && deck.themeTokens) {
+    flowCtx.themeTokens = deck.themeTokens;
   }
 
   flowCtx.themeTokens = fontPairingService.mergeThemeTokensPreservingFonts(
-    flowCtx.themeTokens?.wizardColorThemeId ? {} : deck.themeTokens,
+    deck.themeTokens,
     flowCtx.themeTokens || deck.themeTokens
   );
 
@@ -1067,7 +1241,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
   ) {
     for (const slotId of [...missing]) {
       const prompt =
-        deriveSlotImagePrompt(slotId, content, layoutSchema) ||
+        buildSlotImagePrompt(slotId, content, layoutSchema) ||
         imagePrompts[slotId] ||
         imagePrompts[String(slotId).toUpperCase()] ||
         null;
@@ -1102,49 +1276,15 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
 
   if (!Object.keys(slotImageUrls).length) return content;
 
-  const urlCounts = new Map();
-  for (const url of Object.values(slotImageUrls)) {
-    if (!url) continue;
-    urlCounts.set(url, (urlCounts.get(url) || 0) + 1);
-  }
-  for (const [slotId, url] of Object.entries(slotImageUrls)) {
-    if (url && (urlCounts.get(url) || 0) > 1 && slotIds.length > 1) {
-      delete slotImageUrls[slotId];
-    }
-  }
+  const distinctUrls = await assertDistinctSlotImageUrls({
+    ctx,
+    slide,
+    content,
+    layoutSchema,
+    slotImageUrls,
+  });
 
-  const regenMissing = slotIds.filter((slotId) => !slotImageUrls[slotId]);
-  if (
-    regenMissing.length &&
-    ctx.imageSource !== 'none' &&
-    ctx.imageSource !== 'placeholder'
-  ) {
-    for (const slotId of regenMissing) {
-      const prompt =
-        deriveSlotImagePrompt(slotId, content, layoutSchema) ||
-        imagePrompts[slotId] ||
-        imagePrompts[String(slotId).toUpperCase()] ||
-        `${content?.title || 'Slide'} — alternate visual for ${slotId}`;
-      try {
-        const generated = await generateSlotImage({
-          ctx,
-          slide,
-          slotId,
-          prompt: `${prompt} (distinct variation)`,
-          layoutSchema,
-        });
-        if (generated?.url) slotImageUrls[slotId] = generated.url;
-      } catch (err) {
-        logger.warn?.('presentation_slot_image_regen_failed', {
-          slideId: slide.id,
-          slotId,
-          error: err.message,
-        });
-      }
-    }
-  }
-
-  return { ...content, slotImageUrls };
+  return { ...content, slotImageUrls: distinctUrls };
 }
 
 async function resolveSlideImage({
@@ -1604,10 +1744,13 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'distinct_titles' ||
       issue.rule === 'column_title_matches_slide_title' ||
       issue.rule === 'duplicate_image_prompts' ||
+      issue.rule === 'duplicate_slot_image_urls' ||
       issue.rule === 'required_chart_data' ||
       issue.rule === 'generic_chart_labels' ||
       issue.rule === 'placeholder_chart_subtitle' ||
       issue.rule === 'placeholder_cta' ||
+      issue.rule === 'placeholder_body' ||
+      issue.rule === 'timeline_missing_details' ||
       (issue.truncated === true && issue.rule === 'max_lines')
   );
 }
@@ -1671,12 +1814,16 @@ async function planDeckLayouts(ctx, slides) {
         : [],
     };
 
-    ctx.outlineExplicitType = Boolean(outlineSlide.suggestedContentType || outlineSlide.arrangementHint);
+    ctx.outlineExplicitType = Boolean(outlineSlide.suggestedContentType);
     ctx.respectOutlineTypes = true;
-    const excludeLayoutIds =
+    let excludeLayoutIds =
       Number(slide.order) === totalSlides && ctx.titleLayoutId
-        ? layoutFamilyExcludeIds(ctx.titleLayoutId)
+        ? closingLayoutExcludeIds(ctx.titleLayoutId)
         : null;
+    let preferredLayoutId = preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, slide.order);
+    if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
+      preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+    }
     const { layoutId, template } = selectLayout({
       contentType: layoutContentType,
       content: stubContent,
@@ -1684,7 +1831,7 @@ async function planDeckLayouts(ctx, slides) {
       usedLayoutIds,
       templates,
       preferImageSlot: policy.preferImageSlot,
-      preferredLayoutId: preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, slide.order),
+      preferredLayoutId,
       slideOrder: slide.order,
       totalSlides,
       excludeLayoutIds,
@@ -2142,7 +2289,22 @@ async function processSlide(ctx, slide) {
           model: DEFAULT_SLIDE_MODEL,
           temperature: 0.2,
         });
-        contentType = classified.data?.content_type || contentType || 'bullet_list';
+        const classifiedType = String(classified.data?.content_type || '').toLowerCase();
+        const outlineType = String(outlineSlide.suggestedContentType || '').toLowerCase();
+        const outlineExplicit = Boolean(outlineSlide.suggestedContentType);
+        const hasBullets =
+          Array.isArray(content?.bullets) && content.bullets.filter(Boolean).length >= 2;
+
+        if (
+          outlineExplicit &&
+          outlineType === 'bullet_list' &&
+          classifiedType === 'section_divider' &&
+          hasBullets
+        ) {
+          contentType = 'bullet_list';
+        } else {
+          contentType = classified.data?.content_type || contentType || 'bullet_list';
+        }
         visualNeed = classified.data?.visual_need || visualNeed || (preferVisuals ? 'photo' : 'none');
         await finishJob(classifyJob.job.id, {
           status: 'SUCCEEDED',
@@ -2227,20 +2389,34 @@ async function processSlide(ctx, slide) {
     }
     if (!template && !willRebind) {
       const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
+      const outlineType = String(outlineSlide.suggestedContentType || '').toLowerCase();
+      const outlineExplicit = Boolean(outlineSlide.suggestedContentType);
       const plannedMatches =
         plannedEntry?.template &&
         plannedEntry?.layoutId &&
         String(plannedEntry.layoutContentType || '') === String(policy.layoutContentType);
+      const plannedMatchesOutline =
+        outlineExplicit &&
+        plannedEntry?.template &&
+        plannedEntry?.layoutId &&
+        String(plannedEntry.layoutContentType || '').toLowerCase() === outlineType;
       const preselectedMatches =
         preSelectedTemplate &&
         preSelectedLayoutId &&
         String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
           String(policy.layoutContentType);
-      const canReusePreselected = plannedMatches || preselectedMatches;
+      const canReusePreselected = plannedMatches || plannedMatchesOutline || preselectedMatches;
 
       if (canReusePreselected) {
         template = plannedEntry?.template || preSelectedTemplate;
         layoutId = plannedEntry?.layoutId || preSelectedLayoutId;
+        if (plannedMatchesOutline && !plannedMatches && plannedEntry?.layoutContentType) {
+          policy.layoutContentType = plannedEntry.layoutContentType;
+          contentType = plannedEntry.layoutContentType;
+          if (content && typeof content === 'object') {
+            content.content_type = contentType;
+          }
+        }
       } else {
         let templates = await resolveLayoutTemplates(policy.layoutContentType, {
           layoutIdWhitelist: ctx.layoutIdWhitelist || null,
@@ -2253,8 +2429,17 @@ async function processSlide(ctx, slide) {
         }
         const excludeLayoutIds =
           Number(slide.order) === slideTotal && ctx.titleLayoutId
-            ? layoutFamilyExcludeIds(ctx.titleLayoutId)
+            ? closingLayoutExcludeIds(ctx.titleLayoutId)
             : null;
+        let preferredLayoutId = preferredLayoutForSlide(
+          ctx,
+          policy.layoutContentType,
+          ctx.usedLayoutIds || new Set(),
+          slide.order
+        );
+        if (Number(slide.order) === slideTotal && isSplitHeroLayout(ctx.titleLayoutId)) {
+          preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+        }
         ({ layoutId, template } = selectLayout({
           contentType: policy.layoutContentType,
           content,
@@ -2262,12 +2447,7 @@ async function processSlide(ctx, slide) {
           usedLayoutIds: ctx.usedLayoutIds || null,
           templates,
           preferImageSlot: policy.preferImageSlot,
-          preferredLayoutId: preferredLayoutForSlide(
-            ctx,
-            policy.layoutContentType,
-            ctx.usedLayoutIds || new Set(),
-            slide.order
-          ),
+          preferredLayoutId,
           slideOrder: slide.order,
           totalSlides: slideTotal,
           excludeLayoutIds,
@@ -2288,6 +2468,7 @@ async function processSlide(ctx, slide) {
 
     if (template?.schema) {
       content = normalizeMultiColumnContent(content, template.schema);
+      content = normalizeTimelineContent(content, template.schema);
     }
 
     let qa = validateSlide({
@@ -2423,6 +2604,8 @@ async function processSlide(ctx, slide) {
 
     const layoutSchema = template?.schema || null;
     if (layoutSchema?.slots?.length) {
+      content = normalizeMultiColumnContent(content, layoutSchema);
+      content = normalizeTimelineContent(content, layoutSchema);
       try {
         content = await enrichContentSlotImageUrls({
           ctx,

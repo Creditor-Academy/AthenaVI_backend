@@ -525,9 +525,31 @@ function textForSlot(slotId, content = {}) {
   const id = String(slotId || '').toLowerCase();
   const bullets = bulletsOf(content);
 
+  const milestonePlain = id.match(/^milestone_(\d+)$/);
+  if (milestonePlain) {
+    const milestones = objectListForKind('milestone', content);
+    const raw = milestones[Number(milestonePlain[1]) - 1];
+    if (!raw) return '';
+    if (typeof raw === 'string') return raw.trim();
+    const label = String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? raw.title ?? '').trim();
+    const detail = String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim();
+    if (label && detail) return `${label}\n${detail}`;
+    return label || detail;
+  }
+
   const indexed = id.match(INDEXED_SLOT_RE);
   if (indexed) {
     const index = Number(indexed[2]) - 1;
+    if (indexed[1] === 'milestone') {
+      const milestones = objectListForKind('milestone', content);
+      const raw = milestones[index];
+      if (!raw) return bullets[index] || '';
+      if (typeof raw === 'string') return raw.trim();
+      const label = String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? raw.title ?? '').trim();
+      const detail = String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim();
+      if (label && detail) return `${label}\n${detail}`;
+      return label || detail || itemToText(raw);
+    }
     return listForKind(indexed[1], content)[index] || bullets[index] || '';
   }
 
@@ -1508,6 +1530,8 @@ function layoutSlotsToElements(
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const elements = [];
   let layer = 1;
+  const multiImageSlotCount = slots.filter((slot) => isMediaImageSlot(slot.id, slot.role, slot)).length;
+  const usedMultiImageUrls = new Set();
 
   for (const slot of slots) {
     const slotId = slot.id || `slot_${layer}`;
@@ -1575,7 +1599,11 @@ function layoutSlotsToElements(
     }
 
     if (isMediaImageSlot(slotId, role, slot)) {
-      const url = resolveSlotImageUrl(slotId, content, imageRef, layoutSchema);
+      let url = resolveSlotImageUrl(slotId, content, imageRef, layoutSchema);
+      if (url && multiImageSlotCount > 1) {
+        if (usedMultiImageUrls.has(url)) url = null;
+        else usedMultiImageUrls.add(url);
+      }
       const frameSlot = findDeviceFrameSlot(slots, slotId);
       if (frameSlot) {
         const framePlacement = regionToPlacement(frameSlot.region, canvas, frameSlot, slots);
@@ -2236,6 +2264,85 @@ function applySplitHeroDecorShape(doc, layoutSchema, themeTokens, canvas) {
   return { ...doc, elements };
 }
 
+function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, _canvas) {
+  if (!doc || !layoutSchema?.slots?.length) return doc;
+  const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
+  if (!/timeline/.test(layoutId)) return doc;
+
+  const elements = [...(doc.elements || [])];
+  const palette = themeTokens?.palette || {};
+  const accent = paletteColor(palette, 'accent', paletteColor(palette, 'primary', '#6366F1'));
+  const muted = paletteColor(palette, 'muted', '#94A3B8');
+
+  const milestoneEls = elements
+    .filter((el) => {
+      if (el.type !== 'text' && el.type !== 'textbox') return false;
+      const sid = String(el.slotId || '').toLowerCase();
+      return /^milestone_\d+(_label)?$/i.test(sid);
+    })
+    .sort((a, b) => (a.placement?.x ?? 0) - (b.placement?.x ?? 0));
+
+  if (milestoneEls.length < 2) return doc;
+
+  const centers = milestoneEls.map((el) => {
+    const p = el.placement || {};
+    return {
+      x: (p.x ?? 0) + (p.width ?? 0) / 2,
+      y: (p.y ?? 0) + (p.height ?? 0) / 2,
+    };
+  });
+
+  const axisY = Math.min(...centers.map((c) => c.y)) - 28;
+  const lineX1 = centers[0].x;
+  const lineX2 = centers[centers.length - 1].x;
+
+  elements.unshift({
+    id: newElementId('shp'),
+    type: 'shape',
+    layer: 1,
+    placement: {
+      x: lineX1,
+      y: axisY,
+      width: Math.max(40, lineX2 - lineX1),
+      height: 3,
+      rotation: 0,
+      opacity: 0.85,
+    },
+    content: {
+      shape: 'rect',
+      fill: { type: 'solid', color: muted, colorRole: 'muted' },
+      borderRadius: 2,
+      layoutSurface: true,
+    },
+    role: 'decoration',
+  });
+
+  centers.forEach((c) => {
+    const dotSize = 12;
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 2,
+      placement: {
+        x: c.x - dotSize / 2,
+        y: axisY - dotSize / 2 + 1.5,
+        width: dotSize,
+        height: dotSize,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'ellipse',
+        fill: { type: 'solid', color: accent, colorRole: 'accent' },
+        layoutSurface: true,
+      },
+      role: 'decoration',
+    });
+  });
+
+  return { ...doc, elements };
+}
+
 function docHasFullBleedBackground(doc, layoutSchema) {
   if (layoutRequiresOverlayScrim(layoutSchema)) return true;
   const canvas = doc?.canvas || {};
@@ -2274,6 +2381,7 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
 
   next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
   next = applySplitHeroDecorShape(next, layoutSchema, themeTokens, canvas);
+  next = applyTimelineConnectorShapes(next, layoutSchema, themeTokens, canvas);
 
   if (docHasFullBleedBackground(next, layoutSchema)) {
     const enriched = {

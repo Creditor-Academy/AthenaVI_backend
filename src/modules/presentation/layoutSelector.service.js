@@ -14,6 +14,15 @@ const LAYOUT_FAMILIES = {
     'title_image_logo_v1',
     'agenda_three_columns_hero_v1',
   ],
+  split_hero_right: [
+    'title_image_logo_v1',
+    'para_image_cta_v1',
+    'section_with_image_v1',
+    'section_right_image_v1',
+    'two_para_right_image_v1',
+    'bullet_split_image_v1',
+    'para_split_50_50_v1',
+  ],
 };
 
 function layoutFamilyExcludeIds(layoutId) {
@@ -24,6 +33,21 @@ function layoutFamilyExcludeIds(layoutId) {
     if (ids.includes(id)) {
       ids.forEach((entry) => related.add(entry));
     }
+  }
+  return [...related];
+}
+
+function isSplitHeroLayout(layoutId) {
+  const id = String(layoutId || '').trim();
+  return Boolean(id && LAYOUT_FAMILIES.split_hero_right.includes(id));
+}
+
+function closingLayoutExcludeIds(titleLayoutId) {
+  const id = String(titleLayoutId || '').trim();
+  if (!id) return null;
+  const related = new Set(layoutFamilyExcludeIds(id));
+  if (isSplitHeroLayout(id)) {
+    LAYOUT_FAMILIES.split_hero_right.forEach((entry) => related.add(entry));
   }
   return [...related];
 }
@@ -324,5 +348,7 @@ module.exports = {
   countWords,
   templateHasImageSlot,
   layoutFamilyExcludeIds,
+  closingLayoutExcludeIds,
+  isSplitHeroLayout,
   LAYOUT_FAMILIES,
 };

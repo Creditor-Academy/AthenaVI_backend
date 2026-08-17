@@ -71,6 +71,8 @@ function normalizeChartSeries(chart) {
 }
 
 const PLACEHOLDER_CTA_RE = /\b(book a demo|schedule a demo|get started today)\b/i;
+const PLACEHOLDER_BODY_RE =
+  /supporting paragraph with three to four lines|scannable copy that explains the key idea/i;
 const GENERIC_CHART_LABEL_RE = /^(q[1-4]|quarter\s*[1-4]|series\s*1|period\s*[1-4])$/i;
 const PLACEHOLDER_CHART_SUBTITLE_RE = /this chart has a subtitle|chart subtitle|sample data/i;
 
@@ -145,6 +147,19 @@ function validateStructuredFields(content, layoutSchema, issues) {
     if (normalized.length >= 2 && uniquePrompts.size < normalized.length) {
       issues.push({ path: 'imagePrompts', rule: 'duplicate_image_prompts', repairable: true });
     }
+
+    if (content?.slotImageUrls && typeof content.slotImageUrls === 'object') {
+      const seen = new Map();
+      for (const slotId of imageSlotIds) {
+        const url = content.slotImageUrls[slotId];
+        if (!url) continue;
+        if (seen.has(url)) {
+          issues.push({ path: 'slotImageUrls', rule: 'duplicate_slot_image_urls', repairable: true });
+          break;
+        }
+        seen.set(url, slotId);
+      }
+    }
   }
 
   if (layoutNeedsChart(layoutSchema, slots)) {
@@ -176,6 +191,13 @@ function validateStructuredFields(content, layoutSchema, issues) {
     }
   }
 
+  for (const bodyKey of ['body', 'left_body', 'right_body']) {
+    const bodyText = String(content?.[bodyKey] ?? '').trim();
+    if (bodyText && PLACEHOLDER_BODY_RE.test(bodyText)) {
+      issues.push({ path: bodyKey, rule: 'placeholder_body', repairable: true });
+    }
+  }
+
   if (layoutNeedsComparison(slots)) {
     const hasSideBySide =
       (content?.left?.title || content?.comparison?.left?.title) &&
@@ -194,6 +216,14 @@ function validateStructuredFields(content, layoutSchema, issues) {
     const valid = Array.isArray(milestones) && milestones.filter(Boolean).length >= 2;
     if (!valid) {
       issues.push({ path: 'timeline', rule: 'required_structured', repairable: true });
+    } else {
+      const withDetail = milestones.filter((item) => {
+        if (typeof item === 'string') return false;
+        return String(item.detail ?? item.body ?? item.text ?? item.description ?? '').trim().length > 0;
+      });
+      if (withDetail.length < 2) {
+        issues.push({ path: 'timeline', rule: 'timeline_missing_details', repairable: true });
+      }
     }
   }
 }

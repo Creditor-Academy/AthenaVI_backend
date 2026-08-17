@@ -81,6 +81,8 @@ function buildUser(vars = {}) {
     '  use diagram for SWOT analysis, funnel, 2×2 matrix, or numbered process;',
     '  avoid repeating the same suggestedContentType on consecutive slides unless the narrative requires it.',
     '- Include at least one section_divider slide (chapter/section break) in decks of 5+ slides.',
+    '- section_divider slides are chapter breaks ONLY: title + optional one-line subtitle, NO bullet points in summary.',
+    '- If a slide has multiple talking points or enumerated ideas in the summary, use bullet_list — even when the title looks like "Section I" or a chapter header.',
     '- Include at least one grid slide (multi-image gallery or bento cards) in decks of 5+ slides.',
     '- Include at least one grid or device_frames slide in decks of 8+ slides when visuals matter.',
     '- Use chart only when the slide is primarily quantitative.',

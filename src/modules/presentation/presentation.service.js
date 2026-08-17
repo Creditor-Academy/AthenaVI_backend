@@ -95,6 +95,16 @@ async function resolveCreateThemeTokens({
   brandKitId,
   packThemeId,
 }) {
+  if (themeTokens?.wizardColorThemeId) {
+    return {
+      themeTokens: themeService.resolveThemeTokens({
+        themeId: themeId || themeTokens.wizardColorThemeId || null,
+        themeTokens,
+      }),
+      brandKitId: null,
+    };
+  }
+
   const { themeTokens: kitTokens, brandKitId: resolvedKitId } =
     await brandKitService.loadKitThemeTokensResolved(workspaceId, brandKitId);
   if (kitTokens) {

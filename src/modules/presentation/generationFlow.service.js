@@ -288,7 +288,12 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
 
   const imageMode = resolveImageMode(s.imageType || 'ai');
   const imageStylePhrase = resolveImageStylePhrase(s.imageStyle, s.imageStyleFilter);
-  const themeTokens = resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter);
+  const themeMode = String(s.themeMode || '').toLowerCase();
+  const useWizardPalette =
+    themeMode === 'palette' || (!themeMode && !s.packId && !s.brandKitId && s.colorTheme);
+  const themeTokens = useWizardPalette
+    ? resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter)
+    : null;
   if (themeTokens && imageStylePhrase) {
     themeTokens.imageStyle = imageStylePhrase;
   }
@@ -304,6 +309,7 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
     preferVisuals: imageMode.preferVisuals,
     imageStylePhrase,
     themeTokens,
+    themeMode: themeMode || (s.packId ? 'template' : s.brandKitId ? 'brand' : s.colorTheme ? 'palette' : null),
     canvas,
     locale: s.locale ? String(s.locale).trim() : null,
     title: s.title ? String(s.title).trim().slice(0, 255) : null,
