@@ -8,7 +8,7 @@ const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 4_000;
 const INFOGRAPHIC_SECTION_CONTENT_MAX = 8_000;
 const INFOGRAPHIC_BULLET_MAX = 1_000;
 const INFOGRAPHIC_TITLE_MAX = 200;
-const INFOGRAPHIC_SECTION_MAX = 12;
+const INFOGRAPHIC_SECTION_MAX = 24;
 const INFOGRAPHIC_BULLETS_PER_SECTION_MAX = 20;
 
 const workspaceParams = Joi.object({
@@ -47,7 +47,7 @@ const infographicSchema = Joi.object({
 
 const generateBody = Joi.object({
   mode: Joi.string().valid('image', 'infographic', 'social').default('image'),
-  modelId: Joi.string().trim().max(64).default('gpt-image-1'),
+  modelId: Joi.string().trim().max(64).allow('', null).optional(),
   formatId: Joi.string().trim().max(64).allow(null, '').optional(),
   style: Joi.string().trim().max(64).allow(null, '').optional(),
   styleId: Joi.string().trim().max(64).allow(null, '').optional(),

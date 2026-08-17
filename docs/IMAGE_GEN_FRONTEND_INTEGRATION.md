@@ -28,17 +28,18 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 ## UI checklist
 
 1. Load catalogs once: `GET /models`, `/formats`, `/styles`.
-2. Show **model picker** from `/models` (default `gpt-image-1`).
-3. Mode tabs: Image / Infographic / Social.
+2. Show **model picker** from `/models`. Default `gpt-image-1` for Image/Social. For Infographic, preselect the model whose `recommendedForModes` includes `"infographic"` (`gpt-image-1-hd`).
+3. Mode tabs: Image / Infographic / Social. Infographic format default: `landscape`.
 4. Social → format chips from `/formats` where `category === "social"`.
 5. Optional **context attach zone**: files (PDF/DOCX/MD/TXT/images) + library asset picks + pasted text → `POST .../context` → show `previews` / `warnings`.
-6. Call `GET .../estimate` when model/mode changes; show AC cost (context create is free).
-7. Generate: `POST .../generate` with optional `contextId` — **long timeout** (image gen can take 30–90s).
-8. After success: preview `data.asset.url` / `data.generation.url`; show `contextPreview` badge if present.
+6. Call `GET .../estimate` when model/mode changes; show AC cost (context create is free). Infographic + HD default is **14 AC**.
+7. Generate: `POST .../generate` with optional `contextId` — **long timeout** (image gen 30–90s; **infographic 90–180s** because of planner + optional quality edit).
+8. After success: preview `data.asset.url` / `data.generation.url`; show `contextPreview` badge if present. For infographic, read `data.generation.infographicQuality` (or `request.infographicQuality`).
 9. Actions: Regenerate (inherits context), Tweak (instruction modal; no context in v1), Download menu (`png` | `jpg` | `pdf`).
 10. History: `GET .../generations` (`?mode=image|infographic|social` optional) — versions share `rootId`.
 11. Workspace **Images** tab: prefer `GET /api/workspaces/:workspaceId/library?category=image` (see [WORKSPACE_API.md](api/WORKSPACE_API.md)).
 12. Library filter: assets `source=ai_gen`.
+13. Infographic: always-on hint that text is auto-checked. If `infographicQuality.passed === false`, show a non-blocking banner with `issues` and optionally prefill Tweak from `suggestedTweak` (Tweak still bills; the free in-place fix already ran).
 
 ---
 
@@ -53,10 +54,12 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 
 ### B — Infographic
 
-1. Mode `infographic`, prefer `gpt-image-1` / HD.
-2. Structured form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + freeform `prompt` (max 16,000 — put the full story and labels here).
-3. Optional context PDF/MD for brief text (no auto-structure in v1 — text is injected into the prompt).
-4. Generate → download PNG/PDF for decks/docs.
+1. Mode `infographic`. Preselect `gpt-image-1-hd` and `formatId: "landscape"` (user may switch to medium/square/portrait).
+2. Structured form: `infographic.layout`, `title`, `sections[]` (up to **24**), optional `brandPalette` + freeform `prompt` (max 16,000 — put the full story and labels here).
+3. Optional context PDF/MD for brief text (injected into the planner + image prompt).
+4. Soft hint: dense on-canvas text is auto-checked; remaining errors can use Tweak.
+5. Generate (timeout **90–180s**) → download PNG/PDF for decks/docs.
+6. If `infographicQuality.passed === false`, show issues; optional Tweak prefills `suggestedTweak`.
 
 ### C — Social creative
 
@@ -112,10 +115,13 @@ Successful charges appear in workspace credit history with `metadata.feature` li
 | Topic | Hint |
 |-------|------|
 | Prompt | Max **16,000** chars. Show a counter; this is the brief (story, labels, panel copy), not a one-liner. |
-| Infographic sections | Optional structure on top of prompt: 12 panels; panel body 8,000; bullets 1,000 each. |
+| Infographic sections | Optional structure on top of prompt: **24** panels; panel body 8,000; bullets 1,000 each. |
 | Tweak | `instruction` max **4,000** chars |
 | Sync generate | Loading state + cancel only client-side (request may still complete/charge) |
-| HD (`gpt-image-1-hd`) | Best quality; higher AC — show estimate |
+| Infographic generate | Allow **90–180s**; server may run a planner + one free quality edit |
+| Infographic default | `gpt-image-1-hd` + `landscape` → estimate **14 AC**. Explicit medium is **8 AC**. |
+| HD (`gpt-image-1-hd`) | Best quality; higher AC — show estimate. Preselect on Infographic tab (`recommendedForModes`). |
 | DALL·E 3 (`dall-e-3`) | Still offered for UI compat; backend runs GPT Image HD. Hide for `infographic` (`modes` from catalog) |
+| Infographic quality | `generation.infographicQuality.passed === false` → banner; do not charge again for the silent retry |
 | Context | Free to create; max 5 files+assets; TTL ~7 days; pinned after first generate |
 | Library | Filter AI assets; open generation via `stockMetadata.generationId` |

@@ -6,7 +6,8 @@ body:
   data: |-
     {
       "mode": "infographic",
-      "modelId": "gpt-image-1",
+      "modelId": "gpt-image-1-hd",
+      "formatId": "landscape",
       "style": "flat_illustration",
       "prompt": "Customer onboarding funnel",
       "brandPalette": ["#0B1F3A", "#3DDC97"],

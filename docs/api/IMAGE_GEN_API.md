@@ -20,12 +20,12 @@ OpenAI-only workspace image studio: general images, infographics, and social cre
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/models` |
 
-**Response (200)** – `data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `supportsEdit`, `creditEstimate`.
+**Response (200)** – `data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `recommendedForModes`, `supportsEdit`, `creditEstimate`.
 
 | `id` | OpenAI | Notes |
 |------|--------|--------|
-| `gpt-image-1` | `gpt-image-1` medium | Default |
-| `gpt-image-1-hd` | `gpt-image-1` high | HD |
+| `gpt-image-1` | `gpt-image-1` medium | Default for `image` / `social` |
+| `gpt-image-1-hd` | `gpt-image-1` high | **Default for `infographic`** when `modelId` is omitted. `recommendedForModes: ["infographic"]` |
 | `dall-e-3` | `gpt-image-1` high | Compatibility alias (OpenAI retired DALL·E 3); image/social only |
 
 ### Formats
@@ -57,6 +57,8 @@ Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `insta
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/workspaces/:workspaceId/estimate` |
 | **Query** | `modelId`, `mode` (`image`\|`infographic`\|`social`), `tweak` (`true`/`false`) |
+
+When `mode=infographic` and `modelId` is omitted, the estimate uses **`gpt-image-1-hd`** (default **14 AC** = 12 + 2 surcharge). Explicit `modelId=gpt-image-1` remains **8 AC**.
 
 **Response (200)** – `data`: `{ athenaCredits, breakdown }`.
 
@@ -129,7 +131,7 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 |---|---|
 | **Method** | `POST` |
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generate` |
-| **Status** | **201** (synchronous — allow long client timeout) |
+| **Status** | **201** (synchronous — allow a long client timeout; infographic can exceed 90s because of planner + optional quality edit) |
 
 **Body**
 
@@ -156,16 +158,32 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 | Field | Rules |
 |-------|--------|
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
-| `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). |
+| `modelId` | Optional. Default **`gpt-image-1`** for image/social; default **`gpt-image-1-hd`** for infographic. Explicit values always win. |
+| `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). Infographic default **`landscape`** (1536×1024) when omitted. |
 | `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars (image, infographic, and social). Use this for the full brief — audience, story, labels, panel copy. |
-| `infographic` | Optional structured form. `title` max 200; up to **12** sections; section `title` 200; `content` max **8,000**; up to **20** bullets × **1,000** chars. |
-| `style` / `styleId` | Optional vibe from `/styles` |
+| `infographic` | Optional structured form. `title` max 200; up to **24** sections; section `title` 200; `content` max **8,000**; up to **20** bullets × **1,000** chars. |
+| `style` / `styleId` | Optional vibe from `/styles`. Infographic mode ignores photoreal/cinematic/watercolor/3d/neon suffixes (flat-vector craft is always applied). |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case, e.g. `cute-coffee-cup-emoji.png`). S3 keys stay UUID-based. |
 | `contextId` | Optional. Uses document text + vision summaries in the prompt; reference images go through `images.edit` |
+
+**Infographic pipeline (server):** plans layout/copy with a chat model, typesets via `gpt-image-1`, contain-crops (does not cover-clip steps), vision-QA against the planned labels, and if text/numbering is broken runs **one in-place image edit included in the original charge** (no extra AC). User-initiated Tweak / Regenerate still charge as usual.
 
 **Response `data`:** `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`.
 
 `generation` includes `contextId` and `contextPreview` when context was used. A snapshot is stored in `generation.request.contextSnapshot` for regenerate.
+
+Infographic generations also include `generation.infographicQuality` (same object on `generation.request.infographicQuality`):
+
+```json
+{
+  "passed": false,
+  "retried": true,
+  "issues": ["step 03 missing"],
+  "suggestedTweak": "Restore badge 03 and the heading Pickup Scheduled."
+}
+```
+
+Show a non-blocking “review text” banner when `passed === false`. `suggestedTweak` may prefill the Tweak modal (Tweak still bills — the free fix already ran).
 
 Master file is always **PNG** on S3.
 
@@ -246,7 +264,9 @@ Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.
 | Infographic surcharge | +2 | `IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC` |
 | Social surcharge | +1 | `IMAGE_GEN_SOCIAL_SURCHARGE_AC` |
 
-Context create is **free**. Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` / `IMAGE_GEN_CONTEXT_RATE_LIMIT_WINDOW_SEC`.
+Infographic **default** (HD + landscape, `modelId` omitted): **14 AC**. Explicit medium (`gpt-image-1`): **8 AC**. The silent quality edit after a broken first image is **not** a second charge.
+
+Context create is **free**. Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` / `IMAGE_GEN_CONTEXT_RATE_LIMIT_WINDOW_SEC`. Silent infographic QA edits do **not** increment regenerate rate-limit counters.
 
 Requires **`OPENAI_API_KEY`**.
 

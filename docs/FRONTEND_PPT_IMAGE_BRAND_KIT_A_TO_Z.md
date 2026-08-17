@@ -975,15 +975,15 @@ Versions share `rootId` / `parentId` chains.
 
 ### Models — `GET /api/image-gen/models`
 
-`data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `supportsEdit`, `creditEstimate`.
+`data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `recommendedForModes`, `supportsEdit`, `creditEstimate`.
 
 | id | Notes |
 |----|--------|
-| `gpt-image-1` | Default (medium) |
-| `gpt-image-1-hd` | HD (higher AC) |
+| `gpt-image-1` | Default for image/social (medium) |
+| `gpt-image-1-hd` | Default for infographic (`recommendedForModes`); HD (higher AC) |
 | `dall-e-3` | Compat alias → GPT Image HD; image/social only |
 
-Respect each model’s `modes` array (e.g. hide DALL·E for `infographic` if not listed).
+Respect each model’s `modes` array (e.g. hide DALL·E for `infographic` if not listed). Preselect Infographic from `recommendedForModes`.
 
 ### Formats — `GET /api/image-gen/formats`
 
@@ -1057,9 +1057,10 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 | Field | Rules |
 |-------|--------|
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
-| `formatId` | **Required** for `social`. Optional aspect for `image` |
+| `modelId` | Optional. Infographic default `gpt-image-1-hd`; image/social default `gpt-image-1`. |
+| `formatId` | **Required** for `social`. Optional aspect for `image`. Infographic default `landscape`. |
 | `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars — full brief, not a one-liner |
-| `infographic` | Optional: `title` 200; 12 sections; section `content` 8,000; bullets 20 × 1,000 |
+| `infographic` | Optional: `title` 200; **24** sections; section `content` 8,000; bullets 20 × 1,000 |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
 | `brandPalette` | Optional hex list — can mirror Brand Kit colors in UI |
@@ -1068,7 +1069,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`.
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`. Infographic also returns `generation.infographicQuality` (`passed`, `retried`, `issues`, `suggestedTweak`).
 
 ## 3.6 List / get generations
 
@@ -1127,7 +1128,7 @@ Mode `image`, optional `formatId` (`square`/`landscape`/`portrait`), `style`, `p
 
 ### B — Infographic
 
-Mode `infographic`, prefer `gpt-image-1` / HD. Form: `infographic.layout`, `title`, `sections[]`, optional `brandPalette` + prompt (max 16,000) → generate → PNG/PDF.
+Mode `infographic`. Preselect `gpt-image-1-hd` + `landscape` (14 AC). Form: `infographic.layout`, `title`, `sections[]` (up to 24), optional `brandPalette` + prompt (max 16,000) → generate (allow 90–180s) → PNG/PDF. If `infographicQuality.passed === false`, show a review banner.
 
 ### C — Social creative
 
@@ -1144,7 +1145,7 @@ When user has a default Brand Kit, prefill `brandPalette` from kit colors and su
 ## 3.12 Image Gen UI checklist
 
 - [ ] Load `/models`, `/formats`, `/styles` once
-- [ ] Model picker (default `gpt-image-1`); respect `modes`
+- [ ] Model picker (default `gpt-image-1`; Infographic preselect `gpt-image-1-hd` via `recommendedForModes`)
 - [ ] Mode tabs: Image / Infographic / Social
 - [ ] Social → format chips `category === "social"`
 - [ ] Estimate on model/mode change

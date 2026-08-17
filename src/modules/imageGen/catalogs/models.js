@@ -14,17 +14,19 @@ const MODELS = Object.freeze([
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE,
     modes: ['image', 'infographic', 'social'],
     recommended: true,
+    recommendedForModes: ['image', 'social'],
     supportsEdit: true,
   },
   {
     id: 'gpt-image-1-hd',
     name: 'GPT Image HD',
-    description: 'Same model at high quality — best for social banners and infographics.',
+    description: 'Same model at high quality — default for infographics; best for social banners.',
     openaiModel: 'gpt-image-1',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE_HD,
     modes: ['image', 'infographic', 'social'],
     recommended: false,
+    recommendedForModes: ['infographic'],
     supportsEdit: true,
   },
   {
@@ -38,6 +40,7 @@ const MODELS = Object.freeze([
     feature: IMAGE_GEN_FEATURE.DALL_E_3,
     modes: ['image', 'social'],
     recommended: false,
+    recommendedForModes: [],
     supportsEdit: true,
   },
 ]);
@@ -53,9 +56,17 @@ function listModels() {
     description: m.description,
     modes: m.modes,
     recommended: m.recommended,
+    recommendedForModes: m.recommendedForModes || [],
     supportsEdit: m.supportsEdit,
     creditEstimate: getModelAc(m.id),
   }));
+}
+
+function defaultModelIdForMode(mode, modelId) {
+  const trimmed = modelId != null ? String(modelId).trim() : '';
+  if (trimmed) return trimmed;
+  if (mode === 'infographic') return 'gpt-image-1-hd';
+  return 'gpt-image-1';
 }
 
 function resolveModel(modelId) {
@@ -68,26 +79,28 @@ function resolveModel(modelId) {
 }
 
 function estimateCredits({ modelId, mode, isTweak = false }) {
-  const base = getModelAc(modelId || 'gpt-image-1');
+  const resolvedMode = mode || 'image';
+  const resolvedModelId = defaultModelIdForMode(resolvedMode, modelId);
+  const base = getModelAc(resolvedModelId);
   if (isTweak) {
     return {
       athenaCredits: base,
       breakdown: {
-        modelId: modelId || 'gpt-image-1',
+        modelId: resolvedModelId,
         modelAc: base,
         surcharge: 0,
         mode: 'tweak',
       },
     };
   }
-  const surcharge = getModeSurcharge(mode);
+  const surcharge = getModeSurcharge(resolvedMode);
   return {
     athenaCredits: base + surcharge,
     breakdown: {
-      modelId: modelId || 'gpt-image-1',
+      modelId: resolvedModelId,
       modelAc: base,
       surcharge,
-      mode: mode || 'image',
+      mode: resolvedMode,
     },
   };
 }
@@ -96,6 +109,7 @@ module.exports = {
   MODELS,
   MODEL_BY_ID,
   listModels,
+  defaultModelIdForMode,
   resolveModel,
   estimateCredits,
 };

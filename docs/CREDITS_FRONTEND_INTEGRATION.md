@@ -110,8 +110,12 @@ flowchart TB
 | Brand kit logo variants (apply) | `brand_kit_logo_variants` | `POST .../brand-kits/:id/suggest/logo-variants` with `applyRoles` | Workspace-scoped* |
 | Brand kit logo mockup | `brand_kit_logo_mockup` | `POST .../brand-kits/:id/mockups/generate` | Workspace-scoped* (first 2 per kit free) |
 | Brand guideline deck | `brand_kit_guideline_generate` | `POST .../brand-kits/:id/guidelines/generate` | Workspace-scoped* |
+| AI image (studio) | `image_gen_gpt_image` / `image_gen_gpt_image_hd` | `POST /api/image-gen/workspaces/:workspaceId/generate` | Workspace-scoped* |
+| AI infographic surcharge | `image_gen_infographic_surcharge` (rolled into generate total) | same generate, `mode=infographic` | Workspace-scoped* |
 
 \*Workspace-scoped = personal pool if `PRIVATE`, workspace pool if `TEAM`.
+
+**Image Gen:** default infographic (HD + landscape, `modelId` omitted) is **14 AC** (12 + 2). Explicit medium infographic is **8 AC**. A silent quality edit when the first infographic PNG has garbled text/numbering is **included** — it is not a second charge. User-started Tweak / Regenerate still bill. Always call `GET .../image-gen/.../estimate`.
 
 **Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge. Logo mockups: first **2 successful** generates per brand kit are free.
 

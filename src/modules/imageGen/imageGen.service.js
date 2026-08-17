@@ -13,7 +13,7 @@ const imageGenCredit = require('./imageGenCredit.service');
 const imageGenDao = require('./imageGen.dao');
 const rateLimit = require('./imageGenRateLimit.service');
 const contextService = require('./imageGen.context.service');
-const { listModels, resolveModel, estimateCredits } = require('./catalogs/models');
+const { listModels, resolveModel, estimateCredits, defaultModelIdForMode } = require('./catalogs/models');
 const {
   listFormats,
   resolveFormat,
@@ -23,10 +23,16 @@ const { listStyles, resolveStyle } = require('./catalogs/styles');
 const { buildImagePrompt } = require('./prompts/imageStyle.prompt');
 const { buildInfographicPrompt } = require('./prompts/infographic.prompt');
 const { buildSocialPrompt } = require('./prompts/social.prompt');
+const { planInfographic } = require('./infographicPlan.service');
+const {
+  reviewInfographicSafe,
+  buildFixInstruction,
+} = require('./infographicQa.service');
 const { cropToFormat } = require('./socialCrop.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
 const { resolveAssetFilename } = require('./imageGenFilename');
 const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
+const logger = require('../../shared/utils/logger');
 
 const MODES = new Set(['image', 'infographic', 'social']);
 
@@ -60,16 +66,32 @@ function serializeGeneration(row) {
     createdAt: row.createdAt,
     asset: row.asset || null,
     downloadFormats: [...DOWNLOAD_FORMATS],
+    infographicQuality: request.infographicQuality || null,
   };
 }
 
-function buildFinalPrompt({ mode, prompt, styleId, format, headline, subheadline, brandPalette, infographic }) {
+function cropFitForMode(mode) {
+  return mode === 'infographic' ? 'contain' : 'cover';
+}
+
+function buildFinalPrompt({
+  mode,
+  prompt,
+  styleId,
+  format,
+  headline,
+  subheadline,
+  brandPalette,
+  infographic,
+  plan,
+}) {
   if (mode === 'infographic') {
     return buildInfographicPrompt({
       prompt,
       styleId,
       brandPalette,
       infographic,
+      plan,
     });
   }
   if (mode === 'social') {
@@ -103,6 +125,10 @@ function resolveRequestFormat({ mode, formatId }) {
       throw new AppError('Invalid formatId', 400);
     }
     return format;
+  }
+
+  if (mode === 'infographic') {
+    return resolveFormat('landscape');
   }
 
   return resolveFormat('square');
@@ -175,6 +201,16 @@ async function runPipeline({
 
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
+  let infographicPlan = null;
+  if (mode === 'infographic') {
+    infographicPlan = await planInfographic({
+      prompt: prompt || '',
+      infographic: infographic || {},
+      brandPalette,
+      contextExcerpt: contextResult.enrichmentBlock || '',
+    });
+  }
+
   const basePrompt = buildFinalPrompt({
     mode,
     prompt: prompt || '',
@@ -184,6 +220,7 @@ async function runPipeline({
     subheadline,
     brandPalette,
     infographic,
+    plan: infographicPlan,
   });
 
   let enrichedPrompt = contextService.appendContextBlock(
@@ -216,7 +253,47 @@ async function runPipeline({
         size: openaiSize,
       });
 
-  const cropped = await cropToFormat(generated.buffer, format);
+  let workingBuffer = generated.buffer;
+  let revisedPrompt = generated.revised_prompt || null;
+  let infographicQuality = null;
+
+  let cropped = await cropToFormat(workingBuffer, format, { fit: cropFitForMode(mode) });
+
+  if (mode === 'infographic' && (action === 'generate' || action === 'regenerate')) {
+    let qa = await reviewInfographicSafe({
+      buffer: cropped.buffer,
+      spec: infographicPlan || {},
+    });
+    let retried = false;
+    if (!qa.skipped && !qa.pass) {
+      try {
+        const edited = await editImage({
+          imageBuffer: cropped.buffer,
+          instruction: buildFixInstruction(qa, infographicPlan || {}),
+          model: model.openaiModel,
+          quality: model.quality,
+          size: openaiSize,
+        });
+        retried = true;
+        workingBuffer = edited.buffer;
+        revisedPrompt = edited.revised_prompt || revisedPrompt;
+        cropped = await cropToFormat(workingBuffer, format, { fit: 'contain' });
+        qa = await reviewInfographicSafe({
+          buffer: cropped.buffer,
+          spec: infographicPlan || {},
+        });
+      } catch (err) {
+        logger.warn('Infographic silent quality edit failed', { message: err?.message });
+      }
+    }
+    infographicQuality = {
+      passed: qa.skipped ? true : Boolean(qa.pass),
+      retried,
+      issues: qa.issues || [],
+      suggestedTweak: qa.suggestedTweak || '',
+    };
+  }
+
   const generationId = uuidv4();
   const assetName = resolveAssetFilename({
     name,
@@ -261,6 +338,7 @@ async function runPipeline({
     contextId: liveContextId || contextResult.contextId || contextId || null,
     contextPreview: contextResult.contextPreview || null,
     contextSnapshot: contextResult.contextSnapshot || null,
+    infographicQuality,
   };
 
   const row = await imageGenDao.createGeneration({
@@ -272,7 +350,7 @@ async function runPipeline({
     formatId: format?.id || null,
     styleId: styleId || null,
     prompt: prompt || enrichedPrompt,
-    revisedPrompt: generated.revised_prompt || null,
+    revisedPrompt,
     request: requestPayload,
     parentId: parentId || null,
     rootId: resolvedRootId,
@@ -326,11 +404,12 @@ async function runPipeline({
 }
 
 async function generate({ userId, workspace, body }) {
+  const mode = body.mode || 'image';
   return runPipeline({
     userId,
     workspace,
-    mode: body.mode || 'image',
-    modelId: body.modelId || 'gpt-image-1',
+    mode,
+    modelId: defaultModelIdForMode(mode, body.modelId),
     formatId: body.formatId,
     styleId: body.style || body.styleId,
     prompt: body.prompt,
@@ -360,11 +439,17 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
       ? body.contextId || null
       : parent.contextId || prev.contextId || null;
 
+  const mode = body.mode || parent.mode || prev.mode || 'image';
+
   return runPipeline({
     userId,
     workspace,
-    mode: body.mode || parent.mode || prev.mode || 'image',
-    modelId: body.modelId || parent.modelId || prev.modelId || 'gpt-image-1',
+    mode,
+    modelId:
+      body.modelId ||
+      parent.modelId ||
+      prev.modelId ||
+      defaultModelIdForMode(mode),
     formatId:
       body.formatId !== undefined ? body.formatId : parent.formatId || prev.formatId,
     styleId:
@@ -401,7 +486,9 @@ async function tweak({ userId, workspace, generationId, instruction }) {
   }
 
   const model = resolveModel(parent.modelId) || resolveModel('gpt-image-1');
-  const format = parent.formatId ? resolveFormat(parent.formatId) : resolveFormat('square');
+  const format = parent.formatId
+    ? resolveFormat(parent.formatId)
+    : resolveRequestFormat({ mode: parent.mode, formatId: null });
   const pricing = estimateCredits({
     modelId: model.supportsEdit ? model.id : 'gpt-image-1',
     mode: parent.mode,
@@ -421,7 +508,9 @@ async function tweak({ userId, workspace, generationId, instruction }) {
     size: openaiSize,
   });
 
-  const cropped = await cropToFormat(edited.buffer, format);
+  const cropped = await cropToFormat(edited.buffer, format, {
+    fit: cropFitForMode(parent.mode),
+  });
   const generationIdNew = uuidv4();
   const assetName = resolveAssetFilename({
     prompt: parent.prompt,
@@ -533,7 +622,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
 
 function creditEstimate({ modelId, mode, tweak }) {
   return estimateCredits({
-    modelId: modelId || 'gpt-image-1',
+    modelId,
     mode: mode || 'image',
     isTweak: tweak === true || tweak === 'true',
   });

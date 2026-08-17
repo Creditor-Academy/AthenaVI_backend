@@ -1,16 +1,18 @@
 const sharp = require('sharp');
 
+const CONTAIN_BACKGROUND = { r: 250, g: 250, b: 252, alpha: 1 };
+
 /**
- * Fit buffer to exact format dimensions (full-bleed); always output PNG.
- * Always uses cover + center so social banners/covers fill edge-to-edge
- * (no letterbox / solid side panels). Composition must be prompted for the
- * final aspect so text survives the crop.
+ * Fit buffer to exact format dimensions; always output PNG.
+ * Default `cover` is for social full-bleed. Infographics should pass
+ * `fit: 'contain'` so step rows are not clipped at the edges.
  *
  * @param {Buffer} buffer
  * @param {{ width: number, height: number } | null} format
+ * @param {{ fit?: 'cover'|'contain' }} [options]
  * @returns {Promise<{ buffer: Buffer, width: number, height: number, fit: string }>}
  */
-async function cropToFormat(buffer, format) {
+async function cropToFormat(buffer, format, options = {}) {
   if (!format || !format.width || !format.height) {
     const meta = await sharp(buffer).metadata();
     const out = await sharp(buffer).png().toBuffer();
@@ -24,19 +26,38 @@ async function cropToFormat(buffer, format) {
 
   const targetW = format.width;
   const targetH = format.height;
-  const out = await sharp(buffer)
-    .resize(targetW, targetH, {
-      fit: 'cover',
-      position: 'centre',
-    })
-    .png()
-    .toBuffer();
+  const fit = options.fit === 'contain' ? 'contain' : 'cover';
+
+  const meta = await sharp(buffer).metadata();
+  if (meta.width === targetW && meta.height === targetH) {
+    const out = await sharp(buffer).png().toBuffer();
+    return {
+      buffer: out,
+      width: targetW,
+      height: targetH,
+      fit: 'none',
+    };
+  }
+
+  const resize =
+    fit === 'contain'
+      ? {
+          fit: 'contain',
+          position: 'centre',
+          background: CONTAIN_BACKGROUND,
+        }
+      : {
+          fit: 'cover',
+          position: 'centre',
+        };
+
+  const out = await sharp(buffer).resize(targetW, targetH, resize).png().toBuffer();
 
   return {
     buffer: out,
     width: targetW,
     height: targetH,
-    fit: 'cover',
+    fit,
   };
 }
 
