@@ -55,3 +55,8 @@ variables:
   elementId: ""
   elementId2: ""
   deckTemplateId: ""
+  brandKitId: ""
+  brandKitMediaId: ""
+  guidelinePresentationId: ""
+  imageGenContextId: ""
+  generationId: ""

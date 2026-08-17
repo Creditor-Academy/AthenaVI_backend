@@ -41,3 +41,19 @@ values:
     value: ''
     type: default
     enabled: true
+  - key: generationId
+    value: ''
+    type: default
+    enabled: true
+  - key: brandKitId
+    value: ''
+    type: default
+    enabled: true
+  - key: brandKitMediaId
+    value: ''
+    type: default
+    enabled: true
+  - key: guidelinePresentationId
+    value: ''
+    type: default
+    enabled: true

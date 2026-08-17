@@ -15,4 +15,16 @@ body:
     - key: files
       type: file
       src: []
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.context && j.data.context.id;
+        if (id) {
+          pm.collectionVariables.set("imageGenContextId", id);
+          pm.environment.set("imageGenContextId", id);
+        }
+      }
+    language: text/javascript
 order: 2500

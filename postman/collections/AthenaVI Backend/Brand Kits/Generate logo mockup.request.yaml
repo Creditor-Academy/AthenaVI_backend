@@ -1,4 +1,5 @@
 $kind: http-request
+description: Preview generate. logoPosition is forbidden on mug (400). itemColor optional hex for all templates.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/mockups/generate"
 method: POST
 headers:

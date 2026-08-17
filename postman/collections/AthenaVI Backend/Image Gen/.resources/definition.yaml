@@ -4,7 +4,9 @@ description: |-
 
   Requires `OPENAI_API_KEY`. Charges workspace credits on success (context create is free). Downloads are free.
 
-  Set `imageGenContextId` from Create context response when testing generate-with-context.
+  Infographic default model is `gpt-image-1-hd` (14 AC) when `modelId` is omitted. Prompt max is 16,000 chars. Infographic structured form: up to 24 sections.
+
+  After generate/create-context, test scripts save `generationId` / `imageGenContextId`.
 auth:
   - id: image-gen-bearer-auth
     type: bearer

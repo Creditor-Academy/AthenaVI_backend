@@ -5,4 +5,17 @@ queryParams:
   take: "20"
   skip: "0"
   mode: image
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const gens = j && j.data && j.data.generations;
+        if (Array.isArray(gens) && gens[0] && gens[0].id) {
+          pm.collectionVariables.set("generationId", gens[0].id);
+          pm.environment.set("generationId", gens[0].id);
+          pm.environment.set("imageGenerationId", gens[0].id);
+        }
+      }
+    language: text/javascript
 order: 4000

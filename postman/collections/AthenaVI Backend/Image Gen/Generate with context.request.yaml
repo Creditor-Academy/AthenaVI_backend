@@ -13,4 +13,17 @@ body:
       "prompt": "Product launch visual using the attached brand brief and references",
       "contextId": "{{imageGenContextId}}"
     }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+      }
+    language: text/javascript
 order: 3050

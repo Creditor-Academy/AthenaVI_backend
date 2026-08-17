@@ -11,32 +11,92 @@ body:
       "name": "Acme Brand",
       "isDefault": true,
       "data": {
+        "meta": {
+          "tagline": "Empowering Executive Decks"
+        },
         "colors": [
-          { "id": "c1", "name": "Navy", "hex": "#0B1220" },
-          { "id": "c2", "name": "Blue", "hex": "#3B82F6" },
-          { "id": "c3", "name": "White", "hex": "#F8FAFC" },
-          { "id": "c4", "name": "Muted", "hex": "#94A3B8" }
+          { "id": "c1", "name": "Primary (Light)", "hex": "#D51C0B" },
+          { "id": "c2", "name": "Background (Light)", "hex": "#F7F3F3" },
+          { "id": "c3", "name": "Text (Light)", "hex": "#1B1110" },
+          { "id": "c4", "name": "Background (Dark)", "hex": "#1B1110" },
+          { "id": "c5", "name": "Primary (Dark)", "hex": "#FB6456" },
+          { "id": "c6", "name": "Text (Dark)", "hex": "#F7F3F3" }
         ],
         "colorRoles": {
-          "bg": "c1",
+          "bg": "c2",
           "text": "c3",
-          "primary": "c2",
-          "secondary": "c2",
-          "muted": "c4"
+          "primary": "c1",
+          "secondary": "c1",
+          "muted": "c3",
+          "bgDark": "c4",
+          "textDark": "c6",
+          "primaryDark": "c5"
         },
         "fonts": {
-          "heading": { "fontPairingId": "inter_space", "family": "Inter" },
-          "body": { "fontPairingId": "inter_space", "family": "Inter" }
+          "heading": {
+            "fontPairingId": "outfit_source",
+            "family": "Outfit",
+            "weight": 700,
+            "sizePx": 40,
+            "lineHeight": 1.2,
+            "lightTextColorId": "c3",
+            "darkTextColorId": "c6"
+          },
+          "subheading": {
+            "fontPairingId": "outfit_source",
+            "family": "Space Grotesk",
+            "weight": 600,
+            "sizePx": 20,
+            "lineHeight": 1.4
+          },
+          "body": {
+            "fontPairingId": "outfit_source",
+            "family": "Inter",
+            "weight": 400,
+            "sizePx": 14,
+            "lineHeight": 1.6
+          }
+        },
+        "buttons": {
+          "primary": {
+            "label": "Primary",
+            "backgroundColorId": "c1",
+            "textColorId": null,
+            "borderColorId": null,
+            "borderWidthPx": 0,
+            "borderRadiusPx": 10,
+            "paddingXPx": 20,
+            "paddingYPx": 10,
+            "fontWeight": 600,
+            "fontSizePx": 14
+          },
+          "secondary": {
+            "label": "Secondary",
+            "backgroundColorId": "c2",
+            "textColorId": "c1",
+            "borderColorId": "c1",
+            "borderWidthPx": 1,
+            "borderRadiusPx": 10,
+            "paddingXPx": 20,
+            "paddingYPx": 10,
+            "fontWeight": 600,
+            "fontSizePx": 14
+          }
         },
         "voice": {
           "tone": "Professional, confident",
           "audience": "Enterprise buyers",
-          "dos": ["Keep copy concise"],
+          "dos": ["Use short sentences"],
           "donts": ["No slang"],
           "vocabulary": ["Athena VI"]
         },
-        "chartStyles": { "colorIds": ["c2", "c4"] },
-        "imageStyle": "clean product photography, brand-safe"
+        "usage": {
+          "logoClearSpace": "1.5x cap height",
+          "logoMinSizePx": 24,
+          "doNot": ["Recolor logo", "Stretch lockup"]
+        },
+        "chartStyles": { "colorIds": ["c1", "c5"] },
+        "imageStyle": "clean product photography, studio lighting, brand-safe"
       }
     }
 scripts:

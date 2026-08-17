@@ -73,6 +73,7 @@
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/generate` | Bearer + OWNER/ADMIN | Generate logo product mockup |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | Bearer + OWNER/ADMIN | Generate 6-slide guideline deck |
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | Bearer + member | Guideline presentation link |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/pdf` | Bearer + member | Download brand guideline PDF |
 | POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |
 | DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId` | Bearer + OWNER/ADMIN | Delete Brand Kit media |
 | GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId/stream` | Bearer + member | Stream Brand Kit media |

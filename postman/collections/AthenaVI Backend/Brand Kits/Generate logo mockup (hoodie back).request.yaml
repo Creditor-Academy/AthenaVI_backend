@@ -1,5 +1,5 @@
 $kind: http-request
-description: Save replace-on-role. Apparel logoPosition left_chest on tshirt.
+description: Apparel-only logoPosition. Canonical back value is center_back (aliases back_center, back, rear). Forbidden on non-tshirt/hoodie templates (400).
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/mockups/generate"
 method: POST
 headers:
@@ -9,10 +9,10 @@ body:
   type: json
   content: |-
     {
-      "templateId": "tshirt",
+      "templateId": "hoodie",
       "itemColor": "#1A1A1A",
       "logoRole": "white",
-      "logoPosition": "left_chest",
-      "save": true
+      "logoPosition": "center_back",
+      "save": false
     }
-order: 1195
+order: 1192

@@ -1,0 +1,7 @@
+$kind: http-request
+description: Returns a PDF attachment of the generated brand guideline (not the presentation export).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/guidelines/pdf"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 1165

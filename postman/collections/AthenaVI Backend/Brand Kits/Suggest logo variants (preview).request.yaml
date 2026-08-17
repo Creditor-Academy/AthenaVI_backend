@@ -1,0 +1,12 @@
+$kind: http-request
+description: Free preview — omit applyRoles for base64 URLs, no S3 upload, no credit charge.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/suggest/logo-variants"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {}
+order: 1135

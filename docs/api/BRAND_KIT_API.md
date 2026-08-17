@@ -189,6 +189,7 @@ Both catalog and list responses include:
 |--------|------|------|---------|
 | `POST` | `/:brandKitId/guidelines/generate` | OWNER/ADMIN | Create 6-slide guideline presentation |
 | `GET` | `/:brandKitId/guidelines` | member | Linked presentation id + status |
+| `GET` | `/:brandKitId/guidelines/pdf` | member | Download guideline as PDF attachment |
 
 **Generate body:** `{ "folderId": "<uuid>" }` (required).
 
@@ -196,7 +197,9 @@ Creates a normal workspace **Presentation** with fixed scenes: Cover → Colors 
 
 **Regenerate:** if `guidelineProjectId` already points to an existing presentation in the workspace, slides are replaced in place (same project/deck id). Otherwise a new presentation is created.
 
-**Download:** use existing presentation export:
+**Download PDF:** `GET .../:brandKitId/guidelines/pdf` returns a PDF attachment (does not use the presentation export job).
+
+Presentation export is still available for PPTX:
 
 `POST /api/workspaces/:workspaceId/presentations/:presentationId/export` `{ "format": "pdf" | "pptx" }`
 

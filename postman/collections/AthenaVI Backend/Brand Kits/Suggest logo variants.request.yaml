@@ -1,4 +1,5 @@
 $kind: http-request
+description: Commit selected variants to the kit (charged when variants are applied). Heading light/dark text colours drive wordmark lockups.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/suggest/logo-variants"
 method: POST
 headers:
@@ -8,6 +9,15 @@ body:
   type: json
   content: |-
     {
-      "applyRoles": ["light", "dark", "black", "white"]
+      "applyRoles": [
+        "light",
+        "dark",
+        "black",
+        "white",
+        "with-name-below",
+        "with-name-adjacent",
+        "with-name-below-dark",
+        "with-name-adjacent-dark"
+      ]
     }
 order: 1140

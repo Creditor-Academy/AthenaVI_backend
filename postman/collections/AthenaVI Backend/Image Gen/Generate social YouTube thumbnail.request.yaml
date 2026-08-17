@@ -1,4 +1,5 @@
 $kind: http-request
+description: YouTube 1280x720 thumbnail. formatId is required for social. Allow a long timeout.
 url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
 method: POST
 body:
@@ -7,11 +8,11 @@ body:
     {
       "mode": "social",
       "modelId": "gpt-image-1",
-      "formatId": "instagram_post",
+      "formatId": "youtube_thumbnail",
       "style": "corporate",
-      "prompt": "Product launch promo for Athena VI virtual instructor. Full-bleed square. Headline and subheadline are supplied separately — keep the scene clean for overlay text.",
-      "headline": "Create courses faster",
-      "subheadline": "AI-powered instructor studio",
+      "prompt": "Clickable YouTube thumbnail for an Athena VI product walkthrough. Huge high-contrast title, full-bleed 16:9, readable at small size, no empty bars.",
+      "headline": "Ship courses 10x faster",
+      "subheadline": "Athena VI",
       "brandPalette": ["#0B1F3A", "#3DDC97"]
     }
 scripts:
@@ -27,4 +28,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3100
+order: 3110

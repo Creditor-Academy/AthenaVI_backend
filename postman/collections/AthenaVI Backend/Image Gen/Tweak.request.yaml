@@ -7,4 +7,17 @@ body:
     {
       "instruction": "Make the background darker and leave more space on the left for text"
     }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+      }
+    language: text/javascript
 order: 5100

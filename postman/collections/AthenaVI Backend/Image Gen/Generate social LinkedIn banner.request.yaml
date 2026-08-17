@@ -1,4 +1,5 @@
 $kind: http-request
+description: LinkedIn profile banner 1584x396. Keep left ~25% clear for avatar overlap.
 url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
 method: POST
 body:
@@ -7,11 +8,11 @@ body:
     {
       "mode": "social",
       "modelId": "gpt-image-1",
-      "formatId": "instagram_post",
+      "formatId": "linkedin_banner",
       "style": "corporate",
-      "prompt": "Product launch promo for Athena VI virtual instructor. Full-bleed square. Headline and subheadline are supplied separately — keep the scene clean for overlay text.",
-      "headline": "Create courses faster",
-      "subheadline": "AI-powered instructor studio",
+      "prompt": "Ultra-wide LinkedIn profile banner for Athena VI. Full-bleed texture left to right. Left 25% low-contrast only (profile photo overlap). Headline center-right.",
+      "headline": "Virtual instructor studio",
+      "subheadline": "Athena VI",
       "brandPalette": ["#0B1F3A", "#3DDC97"]
     }
 scripts:
@@ -27,4 +28,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3100
+order: 3120
