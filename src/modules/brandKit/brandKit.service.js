@@ -15,6 +15,8 @@ const LOGO_ROLES = new Set([
   'dark-mode',
   'with-name-below',
   'with-name-adjacent',
+  'with-name-below-dark',
+  'with-name-adjacent-dark',
   'black',
   'white',
 ]);
@@ -37,6 +39,10 @@ function resolveHex(map, colorId, fallback) {
   if (!colorId) return fallback;
   const entry = map.get(String(colorId));
   return entry?.hex || fallback;
+}
+
+function resolveWordmarkTextHex(data, mode = 'light') {
+  return resolveFontRoleTextHex(data, 'heading', mode);
 }
 
 function relativeLuminance(hex) {
@@ -232,6 +238,29 @@ function buildTypeScale(fonts = {}) {
   };
 }
 
+function resolveFontRoleTextHex(data, roleKey, mode = 'light') {
+  const map = colorMap(data);
+  const colorRoles = data?.colorRoles || {};
+  const face = data?.fonts?.[roleKey] || {};
+  const isDark = String(mode).toLowerCase() === 'dark';
+  const colorId = isDark
+    ? face.darkTextColorId || colorRoles.textDark || colorRoles.text
+    : face.lightTextColorId || colorRoles.text;
+  return resolveHex(map, colorId, isDark ? '#F8FAFC' : '#0F172A');
+}
+
+function buildTypographyColors(data = {}) {
+  const roles = ['heading', 'subheading', 'body'];
+  const out = {};
+  for (const roleKey of roles) {
+    out[roleKey] = {
+      light: resolveFontRoleTextHex(data, roleKey, 'light'),
+      dark: resolveFontRoleTextHex(data, roleKey, 'dark'),
+    };
+  }
+  return out;
+}
+
 /**
  * Map a brand kit (+ media) to presentation themeTokens.
  */
@@ -310,6 +339,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
       bodyLineHeight: body.lineHeight ?? 1.6,
     },
     typeScale: buildTypeScale(data.fonts),
+    typographyColors: buildTypographyColors(data),
     buttons: resolveButtonTokens(data, map, roles),
     scaleRatio: 1.333,
     spacingScale: { xs: 4, sm: 8, md: 16, lg: 24 },
@@ -647,8 +677,11 @@ module.exports = {
   relativeLuminance,
   colorMap,
   resolveHex,
+  resolveWordmarkTextHex,
   buildPaletteFromRoles,
   buildTypeScale,
+  buildTypographyColors,
+  resolveFontRoleTextHex,
   LOGO_ROLES,
   IMAGE_MIME,
 };

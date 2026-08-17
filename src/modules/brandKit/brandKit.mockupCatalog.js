@@ -13,8 +13,16 @@ const APPAREL_LOGO_POSITIONS = Object.freeze([
   'center_back',
   'full_back',
 ]);
+const BACK_APPAREL_POSITIONS = Object.freeze(['center_back', 'full_back']);
 const APPAREL_LOGO_POSITION_ALIASES = Object.freeze({
   back_center: 'center_back',
+  back: 'center_back',
+  rear: 'center_back',
+  rear_center: 'center_back',
+  upper_back: 'center_back',
+  back_full: 'full_back',
+  full_rear: 'full_back',
+  rear_full: 'full_back',
 });
 
 const SCENE_COPY = Object.freeze({
@@ -31,14 +39,54 @@ const SCENE_COPY = Object.freeze({
 });
 
 const APPAREL_POSITION_COPY = Object.freeze({
-  center_chest: 'Place the logo clearly on the center chest of the garment.',
-  left_chest: "Place a smaller logo on the left chest (wearer's left, over the heart).",
-  full_front: 'Place a large logo print across the front of the garment.',
+  center_chest:
+    'Print the provided logo on the CENTER CHEST of the FRONT. This is a front-of-garment mockup.',
+  left_chest:
+    "Print a smaller logo on the LEFT CHEST of the FRONT (wearer's left, over the heart). Front view only.",
+  full_front: 'Print a LARGE logo across the FRONT of the garment. Front view only.',
   center_back:
-    'Show the back of the garment with the logo centered on the upper back. Do not show the front of the garment.',
+    'Print the provided logo on the UPPER BACK, centered between the shoulder blades. BACK VIEW ONLY. Do not place the logo on the chest or front.',
   full_back:
-    'Show the back of the garment with a large logo print across the back. Do not show the front of the garment.',
+    'Print a LARGE logo covering the BACK PANEL from the shoulders downward. BACK VIEW ONLY. Do not place the logo on the chest or front.',
 });
+
+function isBackApparelPosition(position) {
+  return BACK_APPAREL_POSITIONS.includes(String(position || '').trim());
+}
+
+function apparelSceneCopy(templateId, position) {
+  const isHoodie = String(templateId) === 'hoodie';
+  const garment = isHoodie ? 'premium pullover hoodie' : 'crew-neck t-shirt';
+
+  if (position === 'center_back') {
+    return [
+      `Photorealistic BACK-SIDE catalog photo of a ${garment}.`,
+      'The camera MUST face the rear of the garment: the wearer faces away from the camera, or the garment is laid flat with the back panel facing up.',
+      isHoodie
+        ? 'Visible: hood from behind, rear shoulder seams, and upper back. The front kangaroo pocket, zipper, and face opening must not appear.'
+        : 'Visible: rear collar, shoulder seams, and upper back. The front neckline and chest print area must not appear.',
+      'Studio lighting, neutral backdrop.',
+    ].join(' ');
+  }
+
+  if (position === 'full_back') {
+    return [
+      `Photorealistic BACK-SIDE catalog photo of a ${garment}.`,
+      'The camera MUST face the rear of the garment only (wearer facing away, or laid flat back-side up).',
+      'Show the full back panel from the shoulders to the hem. Do not show the front of the garment.',
+      'Studio lighting, neutral backdrop.',
+    ].join(' ');
+  }
+
+  const frontView = `Photorealistic FRONT VIEW of a ${garment} on a neutral backdrop, apparel catalog photography.`;
+  if (position === 'left_chest') {
+    return `${frontView} Small logo placement on the left chest.`;
+  }
+  if (position === 'full_front') {
+    return `${frontView} Large logo print across the front.`;
+  }
+  return `${frontView} Logo on the center chest.`;
+}
 
 const MOCKUP_TEMPLATES = Object.freeze([
   {
@@ -162,10 +210,13 @@ function listTemplates() {
 }
 
 function canonicalizeApparelLogoPosition(logoPosition) {
-  const pos = String(logoPosition || '').trim();
+  const pos = String(logoPosition || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_');
   if (!pos) return DEFAULT_APPAREL_LOGO_POSITION;
   const canonical = APPAREL_LOGO_POSITION_ALIASES[pos] || pos;
-  if (!APPAREL_LOGO_POSITIONS.includes(canonical)) return DEFAULT_APPAREL_LOGO_POSITION;
+  if (!APPAREL_LOGO_POSITIONS.includes(canonical)) return null;
   return canonical;
 }
 
@@ -183,22 +234,36 @@ function buildMockupPrompt({
   itemColor,
   logoPosition,
 }) {
-  const scene = SCENE_COPY[template.id] || `A realistic product mockup for ${template.label}.`;
   const name = String(brandName || 'Brand').slice(0, 80);
   const tag = tagline ? String(tagline).slice(0, 120) : '';
   const productColor = String(itemColor || '').trim() || null;
   const apparelPosition = resolveApparelLogoPosition(template.id, logoPosition);
+  const isBackView = isBackApparelPosition(apparelPosition);
+  const scene = apparelPosition
+    ? apparelSceneCopy(template.id, apparelPosition)
+    : SCENE_COPY[template.id] || `A realistic product mockup for ${template.label}.`;
 
-  const parts = [
+  const parts = [];
+  if (isBackView) {
+    parts.push(
+      'CRITICAL: This is a BACK VIEW mockup. Photograph the garment from behind. The logo is printed on the BACK, never on the chest or front.'
+    );
+  }
+  parts.push(
     `Create a photorealistic brand application mockup for "${name}".`,
     scene,
     'Use the provided reference image as the ONLY logo artwork. Place that exact logo on the product.',
     'Do not invent, redraw, distort, or replace the logo. Do not add extra slogans, watermarks, or text overlays.',
-    'Keep the logo sharp and legible. No mock UI chrome, no collage.',
-  ];
+    'Keep the logo sharp and legible. No mock UI chrome, no collage.'
+  );
 
   if (apparelPosition) {
     parts.push(APPAREL_POSITION_COPY[apparelPosition] || APPAREL_POSITION_COPY[DEFAULT_APPAREL_LOGO_POSITION]);
+  }
+  if (isBackView) {
+    parts.push(
+      'Forbidden: front view, chest print, model facing the camera, front neckline, or kangaroo pocket. The logo must sit on the back fabric only.'
+    );
   }
 
   if (tag) parts.push(`Brand tagline context (do not print unless naturally on packaging): ${tag}.`);
@@ -225,9 +290,12 @@ module.exports = {
   APPAREL_LOGO_POSITIONS,
   APPAREL_LOGO_POSITION_ALIASES,
   APPAREL_TEMPLATE_IDS,
+  BACK_APPAREL_POSITIONS,
   getTemplate,
   listTemplates,
   supportsApparelLogoPosition,
+  canonicalizeApparelLogoPosition,
   resolveApparelLogoPosition,
+  isBackApparelPosition,
   buildMockupPrompt,
 };

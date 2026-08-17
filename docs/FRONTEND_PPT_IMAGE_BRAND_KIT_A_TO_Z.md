@@ -234,7 +234,7 @@ Handle **402** / **429** on billable Brand Kit POSTs; refresh balance after succ
 2. Require a kit logo before enabling Generate.
 3. Colour swatches: send optional `itemColor` hex (kit palette or custom). Omit to keep the current product look.
 4. Logo dropdown: kit logos (`kind: logo`); default **`primary`**. `preferredLogoRoles` is an optional contrast hint only (e.g. suggest white on a dark garment).
-5. Position chips **only** when `supportsLogoPosition` is true (`tshirt`, `hoodie`): `center_chest` (default), `left_chest`, `full_front`, `center_back`, `full_back`. Do not send `logoPosition` for other templates (400). (`back_center` is still accepted as an alias of `center_back`.)
+5. Position chips **only** when `supportsLogoPosition` is true (`tshirt`, `hoodie`): `center_chest` (default), `left_chest`, `full_front`, `center_back`, `full_back`. Send the **canonical** id (`center_back` / `full_back`) — do not send `back_center` unless you rely on the server alias. Treat `back_center` / `back` as `center_back` in the UI so catalog hydration does not reset Back to chest. Do not send `logoPosition` for other templates (400).
 6. `POST .../mockups/generate` `{ templateId, itemColor?, logoRole?, logoPosition?, save? }` — show presigned `mockup.url`. Echo `itemColorUsed` / `logoRoleUsed` / `logoPositionUsed`.
 7. Optional `save: true` to persist as `kind: mockup` (replace-on-save per template).
 8. Filter kit media with `kind === 'mockup'`.

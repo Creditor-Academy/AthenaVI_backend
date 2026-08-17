@@ -2,8 +2,18 @@ const sharp = require('sharp');
 const AppError = require('../../shared/utils/AppError');
 const s3Service = require('../s3/s3.service');
 const brandKitDao = require('./brandKit.dao');
+const { resolveWordmarkTextHex } = require('./brandKit.service');
 
-const VARIANT_ROLES = ['light', 'dark', 'black', 'white', 'with-name-below', 'with-name-adjacent'];
+const VARIANT_ROLES = [
+  'light',
+  'dark',
+  'black',
+  'white',
+  'with-name-below',
+  'with-name-adjacent',
+  'with-name-below-dark',
+  'with-name-adjacent-dark',
+];
 
 function normalizeRole(role) {
   const r = String(role || '').toLowerCase();
@@ -78,7 +88,17 @@ async function renderMonochrome(logoBuffer, fillHex) {
     .toBuffer();
 }
 
-async function renderLockup(logoBuffer, brandName, tagline, layout) {
+function mutedTextHex(textHex) {
+  const raw = String(textHex || '#444444').replace(/^#/, '');
+  if (raw.length !== 6) return '#444444';
+  const mix = (channel, target) => Math.round(channel * 0.72 + target * 0.28);
+  const r = mix(parseInt(raw.slice(0, 2), 16), 100);
+  const g = mix(parseInt(raw.slice(2, 4), 16), 100);
+  const b = mix(parseInt(raw.slice(4, 6), 16), 100);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+async function renderLockup(logoBuffer, brandName, tagline, layout, { textColor = '#111111' } = {}) {
   const meta = await sharp(logoBuffer).metadata();
   const logoW = Math.min(meta.width || 256, 320);
   const logoH = Math.round((logoW / (meta.width || 256)) * (meta.height || 256));
@@ -90,16 +110,18 @@ async function renderLockup(logoBuffer, brandName, tagline, layout) {
   const subSize = 18;
   const canvasW = layout === 'adjacent' ? logoW + 420 : logoW + 80;
   const canvasH = layout === 'adjacent' ? Math.max(logoH + 40, 120) : logoH + 120;
+  const primaryText = escapeXml(textColor);
+  const secondaryText = escapeXml(mutedTextHex(textColor));
 
   const svg =
     layout === 'adjacent'
       ? `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-  <text x="${logoW + 24}" y="${Math.round(canvasH / 2) - 8}" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="#111111">${escapeXml(name)}</text>
-  ${sub ? `<text x="${logoW + 24}" y="${Math.round(canvasH / 2) + 24}" font-family="Arial, sans-serif" font-size="${subSize}" fill="#444444">${escapeXml(sub)}</text>` : ''}
+  <text x="${logoW + 24}" y="${Math.round(canvasH / 2) - 8}" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${primaryText}">${escapeXml(name)}</text>
+  ${sub ? `<text x="${logoW + 24}" y="${Math.round(canvasH / 2) + 24}" font-family="Arial, sans-serif" font-size="${subSize}" fill="${secondaryText}">${escapeXml(sub)}</text>` : ''}
 </svg>`
       : `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">
-  <text x="${Math.round(logoW / 2)}" y="${logoH + 48}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="#111111">${escapeXml(name)}</text>
-  ${sub ? `<text x="${Math.round(logoW / 2)}" y="${logoH + 80}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${subSize}" fill="#444444">${escapeXml(sub)}</text>` : ''}
+  <text x="${Math.round(logoW / 2)}" y="${logoH + 48}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${primaryText}">${escapeXml(name)}</text>
+  ${sub ? `<text x="${Math.round(logoW / 2)}" y="${logoH + 80}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${subSize}" fill="${secondaryText}">${escapeXml(sub)}</text>` : ''}
 </svg>`;
 
   const textBuf = Buffer.from(svg);
@@ -145,9 +167,11 @@ async function generateVariantBuffer(role, logoBuffer, kit) {
   const data = kit.data || {};
   const palette = data.colors || [];
   const roles = data.colorRoles || {};
-  const colorMap = new Map(palette.map((c) => [c.id, c.hex]));
-  const bgLight = colorMap.get(roles.bg) || '#F7F3F3';
-  const bgDark = colorMap.get(roles.bgDark) || '#1B1110';
+  const colorMapObj = new Map(palette.map((c) => [c.id, c.hex]));
+  const bgLight = colorMapObj.get(roles.bg) || '#F7F3F3';
+  const bgDark = colorMapObj.get(roles.bgDark) || '#1B1110';
+  const lightText = resolveWordmarkTextHex(data, 'light');
+  const darkText = resolveWordmarkTextHex(data, 'dark');
 
   switch (normalized) {
     case 'light':
@@ -159,9 +183,17 @@ async function generateVariantBuffer(role, logoBuffer, kit) {
     case 'white':
       return renderMonochrome(logoBuffer, '#FFFFFF');
     case 'with-name-below':
-      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'below');
+      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'below', { textColor: lightText });
     case 'with-name-adjacent':
-      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'adjacent');
+      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'adjacent', {
+        textColor: lightText,
+      });
+    case 'with-name-below-dark':
+      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'below', { textColor: darkText });
+    case 'with-name-adjacent-dark':
+      return renderLockup(logoBuffer, kit.name, data.meta?.tagline, 'adjacent', {
+        textColor: darkText,
+      });
     default:
       throw new AppError(`Unsupported logo variant role: ${role}`, 400);
   }

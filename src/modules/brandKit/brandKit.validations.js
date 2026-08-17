@@ -21,6 +21,8 @@ const fontFaceSchema = Joi.object({
   weight: Joi.number().integer().min(100).max(900).optional(),
   sizePx: Joi.number().integer().min(8).max(200).optional(),
   lineHeight: Joi.number().min(0.8).max(3).optional(),
+  lightTextColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+  darkTextColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
 }).optional();
 
 const buttonStyleSchema = Joi.object({
@@ -95,6 +97,12 @@ const brandKitDataSchema = Joi.object({
   })
     .unknown(true)
     .optional(),
+  wordmarks: Joi.object({
+    lightTextColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+    darkTextColorId: Joi.string().trim().min(1).max(64).allow(null, '').optional(),
+  })
+    .unknown(true)
+    .optional(),
   imageStyle: Joi.string().trim().max(512).allow('', null).optional(),
 })
   .unknown(true)
@@ -159,6 +167,8 @@ const uploadBrandKitMediaSchema = Joi.object({
         'dark-mode',
         'with-name-below',
         'with-name-adjacent',
+        'with-name-below-dark',
+        'with-name-adjacent-dark',
         'black',
         'white',
         'mug',
@@ -261,6 +271,8 @@ const suggestLogoVariantsSchema = Joi.object({
           'white',
           'with-name-below',
           'with-name-adjacent',
+          'with-name-below-dark',
+          'with-name-adjacent-dark',
           'light-mode',
           'dark-mode'
         )
@@ -302,6 +314,13 @@ const apparelLogoPositions = [
   'center_back',
   'full_back',
   'back_center',
+  'back',
+  'rear',
+  'rear_center',
+  'upper_back',
+  'back_full',
+  'full_rear',
+  'rear_full',
 ];
 
 const generateMockupSchema = Joi.object({
@@ -330,6 +349,8 @@ const generateMockupSchema = Joi.object({
         'dark-mode',
         'with-name-below',
         'with-name-adjacent',
+        'with-name-below-dark',
+        'with-name-adjacent-dark',
         'black',
         'white'
       )

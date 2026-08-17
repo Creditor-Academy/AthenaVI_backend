@@ -79,6 +79,8 @@ const LOGO_ROLE_ALIASES = {
   primary: ['primary', 'main'],
   'with-name-below': ['with-name-below'],
   'with-name-adjacent': ['with-name-adjacent'],
+  'with-name-below-dark': ['with-name-below-dark'],
+  'with-name-adjacent-dark': ['with-name-adjacent-dark'],
   dark: ['dark', 'dark-mode'],
   light: ['light', 'light-mode'],
   white: ['white'],
@@ -113,13 +115,25 @@ function formatLogoRole(role) {
     white: 'White',
     'with-name-adjacent': 'With name (adjacent)',
     'with-name-below': 'With name (below)',
+    'with-name-adjacent-dark': 'With name (adjacent, dark)',
+    'with-name-below-dark': 'With name (below, dark)',
   };
   return map[role] || String(role || 'Logo').replace(/-/g, ' ');
 }
 
-function collectFontRoles(fonts = {}) {
+function collectFontRoles(fonts = {}, data = {}) {
   const roles = [];
   const seen = new Set();
+  const map = new Map((data?.colors || []).map((c) => [c.id, c.hex]));
+
+  const hexFor = (face, mode) => {
+    const colorRoles = data?.colorRoles || {};
+    const id =
+      mode === 'dark'
+        ? face?.darkTextColorId || colorRoles.textDark || colorRoles.text
+        : face?.lightTextColorId || colorRoles.text;
+    return map.get(id) || (mode === 'dark' ? '#F8FAFC' : '#0F172A');
+  };
 
   for (const key of FONT_ROLE_ORDER) {
     const face = fonts[key];
@@ -135,6 +149,8 @@ function collectFontRoles(fonts = {}) {
       sizePx: Number(face.sizePx) || (key === 'heading' ? 40 : key === 'subheading' ? 20 : 14),
       lineHeight: Number(face.lineHeight) || (key === 'heading' ? 1.2 : key === 'subheading' ? 1.4 : 1.6),
       sample: FONT_ROLE_SAMPLES[key] || FONT_ROLE_SAMPLES.body,
+      lightTextColor: hexFor(face, 'light'),
+      darkTextColor: hexFor(face, 'dark'),
     });
   }
 
@@ -153,6 +169,8 @@ function collectFontRoles(fonts = {}) {
       sizePx: Number(face.sizePx) || 14,
       lineHeight: Number(face.lineHeight) || 1.4,
       sample: FONT_ROLE_SAMPLES.body,
+      lightTextColor: hexFor(face, 'light'),
+      darkTextColor: hexFor(face, 'dark'),
     });
   }
 
@@ -377,6 +395,7 @@ function buildTypeCardInner(role, { watermark = false } = {}) {
         <span class="type-card__specs">
           ${escapeHtml(role.family)} · ${escapeHtml(String(role.weight))} ·
           ${escapeHtml(String(role.sizePx))}px · LH ${escapeHtml(String(role.lineHeight))}
+          · Light ${escapeHtml(role.lightTextColor || '#0F172A')} · Dark ${escapeHtml(role.darkTextColor || '#F8FAFC')}
         </span>
       </div>
       <div
@@ -385,7 +404,7 @@ function buildTypeCardInner(role, { watermark = false } = {}) {
       >Aa</div>
       <div
         class="type-card__sample"
-        style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))}; font-size:${sampleSize}px; line-height:${escapeHtml(String(role.lineHeight))};"
+        style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))}; font-size:${sampleSize}px; line-height:${escapeHtml(String(role.lineHeight))}; color:${escapeHtml(role.lightTextColor || '#0F172A')};"
       >${escapeHtml(role.sample)}</div>
       <div class="type-card__alphabet" style="font-family:${fontStack}; font-weight:${escapeHtml(String(role.weight))};">
         AaBbCcDdEeFf · 0123456789
@@ -488,7 +507,7 @@ function buildGuidelinePdfHtml({ kitName, data, logos, mockups, subtitle }) {
   const text = resolveRoleHex(data, 'text', '#0F172A');
   const muted = resolveRoleHex(data, 'muted', '#64748B');
 
-  const fontRoles = collectFontRoles(data?.fonts || {});
+  const fontRoles = collectFontRoles(data?.fonts || {}, data);
   const heading = fontRoles.find((r) => r.key === 'heading') || fontRoles[0];
   const displayFamily = heading?.family || 'Inter';
   const bodyFamily =

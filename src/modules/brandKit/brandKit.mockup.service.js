@@ -13,6 +13,7 @@ const {
   listTemplates,
   buildMockupPrompt,
   resolveApparelLogoPosition,
+  supportsApparelLogoPosition,
 } = require('./brandKit.mockupCatalog');
 const sharp = require('sharp');
 
@@ -203,7 +204,11 @@ async function generateMockup({
 
   const requestedLogoRole = normalizeOptionalLogoRole(logoRole);
   const requestedItemColor = normalizeOptionalHex(itemColor);
+  const requestedLogoPosition = String(logoPosition || '').trim();
   const resolvedLogoPosition = resolveApparelLogoPosition(template.id, logoPosition);
+  if (supportsApparelLogoPosition(template.id) && requestedLogoPosition && !resolvedLogoPosition) {
+    throw new AppError(`Invalid logoPosition for ${template.id}: ${requestedLogoPosition}`, 400);
+  }
 
   const logoMedia = pickLogoMedia(kit, requestedLogoRole);
   if (!logoMedia) {

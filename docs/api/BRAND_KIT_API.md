@@ -149,7 +149,7 @@ Suggest endpoints return proposals only — client confirms via `PATCH` or `POST
 | `POST` | `/suggest/image-style` | `{ tone?, colors?, colorRoles?, brandKitId? }` | `{ imageStyle, chartStyles, rationale }` |
 | `POST` | `/:brandKitId/suggest/logo-variants` | `{ applyRoles?: string[] }` | `{ generated, missingRoles, variants[] }` |
 
-**Logo variants:** deterministic transforms (light/dark/black/white/lockups) from the primary mark. Omit `applyRoles` for **free preview** (base64 URLs, no S3 upload, no credit charge). Pass `applyRoles` to commit selected roles to the kit in one call (charged only when variants are applied).
+**Logo variants:** deterministic transforms (light/dark/black/white/lockups) from the primary mark. Wordmark lockups use **Heading** font + light/dark text colours from `data.fonts.heading.lightTextColorId` / `darkTextColorId` (fallback: `colorRoles.text` / `colorRoles.textDark`). Roles: `with-name-below`, `with-name-adjacent`, `with-name-below-dark`, `with-name-adjacent-dark`. Omit `applyRoles` for **free preview** (base64 URLs, no S3 upload, no credit charge). Pass `applyRoles` to commit selected roles to the kit in one call (charged only when variants are applied).
 
 Credit feature keys and default AC: see [CREDITS_API.md — Brand Kit AI](CREDITS_API.md#brand-kit-ai-flat-ac). Frontend integration: [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md).
 
@@ -171,7 +171,7 @@ AI product scenes with the kit logo as a reference image (OpenAI Images Edit).
 
 - Omitting `logoRole` uses **`primary`**, then any kit logo. Do not auto-pick from `preferredLogoRoles`.
 - `itemColor` (optional `#RGB` / `#RRGGBB`): product/garment colour for **all** templates. Omit = current look (brand `primaryHex` / `bgHex` hints only).
-- `logoPosition` is **only** for `tshirt` and `hoodie`: `center_chest` (default), `left_chest`, `full_front`, `center_back`, `full_back`. Sending it on any other template is **400**. (`back_center` is accepted as an alias of `center_back`.)
+- `logoPosition` is **only** for `tshirt` and `hoodie`: `center_chest` (default), `left_chest`, `full_front`, `center_back`, `full_back`. Sending it on any other template is **400**. Aliases for back: `back_center`, `back`, `rear` → `center_back`. Unknown values are **400** (they are not silently remapped to chest).
 - Response `data.mockup` includes `logoRoleUsed`, `itemColorUsed` (null if omitted), `logoPositionUsed` (null unless apparel).
 - Preview always uploads to S3 (`mockup-preview/`) and returns a **presigned URL** (no base64).
 - `save: true` stores `kind: mockup`, `role: templateId`, **replace-on-save** for that role.
