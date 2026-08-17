@@ -10,8 +10,12 @@ const APPAREL_LOGO_POSITIONS = Object.freeze([
   'center_chest',
   'left_chest',
   'full_front',
-  'back_center',
+  'center_back',
+  'full_back',
 ]);
+const APPAREL_LOGO_POSITION_ALIASES = Object.freeze({
+  back_center: 'center_back',
+});
 
 const SCENE_COPY = Object.freeze({
   mug: 'A clean ceramic coffee mug on a soft studio surface, logo centered on the mug body, soft natural shadows, product photography.',
@@ -30,8 +34,10 @@ const APPAREL_POSITION_COPY = Object.freeze({
   center_chest: 'Place the logo clearly on the center chest of the garment.',
   left_chest: "Place a smaller logo on the left chest (wearer's left, over the heart).",
   full_front: 'Place a large logo print across the front of the garment.',
-  back_center:
+  center_back:
     'Show the back of the garment with the logo centered on the upper back. Do not show the front of the garment.',
+  full_back:
+    'Show the back of the garment with a large logo print across the back. Do not show the front of the garment.',
 });
 
 const MOCKUP_TEMPLATES = Object.freeze([
@@ -155,12 +161,17 @@ function listTemplates() {
   return MOCKUP_TEMPLATES.map((t) => withCatalogFlags(t));
 }
 
-function resolveApparelLogoPosition(templateId, logoPosition) {
-  if (!supportsApparelLogoPosition(templateId)) return null;
+function canonicalizeApparelLogoPosition(logoPosition) {
   const pos = String(logoPosition || '').trim();
   if (!pos) return DEFAULT_APPAREL_LOGO_POSITION;
-  if (!APPAREL_LOGO_POSITIONS.includes(pos)) return DEFAULT_APPAREL_LOGO_POSITION;
-  return pos;
+  const canonical = APPAREL_LOGO_POSITION_ALIASES[pos] || pos;
+  if (!APPAREL_LOGO_POSITIONS.includes(canonical)) return DEFAULT_APPAREL_LOGO_POSITION;
+  return canonical;
+}
+
+function resolveApparelLogoPosition(templateId, logoPosition) {
+  if (!supportsApparelLogoPosition(templateId)) return null;
+  return canonicalizeApparelLogoPosition(logoPosition);
 }
 
 function buildMockupPrompt({
@@ -212,6 +223,7 @@ module.exports = {
   DEFAULT_LOGO_ROLE,
   DEFAULT_APPAREL_LOGO_POSITION,
   APPAREL_LOGO_POSITIONS,
+  APPAREL_LOGO_POSITION_ALIASES,
   APPAREL_TEMPLATE_IDS,
   getTemplate,
   listTemplates,

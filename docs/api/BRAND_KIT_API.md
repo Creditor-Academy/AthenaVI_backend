@@ -171,7 +171,7 @@ AI product scenes with the kit logo as a reference image (OpenAI Images Edit).
 
 - Omitting `logoRole` uses **`primary`**, then any kit logo. Do not auto-pick from `preferredLogoRoles`.
 - `itemColor` (optional `#RGB` / `#RRGGBB`): product/garment colour for **all** templates. Omit = current look (brand `primaryHex` / `bgHex` hints only).
-- `logoPosition` is **only** for `tshirt` and `hoodie`: `center_chest` (default), `left_chest`, `full_front`, `back_center`. Sending it on any other template is **400**.
+- `logoPosition` is **only** for `tshirt` and `hoodie`: `center_chest` (default), `left_chest`, `full_front`, `center_back`, `full_back`. Sending it on any other template is **400**. (`back_center` is accepted as an alias of `center_back`.)
 - Response `data.mockup` includes `logoRoleUsed`, `itemColorUsed` (null if omitted), `logoPositionUsed` (null unless apparel).
 - Preview always uploads to S3 (`mockup-preview/`) and returns a **presigned URL** (no base64).
 - `save: true` stores `kind: mockup`, `role: templateId`, **replace-on-save** for that role.

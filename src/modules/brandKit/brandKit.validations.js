@@ -295,7 +295,14 @@ const mockupTemplateIds = [
 ];
 
 const apparelMockupTemplateIds = ['tshirt', 'hoodie'];
-const apparelLogoPositions = ['center_chest', 'left_chest', 'full_front', 'back_center'];
+const apparelLogoPositions = [
+  'center_chest',
+  'left_chest',
+  'full_front',
+  'center_back',
+  'full_back',
+  'back_center',
+];
 
 const generateMockupSchema = Joi.object({
   params: Joi.object({
