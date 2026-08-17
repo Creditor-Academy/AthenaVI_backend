@@ -235,6 +235,8 @@ const generateMockup = asyncHandler(async (req, res) => {
     brandKitId: req.params.brandKitId,
     templateId: req.body.templateId,
     logoRole: req.body.logoRole,
+    itemColor: req.body.itemColor,
+    logoPosition: req.body.logoPosition,
     save: req.body.save === true,
   });
   return successResponse(req, res, data, 200, messages.BRAND_KIT_MOCKUP_GENERATED);

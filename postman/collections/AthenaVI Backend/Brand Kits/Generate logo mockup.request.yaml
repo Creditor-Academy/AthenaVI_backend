@@ -9,6 +9,8 @@ body:
   content: |-
     {
       "templateId": "mug",
+      "itemColor": "#F5F5F5",
+      "logoRole": "primary",
       "save": false
     }
 order: 1190

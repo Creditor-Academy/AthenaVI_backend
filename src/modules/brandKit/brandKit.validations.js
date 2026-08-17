@@ -294,6 +294,9 @@ const mockupTemplateIds = [
   'storefront_sign',
 ];
 
+const apparelMockupTemplateIds = ['tshirt', 'hoodie'];
+const apparelLogoPositions = ['center_chest', 'left_chest', 'full_front', 'back_center'];
+
 const generateMockupSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -303,6 +306,11 @@ const generateMockupSchema = Joi.object({
     templateId: Joi.string()
       .valid(...mockupTemplateIds)
       .required(),
+    itemColor: Joi.string()
+      .trim()
+      .pattern(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+      .allow('', null)
+      .optional(),
     logoRole: Joi.string()
       .valid(
         'primary',
@@ -320,6 +328,14 @@ const generateMockupSchema = Joi.object({
       )
       .allow('', null)
       .optional(),
+    logoPosition: Joi.when('templateId', {
+      is: Joi.valid(...apparelMockupTemplateIds),
+      then: Joi.string()
+        .valid(...apparelLogoPositions)
+        .optional()
+        .allow('', null),
+      otherwise: Joi.forbidden(),
+    }),
     save: Joi.boolean().optional(),
   }).required(),
   query: Joi.object({}).unknown(false),

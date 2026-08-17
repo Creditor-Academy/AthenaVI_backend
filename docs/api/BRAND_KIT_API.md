@@ -165,11 +165,14 @@ AI product scenes with the kit logo as a reference image (OpenAI Images Edit).
 | `GET` | `/:brandKitId/mockups` | member | Saved `kind: mockup` media + quota |
 | `POST` | `/:brandKitId/mockups/generate` | OWNER/ADMIN | Generate one scene |
 
-**Catalog templates:** `mug`, `tshirt`, `hoodie`, `tote`, `cap`, `business_card`, `laptop_lid`, `phone_case`, `packaging_box`, `storefront_sign` (each has `category`, `preferredLogoRoles`, `size`).
+**Catalog templates:** `mug`, `tshirt`, `hoodie`, `tote`, `cap`, `business_card`, `laptop_lid`, `phone_case`, `packaging_box`, `storefront_sign`. Each has `category`, `preferredLogoRoles` (contrast hint only), `size`, `supportsItemColor`, `defaultLogoRole` (`primary`), and apparel flags: `supportsLogoPosition`, `logoPositions`, `defaultLogoPosition`.
 
-**Generate body:** `{ "templateId": "mug", "logoRole?": "primary", "save?": false }`
+**Generate body:** `{ "templateId": "mug", "itemColor?": "#1A1A1A", "logoRole?": "primary", "logoPosition?": "left_chest", "save?": false }`
 
-- Omitting `logoRole` auto-picks from the template’s `preferredLogoRoles`, then primary/any logo.
+- Omitting `logoRole` uses **`primary`**, then any kit logo. Do not auto-pick from `preferredLogoRoles`.
+- `itemColor` (optional `#RGB` / `#RRGGBB`): product/garment colour for **all** templates. Omit = current look (brand `primaryHex` / `bgHex` hints only).
+- `logoPosition` is **only** for `tshirt` and `hoodie`: `center_chest` (default), `left_chest`, `full_front`, `back_center`. Sending it on any other template is **400**.
+- Response `data.mockup` includes `logoRoleUsed`, `itemColorUsed` (null if omitted), `logoPositionUsed` (null unless apparel).
 - Preview always uploads to S3 (`mockup-preview/`) and returns a **presigned URL** (no base64).
 - `save: true` stores `kind: mockup`, `role: templateId`, **replace-on-save** for that role.
 - **First 2 successful generates per kit are free** (`data.meta.mockupFreeUsed`). Failures do not consume free slots or credits. After that, flat AC (`brand_kit_logo_mockup`, default **4**).

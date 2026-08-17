@@ -9,6 +9,9 @@ body:
   content: |-
     {
       "templateId": "tshirt",
+      "itemColor": "#1A1A1A",
+      "logoRole": "white",
+      "logoPosition": "left_chest",
       "save": true
     }
 order: 1195

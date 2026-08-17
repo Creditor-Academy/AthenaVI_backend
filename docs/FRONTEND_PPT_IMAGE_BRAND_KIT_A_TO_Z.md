@@ -232,9 +232,12 @@ Handle **402** / **429** on billable Brand Kit POSTs; refresh balance after succ
 
 1. `GET .../mockups/catalog` — show grid (group by `category`); badge `freeRemaining` / `freeLimit`.
 2. Require a kit logo before enabling Generate.
-3. `POST .../mockups/generate` `{ templateId, logoRole?, save? }` — show presigned `mockup.url`.
-4. Optional `save: true` to persist as `kind: mockup` (replace-on-save per template).
-5. Filter kit media with `kind === 'mockup'`.
+3. Colour swatches: send optional `itemColor` hex (kit palette or custom). Omit to keep the current product look.
+4. Logo dropdown: kit logos (`kind: logo`); default **`primary`**. `preferredLogoRoles` is an optional contrast hint only (e.g. suggest white on a dark garment).
+5. Position chips **only** when `supportsLogoPosition` is true (`tshirt`, `hoodie`): `center_chest` (default), `left_chest`, `full_front`, `back_center`. Do not send `logoPosition` for other templates (400).
+6. `POST .../mockups/generate` `{ templateId, itemColor?, logoRole?, logoPosition?, save? }` — show presigned `mockup.url`. Echo `itemColorUsed` / `logoRoleUsed` / `logoPositionUsed`.
+7. Optional `save: true` to persist as `kind: mockup` (replace-on-save per template).
+8. Filter kit media with `kind === 'mockup'`.
 
 ### Create body
 
@@ -1346,7 +1349,7 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 - [ ] Full CRUD + media + default  
 - [ ] MEMBER read-only UX  
 - [ ] AI suggest: colors, fonts, voice, image-style, logo variants (preview free; apply charged)
-- [ ] Logo mockups (catalog + generate; first 2 free; save to kit)
+- [ ] Logo mockups (catalog + generate with itemColor / logoRole default primary / tshirt-hoodie logoPosition; first 2 free; save to kit)
 - [ ] Show flat AC cost + handle 402 on billable Brand Kit actions  
 - [ ] Health score on Overview tab  
 - [ ] Generate guideline deck + export PDF/PPTX  

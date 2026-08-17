@@ -3,11 +3,20 @@
  */
 
 const MOCKUP_FREE_LIMIT = 2;
+const DEFAULT_LOGO_ROLE = 'primary';
+const DEFAULT_APPAREL_LOGO_POSITION = 'center_chest';
+const APPAREL_TEMPLATE_IDS = Object.freeze(['tshirt', 'hoodie']);
+const APPAREL_LOGO_POSITIONS = Object.freeze([
+  'center_chest',
+  'left_chest',
+  'full_front',
+  'back_center',
+]);
 
 const SCENE_COPY = Object.freeze({
   mug: 'A clean ceramic coffee mug on a soft studio surface, logo centered on the mug body, soft natural shadows, product photography.',
-  tshirt: 'A folded or worn crew-neck t-shirt on a neutral backdrop, logo printed clearly on the chest, apparel catalog photography.',
-  hoodie: 'A premium hoodie laid flat or on a hanger, logo on the chest, soft fabric texture, studio lighting.',
+  tshirt: 'A folded or worn crew-neck t-shirt on a neutral backdrop, apparel catalog photography.',
+  hoodie: 'A premium hoodie laid flat or on a hanger, soft fabric texture, studio lighting.',
   tote: 'A canvas tote bag standing upright, logo centered on the front panel, lifestyle product shot.',
   cap: 'A baseball cap angled slightly, logo on the front panel, clean studio background.',
   business_card: 'A pair of business cards on a desk, logo on the card face with minimal layout, shallow depth of field.',
@@ -15,6 +24,14 @@ const SCENE_COPY = Object.freeze({
   phone_case: 'A smartphone in a slim case, logo on the back of the case, clean product photography.',
   packaging_box: 'A branded shipping or gift box, logo on the lid or front panel, packaging photography.',
   storefront_sign: 'A storefront or hanging sign above a shop entrance, logo on the signage panel, daytime exterior.',
+});
+
+const APPAREL_POSITION_COPY = Object.freeze({
+  center_chest: 'Place the logo clearly on the center chest of the garment.',
+  left_chest: "Place a smaller logo on the left chest (wearer's left, over the heart).",
+  full_front: 'Place a large logo print across the front of the garment.',
+  back_center:
+    'Show the back of the garment with the logo centered on the upper back. Do not show the front of the garment.',
 });
 
 const MOCKUP_TEMPLATES = Object.freeze([
@@ -114,20 +131,52 @@ const TEMPLATE_BY_ID = Object.freeze(
   Object.fromEntries(MOCKUP_TEMPLATES.map((t) => [t.id, t]))
 );
 
+function supportsApparelLogoPosition(templateId) {
+  return APPAREL_TEMPLATE_IDS.includes(String(templateId || '').trim());
+}
+
+function withCatalogFlags(template) {
+  const apparel = supportsApparelLogoPosition(template.id);
+  return {
+    ...template,
+    supportsItemColor: true,
+    supportsLogoPosition: apparel,
+    logoPositions: apparel ? [...APPAREL_LOGO_POSITIONS] : [],
+    defaultLogoPosition: apparel ? DEFAULT_APPAREL_LOGO_POSITION : null,
+    defaultLogoRole: DEFAULT_LOGO_ROLE,
+  };
+}
+
 function getTemplate(templateId) {
   return TEMPLATE_BY_ID[String(templateId || '').trim()] || null;
 }
 
 function listTemplates() {
-  return MOCKUP_TEMPLATES.map((t) => ({ ...t }));
+  return MOCKUP_TEMPLATES.map((t) => withCatalogFlags(t));
 }
 
-function buildMockupPrompt({ template, brandName, tagline, primaryHex, bgHex }) {
+function resolveApparelLogoPosition(templateId, logoPosition) {
+  if (!supportsApparelLogoPosition(templateId)) return null;
+  const pos = String(logoPosition || '').trim();
+  if (!pos) return DEFAULT_APPAREL_LOGO_POSITION;
+  if (!APPAREL_LOGO_POSITIONS.includes(pos)) return DEFAULT_APPAREL_LOGO_POSITION;
+  return pos;
+}
+
+function buildMockupPrompt({
+  template,
+  brandName,
+  tagline,
+  primaryHex,
+  bgHex,
+  itemColor,
+  logoPosition,
+}) {
   const scene = SCENE_COPY[template.id] || `A realistic product mockup for ${template.label}.`;
   const name = String(brandName || 'Brand').slice(0, 80);
   const tag = tagline ? String(tagline).slice(0, 120) : '';
-  const primary = primaryHex || null;
-  const bg = bgHex || null;
+  const productColor = String(itemColor || '').trim() || null;
+  const apparelPosition = resolveApparelLogoPosition(template.id, logoPosition);
 
   const parts = [
     `Create a photorealistic brand application mockup for "${name}".`,
@@ -137,9 +186,22 @@ function buildMockupPrompt({ template, brandName, tagline, primaryHex, bgHex }) 
     'Keep the logo sharp and legible. No mock UI chrome, no collage.',
   ];
 
+  if (apparelPosition) {
+    parts.push(APPAREL_POSITION_COPY[apparelPosition] || APPAREL_POSITION_COPY[DEFAULT_APPAREL_LOGO_POSITION]);
+  }
+
   if (tag) parts.push(`Brand tagline context (do not print unless naturally on packaging): ${tag}.`);
-  if (primary) parts.push(`Brand primary accent color hint: ${primary} (use subtly on product or set if natural).`);
-  if (bg) parts.push(`Brand background color hint: ${bg} (optional backdrop or fabric tint when appropriate).`);
+
+  if (productColor) {
+    parts.push(
+      `The product, garment, or object itself MUST be colored ${productColor}. Do not recolor, tint, or alter the logo artwork to match the product.`
+    );
+  } else {
+    const primary = primaryHex || null;
+    const bg = bgHex || null;
+    if (primary) parts.push(`Brand primary accent color hint: ${primary} (use subtly on product or set if natural).`);
+    if (bg) parts.push(`Brand background color hint: ${bg} (optional backdrop or fabric tint when appropriate).`);
+  }
 
   return parts.join(' ');
 }
@@ -147,7 +209,13 @@ function buildMockupPrompt({ template, brandName, tagline, primaryHex, bgHex }) 
 module.exports = {
   MOCKUP_FREE_LIMIT,
   MOCKUP_TEMPLATES,
+  DEFAULT_LOGO_ROLE,
+  DEFAULT_APPAREL_LOGO_POSITION,
+  APPAREL_LOGO_POSITIONS,
+  APPAREL_TEMPLATE_IDS,
   getTemplate,
   listTemplates,
+  supportsApparelLogoPosition,
+  resolveApparelLogoPosition,
   buildMockupPrompt,
 };

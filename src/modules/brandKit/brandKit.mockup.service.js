@@ -12,6 +12,7 @@ const {
   getTemplate,
   listTemplates,
   buildMockupPrompt,
+  resolveApparelLogoPosition,
 } = require('./brandKit.mockupCatalog');
 const sharp = require('sharp');
 
@@ -61,7 +62,7 @@ function resolvePaletteHints(kit) {
   }
 }
 
-function pickLogoMedia(kit, logoRole, preferredLogoRoles = []) {
+function pickLogoMedia(kit, logoRole) {
   const logos = (kit.media || []).filter((m) => m.kind === 'logo' && m.s3Key);
   if (!logos.length) return null;
 
@@ -76,11 +77,6 @@ function pickLogoMedia(kit, logoRole, preferredLogoRoles = []) {
   if (logoRole) {
     const wanted = normalizeLogoRole(logoRole);
     return byRole.get(wanted) || logos.find((m) => normalizeLogoRole(m.role) === wanted) || null;
-  }
-
-  for (const role of preferredLogoRoles) {
-    const found = byRole.get(normalizeLogoRole(role));
-    if (found) return found;
   }
 
   return (
@@ -175,12 +171,24 @@ async function listSavedMockups(workspaceId, brandKitId) {
   };
 }
 
+function normalizeOptionalHex(value) {
+  const hex = String(value || '').trim();
+  return hex || null;
+}
+
+function normalizeOptionalLogoRole(value) {
+  const role = String(value || '').trim();
+  return role || null;
+}
+
 async function generateMockup({
   workspaceId,
   userId,
   brandKitId,
   templateId,
   logoRole,
+  itemColor,
+  logoPosition,
   save = false,
 }) {
   await mockupRateLimit.assertGenerateAllowed(userId, workspaceId);
@@ -193,7 +201,11 @@ async function generateMockup({
   const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
 
-  const logoMedia = pickLogoMedia(kit, logoRole, template.preferredLogoRoles);
+  const requestedLogoRole = normalizeOptionalLogoRole(logoRole);
+  const requestedItemColor = normalizeOptionalHex(itemColor);
+  const resolvedLogoPosition = resolveApparelLogoPosition(template.id, logoPosition);
+
+  const logoMedia = pickLogoMedia(kit, requestedLogoRole);
   if (!logoMedia) {
     throw new AppError(messages.BRAND_KIT_MOCKUP_LOGO_REQUIRED, 400);
   }
@@ -215,6 +227,8 @@ async function generateMockup({
     tagline: kit.data?.meta?.tagline,
     primaryHex,
     bgHex,
+    itemColor: requestedItemColor,
+    logoPosition: resolvedLogoPosition,
   });
 
   const model = process.env.BRAND_KIT_MOCKUP_MODEL || 'gpt-image-1';
@@ -304,6 +318,8 @@ async function generateMockup({
     mockup: {
       templateId: template.id,
       logoRoleUsed: normalizeLogoRole(logoMedia.role) || 'primary',
+      itemColorUsed: requestedItemColor,
+      logoPositionUsed: resolvedLogoPosition,
       url,
       s3Key,
       mediaId,
