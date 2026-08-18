@@ -30,16 +30,17 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 1. Load catalogs once: `GET /models`, `/formats`, `/styles`.
 2. Show **model picker** from `/models`. Default `gpt-image-1` for Image/Social. For Infographic, preselect the model whose `recommendedForModes` includes `"infographic"` (`gpt-image-1-hd`).
 3. Mode tabs: Image / Infographic / Social. Infographic format default: `landscape`.
-4. Social → format chips from `/formats` where `category === "social"`.
+4. Social → format chips from `/formats` where `category === "social"`. Default `textMode: overlay`. Preselect `textMode: baked` only when `recommendedTextMode === "baked"` (`youtube_thumbnail`). Always-on hint: overlay PNG already has Sharp typeset copy; step lists belong in Infographic (or baked + QA).
 5. Optional **context attach zone**: files (PDF/DOCX/MD/TXT/images) + library asset picks + pasted text → `POST .../context` → show `previews` / `warnings`.
-6. Call `GET .../estimate` when model/mode changes; show AC cost (context create is free). Infographic + HD default is **14 AC**.
-7. Generate: `POST .../generate` with optional `contextId` — **long timeout** (image gen 30–90s; **infographic 90–180s** because of planner + optional quality edit).
-8. After success: preview `data.asset.url` / `data.generation.url`; show `contextPreview` badge if present. For infographic, read `data.generation.infographicQuality` (or `request.infographicQuality`).
-9. Actions: Regenerate (inherits context), Tweak (instruction modal; no context in v1), Download menu (`png` | `jpg` | `pdf`).
+6. Call `GET .../estimate` when model/mode changes; show AC cost (context create is free). Infographic + HD default is **14 AC**. Social overlay / hasText wipe / baked retry are **not** extra AC.
+7. Generate: `POST .../generate` with optional `contextId` — **long timeout** (image gen 30–90s; **infographic 90–180s** because of planner + optional quality edit; social overlay can add a wipe).
+8. After success: preview `data.asset.url` / `data.generation.url`; show `contextPreview` badge if present. For infographic, read `data.generation.infographicQuality`. For social overlay, read `socialOverlay`; for baked, read `socialQuality`.
+9. Actions: Regenerate (inherits context and `textMode`), Tweak (instruction modal; no context in v1; **does not re-typeset overlay** — change headline via Regenerate), Download menu (`png` | `jpg` | `pdf`).
 10. History: `GET .../generations` (`?mode=image|infographic|social` optional) — versions share `rootId`.
 11. Workspace **Images** tab: prefer `GET /api/workspaces/:workspaceId/library?category=image` (see [WORKSPACE_API.md](api/WORKSPACE_API.md)).
 12. Library filter: assets `source=ai_gen`.
 13. Infographic: always-on hint that text is auto-checked. If `infographicQuality.passed === false`, show a non-blocking banner with `issues` and optionally prefill Tweak from `suggestedTweak` (Tweak still bills; the free in-place fix already ran).
+14. Social: always-on hint that overlay typesets `headline`/`subheadline`. Stronger warning if `textMode=baked`. If `socialQuality.passed === false`, show a review banner.
 
 ---
 
@@ -64,11 +65,12 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 ### C — Social creative
 
 1. Mode `social`, required `formatId` (e.g. `instagram_post`, `linkedin_banner`).
-2. Optional `headline` / `subheadline` / `brandPalette` / `contextId`.
-3. Generate (server **cover-crops** to exact platform pixels for full-bleed — no letterbox side panels).
-4. Prefer sending `headline` / `subheadline` for readable on-canvas copy; keep copy short.
-5. For banners/covers, remind users the design is panoramic full-bleed; empty side bars mean regenerate.
-6. Download JPG/PNG for upload to the network.
+2. Put **visible copy** in `headline` / `subheadline` (not `prompt`). Optional `brandPalette` / `contextId`. Social is valid with headline only (no prompt).
+3. Default `textMode: overlay` — PNG already has Sharp typeset copy after cover-crop. Preselect `baked` only when `recommendedTextMode === "baked"` (YouTube thumbnail). Prefer HD for baked; do not change the social model default (`gpt-image-1`).
+4. Always-on hint: overlay is the launch path. Stronger warning if `textMode=baked`. Numbered step lists → Infographic mode (or baked + QA).
+5. Generate (server **cover-crops** to exact platform pixels, then overlays). Empty headline → background only (`socialOverlay.composited === false`).
+6. If `socialQuality.passed === false` (baked), show issues. To change copy, **Regenerate** (Tweak does not re-overlay).
+7. Download JPG/PNG for upload to the network.
 
 ### D — Context (briefs + references)
 
@@ -81,8 +83,8 @@ Every success creates an **Asset** (`source: "ai_gen"`) and a **generation** row
 
 ### E — Iterate
 
-- **Regenerate:** same or edited params → new asset + child generation (inherits context).
-- **Tweak:** `{ instruction }` → image edit on prior PNG → new asset (no context in v1).
+- **Regenerate:** same or edited params → new asset + child generation (inherits context and `textMode`). Overlay re-typesets headline.
+- **Tweak:** `{ instruction }` → image edit on prior PNG → new asset (no context in v1). Does **not** re-run social overlay.
 
 ### F — Download
 
@@ -123,5 +125,8 @@ Successful charges appear in workspace credit history with `metadata.feature` li
 | HD (`gpt-image-1-hd`) | Best quality; higher AC — show estimate. Preselect on Infographic tab (`recommendedForModes`). |
 | DALL·E 3 (`dall-e-3`) | Still offered for UI compat; backend runs GPT Image HD. Hide for `infographic` (`modes` from catalog) |
 | Infographic quality | `generation.infographicQuality.passed === false` → banner; do not charge again for the silent retry |
+| Social overlay | Default `textMode: overlay`. PNG is already typeset. `socialOverlay.composited` false = background only. |
+| Social baked | Opt-in; `socialQuality.passed === false` → banner. Prefer HD for YouTube. |
+| Social copy changes | Regenerated overlay re-typesets. Tweak v1 does **not** re-overlay. |
 | Context | Free to create; max 5 files+assets; TTL ~7 days; pinned after first generate |
 | Library | Filter AI assets; open generation via `stockMetadata.generationId` |

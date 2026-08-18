@@ -55,6 +55,7 @@ const generateBody = Joi.object({
   headline: Joi.string().trim().max(200).allow('', null).optional(),
   subheadline: Joi.string().trim().max(300).allow('', null).optional(),
   brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
+  textMode: Joi.string().valid('overlay', 'baked').optional(),
   infographic: infographicSchema.optional(),
   name: Joi.string().trim().max(255).optional(),
   contextId: Joi.string().uuid().allow(null, '').optional(),
@@ -64,8 +65,16 @@ const generateBody = Joi.object({
     return helpers.message('formatId is required for social mode');
   }
   const hasPrompt = value.prompt && String(value.prompt).trim();
+  const hasHeadline = value.headline && String(value.headline).trim();
+  const hasSubheadline = value.subheadline && String(value.subheadline).trim();
   const hasSections = value.infographic?.sections?.length;
-  if (!hasPrompt && !(mode === 'infographic' && hasSections)) {
+  if (!hasPrompt) {
+    if (mode === 'infographic' && hasSections) {
+      return value;
+    }
+    if (mode === 'social' && (hasHeadline || hasSubheadline)) {
+      return value;
+    }
     return helpers.message('prompt is required');
   }
   return value;
@@ -88,6 +97,7 @@ const regenerateSchema = Joi.object({
     headline: Joi.string().trim().max(200).allow('', null).optional(),
     subheadline: Joi.string().trim().max(300).allow('', null).optional(),
     brandPalette: Joi.array().items(Joi.string().trim().max(32)).max(8).optional(),
+    textMode: Joi.string().valid('overlay', 'baked').optional(),
     infographic: infographicSchema.optional(),
     name: Joi.string().trim().max(255).optional(),
     contextId: Joi.string().uuid().allow(null, '').optional(),

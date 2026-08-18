@@ -10,6 +10,8 @@ const FULL_BLEED_COMMON = [
   'No separate solid color panels used as filler.',
 ];
 
+const INSET_10 = Object.freeze({ top: 0.1, right: 0.1, bottom: 0.1, left: 0.1 });
+
 const FORMATS = Object.freeze([
   {
     id: 'square',
@@ -20,6 +22,9 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1024',
     openaiSizeDalle: '1024x1024',
     safeZone: 'Keep subject centered with comfortable margins.',
+    overlayInsets: null,
+    overlayAlign: null,
+    recommendedTextMode: null,
     composeRules: [
       ...FULL_BLEED_COMMON,
       '1:1 square composition; balanced center focus.',
@@ -34,6 +39,9 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
     safeZone: 'Keep focal content in the center third.',
+    overlayInsets: null,
+    overlayAlign: null,
+    recommendedTextMode: null,
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Landscape 3:2; keep hero in the center third.',
@@ -48,6 +56,9 @@ const FORMATS = Object.freeze([
     openaiSizeGpt: '1024x1536',
     openaiSizeDalle: '1024x1792',
     safeZone: 'Keep focal content in the center third.',
+    overlayInsets: null,
+    overlayAlign: null,
+    recommendedTextMode: null,
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Portrait 2:3; keep hero in the center third.',
@@ -63,6 +74,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1584×396 (~4:1) profile banner. Full-bleed texture across the full width. Keep text center-right; left ~25% subtle for profile photo overlap.',
+    overlayInsets: Object.freeze({ top: 0.12, right: 0.1, bottom: 0.12, left: 0.25 }),
+    overlayAlign: 'center-right',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Ultra-wide LinkedIn PROFILE BANNER (~4:1 panoramic strip).',
@@ -83,6 +97,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1200×627 (~1.91:1) feed post. Full-bleed; large readable headline centered with ≥10% margins.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'LinkedIn FEED POST (~1.91:1 landscape).',
@@ -101,6 +118,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1024x1024',
     safeZone:
       '1080×1080 (1:1) feed post. Bold centered composition; text fully inside ≥8% margins.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Instagram FEED POST (1:1 square).',
@@ -118,6 +138,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1024x1792',
     safeZone:
       '1080×1920 (9:16) story. Full-bleed vertical; keep text/CTAs in middle third — avoid top/bottom ~250px UI chrome.',
+    overlayInsets: Object.freeze({ top: 0.13, right: 0.08, bottom: 0.13, left: 0.08 }),
+    overlayAlign: 'middle',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Instagram STORY (9:16 tall).',
@@ -137,6 +160,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1080×566 (~1.91:1) landscape feed. Full-bleed; center subject + text with ≥10% margins.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Instagram LANDSCAPE feed (~1.91:1).',
@@ -154,6 +180,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1200×630 (~1.91:1) link/post preview. Full-bleed; large centered high-contrast text with ≥10% margins.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Facebook POST / link preview (~1.91:1).',
@@ -171,6 +200,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '820×312 (~2.63:1) page/profile cover. Full-bleed across width; text in center band; keep lower-left quieter for profile UI.',
+    overlayInsets: Object.freeze({ top: 0.08, right: 0.08, bottom: 0.08, left: 0.12 }),
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'Facebook COVER photo (~2.63:1 panoramic).',
@@ -190,6 +222,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1600×900 (16:9) timeline image. Full-bleed; strong center focus; text ≥10% from edges.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'X / Twitter POST image (16:9).',
@@ -207,6 +242,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1500×500 (3:1) profile header. Full-bleed; text upper/center; leave lower-center clear for avatar overlap.',
+    overlayInsets: Object.freeze({ top: 0.08, right: 0.1, bottom: 0.18, left: 0.1 }),
+    overlayAlign: 'center',
+    recommendedTextMode: 'overlay',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'X / Twitter PROFILE HEADER (3:1 panoramic).',
@@ -226,6 +264,9 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone:
       '1280×720 (16:9) thumbnail. Full-bleed; huge high-contrast title; ≥10% margins; readable at small size.',
+    overlayInsets: INSET_10,
+    overlayAlign: 'center',
+    recommendedTextMode: 'baked',
     composeRules: [
       ...FULL_BLEED_COMMON,
       'YouTube THUMBNAIL (16:9).',
@@ -248,6 +289,9 @@ function listFormats() {
     width: f.width,
     height: f.height,
     safeZone: f.safeZone,
+    overlayInsets: f.overlayInsets || null,
+    overlayAlign: f.overlayAlign || null,
+    recommendedTextMode: f.recommendedTextMode || null,
   }));
 }
 

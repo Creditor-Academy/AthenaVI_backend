@@ -1,3 +1,22 @@
+## Status (server overlay hybrid)
+
+Launch path is **`textMode: overlay`** (default): the image model does not typeset; Sharp/SVG draws `headline`/`subheadline` after cover-crop. Opt-in **`textMode: baked`** is for YouTube-style huge type with vision QA + one free edit.
+
+| Issue | Status |
+|---|---|
+| #1 Garbled text (all platforms) | Overlay default: model never typesets. Residual stray letters → hasText vision + one free wipe, then composite |
+| #2 Cut-off Story / FB cover / X header | Typeset **after** cover-crop inside `overlayInsets` |
+| #3 Number skip/duplicate | Overlay does not draw `01…07`. Step lists → Infographic or `baked` + QA |
+| LinkedIn banner left text | `overlayAlign: center-right`; left inset 0.25 |
+| YouTube “ADIDIT” | Default overlay. Catalog `recommendedTextMode: baked` for opt-in huge type |
+| Disable social | Out of scope — overlay is the launch path |
+| Warning banner | FE always-on overlay hint; stronger if baked |
+| Extra AC for overlay / wipe / baked retry | None |
+
+Residual: overlay cannot typeset a 7-step list; baked small type can still fail after one edit (`socialQuality.passed === false`).
+
+---
+
 ## 🔴 CRITICAL ISSUES (All Platforms)
 
 ### 1. Text Rendering Completely Broken
@@ -196,15 +215,17 @@ function validateNumberSequence(detectedNumbers) {
 
 ## 🚨 LAUNCH BLOCKER
 
-**DO NOT launch social media feature without**:
-1. ✅ Text overlay system (separate text from image generation)
-2. ✅ Canvas boundary validation (prevent cut-off)
-3. ✅ User warnings about text quality
+**Addressed in overlay hybrid (this backend pass):**
+1. Text overlay system (Sharp/SVG after cover-crop; default `textMode: overlay`)
+2. Canvas boundary validation (`overlayInsets` on GET `/formats`; typeset after crop)
+3. User warnings (frontend always-on overlay hint; stronger if baked)
 
-**Current state**: 0% usable outputs (except YouTube thumbnail at ~70%)
+**Still residual:** overlay does not typeset numbered step lists; baked small type can fail after one free edit.
+
+Historical note below describes the pre-overlay test set (0% usable except YouTube ~70%). Do not treat that as current API behavior.
 
 ---
 
-**Conclusion**: Social media generation is **NOT production-ready**. Text rendering is catastrophic across all platforms. Only path forward is text overlay feature that bypasses baked-in text generation entirely.
+**Conclusion**: Pre-overlay social generation was **not** production-ready (baked-in text was catastrophic). The launch path is **text overlay** (`textMode: overlay`) that bypasses model typesetting. Baked mode remains opt-in for YouTube-style huge type.
 
 

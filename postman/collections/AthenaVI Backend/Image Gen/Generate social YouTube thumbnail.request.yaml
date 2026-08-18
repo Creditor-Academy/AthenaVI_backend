@@ -13,6 +13,7 @@ body:
       "prompt": "Clickable YouTube thumbnail for an Athena VI product walkthrough. Huge high-contrast title, full-bleed 16:9, readable at small size, no empty bars.",
       "headline": "Ship courses 10x faster",
       "subheadline": "Athena VI",
+      "textMode": "baked",
       "brandPalette": ["#0B1F3A", "#3DDC97"]
     }
 scripts:

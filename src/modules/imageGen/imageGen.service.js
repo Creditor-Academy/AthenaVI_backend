@@ -29,6 +29,15 @@ const {
   buildFixInstruction,
 } = require('./infographicQa.service');
 const { cropToFormat } = require('./socialCrop.service');
+const {
+  detectHasTextSafe,
+  compositeOverlay,
+  WIPE_INSTRUCTION,
+} = require('./socialOverlay.service');
+const {
+  reviewSocialSafe,
+  buildSocialFixInstruction,
+} = require('./socialQa.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
 const { resolveAssetFilename } = require('./imageGenFilename');
 const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
@@ -67,11 +76,23 @@ function serializeGeneration(row) {
     asset: row.asset || null,
     downloadFormats: [...DOWNLOAD_FORMATS],
     infographicQuality: request.infographicQuality || null,
+    socialOverlay: request.socialOverlay || null,
+    socialQuality: request.socialQuality || null,
   };
 }
 
 function cropFitForMode(mode) {
   return mode === 'infographic' ? 'contain' : 'cover';
+}
+
+function resolveTextMode(mode, textMode) {
+  if (mode !== 'social') return null;
+  if (textMode === 'baked') return 'baked';
+  return 'overlay';
+}
+
+function hasCopy(value) {
+  return Boolean(value && String(value).trim());
 }
 
 function buildFinalPrompt({
@@ -84,6 +105,7 @@ function buildFinalPrompt({
   brandPalette,
   infographic,
   plan,
+  textMode,
 }) {
   if (mode === 'infographic') {
     return buildInfographicPrompt({
@@ -102,6 +124,7 @@ function buildFinalPrompt({
       headline,
       subheadline,
       brandPalette,
+      textMode,
     });
   }
   return buildImagePrompt({ prompt, styleId });
@@ -162,13 +185,17 @@ async function runPipeline({
   rateLimitFn,
   contextId = null,
   parentSnapshot = null,
+  textMode: textModeRaw = null,
 }) {
   if (!MODES.has(mode)) {
     throw new AppError('Invalid mode. Use image, infographic, or social.', 400);
   }
+  const textMode = resolveTextMode(mode, textModeRaw);
   if (!prompt || !String(prompt).trim()) {
     if (mode === 'infographic' && infographic?.sections?.length) {
       // ok — sections carry content
+    } else if (mode === 'social' && (hasCopy(headline) || hasCopy(subheadline))) {
+      // ok — overlay/baked copy lives in headline fields
     } else {
       throw new AppError('prompt is required', 400);
     }
@@ -221,12 +248,16 @@ async function runPipeline({
     brandPalette,
     infographic,
     plan: infographicPlan,
+    textMode,
   });
 
   let enrichedPrompt = contextService.appendContextBlock(
     basePrompt,
     contextResult.enrichmentBlock
   );
+  if (mode === 'social' && textMode === 'overlay') {
+    enrichedPrompt = `${enrichedPrompt}\n\nReminder: do not render any letters, numbers, captions, or labels from the brief or reference context.`;
+  }
 
   const referenceBuffers = contextResult.referenceImageBuffers || [];
   const useRefs = referenceBuffers.length > 0;
@@ -256,6 +287,8 @@ async function runPipeline({
   let workingBuffer = generated.buffer;
   let revisedPrompt = generated.revised_prompt || null;
   let infographicQuality = null;
+  let socialQuality = null;
+  let socialOverlay = null;
 
   let cropped = await cropToFormat(workingBuffer, format, { fit: cropFitForMode(mode) });
 
@@ -292,6 +325,81 @@ async function runPipeline({
       issues: qa.issues || [],
       suggestedTweak: qa.suggestedTweak || '',
     };
+  }
+
+  if (mode === 'social' && (action === 'generate' || action === 'regenerate')) {
+    if (textMode === 'overlay') {
+      const letterCheck = await detectHasTextSafe(cropped.buffer);
+      if (letterCheck.hasText) {
+        try {
+          const wiped = await editImage({
+            imageBuffer: cropped.buffer,
+            instruction: WIPE_INSTRUCTION,
+            model: model.openaiModel,
+            quality: model.quality,
+            size: openaiSize,
+          });
+          workingBuffer = wiped.buffer;
+          revisedPrompt = wiped.revised_prompt || revisedPrompt;
+          cropped = await cropToFormat(workingBuffer, format, { fit: 'cover' });
+        } catch (err) {
+          logger.warn('Social overlay text wipe failed', { message: err?.message });
+        }
+      }
+      const overlay = await compositeOverlay({
+        buffer: cropped.buffer,
+        format,
+        headline,
+        subheadline,
+        brandPalette,
+        width: cropped.width,
+        height: cropped.height,
+      });
+      cropped = { ...cropped, buffer: overlay.buffer };
+      socialOverlay = {
+        textMode: 'overlay',
+        headline: hasCopy(headline) ? String(headline).trim() : '',
+        subheadline: hasCopy(subheadline) ? String(subheadline).trim() : '',
+        insets: overlay.insets,
+        align: overlay.align,
+        composited: overlay.composited,
+      };
+    } else {
+      let qa = await reviewSocialSafe({
+        buffer: cropped.buffer,
+        headline,
+        subheadline,
+      });
+      let retried = false;
+      if (!qa.skipped && !qa.pass) {
+        try {
+          const edited = await editImage({
+            imageBuffer: cropped.buffer,
+            instruction: buildSocialFixInstruction(qa, { headline, subheadline }),
+            model: model.openaiModel,
+            quality: model.quality,
+            size: openaiSize,
+          });
+          retried = true;
+          workingBuffer = edited.buffer;
+          revisedPrompt = edited.revised_prompt || revisedPrompt;
+          cropped = await cropToFormat(workingBuffer, format, { fit: 'cover' });
+          qa = await reviewSocialSafe({
+            buffer: cropped.buffer,
+            headline,
+            subheadline,
+          });
+        } catch (err) {
+          logger.warn('Social baked quality edit failed', { message: err?.message });
+        }
+      }
+      socialQuality = {
+        passed: qa.skipped ? true : Boolean(qa.pass),
+        retried,
+        issues: qa.issues || [],
+        suggestedTweak: qa.suggestedTweak || '',
+      };
+    }
   }
 
   const generationId = uuidv4();
@@ -334,11 +442,14 @@ async function runPipeline({
     subheadline: subheadline || null,
     brandPalette: brandPalette || null,
     infographic: infographic || null,
+    textMode,
     name: assetName,
     contextId: liveContextId || contextResult.contextId || contextId || null,
     contextPreview: contextResult.contextPreview || null,
     contextSnapshot: contextResult.contextSnapshot || null,
     infographicQuality,
+    socialOverlay,
+    socialQuality,
   };
 
   const row = await imageGenDao.createGeneration({
@@ -424,6 +535,7 @@ async function generate({ userId, workspace, body }) {
     rateLimitFn: rateLimit.assertGenerateAllowed,
     contextId: body.contextId || null,
     parentSnapshot: null,
+    textMode: body.textMode,
   });
 }
 
@@ -472,6 +584,7 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
     rateLimitFn: rateLimit.assertRegenerateAllowed,
     contextId: inheritedContextId,
     parentSnapshot: prev.contextSnapshot || null,
+    textMode: body.textMode !== undefined ? body.textMode : prev.textMode,
   });
 }
 

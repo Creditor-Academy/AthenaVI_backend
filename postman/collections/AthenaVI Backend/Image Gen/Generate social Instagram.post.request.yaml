@@ -12,6 +12,7 @@ body:
       "prompt": "Product launch promo for Athena VI virtual instructor. Full-bleed square. Headline and subheadline are supplied separately — keep the scene clean for overlay text.",
       "headline": "Create courses faster",
       "subheadline": "AI-powered instructor studio",
+      "textMode": "overlay",
       "brandPalette": ["#0B1F3A", "#3DDC97"]
     }
 scripts:

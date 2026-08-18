@@ -990,12 +990,14 @@ Respect each model’s `modes` array (e.g. hide DALL·E for `infographic` if not
 
 ### Formats — `GET /api/image-gen/formats`
 
-`data.formats[]`: `id`, `name`, `category` (`generic` \| `social`), `width`, `height`, `safeZone`.
+`data.formats[]`: `id`, `name`, `category` (`generic` \| `social`), `width`, `height`, `safeZone`, `overlayInsets`, `overlayAlign`, `recommendedTextMode`.
 
 **Social ids:**  
 `linkedin_banner`, `linkedin_post`, `instagram_post`, `instagram_story`, `instagram_landscape`, `facebook_post`, `facebook_cover`, `x_post`, `x_header`, `youtube_thumbnail`
 
-**Generic:** `square`, `landscape`, `portrait`
+**Generic:** `square`, `landscape`, `portrait` (`overlayInsets` / `overlayAlign` / `recommendedTextMode` are `null`)
+
+Social: default `textMode` is **overlay**. Preselect `baked` only when `recommendedTextMode === "baked"` (`youtube_thumbnail`).
 
 ### Styles — `GET /api/image-gen/styles`
 
@@ -1047,6 +1049,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
   "headline": "Create faster",
   "subheadline": "AI instructor studio",
   "brandPalette": ["#0B1F3A", "#3DDC97"],
+  "textMode": "overlay",
   "infographic": {
     "layout": "process",
     "title": "Onboarding",
@@ -1062,7 +1065,8 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
 | `modelId` | Optional. Infographic default `gpt-image-1-hd`; image/social default `gpt-image-1`. |
 | `formatId` | **Required** for `social`. Optional aspect for `image`. Infographic default `landscape`. |
-| `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars — full brief, not a one-liner |
+| `prompt` | Required unless `infographic.sections` provided, or social with `headline`/`subheadline`. Max **16,000** chars. Social: visible copy in `headline`/`subheadline`. |
+| `textMode` | Social only: `overlay` (service default if omitted) \| `baked`. |
 | `infographic` | Optional: `title` 200; **24** sections; section `content` 8,000; bullets 20 × 1,000 |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
@@ -1072,7 +1076,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`. Infographic also returns `generation.infographicQuality` (`passed`, `retried`, `issues`, `suggestedTweak`).
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`. Infographic also returns `generation.infographicQuality` (`passed`, `retried`, `issues`, `suggestedTweak`). Social overlay returns `generation.socialOverlay`; baked returns `generation.socialQuality`. Overlay/wipe/baked retry are not extra AC.
 
 ## 3.6 List / get generations
 
@@ -1097,7 +1101,7 @@ Body fields optional — omitted fields reuse parent request. Creates new genera
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge). `instruction` max **4,000** chars.
+Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge). `instruction` max **4,000** chars. Social overlay is **not** re-applied on Tweak — change headline via Regenerate.
 
 ## 3.9 Download
 
@@ -1135,7 +1139,7 @@ Mode `infographic`. Preselect `gpt-image-1-hd` + `landscape` (14 AC). Form: `inf
 
 ### C — Social creative
 
-Mode `social`, required `formatId`. Optional `headline` / `subheadline` / `brandPalette`. Server crops to exact platform pixels.
+Mode `social`, required `formatId`. Put visible copy in `headline` / `subheadline`. Default `textMode: overlay` (PNG already typeset after cover-crop). Preselect `baked` only when `recommendedTextMode === "baked"`. Always-on overlay hint. Numbered lists → Infographic. Change copy via Regenerate (Tweak does not re-overlay). If `socialQuality.passed === false`, show a review banner.
 
 ### D — Iterate
 
@@ -1150,7 +1154,8 @@ When user has a default Brand Kit, prefill `brandPalette` from kit colors and su
 - [ ] Load `/models`, `/formats`, `/styles` once
 - [ ] Model picker (default `gpt-image-1`; Infographic preselect `gpt-image-1-hd` via `recommendedForModes`)
 - [ ] Mode tabs: Image / Infographic / Social
-- [ ] Social → format chips `category === "social"`
+- [ ] Social → format chips `category === "social"`; default overlay; baked only if `recommendedTextMode === "baked"`
+- [ ] Always-on social overlay hint; `socialQuality` banner when baked fails
 - [ ] Estimate on model/mode change
 - [ ] Generate with long timeout + loading state
 - [ ] Preview; Regenerate; Tweak modal; Download menu
@@ -1323,9 +1328,10 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 ## Journey 4 — Image studio for social
 
 1. Open Image Gen  
-2. Mode social → Instagram post → generate  
-3. Tweak instruction → download JPG  
+2. Mode social → Instagram post → `headline` + default overlay → generate  
+3. PNG already has Sharp typeset copy; download JPG  
 4. Asset already in library (`ai_gen`)  
+5. To change headline, Regenerate (not Tweak)  
 
 ## Journey 5 — Superadmin ships a new pack
 

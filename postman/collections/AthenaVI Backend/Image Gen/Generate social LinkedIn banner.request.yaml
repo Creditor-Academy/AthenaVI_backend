@@ -13,6 +13,7 @@ body:
       "prompt": "Ultra-wide LinkedIn profile banner for Athena VI. Full-bleed texture left to right. Left 25% low-contrast only (profile photo overlap). Headline center-right.",
       "headline": "Virtual instructor studio",
       "subheadline": "Athena VI",
+      "textMode": "overlay",
       "brandPalette": ["#0B1F3A", "#3DDC97"]
     }
 scripts:

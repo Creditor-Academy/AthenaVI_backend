@@ -35,9 +35,19 @@ OpenAI-only workspace image studio: general images, infographics, and social cre
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/formats` |
 
-**Response (200)** – `data.formats[]`: `id`, `name`, `category` (`generic`|`social`), `width`, `height`, `safeZone`.
+**Response (200)** – `data.formats[]`: `id`, `name`, `category` (`generic`|`social`), `width`, `height`, `safeZone`, `overlayInsets`, `overlayAlign`, `recommendedTextMode`.
 
-Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `instagram_story`, `instagram_landscape`, `facebook_post`, `facebook_cover`, `x_post`, `x_header`, `youtube_thumbnail`. Generic: `square`, `landscape`, `portrait`.
+Social ids include: `linkedin_banner`, `linkedin_post`, `instagram_post`, `instagram_story`, `instagram_landscape`, `facebook_post`, `facebook_cover`, `x_post`, `x_header`, `youtube_thumbnail`. Generic: `square`, `landscape`, `portrait` (`overlayInsets` / `overlayAlign` / `recommendedTextMode` are `null`).
+
+Social overlay fields (fractions of cropped WxH):
+
+| Format | `overlayAlign` | `recommendedTextMode` |
+|--------|----------------|------------------------|
+| Most posts / landscape / YouTube | `center` | `overlay` except `youtube_thumbnail` → `baked` |
+| `linkedin_banner` | `center-right` (left inset 0.25 for profile overlap) | `overlay` |
+| `instagram_story` | `middle` | `overlay` |
+| `facebook_cover` | `center` | `overlay` |
+| `x_header` | `center` (larger bottom inset for avatar) | `overlay` |
 
 ### Styles
 
@@ -145,6 +155,7 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
   "headline": "Create faster",
   "subheadline": "AI instructor studio",
   "brandPalette": ["#0B1F3A", "#3DDC97"],
+  "textMode": "overlay",
   "infographic": {
     "layout": "process",
     "title": "Onboarding",
@@ -160,7 +171,9 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 | `mode` | `image` \| `infographic` \| `social` (default `image`) |
 | `modelId` | Optional. Default **`gpt-image-1`** for image/social; default **`gpt-image-1-hd`** for infographic. Explicit values always win. |
 | `formatId` | **Required** for `social`. Optional aspect for `image` (`square`/`landscape`/`portrait`). Infographic default **`landscape`** (1536×1024) when omitted. |
-| `prompt` | Required unless `infographic.sections` provided. Max **16,000** chars (image, infographic, and social). Use this for the full brief — audience, story, labels, panel copy. |
+| `prompt` | Required unless `infographic.sections` is provided, or `mode=social` with `headline` and/or `subheadline`. Max **16,000** chars. For social, put **visible copy** in `headline` / `subheadline` — `prompt` is the visual brief only. |
+| `headline` / `subheadline` | Social on-canvas copy (max 200 / 300). Overlay typesets these after crop. |
+| `textMode` | Social only: `overlay` \| `baked`. **Do not rely on a Joi default** — omitted social requests use **`overlay`** in the service. Catalog `recommendedTextMode` is `baked` only for `youtube_thumbnail` (client should opt in). |
 | `infographic` | Optional structured form. `title` max 200; up to **24** sections; section `title` 200; `content` max **8,000**; up to **20** bullets × **1,000** chars. |
 | `style` / `styleId` | Optional vibe from `/styles`. Infographic mode ignores photoreal/cinematic/watercolor/3d/neon suffixes (flat-vector craft is always applied). |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case, e.g. `cute-coffee-cup-emoji.png`). S3 keys stay UUID-based. |
@@ -184,6 +197,36 @@ Infographic generations also include `generation.infographicQuality` (same objec
 ```
 
 Show a non-blocking “review text” banner when `passed === false`. `suggestedTweak` may prefill the Tweak modal (Tweak still bills — the free fix already ran).
+
+**Social pipeline (server):** default **`textMode: overlay`** — the image model is instructed not to paint letters; after **cover-crop** the server Sharp/SVG-typesets `headline` / `subheadline` inside `overlayInsets`. If vision still sees letters, **one in-place wipe is included** (no extra AC), then overlay always runs. Empty headline/subheadline → background only (`socialOverlay.composited: false`). Opt-in **`textMode: baked`** quotes the headline into the model (YouTube-style huge type), then vision-QA (exact spelling, cutoff, sequence) with **one free edit**. Overlay, wipe, and baked retry are **not** extra AC. Tweak does **not** re-run overlay — change copy via Regenerate.
+
+Social generate/regenerate also include:
+
+`generation.socialOverlay` (overlay path; also on `generation.request.socialOverlay`):
+
+```json
+{
+  "textMode": "overlay",
+  "headline": "Create faster",
+  "subheadline": "AI instructor studio",
+  "insets": { "top": 0.1, "right": 0.1, "bottom": 0.1, "left": 0.1 },
+  "align": "center",
+  "composited": true
+}
+```
+
+`generation.socialQuality` (baked path only; same object on `generation.request.socialQuality`):
+
+```json
+{
+  "passed": false,
+  "retried": true,
+  "issues": ["headline misspelled"],
+  "suggestedTweak": "Restore the exact headline Ship courses 10x faster."
+}
+```
+
+`generation.request.textMode` is stored for regenerate inherit.
 
 Master file is always **PNG** on S3.
 
@@ -214,7 +257,7 @@ PRIVATE workspaces only return the current user’s generations.
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` |
 | **Status** | **201** |
 
-Body fields optional — omitted fields reuse the parent generation’s request (including `contextId`). Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+Body fields optional — omitted fields reuse the parent generation’s request (including `contextId` and `textMode`). Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
 
 If the live context expired, regenerate still applies **text** context from `request.contextSnapshot` (visual reference images require a live/pinned context).
 
@@ -232,7 +275,7 @@ If the live context expired, regenerate still applies **text** context from `req
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge). Context bundles are **not** applied on tweak (v1). `instruction` max **4,000** chars.
+Uses OpenAI **image edit** on the parent PNG. Charges model AC (no mode surcharge). Context bundles are **not** applied on tweak (v1). `instruction` max **4,000** chars. Social overlay is **not** re-applied — change copy via Regenerate.
 
 ---
 
@@ -264,9 +307,9 @@ Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.
 | Infographic surcharge | +2 | `IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC` |
 | Social surcharge | +1 | `IMAGE_GEN_SOCIAL_SURCHARGE_AC` |
 
-Infographic **default** (HD + landscape, `modelId` omitted): **14 AC**. Explicit medium (`gpt-image-1`): **8 AC**. The silent quality edit after a broken first image is **not** a second charge.
+Infographic **default** (HD + landscape, `modelId` omitted): **14 AC**. Explicit medium (`gpt-image-1`): **8 AC**. The silent quality edit after a broken first image is **not** a second charge. Social overlay, hasText wipe, and baked silent edit are also **not** extra AC (social surcharge +1 still applies to generate/regenerate).
 
-Context create is **free**. Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` / `IMAGE_GEN_CONTEXT_RATE_LIMIT_WINDOW_SEC`. Silent infographic QA edits do **not** increment regenerate rate-limit counters.
+Context create is **free**. Rate limits: `IMAGE_GEN_RATE_LIMIT_MAX` / `IMAGE_GEN_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` / `IMAGE_GEN_REGENERATE_RATE_LIMIT_WINDOW_SEC`, `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` / `IMAGE_GEN_CONTEXT_RATE_LIMIT_WINDOW_SEC`. Silent infographic QA edits and social overlay wipe / baked QA edits do **not** increment regenerate rate-limit counters.
 
 Requires **`OPENAI_API_KEY`**.
 
