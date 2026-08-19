@@ -52,6 +52,64 @@ const tweak = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 201, messages.IMAGE_GEN_TWEAKED);
 });
 
+const listThreads = asyncHandler(async (req, res) => {
+  const threads = await imageGenService.listThreads({
+    userId: req.user.id,
+    workspace: req.workspace,
+    query: req.query,
+  });
+  return successResponse(req, res, { threads }, 200, messages.IMAGE_GEN_THREADS_FETCHED);
+});
+
+const getThread = asyncHandler(async (req, res) => {
+  const thread = await imageGenService.getThread({
+    userId: req.user.id,
+    workspace: req.workspace,
+    threadId: req.params.threadId,
+  });
+  return successResponse(req, res, { thread }, 200, messages.IMAGE_GEN_THREAD_FETCHED);
+});
+
+const sendThreadMessage = asyncHandler(async (req, res) => {
+  const data = await imageGenService.sendThreadMessage({
+    userId: req.user.id,
+    workspace: req.workspace,
+    threadId: req.params.threadId,
+    content: req.body.content,
+    fromGenerationId: req.body.fromGenerationId,
+  });
+  return successResponse(req, res, data, 201, messages.IMAGE_GEN_MESSAGE_SENT);
+});
+
+const renameThread = asyncHandler(async (req, res) => {
+  const thread = await imageGenService.renameThread({
+    userId: req.user.id,
+    workspace: req.workspace,
+    threadId: req.params.threadId,
+    title: req.body.title,
+  });
+  return successResponse(req, res, { thread }, 200, messages.IMAGE_GEN_THREAD_RENAMED);
+});
+
+const moveThread = asyncHandler(async (req, res) => {
+  const thread = await imageGenService.moveThread({
+    userId: req.user.id,
+    workspace: req.workspace,
+    threadId: req.params.threadId,
+    folderId: req.body.folderId,
+  });
+  return successResponse(req, res, { thread }, 200, messages.IMAGE_GEN_THREAD_MOVED);
+});
+
+const deleteThread = asyncHandler(async (req, res) => {
+  const data = await imageGenService.deleteThread({
+    userId: req.user.id,
+    workspace: req.workspace,
+    threadId: req.params.threadId,
+  });
+  return successResponse(req, res, data, 200, messages.IMAGE_GEN_THREAD_DELETED);
+});
+
 const listGenerations = asyncHandler(async (req, res) => {
   const generations = await imageGenService.listGenerations({
     userId: req.user.id,
@@ -93,6 +151,12 @@ module.exports = {
   generate,
   regenerate,
   tweak,
+  listThreads,
+  getThread,
+  sendThreadMessage,
+  renameThread,
+  moveThread,
+  deleteThread,
   listGenerations,
   getGeneration,
   download,

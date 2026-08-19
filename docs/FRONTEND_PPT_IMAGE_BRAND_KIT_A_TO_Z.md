@@ -965,13 +965,14 @@ OpenAI-only workspace image studio for **general images**. Results save as works
 ## 3.2 Mental model
 
 ```
-Workspace → Image Gen studio
-  → model + format (square / landscape / portrait) + style
-  → Generate (sync) → Asset + generation row
-  → Regenerate | Tweak | Download | Library (already saved)
+Workspace → Folder → Image chat
+  → model + format + style
+  → Generate (sync, folderId required) → saved chat + Asset
+  → Folder card: View | Download | Open chat
+  → Chat send → latest hop (charges)
 ```
 
-Versions share `rootId` / `parentId` chains. `mode` is `image` only.
+Versions share `rootId` / `parentId` / `threadId`. `mode` is `image` only.
 
 ## 3.3 Catalogs (load once)
 
@@ -1031,6 +1032,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 ```json
 {
   "mode": "image",
+  "folderId": "folder-uuid",
   "modelId": "gpt-image-1",
   "formatId": "square",
   "style": "cinematic",
@@ -1044,6 +1046,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 | Field | Rules |
 |-------|--------|
 | `mode` | `image` only (default `image`) |
+| `folderId` | **Required.** Folder that owns the saved chat. |
 | `modelId` | Optional. Default `gpt-image-1`. |
 | `formatId` | Optional `square` / `landscape` / `portrait`. Default `square`. |
 | `prompt` | **Required**. Max **16,000** chars. |
@@ -1053,7 +1056,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 | `contextId` | Optional context bundle from §3.4b |
 
 **Response `data`:**  
-`{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`
+`{ generation, asset, creditsCharged, downloadFormats, thread, actions }` — `actions` is `{ viewUrl, downloadPath, threadId }` for View / Download / Open chat.
 
 Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`.
 
@@ -1141,6 +1144,12 @@ GET  /api/image-gen/formats
 GET  /api/image-gen/styles
 GET  /api/image-gen/workspaces/:workspaceId/estimate
 POST /api/image-gen/workspaces/:workspaceId/generate
+GET  /api/image-gen/workspaces/:workspaceId/threads
+GET  /api/image-gen/workspaces/:workspaceId/threads/:threadId
+POST /api/image-gen/workspaces/:workspaceId/threads/:threadId/messages
+PATCH /api/image-gen/workspaces/:workspaceId/threads/:threadId
+POST /api/image-gen/workspaces/:workspaceId/threads/:threadId/move-folder
+DELETE /api/image-gen/workspaces/:workspaceId/threads/:threadId
 GET  /api/image-gen/workspaces/:workspaceId/generations
 GET  /api/image-gen/workspaces/:workspaceId/generations/:generationId
 POST /api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate

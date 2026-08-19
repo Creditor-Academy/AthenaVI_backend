@@ -6,6 +6,7 @@ body:
   data: |-
     {
       "mode": "image",
+      "folderId": "{{folderId}}",
       "modelId": "gpt-image-1",
       "formatId": "square",
       "style": "cinematic",
@@ -17,10 +18,15 @@ scripts:
       if (pm.response.code === 201) {
         const j = pm.response.json();
         const id = j && j.data && j.data.generation && j.data.generation.id;
+        const threadId = j && j.data && j.data.thread && j.data.thread.id;
         if (id) {
           pm.collectionVariables.set("generationId", id);
           pm.environment.set("generationId", id);
           pm.environment.set("imageGenerationId", id);
+        }
+        if (threadId) {
+          pm.collectionVariables.set("imageGenThreadId", threadId);
+          pm.environment.set("imageGenThreadId", threadId);
         }
       }
     language: text/javascript

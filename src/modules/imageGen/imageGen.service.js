@@ -9,8 +9,11 @@ const {
 const { getObjectBuffer } = require('../s3/s3.service');
 const { persistWorkspaceAsset } = require('../asset/asset.service');
 const prisma = require('../../shared/config/prismaClient');
+const projectDao = require('../project/project.dao');
 const imageGenCredit = require('./imageGenCredit.service');
 const imageGenDao = require('./imageGen.dao');
+const threadDao = require('./imageGen.thread.dao');
+const messageDao = require('./imageGen.message.dao');
 const rateLimit = require('./imageGenRateLimit.service');
 const contextService = require('./imageGen.context.service');
 const { listModels, resolveModel, estimateCredits, defaultModelIdForMode } = require('./catalogs/models');
@@ -21,6 +24,7 @@ const {
 } = require('./catalogs/formats');
 const { listStyles, resolveStyle } = require('./catalogs/styles');
 const { buildImagePrompt } = require('./prompts/imageStyle.prompt');
+const { buildChatEditInstruction } = require('./prompts/chatEdit.prompt');
 const { cropToFormat } = require('./socialCrop.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
 const { resolveAssetFilename } = require('./imageGenFilename');
@@ -44,6 +48,7 @@ function serializeGeneration(row) {
     rootId: row.rootId,
     action: row.action,
     assetId: row.assetId,
+    threadId: row.threadId || null,
     contextId: row.contextId || request.contextId || null,
     contextPreview: request.contextPreview || null,
     s3Key: row.s3Key,
@@ -57,6 +62,103 @@ function serializeGeneration(row) {
     asset: row.asset || null,
     downloadFormats: [...DOWNLOAD_FORMATS],
   };
+}
+
+function serializeHead(generation) {
+  if (!generation) return null;
+  return {
+    generationId: generation.id,
+    url: generation.url,
+    action: generation.action,
+    createdAt: generation.createdAt,
+    asset: generation.asset || null,
+  };
+}
+
+function serializeMessage(row) {
+  if (!row) return row;
+  const generation = row.generation || null;
+  return {
+    id: row.id,
+    threadId: row.threadId,
+    userId: row.userId,
+    role: row.role,
+    type: row.type,
+    content: row.content,
+    generationId: row.generationId || null,
+    creditsCharged: row.creditsCharged,
+    createdAt: row.createdAt,
+    url: generation?.url || generation?.asset?.url || null,
+    asset: generation?.asset || null,
+  };
+}
+
+function serializeThread(row, { includeMessages = false } = {}) {
+  if (!row) return row;
+  const head = serializeHead(row.headGeneration);
+  const payload = {
+    id: row.id,
+    threadId: row.id,
+    workspaceId: row.workspaceId,
+    folderId: row.folderId,
+    userId: row.userId,
+    title: row.title,
+    rootGenerationId: row.rootGenerationId,
+    headGenerationId: row.headGenerationId,
+    contextId: row.contextId || null,
+    modelId: row.modelId || null,
+    formatId: row.formatId || null,
+    styleId: row.styleId || null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    head,
+    messageCount: row._count?.messages ?? (row.messages ? row.messages.length : 0),
+    versionCount: row._count?.generations ?? 0,
+    downloadFormats: [...DOWNLOAD_FORMATS],
+  };
+  if (includeMessages) {
+    payload.messages = Array.isArray(row.messages) ? row.messages.map(serializeMessage) : [];
+  }
+  return payload;
+}
+
+function threadActions(workspaceId, generation, threadId) {
+  const generationId = generation?.id;
+  return {
+    viewUrl: generation?.url || null,
+    downloadPath: generationId
+      ? `/api/image-gen/workspaces/${workspaceId}/generations/${generationId}/download`
+      : null,
+    threadId: threadId || generation?.threadId || null,
+  };
+}
+
+function withThreadPayload(result, thread, workspaceId) {
+  const generation = result.generation;
+  const serialized = serializeThread(thread);
+  return {
+    ...result,
+    generation: serializeGeneration({
+      ...(generation || {}),
+      threadId: thread?.id || generation?.threadId || null,
+    }),
+    thread: serialized,
+    actions: threadActions(workspaceId, generation, thread?.id),
+  };
+}
+
+function titleFromPrompt(prompt) {
+  const raw = String(prompt || '').trim().replace(/\s+/g, ' ');
+  if (!raw) return 'Untitled image';
+  return raw.length > 80 ? `${raw.slice(0, 79)}…` : raw;
+}
+
+async function assertFolderInWorkspace(folderId, workspaceId) {
+  const folder = await projectDao.findFolderById(folderId);
+  if (!folder || folder.workspaceId !== workspaceId) {
+    throw new AppError(messages.FOLDER_NOT_FOUND, 404);
+  }
+  return folder;
 }
 
 function resolveRequestFormat(formatId) {
@@ -92,6 +194,143 @@ function requireImageGeneration(row, { notFoundIfWrongMode = false } = {}) {
   return row;
 }
 
+function requireThread(row) {
+  if (!row) {
+    throw new AppError(messages.IMAGE_GEN_THREAD_NOT_FOUND, 404);
+  }
+  return row;
+}
+
+function assertThreadAccessible(row, workspace, userId) {
+  requireThread(row);
+  if (workspace.type === 'PRIVATE' && row.userId !== userId) {
+    throw new AppError(messages.IMAGE_GEN_THREAD_NOT_FOUND, 404);
+  }
+}
+
+async function loadThread(threadId, workspace, userId) {
+  const row = await threadDao.findById(threadId, workspace.id, {
+    userId,
+    isPrivate: workspace.type === 'PRIVATE',
+  });
+  assertThreadAccessible(row, workspace, userId);
+  return row;
+}
+
+async function findFirstFolderId(workspaceId) {
+  const folder = await prisma.folder.findFirst({
+    where: { workspaceId },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  return folder?.id || null;
+}
+
+async function attachHopMessages({
+  threadId,
+  userId,
+  type,
+  userContent,
+  generationId,
+  creditsCharged,
+}) {
+  await messageDao.createMessages([
+    {
+      threadId,
+      userId,
+      role: 'user',
+      type,
+      content: String(userContent || ''),
+      generationId: null,
+      creditsCharged: 0,
+    },
+    {
+      threadId,
+      userId,
+      role: 'assistant',
+      type,
+      content: '',
+      generationId,
+      creditsCharged: creditsCharged || 0,
+    },
+  ]);
+}
+
+async function advanceThreadHead(threadId, generation) {
+  await imageGenDao.setThreadId(generation.id, threadId);
+  return threadDao.updateThread(threadId, {
+    headGenerationId: generation.id,
+    modelId: generation.modelId || undefined,
+    formatId: generation.formatId,
+    styleId: generation.styleId,
+    contextId: generation.contextId,
+    updatedAt: new Date(),
+  });
+}
+
+async function createThreadForGeneration({
+  workspace,
+  folderId,
+  userId,
+  generation,
+  prompt,
+  rootGenerationId = null,
+}) {
+  const thread = await threadDao.createThread({
+    workspaceId: workspace.id,
+    folderId,
+    userId,
+    title: titleFromPrompt(prompt || generation.prompt),
+    rootGenerationId: rootGenerationId || generation.id,
+    headGenerationId: generation.id,
+    contextId: generation.contextId || null,
+    modelId: generation.modelId,
+    formatId: generation.formatId,
+    styleId: generation.styleId,
+  });
+  await imageGenDao.setThreadId(generation.id, thread.id);
+  await attachHopMessages({
+    threadId: thread.id,
+    userId,
+    type: 'prompt',
+    userContent: prompt || generation.prompt || '',
+    generationId: generation.id,
+    creditsCharged: generation.creditsCharged,
+  });
+  return threadDao.findById(thread.id, workspace.id);
+}
+
+async function ensureThreadForParent({ parent, workspace, userId, folderId }) {
+  if (parent.threadId) {
+    const existing = await threadDao.findById(parent.threadId, workspace.id, {
+      userId,
+      isPrivate: workspace.type === 'PRIVATE',
+    });
+    if (existing) return existing;
+  }
+
+  const rootId = parent.rootId || parent.id;
+  const byRoot = await threadDao.findByRootGenerationId(rootId, workspace.id);
+  if (byRoot) {
+    await imageGenDao.setThreadId(parent.id, byRoot.id);
+    return threadDao.findById(byRoot.id, workspace.id);
+  }
+
+  const resolvedFolderId = folderId || (await findFirstFolderId(workspace.id));
+  if (!resolvedFolderId) {
+    throw new AppError(messages.FOLDER_NOT_FOUND, 404);
+  }
+  await assertFolderInWorkspace(resolvedFolderId, workspace.id);
+  return createThreadForGeneration({
+    workspace,
+    folderId: resolvedFolderId,
+    userId: parent.userId || userId,
+    generation: parent,
+    prompt: parent.prompt,
+    rootGenerationId: parent.rootId || parent.id,
+  });
+}
+
 async function runPipeline({
   userId,
   workspace,
@@ -107,6 +346,7 @@ async function runPipeline({
   rateLimitFn,
   contextId = null,
   parentSnapshot = null,
+  threadId = null,
 }) {
   const mode = 'image';
   if (!prompt || !String(prompt).trim()) {
@@ -195,6 +435,7 @@ async function runPipeline({
       styleId: styleId || null,
       action,
       contextId: contextResult.contextId || null,
+      threadId: threadId || null,
     },
   });
 
@@ -229,6 +470,7 @@ async function runPipeline({
     action,
     assetId: asset.id,
     contextId: liveContextId,
+    threadId: threadId || null,
     s3Key: asset.key,
     url: asset.url,
     openaiSize,
@@ -255,6 +497,7 @@ async function runPipeline({
       formatId: format?.id || null,
       action,
       contextId: liveContextId,
+      threadId: threadId || null,
     },
   });
 
@@ -268,86 +511,24 @@ async function runPipeline({
   }
 
   return {
-    generation: serializeGeneration({ ...row, asset }),
+    generation: serializeGeneration({ ...row, asset, threadId: threadId || row.threadId }),
     asset,
     creditsCharged: charged,
     downloadFormats: [...DOWNLOAD_FORMATS],
   };
 }
 
-async function generate({ userId, workspace, body }) {
-  const mode = body.mode || 'image';
-  if (mode !== 'image') {
-    throw new AppError('Invalid mode. Only image is supported.', 400);
-  }
-  return runPipeline({
-    userId,
-    workspace,
-    modelId: defaultModelIdForMode(mode, body.modelId),
-    formatId: body.formatId,
-    styleId: body.style || body.styleId,
-    prompt: body.prompt,
-    brandPalette: body.brandPalette,
-    name: body.name,
-    action: 'generate',
-    parentId: null,
-    rootId: null,
-    rateLimitFn: rateLimit.assertGenerateAllowed,
-    contextId: body.contextId || null,
-    parentSnapshot: null,
-  });
-}
-
-async function regenerate({ userId, workspace, generationId, body = {} }) {
-  const parent = requireImageGeneration(
-    await imageGenDao.findById(generationId, workspace.id)
-  );
-
-  const prev = parent.request || {};
-  const inheritedContextId =
-    body.contextId !== undefined
-      ? body.contextId || null
-      : parent.contextId || prev.contextId || null;
-
-  if (body.mode && body.mode !== 'image') {
-    throw new AppError('Invalid mode. Only image is supported.', 400);
-  }
-
-  return runPipeline({
-    userId,
-    workspace,
-    modelId:
-      body.modelId ||
-      parent.modelId ||
-      prev.modelId ||
-      defaultModelIdForMode('image'),
-    formatId:
-      body.formatId !== undefined ? body.formatId : parent.formatId || prev.formatId,
-    styleId:
-      body.style !== undefined || body.styleId !== undefined
-        ? body.style || body.styleId
-        : parent.styleId || prev.styleId,
-    prompt: body.prompt !== undefined ? body.prompt : parent.prompt || prev.prompt,
-    brandPalette:
-      body.brandPalette !== undefined ? body.brandPalette : prev.brandPalette,
-    name: body.name,
-    action: 'regenerate',
-    parentId: parent.id,
-    rootId: parent.rootId || parent.id,
-    rateLimitFn: rateLimit.assertRegenerateAllowed,
-    contextId: inheritedContextId,
-    parentSnapshot: prev.contextSnapshot || null,
-  });
-}
-
-async function tweak({ userId, workspace, generationId, instruction }) {
+async function runTweakOnParent({
+  userId,
+  workspace,
+  parent,
+  instruction,
+  editPrompt,
+  threadId = null,
+}) {
   if (!instruction || !String(instruction).trim()) {
     throw new AppError('instruction is required', 400);
   }
-
-  const parent = requireImageGeneration(
-    await imageGenDao.findById(generationId, workspace.id)
-  );
 
   const model = resolveModel(parent.modelId) || resolveModel('gpt-image-1');
   const format = parent.formatId
@@ -364,9 +545,10 @@ async function tweak({ userId, workspace, generationId, instruction }) {
 
   const sourceBuffer = await getObjectBuffer(parent.s3Key);
   const openaiSize = openaiSizeForFormat(format, 'gpt-image-1');
+  const openaiInstruction = String(editPrompt || instruction).trim();
   const edited = await editImage({
     imageBuffer: sourceBuffer,
-    instruction: String(instruction).trim(),
+    instruction: openaiInstruction,
     model: 'gpt-image-1',
     quality: model.quality === 'high' ? 'high' : 'medium',
     size: openaiSize,
@@ -395,6 +577,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
       formatId: format?.id || null,
       action: 'tweak',
       parentId: parent.id,
+      threadId: threadId || parent.threadId || null,
     },
   });
 
@@ -429,6 +612,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
     action: 'tweak',
     assetId: asset.id,
     contextId: parent.contextId || prev.contextId || null,
+    threadId: threadId || parent.threadId || null,
     s3Key: asset.key,
     url: asset.url,
     openaiSize,
@@ -449,6 +633,7 @@ async function tweak({ userId, workspace, generationId, instruction }) {
       parentId: parent.id,
       action: 'tweak',
       modelId: model.id,
+      threadId: threadId || parent.threadId || null,
     },
   });
 
@@ -469,6 +654,238 @@ async function tweak({ userId, workspace, generationId, instruction }) {
   };
 }
 
+async function generate({ userId, workspace, body }) {
+  const mode = body.mode || 'image';
+  if (mode !== 'image') {
+    throw new AppError('Invalid mode. Only image is supported.', 400);
+  }
+  await assertFolderInWorkspace(body.folderId, workspace.id);
+
+  const result = await runPipeline({
+    userId,
+    workspace,
+    modelId: defaultModelIdForMode(mode, body.modelId),
+    formatId: body.formatId,
+    styleId: body.style || body.styleId,
+    prompt: body.prompt,
+    brandPalette: body.brandPalette,
+    name: body.name,
+    action: 'generate',
+    parentId: null,
+    rootId: null,
+    rateLimitFn: rateLimit.assertGenerateAllowed,
+    contextId: body.contextId || null,
+    parentSnapshot: null,
+  });
+
+  const thread = await createThreadForGeneration({
+    workspace,
+    folderId: body.folderId,
+    userId,
+    generation: result.generation,
+    prompt: body.prompt,
+  });
+
+  return withThreadPayload(result, thread, workspace.id);
+}
+
+async function regenerate({ userId, workspace, generationId, body = {} }) {
+  const parent = requireImageGeneration(
+    await imageGenDao.findById(generationId, workspace.id)
+  );
+
+  const prev = parent.request || {};
+  const inheritedContextId =
+    body.contextId !== undefined
+      ? body.contextId || null
+      : parent.contextId || prev.contextId || null;
+
+  if (body.mode && body.mode !== 'image') {
+    throw new AppError('Invalid mode. Only image is supported.', 400);
+  }
+
+  const thread = await ensureThreadForParent({ parent, workspace, userId });
+  const prompt = body.prompt !== undefined ? body.prompt : parent.prompt || prev.prompt;
+
+  const result = await runPipeline({
+    userId,
+    workspace,
+    modelId:
+      body.modelId ||
+      parent.modelId ||
+      prev.modelId ||
+      defaultModelIdForMode('image'),
+    formatId:
+      body.formatId !== undefined ? body.formatId : parent.formatId || prev.formatId,
+    styleId:
+      body.style !== undefined || body.styleId !== undefined
+        ? body.style || body.styleId
+        : parent.styleId || prev.styleId,
+    prompt,
+    brandPalette:
+      body.brandPalette !== undefined ? body.brandPalette : prev.brandPalette,
+    name: body.name,
+    action: 'regenerate',
+    parentId: parent.id,
+    rootId: parent.rootId || parent.id,
+    rateLimitFn: rateLimit.assertRegenerateAllowed,
+    contextId: inheritedContextId,
+    parentSnapshot: prev.contextSnapshot || null,
+    threadId: thread.id,
+  });
+
+  await attachHopMessages({
+    threadId: thread.id,
+    userId,
+    type: 'regenerate',
+    userContent: prompt || 'Regenerate',
+    generationId: result.generation.id,
+    creditsCharged: result.creditsCharged,
+  });
+  const updated = await advanceThreadHead(thread.id, result.generation);
+  return withThreadPayload(result, updated, workspace.id);
+}
+
+async function tweak({ userId, workspace, generationId, instruction }) {
+  const parent = requireImageGeneration(
+    await imageGenDao.findById(generationId, workspace.id)
+  );
+  const thread = await ensureThreadForParent({ parent, workspace, userId });
+
+  const result = await runTweakOnParent({
+    userId,
+    workspace,
+    parent,
+    instruction,
+    editPrompt: instruction,
+    threadId: thread.id,
+  });
+
+  await attachHopMessages({
+    threadId: thread.id,
+    userId,
+    type: 'tweak',
+    userContent: instruction,
+    generationId: result.generation.id,
+    creditsCharged: result.creditsCharged,
+  });
+  const updated = await advanceThreadHead(thread.id, result.generation);
+  return withThreadPayload(result, updated, workspace.id);
+}
+
+async function sendThreadMessage({
+  userId,
+  workspace,
+  threadId,
+  content,
+  fromGenerationId = null,
+}) {
+  if (!content || !String(content).trim()) {
+    throw new AppError('content is required', 400);
+  }
+
+  const thread = await loadThread(threadId, workspace, userId);
+  const parentId = fromGenerationId || thread.headGenerationId;
+  const parent = requireImageGeneration(
+    await imageGenDao.findById(parentId, workspace.id)
+  );
+
+  if (parent.threadId && parent.threadId !== thread.id) {
+    throw new AppError('Generation does not belong to this thread', 400);
+  }
+  if (!parent.threadId && parent.rootId && parent.rootId !== thread.rootGenerationId) {
+    const rootOk =
+      parent.id === thread.rootGenerationId || parent.rootId === thread.rootGenerationId;
+    if (!rootOk) {
+      throw new AppError('Generation does not belong to this thread', 400);
+    }
+  }
+
+  const priorRows = await messageDao.listUserMessages(thread.id, { take: 12 });
+  const priorUserTurns = [...priorRows].reverse().map((row) => row.content);
+  let editPrompt = buildChatEditInstruction({
+    originalPrompt: parent.prompt || thread.title,
+    styleId: thread.styleId || parent.styleId,
+    priorUserTurns,
+    latestInstruction: String(content).trim(),
+  });
+
+  const snapshot =
+    parent.request && typeof parent.request === 'object'
+      ? parent.request.contextSnapshot
+      : null;
+  if (snapshot?.enrichmentBlock) {
+    editPrompt = contextService.appendContextBlock(editPrompt, snapshot.enrichmentBlock);
+    if (editPrompt.length > 4000) {
+      editPrompt = editPrompt.slice(0, 4000);
+    }
+  }
+
+  const result = await runTweakOnParent({
+    userId,
+    workspace,
+    parent,
+    instruction: String(content).trim(),
+    editPrompt,
+    threadId: thread.id,
+  });
+
+  await attachHopMessages({
+    threadId: thread.id,
+    userId,
+    type: 'tweak',
+    userContent: String(content).trim(),
+    generationId: result.generation.id,
+    creditsCharged: result.creditsCharged,
+  });
+  const updated = await advanceThreadHead(thread.id, result.generation);
+  return withThreadPayload(result, updated, workspace.id);
+}
+
+async function listThreads({ userId, workspace, query = {} }) {
+  if (query.folderId) {
+    await assertFolderInWorkspace(query.folderId, workspace.id);
+  }
+  const rows = await threadDao.listThreads({
+    workspaceId: workspace.id,
+    userId,
+    isPrivate: workspace.type === 'PRIVATE',
+    folderId: query.folderId,
+    take: query.take,
+    skip: query.skip,
+  });
+  return rows.map((row) => serializeThread(row));
+}
+
+async function getThread({ userId, workspace, threadId }) {
+  const row = await loadThread(threadId, workspace, userId);
+  return serializeThread(row, { includeMessages: true });
+}
+
+async function renameThread({ userId, workspace, threadId, title }) {
+  const row = await loadThread(threadId, workspace, userId);
+  const nextTitle = String(title || '').trim();
+  if (!nextTitle) {
+    throw new AppError('title is required', 400);
+  }
+  const updated = await threadDao.updateThread(row.id, { title: nextTitle.slice(0, 255) });
+  return serializeThread(updated);
+}
+
+async function moveThread({ userId, workspace, threadId, folderId }) {
+  const row = await loadThread(threadId, workspace, userId);
+  await assertFolderInWorkspace(folderId, workspace.id);
+  const updated = await threadDao.updateThread(row.id, { folderId });
+  return serializeThread(updated);
+}
+
+async function deleteThread({ userId, workspace, threadId }) {
+  const row = await loadThread(threadId, workspace, userId);
+  await threadDao.unlinkGenerations(row.id);
+  await threadDao.deleteThread(row.id);
+  return { deleted: true };
+}
+
 async function getGeneration({ workspace, generationId }) {
   const row = await imageGenDao.findById(generationId, workspace.id);
   requireImageGeneration(row, { notFoundIfWrongMode: true });
@@ -483,6 +900,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
     take: query.take,
     skip: query.skip,
     mode: 'image',
+    threadId: query.threadId,
   });
   return rows.map(serializeGeneration);
 }
@@ -518,8 +936,15 @@ module.exports = {
   generate,
   regenerate,
   tweak,
+  sendThreadMessage,
+  listThreads,
+  getThread,
+  renameThread,
+  moveThread,
+  deleteThread,
   getGeneration,
   listGenerations,
   downloadGeneration,
+  serializeThread,
   DOWNLOAD_FORMATS,
 };

@@ -161,6 +161,54 @@ router.post(
 );
 
 router.get(
+  '/workspaces/:workspaceId/threads',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.listThreadsSchema),
+  imageGenController.listThreads
+);
+
+router.get(
+  '/workspaces/:workspaceId/threads/:threadId',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.getThreadSchema),
+  imageGenController.getThread
+);
+
+router.post(
+  '/workspaces/:workspaceId/threads/:threadId/messages',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.sendThreadMessageSchema),
+  imageGenController.sendThreadMessage
+);
+
+router.patch(
+  '/workspaces/:workspaceId/threads/:threadId',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.renameThreadSchema),
+  imageGenController.renameThread
+);
+
+router.post(
+  '/workspaces/:workspaceId/threads/:threadId/move-folder',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.moveThreadSchema),
+  imageGenController.moveThread
+);
+
+router.delete(
+  '/workspaces/:workspaceId/threads/:threadId',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.deleteThreadSchema),
+  imageGenController.deleteThread
+);
+
+router.get(
   '/workspaces/:workspaceId/generations',
   authMiddleware,
   checkWorkspaceAccess,

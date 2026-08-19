@@ -1,19 +1,25 @@
 const prisma = require('../../shared/config/prismaClient');
 
-async function countByCategory({ workspaceId, userId, isPrivate }) {
+async function countByCategory({ workspaceId, userId, isPrivate, folderId }) {
   const imageWhere = {
     workspaceId,
+    ...(folderId ? { folderId } : {}),
     ...(isPrivate && userId ? { userId } : {}),
+  };
+
+  const projectWhere = {
+    workspaceId,
+    ...(folderId ? { folderId } : {}),
   };
 
   const [video, presentation, image] = await Promise.all([
     prisma.project.count({
-      where: { workspaceId, type: 'VIDEO' },
+      where: { ...projectWhere, type: 'VIDEO' },
     }),
     prisma.project.count({
-      where: { workspaceId, type: 'PRESENTATION' },
+      where: { ...projectWhere, type: 'PRESENTATION' },
     }),
-    prisma.imageGeneration.count({
+    prisma.imageGenThread.count({
       where: imageWhere,
     }),
   ]);

@@ -13,7 +13,7 @@ function findById(id, workspaceId) {
   });
 }
 
-function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode }) {
+function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode, threadId }) {
   const limit = Math.min(Math.max(Number(take) || 20, 1), 100);
   const offset = Math.max(Number(skip) || 0, 0);
 
@@ -22,6 +22,7 @@ function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode }) {
       workspaceId,
       ...(isPrivate && userId ? { userId } : {}),
       ...(mode ? { mode } : {}),
+      ...(threadId ? { threadId } : {}),
     },
     take: limit,
     skip: offset,
@@ -40,8 +41,16 @@ function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode }) {
   });
 }
 
+function setThreadId(id, threadId) {
+  return prisma.imageGeneration.update({
+    where: { id },
+    data: { threadId },
+  });
+}
+
 module.exports = {
   createGeneration,
   findById,
   listGenerations,
+  setThreadId,
 };

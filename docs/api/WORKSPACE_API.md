@@ -16,7 +16,7 @@ All workspace routes require **`Authorization: Bearer <access_token>`**. Some ro
 
 ### Workspace library (Videos / PPT / Images)
 
-FE tabs for workspace content. **Images** here means **Image Gen** history (not `/api/assets`).
+FE tabs for workspace content. **Images** here means **Image Gen chats** (not `/api/assets` and not every hop).
 
 | | |
 |---|---|
@@ -29,9 +29,8 @@ FE tabs for workspace content. **Images** here means **Image Gen** history (not 
 | Param | Required | Notes |
 |-------|----------|--------|
 | `category` | no | Omit for tab counts. One of `video` \| `presentation` \| `image` to list items. |
-| `folderId` | no | Filter `video` / `presentation` to one folder |
+| `folderId` | no | Filter video / presentation / **image chats** to one folder |
 | `take` / `skip` | no | Pagination for `category=image` (1–100 / ≥0) |
-| `mode` | no | Image Gen only: `image` |
 
 **Without `category` (200)** – tab badges:
 
@@ -51,13 +50,15 @@ FE tabs for workspace content. **Images** here means **Image Gen** history (not 
 |------------|-----------|
 | `video` | VIDEO projects (same shape as project list) |
 | `presentation` | PRESENTATION projects + `deckStatus`, `slideCount`, `aspectRatio`, … |
-| `image` | Image Gen generations (same shape as `/api/image-gen/.../generations`) |
+| `image` | Image Gen **chats** (same shape as `GET /api/image-gen/.../threads`) |
 
 Aliases (same filters, existing domain paths):
 
 - Videos: `GET .../projects?type=VIDEO`
 - PPT: `GET .../presentations` or `GET .../projects?type=PRESENTATION`
-- Images: `GET /api/image-gen/workspaces/:workspaceId/generations`
+- Images: `GET /api/image-gen/workspaces/:workspaceId/threads?folderId=`
+
+Each image item includes `id` / `threadId`, `title`, `folderId`, `head.url`, `head.generationId` (View / Download / Open chat). Hops stay on `GET .../generations?threadId=`.
 
 Each user has exactly one **private** workspace (created on registration). Users can create additional **team** workspaces.
 
@@ -464,6 +465,7 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
         "email": "jane@example.com"
       },
       "projectCount": 3,
+      "imageThreadCount": 2,
       "sizeBytes": 52428800,
       "lastActivityAt": "2026-05-20T14:30:00.000Z"
     }
@@ -478,8 +480,9 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
 | `lastModifiedAt` | When the folder record was last updated (e.g. rename). |
 | `lastModifiedBy` | User who last updated folder metadata. |
 | `projectCount` | Number of projects in the folder. |
+| `imageThreadCount` | Number of Image Gen chats in the folder. |
 | `sizeBytes` | Sum of each project’s `storageBytes` in this folder (see projects). Shared assets referenced by multiple projects may be counted more than once. |
-| `lastActivityAt` | Latest `updatedAt` among projects in the folder (editor saves), or `null` if empty. |
+| `lastActivityAt` | Latest `updatedAt` among projects **or image chats** in the folder, or `null` if empty. |
 
 ---
 

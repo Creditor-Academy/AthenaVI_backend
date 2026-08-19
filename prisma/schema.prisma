@@ -128,6 +128,8 @@ model User {
   uploadedAssets      Asset[]              @relation("AssetUploader")
   imageGenerations    ImageGeneration[]
   imageGenContexts    ImageGenContext[]
+  imageGenThreads     ImageGenThread[]
+  imageGenMessages    ImageGenMessage[]
 
   ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
@@ -200,6 +202,7 @@ model Workspace {
   projectComments    ProjectComment[]
   imageGenerations   ImageGeneration[]
   imageGenContexts   ImageGenContext[]
+  imageGenThreads    ImageGenThread[]
   brandKits          WorkspaceBrandKit[]
 
   @@index([ownerId])
@@ -420,6 +423,7 @@ model Folder {
   updatedBy   String?
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   projects    Project[]
+  imageGenThreads ImageGenThread[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -522,6 +526,7 @@ model ImageGenContext {
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   files       ImageGenContextFile[]
   generations ImageGeneration[]
+  threads     ImageGenThread[]
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, userId])
@@ -547,6 +552,59 @@ model ImageGenContextFile {
   @@map("image_gen_context_files")
 }
 
+model ImageGenThread {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @map("workspace_id")
+  folderId           String   @map("folder_id")
+  userId             String   @map("user_id")
+  title              String
+  rootGenerationId   String   @map("root_generation_id")
+  headGenerationId   String   @map("head_generation_id")
+  contextId          String?  @map("context_id")
+  modelId            String?  @map("model_id")
+  formatId           String?  @map("format_id")
+  styleId            String?  @map("style_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder         Folder           @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context        ImageGenContext? @relation(fields: [contextId], references: [id], onDelete: SetNull)
+  rootGeneration ImageGeneration  @relation("ThreadRoot", fields: [rootGenerationId], references: [id], onDelete: Restrict)
+  headGeneration ImageGeneration  @relation("ThreadHead", fields: [headGenerationId], references: [id], onDelete: Restrict)
+  generations    ImageGeneration[] @relation("ThreadHops")
+  messages       ImageGenMessage[]
+
+  @@unique([rootGenerationId])
+  @@index([workspaceId, folderId, updatedAt])
+  @@index([workspaceId, userId])
+  @@index([folderId])
+  @@index([headGenerationId])
+  @@index([contextId])
+  @@map("image_gen_threads")
+}
+
+model ImageGenMessage {
+  id             String   @id @default(uuid())
+  threadId       String   @map("thread_id")
+  userId         String   @map("user_id")
+  role           String
+  type           String
+  content        String   @db.Text
+  generationId   String?  @map("generation_id")
+  creditsCharged Int      @default(0) @map("credits_charged")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  thread     ImageGenThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation ImageGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([generationId])
+  @@map("image_gen_messages")
+}
+
 model ImageGeneration {
   id             String  @id @default(uuid())
   workspaceId    String  @map("workspace_id")
@@ -563,6 +621,7 @@ model ImageGeneration {
   action         String
   assetId        String? @map("asset_id")
   contextId      String? @map("context_id")
+  threadId       String? @map("thread_id")
   s3Key          String  @map("s3_key")
   url            String
   openaiSize     String? @map("openai_size")
@@ -576,14 +635,19 @@ model ImageGeneration {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   asset     Asset?           @relation(fields: [assetId], references: [id], onDelete: SetNull)
   context   ImageGenContext? @relation(fields: [contextId], references: [id], onDelete: SetNull)
+  thread    ImageGenThread?  @relation("ThreadHops", fields: [threadId], references: [id], onDelete: SetNull)
   parent    ImageGeneration? @relation("ImageGenChain", fields: [parentId], references: [id], onDelete: SetNull)
   children  ImageGeneration[] @relation("ImageGenChain")
+  messages  ImageGenMessage[]
+  threadRootFor ImageGenThread[] @relation("ThreadRoot")
+  threadHeadFor ImageGenThread[] @relation("ThreadHead")
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, userId])
   @@index([rootId])
   @@index([assetId])
   @@index([contextId])
+  @@index([threadId])
   @@map("image_generations")
 }
 

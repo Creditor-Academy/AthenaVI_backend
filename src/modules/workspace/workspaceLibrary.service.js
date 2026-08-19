@@ -36,12 +36,13 @@ function withKind(kind, item) {
   return { ...item, kind, category: kind };
 }
 
-async function getLibrarySummary({ userId, workspace }) {
+async function getLibrarySummary({ userId, workspace, query = {} }) {
   const isPrivate = workspace.type === 'PRIVATE';
   const counts = await workspaceLibraryDao.countByCategory({
     workspaceId: workspace.id,
     userId,
     isPrivate,
+    folderId: query.folderId,
   });
 
   return {
@@ -55,7 +56,7 @@ async function getLibrarySummary({ userId, workspace }) {
 
 async function listLibraryCategory({ userId, workspace, category, query = {} }) {
   const meta = assertCategory(category);
-  const { folderId, take, skip, mode } = query;
+  const { folderId, take, skip } = query;
 
   if (meta.id === 'video') {
     const projects = await projectService.listProjects(workspace.id, folderId, 'VIDEO');
@@ -76,14 +77,14 @@ async function listLibraryCategory({ userId, workspace, category, query = {} }) 
     };
   }
 
-  const generations = await imageGenService.listGenerations({
+  const threads = await imageGenService.listThreads({
     userId,
     workspace,
-    query: { take, skip, mode },
+    query: { folderId, take, skip },
   });
   return {
     category: meta.id,
-    items: generations.map((g) => withKind('image', g)),
+    items: threads.map((thread) => withKind('image', thread)),
   };
 }
 
@@ -91,7 +92,7 @@ async function getLibrary({ userId, workspace, query = {} }) {
   if (query.category) {
     return listLibraryCategory({ userId, workspace, category: query.category, query });
   }
-  return getLibrarySummary({ userId, workspace });
+  return getLibrarySummary({ userId, workspace, query });
 }
 
 module.exports = {

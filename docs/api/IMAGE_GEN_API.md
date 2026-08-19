@@ -7,9 +7,11 @@ OpenAI-only workspace image studio for **general images**. Results are saved as 
 **Auth:** `Authorization: Bearer <access_token>` on all routes.  
 **Workspace routes:** `checkWorkspaceAccess` (PRIVATE = owner; TEAM = any member).
 
-**Credits:** charged **on success only** from the workspace billing pool (PRIVATE → owner personal; TEAM → workspace). Insufficient → **402**. Downloads are free. Rate limits → **429**.
+**Credits:** charged **on success only** from the workspace billing pool (PRIVATE → owner personal; TEAM → workspace). Insufficient → **402**. Opening a saved chat, viewing, and downloads are free. Rate limits → **429**.
 
 **Mode:** `image` only. `infographic` and `social` return **400**. List/get only return `mode=image` (404 for other stored rows).
+
+**Chats:** each successful generate creates a folder-scoped **thread** (workspace → folder → image chat). Folder cards support View (head URL), Download (generation download), and Open chat. Follow-up messages edit the **latest hop** and charge like tweak.
 
 ---
 
@@ -140,6 +142,7 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 ```json
 {
   "mode": "image",
+  "folderId": "folder-uuid",
   "modelId": "gpt-image-1",
   "formatId": "square",
   "style": "cinematic",
@@ -153,6 +156,7 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 | Field | Rules |
 |-------|--------|
 | `mode` | `image` only (default `image`). Other values **400**. |
+| `folderId` | **Required.** Folder in this workspace. The saved chat lives here. |
 | `modelId` | Optional. Default **`gpt-image-1`**. |
 | `formatId` | Optional `square` / `landscape` / `portrait`. Default **`square`**. |
 | `prompt` | **Required**. Max **16,000** chars. |
@@ -163,13 +167,64 @@ Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE works
 
 `mode` other than `image`, social `formatId`s, and leftover fields (`headline`, `subheadline`, `textMode`, `infographic`) return **400**.
 
-**Pipeline:** style-wrapped prompt → OpenAI `gpt-image-1` → cover-crop to format → PNG asset.
+**Pipeline:** style-wrapped prompt → OpenAI `gpt-image-1` → cover-crop to format → PNG asset → **thread** in `folderId`.
 
-**Response `data`:** `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`.
+**Response `data`:** `{ generation, asset, creditsCharged, downloadFormats, thread, actions }`.
 
-`generation` includes `contextId` and `contextPreview` when context was used. A snapshot is stored in `generation.request.contextSnapshot` for regenerate.
+`actions`: `{ viewUrl, downloadPath, threadId }` for View / Download / Open chat.
+
+`generation` includes `threadId`, `contextId`, and `contextPreview` when context was used. A snapshot is stored in `generation.request.contextSnapshot` for regenerate.
 
 Master file is always **PNG** on S3.
+
+---
+
+## Folder chats (threads)
+
+Hierarchy: **workspace → folder → image chat**. One library row per conversation (not per hop).
+
+### List threads
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/threads` |
+| **Query** | `folderId` (optional), `take` (1–100), `skip` |
+
+**Response (200)** – `data.threads[]`: `id`, `threadId` (same as `id`), `title`, `folderId`, `head` (`generationId`, `url`, `asset`), `messageCount`, `versionCount`, `updatedAt`, `downloadFormats`.
+
+PRIVATE: current user’s threads only. Same payload as `GET /api/workspaces/:workspaceId/library?category=image&folderId=`.
+
+### Get thread
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` |
+
+**Response (200)** – `data.thread` including `messages[]` (`role` `user`\|`assistant`, `type`, `content`, `generationId`, `url`) and `head`. **No credit charge.**
+
+### Send message
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/messages` |
+| **Status** | **201** |
+
+```json
+{ "content": "Make the background darker", "fromGenerationId": "optional-hop-uuid" }
+```
+
+Edits the **head** PNG (or `fromGenerationId` if it belongs to the thread) via `images.edit`. Composes OpenAI instruction from original prompt + prior user turns + this line. Charges **tweak AC** (same as model). Rate limit: regenerate/tweak bucket.
+
+### Rename / move / delete
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `PATCH` | `.../threads/:threadId` | Body `{ "title" }`. Free. |
+| `POST` | `.../threads/:threadId/move-folder` | Body `{ "folderId" }`. FK only (no S3 rewrite). Free. |
+| `DELETE` | `.../threads/:threadId` | Unlinks generations; **does not** delete Assets. Free. |
 
 ---
 
@@ -179,7 +234,7 @@ Master file is always **PNG** on S3.
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations` |
-| **Query** | `take` (1–100), `skip`, `mode` (`image` only, optional — list is always image) |
+| **Query** | `take` (1–100), `skip`, `mode` (`image` only, optional), `threadId` (optional — hops in one chat) |
 
 | | |
 |---|---|
@@ -198,7 +253,7 @@ PRIVATE workspaces only return the current user’s generations. Non-image store
 | **Path** | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` |
 | **Status** | **201** |
 
-Body fields optional — omitted fields reuse the parent generation’s request (including `contextId`). Parent must be `mode=image` (**400** otherwise). Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+Body fields optional — omitted fields reuse the parent generation’s request (including `contextId`). Parent must be `mode=image` (**400** otherwise). Creates a new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId` / `threadId`. Charges again. Appends chat messages and advances the thread **head**.
 
 If the live context expired, regenerate still applies **text** context from `request.contextSnapshot` (visual reference images require a live/pinned context).
 
@@ -216,7 +271,7 @@ If the live context expired, regenerate still applies **text** context from `req
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI **image edit** on the parent PNG. Parent must be `mode=image` (**400** otherwise). Charges model AC. Context bundles are **not** applied on tweak (v1). `instruction` max **4,000** chars.
+Uses OpenAI **image edit** on the parent PNG. Parent must be `mode=image` (**400** otherwise). Charges model AC. Appends the instruction to the saved chat and advances **head**. Prefer `POST .../threads/:threadId/messages` for conversation-aware edits. `instruction` max **4,000** chars.
 
 ---
 

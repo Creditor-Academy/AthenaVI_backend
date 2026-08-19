@@ -26,7 +26,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |
 | [STOCK_API.md](STOCK_API.md) | `/api/stock` | Stock library search (Pexels, Unsplash, Pixabay) and import |
-| [IMAGE_GEN_API.md](IMAGE_GEN_API.md) | `/api/image-gen` | AI image studio: generate, regen/tweak, download |
+| [IMAGE_GEN_API.md](IMAGE_GEN_API.md) | `/api/image-gen` | AI image studio: folder chats, generate, regen/tweak, download |
 | [CREDITS_API.md](CREDITS_API.md) | `/api/credits` | Balances, history, estimates, TEAM allocation |
 | [SUPERADMIN_API.md](SUPERADMIN_API.md) | `/api/superadmin` | Platform credit + storage admin (superadmin only) |
 | [HEYGEN_API.md](HEYGEN_API.md) | `/api/heygen` | User-scoped avatars, voices, previews |
@@ -42,7 +42,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + packs + Brand Kit** — AI/blank/pack/template, canvas, export, admin |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
-| [IMAGE_GEN_FRONTEND_INTEGRATION.md](../IMAGE_GEN_FRONTEND_INTEGRATION.md) | AI image studio (models, regen/tweak, download) |
+| [IMAGE_GEN_FRONTEND_INTEGRATION.md](../IMAGE_GEN_FRONTEND_INTEGRATION.md) | AI image studio (folder chats, models, regen/tweak, download) |
 | [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |
 | [PRESENTATION_CREDITS_FRONTEND.md](../PRESENTATION_CREDITS_FRONTEND.md) | AI PPT credits: `ppt_*` features, outline reconcile, charge-on-success, estimate |
 | [PRESENTATION_PROMPTS.md](../PRESENTATION_PROMPTS.md) | Prompt bundle version, prompt files, when to bump |

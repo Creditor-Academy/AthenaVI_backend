@@ -142,8 +142,14 @@
 | POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |
 | GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
 | DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Delete unpinned context |
-| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset |
-| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image generations (`take`/`skip`/`mode`) |
+| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset + folder chat (`folderId` required) |
+| GET | `/api/image-gen/workspaces/:workspaceId/threads` | Bearer + workspace access | List image chats (`folderId`/`take`/`skip`) |
+| GET | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Get chat + messages (free) |
+| POST | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/messages` | Bearer + workspace access | Chat send → tweak latest hop (charges) |
+| PATCH | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Rename chat |
+| POST | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/move-folder` | Bearer + workspace access | Move chat to another folder |
+| DELETE | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Delete chat (keeps assets) |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image hops (`take`/`skip`/`mode`/`threadId`) |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |

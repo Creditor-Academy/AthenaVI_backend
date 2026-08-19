@@ -21,6 +21,7 @@ const contextParams = Joi.object({
 
 const generateBody = Joi.object({
   mode: Joi.string().valid('image').default('image'),
+  folderId: Joi.string().uuid().required(),
   modelId: Joi.string().trim().max(64).allow('', null).optional(),
   formatId: Joi.string().trim().max(64).allow(null, '').optional(),
   style: Joi.string().trim().max(64).allow(null, '').optional(),
@@ -72,7 +73,52 @@ const listGenerationsSchema = Joi.object({
     take: Joi.number().integer().min(1).max(100).optional(),
     skip: Joi.number().integer().min(0).optional(),
     mode: Joi.string().valid('image').optional(),
+    threadId: Joi.string().uuid().optional(),
   }),
+});
+
+const threadParams = Joi.object({
+  workspaceId: Joi.string().uuid().required(),
+  threadId: Joi.string().uuid().required(),
+});
+
+const listThreadsSchema = Joi.object({
+  params: workspaceParams,
+  query: Joi.object({
+    folderId: Joi.string().uuid().optional(),
+    take: Joi.number().integer().min(1).max(100).optional(),
+    skip: Joi.number().integer().min(0).optional(),
+  }),
+});
+
+const getThreadSchema = Joi.object({
+  params: threadParams,
+});
+
+const sendThreadMessageSchema = Joi.object({
+  params: threadParams,
+  body: Joi.object({
+    content: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).required(),
+    fromGenerationId: Joi.string().uuid().optional(),
+  }),
+});
+
+const renameThreadSchema = Joi.object({
+  params: threadParams,
+  body: Joi.object({
+    title: Joi.string().trim().min(1).max(255).required(),
+  }),
+});
+
+const moveThreadSchema = Joi.object({
+  params: threadParams,
+  body: Joi.object({
+    folderId: Joi.string().uuid().required(),
+  }),
+});
+
+const deleteThreadSchema = Joi.object({
+  params: threadParams,
 });
 
 const getGenerationSchema = Joi.object({
@@ -126,4 +172,10 @@ module.exports = {
   createContextSchema,
   getContextSchema,
   deleteContextSchema,
+  listThreadsSchema,
+  getThreadSchema,
+  sendThreadMessageSchema,
+  renameThreadSchema,
+  moveThreadSchema,
+  deleteThreadSchema,
 };

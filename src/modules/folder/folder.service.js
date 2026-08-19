@@ -3,6 +3,7 @@ const messages = require('../../shared/utils/messages');
 const { attachUsers } = require('../../shared/utils/attachUsers');
 const { sumPrismaAggregate } = require('../../shared/utils/byteSize');
 const folderDao = require('./folder.dao');
+const threadDao = require('../imageGen/imageGen.thread.dao');
 
 const FOLDER_USER_FIELD_MAP = [
   { sourceField: 'createdBy', targetField: 'owner' },
@@ -25,6 +26,7 @@ async function validateWorkspaceAccess(workspaceId, userId) {
 
 function formatFolderBase(folder, stats) {
   const projectCount = stats?.projectCount ?? 0;
+  const imageThreadCount = stats?.imageThreadCount ?? 0;
   const sizeBytes = stats?.sizeBytes ?? 0;
   const lastActivityAt = stats?.lastActivityAt ?? null;
 
@@ -37,19 +39,38 @@ function formatFolderBase(folder, stats) {
     createdAt: folder.createdAt,
     lastModifiedAt: folder.updatedAt,
     projectCount,
+    imageThreadCount,
     sizeBytes,
     lastActivityAt,
   };
 }
 
-function buildStatsMap(statsRows) {
+function mergeFolderStats(projectRows, threadRows) {
   const map = new Map();
-  for (const row of statsRows) {
+  for (const row of projectRows || []) {
     map.set(row.folderId, {
       projectCount: row._count.id,
+      imageThreadCount: 0,
       sizeBytes: sumPrismaAggregate(row._sum.storageBytes),
       lastActivityAt: row._max.updatedAt ?? null,
     });
+  }
+  for (const row of threadRows || []) {
+    const existing = map.get(row.folderId) || {
+      projectCount: 0,
+      imageThreadCount: 0,
+      sizeBytes: 0,
+      lastActivityAt: null,
+    };
+    existing.imageThreadCount = row._count.id;
+    const threadUpdated = row._max.updatedAt ?? null;
+    if (
+      threadUpdated &&
+      (!existing.lastActivityAt || threadUpdated > existing.lastActivityAt)
+    ) {
+      existing.lastActivityAt = threadUpdated;
+    }
+    map.set(row.folderId, existing);
   }
   return map;
 }
@@ -67,11 +88,12 @@ async function enrichFolders(folders, statsMap) {
 
 async function listFolders(workspaceId, userId) {
   await validateWorkspaceAccess(workspaceId, userId);
-  const [folders, statsRows] = await Promise.all([
+  const [folders, statsRows, threadStatsRows] = await Promise.all([
     folderDao.listFoldersByWorkspace(workspaceId),
     folderDao.getFolderProjectStatsByWorkspace(workspaceId),
+    threadDao.getFolderThreadStatsByWorkspace(workspaceId),
   ]);
-  const statsMap = buildStatsMap(statsRows);
+  const statsMap = mergeFolderStats(statsRows, threadStatsRows);
   return enrichFolders(folders, statsMap);
 }
 
@@ -89,8 +111,11 @@ async function createFolder(workspaceId, userId, name) {
 
 const renameFolder = async (folderId, userId, name) => {
   const folder = await folderDao.renameFolder(folderId, name, userId);
-  const statsRows = await folderDao.getFolderProjectStatsByWorkspace(folder.workspaceId);
-  const statsMap = buildStatsMap(statsRows);
+  const [statsRows, threadStatsRows] = await Promise.all([
+    folderDao.getFolderProjectStatsByWorkspace(folder.workspaceId),
+    threadDao.getFolderThreadStatsByWorkspace(folder.workspaceId),
+  ]);
+  const statsMap = mergeFolderStats(statsRows, threadStatsRows);
   const [enriched] = await enrichFolders([folder], statsMap);
   return enriched;
 };
