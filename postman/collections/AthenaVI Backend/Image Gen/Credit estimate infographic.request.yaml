@@ -1,7 +1,0 @@
-$kind: http-request
-description: Omitting modelId uses gpt-image-1-hd (default 14 AC = 12 + 2 infographic surcharge).
-url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/estimate?mode=infographic"
-method: GET
-queryParams:
-  mode: infographic
-order: 2010

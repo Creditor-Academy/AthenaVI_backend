@@ -5,7 +5,7 @@ This document is the **single source** for frontend engineers integrating three 
 
 1. **Brand Kit** — Canva-style workspace branding (colors, fonts, logos, photos, voice)
 2. **Presentations (AI PPT)** — create / outline / generate / canvas edit / export, including **deck packs** and Brand Kit apply
-3. **Image Gen** — AI image studio (general, infographic, social) with regenerate / tweak / download
+3. **Image Gen** — AI image studio (general image) with regenerate / tweak / download
 
 Everything needed for integration is **in this file**: auth, roles, envelopes, request/response shapes, flows, credits, caps, seeded catalogs, superadmin template CRUD, and UI checklists. Do not rely on other docs to ship these three features.
 
@@ -117,7 +117,7 @@ Insufficient → **402**. Refresh balances after successful AI/export charges. S
 ┌─────────────────────────────────────────────────────────────────┐
 │ Image Gen (separate studio, same workspace + credits)            │
 │  /api/image-gen/...  → Asset (source: ai_gen)                    │
-│  Optional: brandPalette / headlines inspired by Brand Kit colors │
+│  Optional: brandPalette inspired by Brand Kit colors             │
 │  Outputs usable in assets library; not auto-wired into PPT yet   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -949,7 +949,7 @@ GET    .../export/:exportId
 
 # Part 3 — Image Gen (AI image studio)
 
-OpenAI-only workspace image studio: general images, infographics, and social creatives. Results save as workspace **Assets** (`source: "ai_gen"`) and are downloadable as PNG / JPG / JPEG / PDF.
+OpenAI-only workspace image studio for **general images**. Results save as workspace **Assets** (`source: "ai_gen"`) and are downloadable as PNG / JPG / JPEG / PDF. Infographic and social modes are not offered.
 
 ## 3.1 Base path & auth
 
@@ -966,38 +966,30 @@ OpenAI-only workspace image studio: general images, infographics, and social cre
 
 ```
 Workspace → Image Gen studio
-  → mode (image | infographic | social)
-  → model + format + style
+  → model + format (square / landscape / portrait) + style
   → Generate (sync) → Asset + generation row
   → Regenerate | Tweak | Download | Library (already saved)
 ```
 
-Versions share `rootId` / `parentId` chains.
+Versions share `rootId` / `parentId` chains. `mode` is `image` only.
 
 ## 3.3 Catalogs (load once)
 
 ### Models — `GET /api/image-gen/models`
 
-`data.models[]`: `id`, `name`, `description`, `modes`, `recommended`, `recommendedForModes`, `supportsEdit`, `creditEstimate`.
+`data.models[]`: `id`, `name`, `description`, `modes` (`["image"]`), `recommended`, `supportsEdit`, `creditEstimate`.
 
 | id | Notes |
 |----|--------|
-| `gpt-image-1` | Default for image/social (medium) |
-| `gpt-image-1-hd` | Default for infographic (`recommendedForModes`); HD (higher AC) |
-| `dall-e-3` | Compat alias → GPT Image HD; image/social only |
-
-Respect each model’s `modes` array (e.g. hide DALL·E for `infographic` if not listed). Preselect Infographic from `recommendedForModes`.
+| `gpt-image-1` | Default (medium) |
+| `gpt-image-1-hd` | HD (higher AC) |
+| `dall-e-3` | Compat alias → GPT Image HD |
 
 ### Formats — `GET /api/image-gen/formats`
 
-`data.formats[]`: `id`, `name`, `category` (`generic` \| `social`), `width`, `height`, `safeZone`, `overlayInsets`, `overlayAlign`, `recommendedTextMode`.
+`data.formats[]`: `id`, `name`, `category` (`generic`), `width`, `height`, `safeZone`.
 
-**Social ids:**  
-`linkedin_banner`, `linkedin_post`, `instagram_post`, `instagram_story`, `instagram_landscape`, `facebook_post`, `facebook_cover`, `x_post`, `x_header`, `youtube_thumbnail`
-
-**Generic:** `square`, `landscape`, `portrait` (`overlayInsets` / `overlayAlign` / `recommendedTextMode` are `null`)
-
-Social: default `textMode` is **overlay**. Preselect `baked` only when `recommendedTextMode === "baked"` (`youtube_thumbnail`).
+**Generic:** `square`, `landscape`, `portrait`. Default when omitted: **`square`**.
 
 ### Styles — `GET /api/image-gen/styles`
 
@@ -1005,10 +997,9 @@ Social: default `textMode` is **overlay**. Preselect `baked` only when `recommen
 
 ## 3.4 Credit estimate
 
-`GET /api/image-gen/workspaces/:workspaceId/estimate?modelId=&mode=&tweak=`
+`GET /api/image-gen/workspaces/:workspaceId/estimate?modelId=&mode=image&tweak=`
 
-`mode`: `image` \| `infographic` \| `social`  
-`tweak`: `true` / `false`
+`mode`: `image` only. `tweak`: `true` / `false`.
 
 Response: `{ athenaCredits, breakdown }`.
 
@@ -1019,8 +1010,6 @@ Response: `{ athenaCredits, breakdown }`.
 | `image_gen_gpt_image` | 6 |
 | `image_gen_gpt_image_hd` | 12 |
 | `image_gen_dall_e_3` | 12 (alias → HD quality) |
-| Infographic surcharge | +2 |
-| Social surcharge | +1 |
 
 Requires server `OPENAI_API_KEY`. Rate limits return **429**.
 
@@ -1043,18 +1032,10 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 {
   "mode": "image",
   "modelId": "gpt-image-1",
-  "formatId": "instagram_post",
+  "formatId": "square",
   "style": "cinematic",
   "prompt": "Product launch visual for Athena VI",
-  "headline": "Create faster",
-  "subheadline": "AI instructor studio",
   "brandPalette": ["#0B1F3A", "#3DDC97"],
-  "textMode": "overlay",
-  "infographic": {
-    "layout": "process",
-    "title": "Onboarding",
-    "sections": [{ "title": "Sign up", "bullets": ["Email", "Verify"] }]
-  },
   "name": "launch.png",
   "contextId": "optional-context-uuid"
 }
@@ -1062,12 +1043,10 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 
 | Field | Rules |
 |-------|--------|
-| `mode` | `image` \| `infographic` \| `social` (default `image`) |
-| `modelId` | Optional. Infographic default `gpt-image-1-hd`; image/social default `gpt-image-1`. |
-| `formatId` | **Required** for `social`. Optional aspect for `image`. Infographic default `landscape`. |
-| `prompt` | Required unless `infographic.sections` provided, or social with `headline`/`subheadline`. Max **16,000** chars. Social: visible copy in `headline`/`subheadline`. |
-| `textMode` | Social only: `overlay` (service default if omitted) \| `baked`. |
-| `infographic` | Optional: `title` 200; **24** sections; section `content` 8,000; bullets 20 × 1,000 |
+| `mode` | `image` only (default `image`) |
+| `modelId` | Optional. Default `gpt-image-1`. |
+| `formatId` | Optional `square` / `landscape` / `portrait`. Default `square`. |
+| `prompt` | **Required**. Max **16,000** chars. |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
 | `brandPalette` | Optional hex list — can mirror Brand Kit colors in UI |
@@ -1076,7 +1055,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats: ["png","jpg","jpeg","pdf"] }`
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`. Infographic also returns `generation.infographicQuality` (`passed`, `retried`, `issues`, `suggestedTweak`). Social overlay returns `generation.socialOverlay`; baked returns `generation.socialQuality`. Overlay/wipe/baked retry are not extra AC.
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`.
 
 ## 3.6 List / get generations
 
@@ -1085,13 +1064,13 @@ GET /api/image-gen/workspaces/:workspaceId/generations?take=&skip=
 GET /api/image-gen/workspaces/:workspaceId/generations/:generationId
 ```
 
-PRIVATE workspaces only return the current user’s generations.
+List is always `mode=image`. Get of a non-image row → **404**. PRIVATE workspaces only return the current user’s generations.
 
 ## 3.7 Regenerate
 
 `POST .../generations/:generationId/regenerate` → **201**
 
-Body fields optional — omitted fields reuse parent request. Creates new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+Body fields optional — omitted fields reuse parent request. Parent must be `mode=image` (**400** otherwise). Creates new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
 
 ## 3.8 Tweak
 
@@ -1101,13 +1080,13 @@ Body fields optional — omitted fields reuse parent request. Creates new genera
 { "instruction": "Make the background darker and move the logo left" }
 ```
 
-Uses OpenAI image edit on the parent PNG. Charges model AC (no mode surcharge). `instruction` max **4,000** chars. Social overlay is **not** re-applied on Tweak — change headline via Regenerate.
+Uses OpenAI image edit on the parent PNG. Parent must be `mode=image`. Charges model AC. `instruction` max **4,000** chars.
 
 ## 3.9 Download
 
 `GET .../generations/:generationId/download?format=png|jpg|jpeg|pdf`
 
-Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.**
+Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.** Non-image rows → **404**.
 
 | format | Content-Type |
 |--------|----------------|
@@ -1131,37 +1110,27 @@ GET /api/assets/:workspaceId?source=ai_gen
 
 ### A — General image
 
-Mode `image`, optional `formatId` (`square`/`landscape`/`portrait`), `style`, `prompt` → generate → preview / download.
+Optional `formatId` (`square`/`landscape`/`portrait`), `style`, required `prompt` → generate → preview / download.
 
-### B — Infographic
+### B — Iterate
 
-Mode `infographic`. Preselect `gpt-image-1-hd` + `landscape` (14 AC). Form: `infographic.layout`, `title`, `sections[]` (up to 24), optional `brandPalette` + prompt (max 16,000) → generate (allow 90–180s) → PNG/PDF. If `infographicQuality.passed === false`, show a review banner.
+Regenerate (edited params) or Tweak (`instruction` modal). Parent must be image.
 
-### C — Social creative
-
-Mode `social`, required `formatId`. Put visible copy in `headline` / `subheadline`. Default `textMode: overlay` (PNG already typeset after cover-crop). Preselect `baked` only when `recommendedTextMode === "baked"`. Always-on overlay hint. Numbered lists → Infographic. Change copy via Regenerate (Tweak does not re-overlay). If `socialQuality.passed === false`, show a review banner.
-
-### D — Iterate
-
-Regenerate (edited params) or Tweak (`instruction` modal).
-
-### E — Brand Kit optional polish
+### C — Brand Kit optional polish
 
 When user has a default Brand Kit, prefill `brandPalette` from kit colors and suggest brand voice keywords in the prompt — Image Gen does not auto-load the kit; the UI can bridge them.
 
 ## 3.12 Image Gen UI checklist
 
 - [ ] Load `/models`, `/formats`, `/styles` once
-- [ ] Model picker (default `gpt-image-1`; Infographic preselect `gpt-image-1-hd` via `recommendedForModes`)
-- [ ] Mode tabs: Image / Infographic / Social
-- [ ] Social → format chips `category === "social"`; default overlay; baked only if `recommendedTextMode === "baked"`
-- [ ] Always-on social overlay hint; `socialQuality` banner when baked fails
-- [ ] Estimate on model/mode change
-- [ ] Generate with long timeout + loading state
+- [ ] Model picker (default `gpt-image-1`)
+- [ ] Formats: square / landscape / portrait
+- [ ] Estimate on model change
+- [ ] Generate with required prompt, long timeout + loading state
 - [ ] Preview; Regenerate; Tweak modal; Download menu
 - [ ] History list with version chains (`rootId`)
 - [ ] Library filter `source=ai_gen`
-- [ ] Handle 400 / 402 / 429 / 502–503
+- [ ] Handle 400 / 402 / 404 / 429 / 502–503
 - [ ] Optional: prefill palette from Brand Kit
 
 ## 3.13 Image Gen route map
@@ -1325,13 +1294,13 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 5. Fix failed images via regenerate `target: image`  
 6. Export  
 
-## Journey 4 — Image studio for social
+## Journey 4 — Image studio
 
 1. Open Image Gen  
-2. Mode social → Instagram post → `headline` + default overlay → generate  
-3. PNG already has Sharp typeset copy; download JPG  
+2. Pick square / landscape / portrait + prompt → generate  
+3. Download PNG/JPG  
 4. Asset already in library (`ai_gen`)  
-5. To change headline, Regenerate (not Tweak)  
+5. Tweak or Regenerate to iterate  
 
 ## Journey 5 — Superadmin ships a new pack
 
@@ -1370,7 +1339,7 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 - [ ] Caps 20 / 40 / 50 shown in UI  
 
 ### Image Gen
-- [ ] Catalogs + modes + estimate  
+- [ ] Catalogs + estimate  
 - [ ] Sync generate UX  
 - [ ] Regenerate / tweak / download  
 - [ ] History + library filter  

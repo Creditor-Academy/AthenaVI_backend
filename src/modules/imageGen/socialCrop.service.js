@@ -4,8 +4,7 @@ const CONTAIN_BACKGROUND = { r: 250, g: 250, b: 252, alpha: 1 };
 
 /**
  * Fit buffer to exact format dimensions; always output PNG.
- * Default `cover` is for social full-bleed. Infographics should pass
- * `fit: 'contain'` so step rows are not clipped at the edges.
+ * Default `cover` fills the canvas (generic square/landscape/portrait).
  *
  * @param {Buffer} buffer
  * @param {{ width: number, height: number } | null} format

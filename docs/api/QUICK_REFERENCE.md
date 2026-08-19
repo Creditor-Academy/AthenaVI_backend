@@ -136,7 +136,7 @@
 | GET | `/api/stock/search` | Bearer | Search stock (`q`, `type=photo\|video`, `provider=pexels\|unsplash\|pixabay\|all`, `page`, `perPage`) |
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
 | GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog |
-| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (social + generic) |
+| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
 | GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
 | POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |

@@ -4,7 +4,6 @@ const {
   IMAGE_GEN_FEATURE,
   getFlatAc,
   getModelAc,
-  getModeSurcharge,
 } = require('../../shared/config/imageGenCreditPricing');
 const { estimateCredits } = require('./catalogs/models');
 
@@ -63,6 +62,5 @@ module.exports = {
   chargeFlat,
   getFlatAc,
   getModelAc,
-  getModeSurcharge,
   estimateCredits,
 };

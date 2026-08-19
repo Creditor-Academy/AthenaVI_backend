@@ -1,7 +1,7 @@
 $kind: http-request
-url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/estimate?modelId=gpt-image-1&mode=social"
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/estimate?modelId=gpt-image-1&mode=image"
 method: GET
 queryParams:
   modelId: gpt-image-1
-  mode: social
+  mode: image
 order: 2000

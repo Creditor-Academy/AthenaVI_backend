@@ -1,10 +1,10 @@
 $kind: collection
 description: |-
-  AI Image Gen (OpenAI): models/formats/styles catalogs, context bundles (docs/refs), generate (image/infographic/social), regenerate, tweak, download (png/jpg/pdf).
+  AI Image Gen (OpenAI): models/formats/styles catalogs, context bundles (docs/refs), generate (image), regenerate, tweak, download (png/jpg/pdf).
 
   Requires `OPENAI_API_KEY`. Charges workspace credits on success (context create is free). Downloads are free.
 
-  Infographic default model is `gpt-image-1-hd` (14 AC) when `modelId` is omitted. Prompt max is 16,000 chars. Infographic structured form: up to 24 sections.
+  Mode is `image` only. Prompt is required (max 16,000 chars). Formats: square, landscape, portrait.
 
   After generate/create-context, test scripts save `generationId` / `imageGenContextId`.
 auth:

@@ -1,8 +1,4 @@
-const {
-  IMAGE_GEN_FEATURE,
-  getModelAc,
-  getModeSurcharge,
-} = require('../../../shared/config/imageGenCreditPricing');
+const { IMAGE_GEN_FEATURE, getModelAc } = require('../../../shared/config/imageGenCreditPricing');
 
 const MODELS = Object.freeze([
   {
@@ -12,21 +8,19 @@ const MODELS = Object.freeze([
     openaiModel: 'gpt-image-1',
     quality: 'medium',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE,
-    modes: ['image', 'infographic', 'social'],
+    modes: ['image'],
     recommended: true,
-    recommendedForModes: ['image', 'social'],
     supportsEdit: true,
   },
   {
     id: 'gpt-image-1-hd',
     name: 'GPT Image HD',
-    description: 'Same model at high quality — default for infographics; best for social banners.',
+    description: 'Same model at high quality.',
     openaiModel: 'gpt-image-1',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE_HD,
-    modes: ['image', 'infographic', 'social'],
+    modes: ['image'],
     recommended: false,
-    recommendedForModes: ['infographic'],
     supportsEdit: true,
   },
   {
@@ -38,16 +32,13 @@ const MODELS = Object.freeze([
     openaiModel: 'gpt-image-1',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.DALL_E_3,
-    modes: ['image', 'social'],
+    modes: ['image'],
     recommended: false,
-    recommendedForModes: [],
     supportsEdit: true,
   },
 ]);
 
-const MODEL_BY_ID = Object.freeze(
-  Object.fromEntries(MODELS.map((m) => [m.id, m]))
-);
+const MODEL_BY_ID = Object.freeze(Object.fromEntries(MODELS.map((m) => [m.id, m])));
 
 function listModels() {
   return MODELS.map((m) => ({
@@ -56,7 +47,6 @@ function listModels() {
     description: m.description,
     modes: m.modes,
     recommended: m.recommended,
-    recommendedForModes: m.recommendedForModes || [],
     supportsEdit: m.supportsEdit,
     creditEstimate: getModelAc(m.id),
   }));
@@ -65,42 +55,24 @@ function listModels() {
 function defaultModelIdForMode(mode, modelId) {
   const trimmed = modelId != null ? String(modelId).trim() : '';
   if (trimmed) return trimmed;
-  if (mode === 'infographic') return 'gpt-image-1-hd';
   return 'gpt-image-1';
 }
 
 function resolveModel(modelId) {
   const id = modelId || 'gpt-image-1';
-  const model = MODEL_BY_ID[id];
-  if (!model) {
-    return null;
-  }
-  return model;
+  return MODEL_BY_ID[id] || null;
 }
 
 function estimateCredits({ modelId, mode, isTweak = false }) {
-  const resolvedMode = mode || 'image';
-  const resolvedModelId = defaultModelIdForMode(resolvedMode, modelId);
+  const resolvedModelId = defaultModelIdForMode(mode || 'image', modelId);
   const base = getModelAc(resolvedModelId);
-  if (isTweak) {
-    return {
-      athenaCredits: base,
-      breakdown: {
-        modelId: resolvedModelId,
-        modelAc: base,
-        surcharge: 0,
-        mode: 'tweak',
-      },
-    };
-  }
-  const surcharge = getModeSurcharge(resolvedMode);
   return {
-    athenaCredits: base + surcharge,
+    athenaCredits: base,
     breakdown: {
       modelId: resolvedModelId,
       modelAc: base,
-      surcharge,
-      mode: resolvedMode,
+      surcharge: 0,
+      mode: isTweak ? 'tweak' : 'image',
     },
   };
 }

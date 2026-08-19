@@ -31,7 +31,7 @@ FE tabs for workspace content. **Images** here means **Image Gen** history (not 
 | `category` | no | Omit for tab counts. One of `video` \| `presentation` \| `image` to list items. |
 | `folderId` | no | Filter `video` / `presentation` to one folder |
 | `take` / `skip` | no | Pagination for `category=image` (1–100 / ≥0) |
-| `mode` | no | Image Gen only: `image` \| `infographic` \| `social` |
+| `mode` | no | Image Gen only: `image` |
 
 **Without `category` (200)** – tab badges:
 

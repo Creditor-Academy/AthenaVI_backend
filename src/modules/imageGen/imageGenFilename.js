@@ -83,30 +83,18 @@ function slugifyPromptText(text) {
   return base;
 }
 
-function collectPromptSources({ prompt, headline, infographic, instruction } = {}) {
-  const sources = [prompt, headline, infographic?.title];
-  const firstSection = infographic?.sections?.[0];
-  if (firstSection) {
-    sources.push(firstSection.title, firstSection.content);
-  }
-  sources.push(instruction);
-  return sources.filter((value) => value && String(value).trim());
+function collectPromptSources({ prompt, instruction } = {}) {
+  return [prompt, instruction].filter((value) => value && String(value).trim());
 }
 
 /**
  * Display filename for AI Image Studio assets and downloads.
  * Does not affect S3 keys (those stay UUID-based).
  */
-function generateDescriptiveFilename({
-  prompt,
-  mode,
-  headline,
-  infographic,
-  instruction,
-} = {}) {
+function generateDescriptiveFilename({ prompt, mode, instruction } = {}) {
   const fallback = `athena-${mode || 'image'}.png`;
 
-  for (const source of collectPromptSources({ prompt, headline, infographic, instruction })) {
+  for (const source of collectPromptSources({ prompt, instruction })) {
     const slug = slugifyPromptText(source);
     if (slug) {
       return `${slug}.png`;
@@ -116,22 +104,13 @@ function generateDescriptiveFilename({
   return fallback;
 }
 
-function resolveAssetFilename({
-  name,
-  prompt,
-  mode,
-  headline,
-  infographic,
-  instruction,
-} = {}) {
+function resolveAssetFilename({ name, prompt, mode, instruction } = {}) {
   if (name && String(name).trim()) {
     return withPngExtension(name);
   }
   return generateDescriptiveFilename({
     prompt,
     mode,
-    headline,
-    infographic,
     instruction,
   });
 }

@@ -325,7 +325,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
 | `docs/PRESENTATION_FRONTEND_INTEGRATION.md` | Frontend PPT/canvas + templates integration (UI flows) |
-| `docs/IMAGE_GEN_FRONTEND_INTEGRATION.md` | Frontend AI image studio (models, social, regen/tweak, download) |
+| `docs/IMAGE_GEN_FRONTEND_INTEGRATION.md` | Frontend AI image studio (models, regen/tweak, download) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
 | `docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md` | Frontend notifications guide (settings, inbox, comments) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |

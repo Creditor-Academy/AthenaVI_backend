@@ -6,8 +6,6 @@ const IMAGE_GEN_FEATURE = Object.freeze({
   GPT_IMAGE: 'image_gen_gpt_image',
   GPT_IMAGE_HD: 'image_gen_gpt_image_hd',
   DALL_E_3: 'image_gen_dall_e_3',
-  INFOGRAPHIC_SURCHARGE: 'image_gen_infographic_surcharge',
-  SOCIAL_SURCHARGE: 'image_gen_social_surcharge',
   TWEAK: 'image_gen_tweak',
 });
 
@@ -16,8 +14,6 @@ const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 12,
   // Same OpenAI call as HD (dall-e-3 is a catalog alias → gpt-image-1 high)
   [IMAGE_GEN_FEATURE.DALL_E_3]: 12,
-  [IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE]: 2,
-  [IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE]: 1,
 });
 
 const MODEL_FEATURE = Object.freeze({
@@ -30,8 +26,6 @@ const FLAT_ENV_KEYS = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE]: 'IMAGE_GEN_GPT_IMAGE_AC',
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 'IMAGE_GEN_GPT_IMAGE_HD_AC',
   [IMAGE_GEN_FEATURE.DALL_E_3]: 'IMAGE_GEN_DALL_E_3_AC',
-  [IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE]: 'IMAGE_GEN_INFOGRAPHIC_SURCHARGE_AC',
-  [IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE]: 'IMAGE_GEN_SOCIAL_SURCHARGE_AC',
 });
 
 function envNumber(name, fallback) {
@@ -54,20 +48,9 @@ function getModelAc(modelId) {
   return getFlatAc(feature);
 }
 
-function getModeSurcharge(mode) {
-  if (mode === 'infographic') {
-    return getFlatAc(IMAGE_GEN_FEATURE.INFOGRAPHIC_SURCHARGE);
-  }
-  if (mode === 'social') {
-    return getFlatAc(IMAGE_GEN_FEATURE.SOCIAL_SURCHARGE);
-  }
-  return 0;
-}
-
 module.exports = {
   IMAGE_GEN_FEATURE,
   MODEL_FEATURE,
   getFlatAc,
   getModelAc,
-  getModeSurcharge,
 };
