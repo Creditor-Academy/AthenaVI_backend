@@ -81,6 +81,10 @@ enum ProjectType {
   PRESENTATION
 }
 
+enum PresentationShareAccess {
+  VIEW
+}
+
 enum TemplateType {
   VIDEO_SCENE
   DECK_LAYOUT
@@ -145,6 +149,8 @@ model User {
   sentInvitations Invitation[] @relation("InvitationInvitedBy")
   productEmailBroadcastsSent ProductEmailBroadcast[] @relation("ProductEmailBroadcastSentBy")
   productEmailBroadcastRecipients ProductEmailBroadcastRecipient[]
+  presentationShareLinks  PresentationShareLink[]  @relation("PresentationShareCreatedBy")
+  presentationShareAudits PresentationShareAudit[] @relation("PresentationShareAuditActor")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -204,6 +210,7 @@ model Workspace {
   imageGenContexts   ImageGenContext[]
   imageGenThreads    ImageGenThread[]
   brandKits          WorkspaceBrandKit[]
+  presentationShareLinks PresentationShareLink[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -457,6 +464,7 @@ model Project {
   sceneRenderCaches  SceneRenderCache[]
   comments           ProjectComment[]
   deck               Deck?
+  shareLink          PresentationShareLink?
 
   @@index([updatedBy])
   @@index([type])
@@ -1014,6 +1022,47 @@ model PresentationImageCache {
   createdAt DateTime @default(now())
 
   @@map("presentation_image_cache")
+}
+
+model PresentationShareLink {
+  id          String                  @id @default(uuid())
+  projectId   String                  @unique @map("project_id")
+  workspaceId String                  @map("workspace_id")
+  tokenHash   String                  @unique @map("token_hash")
+  tokenPrefix String                  @map("token_prefix")
+  access      PresentationShareAccess @default(VIEW)
+  enabled     Boolean                 @default(true)
+  expiresAt   DateTime?               @map("expires_at")
+  createdBy   String?                 @map("created_by")
+  revokedAt   DateTime?               @map("revoked_at")
+  rotateCount Int                     @default(0) @map("rotate_count")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  project       Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUser User?                    @relation("PresentationShareCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  audits        PresentationShareAudit[]
+
+  @@index([workspaceId])
+  @@index([createdBy])
+  @@map("presentation_share_links")
+}
+
+model PresentationShareAudit {
+  id          String   @id @default(uuid())
+  shareId     String   @map("share_id")
+  actorUserId String?  @map("actor_user_id")
+  action      String // CREATED | ROTATED | DISABLED | ENABLED
+  ip          String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  share PresentationShareLink @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  actor User?                 @relation("PresentationShareAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([shareId, createdAt])
+  @@index([actorUserId])
+  @@map("presentation_share_audits")
 }
 
 model ProductEmailBroadcast {

@@ -21,7 +21,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |
 | [USER_SETTINGS_API.md](USER_SETTINGS_API.md) | `/api/user/settings` | Appearance, notifications, security, account deletion |
 | [WORKSPACE_API.md](WORKSPACE_API.md) | `/api/workspaces` | Workspaces, members, invitations, folders, projects, Remotion renders |
-| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations` | AI PPT: create, outline, theme, generate, packs, brand apply, slides, export |
+| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations`, `/api/p` | AI PPT: create, outline, theme, generate, packs, brand apply, slides, export, view-only share links + presence |
 | [BRAND_KIT_API.md](BRAND_KIT_API.md) | `.../brand-kits` | Workspace Brand Kits (colors, fonts, logos, photos, voice) |
 | [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |

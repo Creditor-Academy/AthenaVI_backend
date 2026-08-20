@@ -58,6 +58,7 @@ const superadminRoutes = require('./modules/superadmin/superadmin.routes');
 const stockRoutes = require('./modules/stock/stock.routes');
 const earlyAccessRoutes = require('./modules/earlyAccess/earlyAccess.routes');
 const imageGenRoutes = require('./modules/imageGen/imageGen.routes');
+const presentationSharePublicRoutes = require('./modules/presentationShare/presentationShare.public.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -69,6 +70,8 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/image-gen', imageGenRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/early-access', earlyAccessRoutes);
+/** Public view-only presentation links: the capability token in the path is the permission. */
+app.use('/api/p', presentationSharePublicRoutes);
 app.use(errorHandler);
 
 module.exports = app;

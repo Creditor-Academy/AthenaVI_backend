@@ -1,0 +1,14 @@
+$kind: http-request
+description: Call every ~15s. viewerSessionId is client-generated and identifies guests. Any displayName in the body is ignored.
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/presence"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "viewerSessionId": "{{viewerSessionId}}",
+      "slideIndex": 0
+    }
+order: 7000
