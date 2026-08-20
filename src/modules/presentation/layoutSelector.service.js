@@ -336,6 +336,8 @@ function filterTemplatesForSlideOrder(templates, slideOrder, totalSlides) {
 }
 
 /**
+ * @deprecated Generation flow now uses deckLayout/pickLayoutForGeneratedSlide canonical pipeline.
+ * Kept for backward compatibility with non-generation callers.
  * Rule-based layout pick: match contentType, prefer by density, avoid previousLayoutId.
  * @returns {{ layoutId: string, template: object|null }}
  */

@@ -4,7 +4,16 @@ const {
   CANVAS_HEIGHT,
 } = require('./presentation.constants');
 const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const {
+  relativeLuminance,
+  AA_CONTRAST_RATIO,
+  contrastRatioCss,
+} = require('./theme.service');
 const { normalizeChartContent } = require('./chartContentNormalize');
+const { resolveSemanticTheme } = require('./artDirection/semanticTheme');
+const { resolveTextColor } = require('./artDirection/resolveTextColor');
+const { inferTypographyRole } = require('./artDirection/typographyRoles');
+const { repairElementsDoc } = require('./artDirection/validateDesign');
 
 function parseRegion(region) {
   const str = String(region || '');
@@ -292,7 +301,9 @@ const IMAGE_PRESENTATION = {
 
 function inferImageStyle(slotId) {
   const id = String(slotId || '').toUpperCase();
-  if (id === 'HERO_IMAGE' || id === 'BACKGROUND_IMAGE') return 'hero';
+  // Full-bleed backgrounds must be edge-to-edge (no rounded corners / grey gutters).
+  if (id === 'BACKGROUND_IMAGE') return 'flat';
+  if (id === 'HERO_IMAGE') return 'hero';
   if (/^IMAGE_\d+$|^COL_\d+_IMAGE$|^METRIC_IMAGE/.test(id)) return 'card';
   if (/^DEVICE_|^PHONE_|^LAPTOP_|^TABLET_|^WATCH_/.test(id)) return 'inset';
   return 'featured';
@@ -363,6 +374,12 @@ function bulletBlock(list) {
   return list.map((line) => `• ${line}`).join('\n');
 }
 
+function stripMarkdownBold(text) {
+  return String(text || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1');
+}
+
 function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
   const raw = typeof line === 'string' ? line.trim() : itemToText(line);
   if (!raw) return null;
@@ -372,7 +389,24 @@ function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
     return [
       { text: '• ', colorRole: textRole },
       { text: `${mdMatch[1]}:`, fontWeight: 700, colorRole: textRole },
-      { text: ` ${mdMatch[2]}`, colorRole: mutedRole },
+      { text: ` ${stripMarkdownBold(mdMatch[2])}`, colorRole: mutedRole },
+    ];
+  }
+  // **Label** without required colon (common AI variant)
+  const mdLoose = cleaned.match(/^\*\*(.+?)\*\*\s*[:\-—–]?\s*(.*)$/);
+  if (mdLoose && mdLoose[1]) {
+    const label = mdLoose[1].trim();
+    const detail = stripMarkdownBold(mdLoose[2] || '').trim();
+    if (detail) {
+      return [
+        { text: '• ', colorRole: textRole },
+        { text: `${label}:`, fontWeight: 700, colorRole: textRole },
+        { text: ` ${detail}`, colorRole: mutedRole },
+      ];
+    }
+    return [
+      { text: '• ', colorRole: textRole },
+      { text: label, fontWeight: 700, colorRole: textRole },
     ];
   }
   const colonMatch = cleaned.match(/^([^:]{2,40}):\s*(.+)$/);
@@ -380,7 +414,7 @@ function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
     return [
       { text: '• ', colorRole: textRole },
       { text: `${colonMatch[1]}:`, fontWeight: 700, colorRole: textRole },
-      { text: ` ${colonMatch[2]}`, colorRole: mutedRole },
+      { text: ` ${stripMarkdownBold(colonMatch[2])}`, colorRole: mutedRole },
     ];
   }
   if (line && typeof line === 'object' && (line.topic || line.label)) {
@@ -390,11 +424,11 @@ function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
       return [
         { text: '• ', colorRole: textRole },
         { text: `${topic}:`, fontWeight: 700, colorRole: textRole },
-        { text: ` ${detail}`, colorRole: mutedRole },
+        { text: ` ${stripMarkdownBold(detail)}`, colorRole: mutedRole },
       ];
     }
   }
-  return [{ text: `• ${cleaned}`, colorRole: mutedRole }];
+  return [{ text: `• ${stripMarkdownBold(cleaned)}`, colorRole: mutedRole }];
 }
 
 function buildBulletListRuns(content, onImage = false) {
@@ -411,17 +445,70 @@ function buildBulletListRuns(content, onImage = false) {
   });
   if (!runs.length) return null;
   return {
-    text: bulletBlock(items),
+    text: bulletBlock(items.map((item) => stripMarkdownBold(typeof item === 'string' ? item : itemToText(item)))),
+    runs,
+  };
+}
+
+function applyMarkdownRunsToPlainText(textContent, onImage = false) {
+  if (!textContent || textContent.runs?.length) return textContent;
+  const raw = String(textContent.text || '');
+  if (!raw.includes('**') && !raw.includes('__')) return textContent;
+  const textRole = onImage ? 'textOnImage' : 'text';
+  const mutedRole = onImage ? 'textOnImageMuted' : 'muted';
+  const lines = raw.split('\n');
+  const runs = [];
+  lines.forEach((line, index) => {
+    if (index > 0) runs.push({ text: '\n', colorRole: mutedRole });
+    const trimmed = line.trim();
+    if (/^•/.test(trimmed) || /^\*\*/.test(trimmed)) {
+      const lineRuns = parseBulletLineRuns(trimmed, mutedRole, textRole);
+      if (lineRuns) {
+        runs.push(...lineRuns);
+        return;
+      }
+    }
+    // Inline **bold** spans within a normal body line
+    const parts = trimmed.split(/(\*\*[^*]+\*\*)/g).filter((p) => p.length);
+    if (parts.length > 1) {
+      parts.forEach((part) => {
+        const bold = part.match(/^\*\*(.+)\*\*$/);
+        if (bold) runs.push({ text: bold[1], fontWeight: 700, colorRole: textRole });
+        else runs.push({ text: part, colorRole: mutedRole });
+      });
+      return;
+    }
+    runs.push({ text: stripMarkdownBold(line), colorRole: mutedRole });
+  });
+  return {
+    ...textContent,
+    text: stripMarkdownBold(raw),
     runs,
   };
 }
 
 function applyRichBulletsToTextContent(textContent, content, slotId, onImage = false) {
   const id = String(slotId || '').toLowerCase();
-  if (id !== 'bullets' && id !== 'bullet_list') return textContent;
-  const rich = buildBulletListRuns(content, onImage);
-  if (!rich) return textContent;
-  return { ...textContent, text: rich.text, runs: rich.runs };
+  if (id === 'bullets' || id === 'bullet_list') {
+    const rich = buildBulletListRuns(content, onImage);
+    if (rich) return { ...textContent, text: rich.text, runs: rich.runs };
+  }
+  // Per-column / body slots: parse or strip markdown so `**` never shows raw.
+  if (
+    /^bullet_\d+$/.test(id) ||
+    /^body_\d+$/.test(id) ||
+    /^card_\d+_body$/.test(id) ||
+    /^col_\d+_body$/.test(id) ||
+    id === 'body' ||
+    id === 'left_body' ||
+    id === 'right_body'
+  ) {
+    return applyMarkdownRunsToPlainText(textContent, onImage);
+  }
+  if (String(textContent?.text || '').includes('**')) {
+    return applyMarkdownRunsToPlainText(textContent, onImage);
+  }
+  return textContent;
 }
 
 function bulletsOf(content) {
@@ -570,7 +657,51 @@ function diagramCellAt(content, index) {
   return Array.isArray(cells) ? cells[index] : null;
 }
 
-function textForSlot(slotId, content = {}) {
+function titleWordsFromBodyLocal(body, fallback) {
+  const words = String(body || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 4)
+    .join(' ');
+  return words || fallback || '';
+}
+
+function layoutHasDedicatedColumnTitleSlots(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots.some((s) => /^(card|col|feature)_\d+_title$/i.test(String(s.id || '')));
+}
+
+function uniqueColumnTitle(rawTitle, body, index, content, fallbackPrefix = 'Aspect') {
+  const slideTitle = String(content?.title || '').trim().toLowerCase();
+  let title = String(rawTitle || '').trim();
+  const titleLower = title.toLowerCase();
+  const cols = content?.columns || content?.cards || content?.features || [];
+  const seen = new Set();
+  if (Array.isArray(cols)) {
+    for (let i = 0; i < index; i += 1) {
+      const prev = cols[i];
+      const prevTitle = String(prev?.title ?? prev?.heading ?? prev?.label ?? '')
+        .trim()
+        .toLowerCase();
+      if (prevTitle) seen.add(prevTitle);
+    }
+  }
+  if (!title || titleLower === slideTitle || seen.has(titleLower)) {
+    const fromBody = titleWordsFromBodyLocal(body, '');
+    const fromBodyLower = String(fromBody || '')
+      .trim()
+      .toLowerCase();
+    if (fromBody && fromBodyLower !== slideTitle && !seen.has(fromBodyLower)) {
+      title = fromBody;
+    } else {
+      title = `${fallbackPrefix} ${index + 1}`;
+    }
+  }
+  return title;
+}
+
+function textForSlot(slotId, content = {}, layoutSchema = null) {
   const id = String(slotId || '').toLowerCase();
   const bullets = bulletsOf(content);
 
@@ -691,7 +822,13 @@ function textForSlot(slotId, content = {}) {
     const col = structuredColumnAt(content, Number(cardField[1]) - 1);
     if (!col) return '';
     if (cardField[2] === 'title') {
-      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        Number(cardField[1]) - 1,
+        content,
+        'Aspect'
+      );
     }
     return String(col.body ?? col.text ?? itemToText(col)).trim();
   }
@@ -701,7 +838,13 @@ function textForSlot(slotId, content = {}) {
     const col = structuredColumnAt(content, Number(colField[1]) - 1);
     if (!col) return '';
     if (colField[2] === 'title') {
-      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        Number(colField[1]) - 1,
+        content,
+        'Aspect'
+      );
     }
     return String(col.body ?? col.text ?? itemToText(col)).trim();
   }
@@ -711,7 +854,13 @@ function textForSlot(slotId, content = {}) {
     const col = structuredColumnAt(content, Number(featureField[1]) - 1);
     if (!col) return '';
     if (featureField[2] === 'title') {
-      return String(col.title ?? col.heading ?? col.label ?? '').trim();
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        Number(featureField[1]) - 1,
+        content,
+        'Aspect'
+      );
     }
     return String(col.body ?? col.text ?? itemToText(col)).trim();
   }
@@ -858,12 +1007,30 @@ function textForSlot(slotId, content = {}) {
   if (imageLabelSlot) {
     const idx = Number(imageLabelSlot[1]) - 1;
     const col = structuredColumnAt(content, idx);
-    if (col) return String(col.title ?? col.heading ?? col.label ?? '').trim();
+    if (col) {
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        idx,
+        content,
+        'Gallery'
+      );
+    }
     const items = Array.isArray(content.items) ? content.items : [];
     const item = items[idx];
-    if (typeof item === 'string') return item.trim();
-    if (item) return String(item.title ?? item.label ?? item.heading ?? '').trim();
-    return '';
+    if (typeof item === 'string') {
+      return uniqueColumnTitle(item, '', idx, content, 'Gallery');
+    }
+    if (item) {
+      return uniqueColumnTitle(
+        item.title ?? item.label ?? item.heading,
+        item.body ?? item.text,
+        idx,
+        content,
+        'Gallery'
+      );
+    }
+    return `Gallery ${idx + 1}`;
   }
 
   const bulletSlot = id.match(/^bullet_(\d+)$/);
@@ -873,6 +1040,10 @@ function textForSlot(slotId, content = {}) {
     if (col) {
       const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
       const body = String(col.body ?? col.text ?? '').trim();
+      // When layout has dedicated title slots, body/bullet slots must not repeat the title.
+      if (layoutHasDedicatedColumnTitleSlots(layoutSchema)) {
+        return body || itemToText(col) || '';
+      }
       if (title && body) return `${title}\n${body}`;
       return body || title || itemToText(col);
     }
@@ -882,7 +1053,8 @@ function textForSlot(slotId, content = {}) {
   if (
     id.includes('title') &&
     !id.includes('subtitle') &&
-    !/^metric_|^plan_|^col_|^card_|^feature_|^point_|^member_|^agenda_col_/.test(id)
+    // Never flood indexed process/card/column slots with the slide title.
+    !/^metric_|^plan_|^col_|^card_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_/.test(id)
   ) {
     return content.title || '';
   }
@@ -904,6 +1076,9 @@ function textForSlot(slotId, content = {}) {
     if (col) {
       const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
       const body = String(col.body ?? col.text ?? '').trim();
+      if (layoutHasDedicatedColumnTitleSlots(layoutSchema)) {
+        return body || itemToText(col) || '';
+      }
       if (title && body) return `${title}\n${body}`;
       return body || title || itemToText(col);
     }
@@ -1045,9 +1220,25 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens, placeme
   const mergedDesignTokens = mergeDesignTokensWithTheme(designTokens, themeTokens, layoutSchema);
   const overlayActive = isOverlayLayout(layoutSchema, mergedDesignTokens);
 
+  const typographyRole = inferTypographyRole({ slot, layoutSchema });
   let fontSize = ty.fontSize;
   if (fontSize == null) {
-    fontSize = resolveTypeScaleFontSize(role, scale);
+    const semanticSize =
+      typographyRole === 'heroTitle'
+        ? scale.display
+        : typographyRole === 'title' || typographyRole === 'sectionTitle'
+          ? scale.title
+          : typographyRole === 'subtitle'
+            ? scale.subtitle
+            : typographyRole === 'body'
+              ? scale.body
+              : typographyRole === 'caption' || typographyRole === 'eyebrow' || typographyRole === 'label'
+                ? scale.caption
+                : typographyRole === 'metric'
+                  ? scale.stat ?? scale.display
+                  : null;
+    if (semanticSize != null && Number(semanticSize) > 0) fontSize = Number(semanticSize);
+    else fontSize = resolveTypeScaleFontSize(role, scale);
   }
   if (fontSize == null && role === 'heading' && scale.display != null) {
     fontSize = scale.display;
@@ -1141,20 +1332,30 @@ function resolveSlotImageUrl(slotId, content = {}, imageRef = null, layoutSchema
     if (map[id.toLowerCase()]) return map[id.toLowerCase()];
   }
 
+  const heroUrl =
+    imageRef?.url
+    || imageRef?.s3Url
+    || (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null)
+    || null;
+
   let imageSlotCount = 1;
   if (layoutSchema?.slots?.length) {
     imageSlotCount = layoutSchema.slots.filter((slot) =>
       isMediaImageSlot(slot.id, slot.role, slot)
     ).length;
   }
-  if (imageSlotCount > 1) return null;
 
-  return (
-    imageRef?.url
-    || imageRef?.s3Url
-    || (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null)
-    || null
-  );
+  // Multi-image layouts: only allow hero backfill for primary full-bleed slots.
+  // Secondary IMAGE_2 / COL_n slots must keep distinct per-slot URLs.
+  if (imageSlotCount > 1) {
+    const upper = id.toUpperCase();
+    if (heroUrl && (upper === 'BACKGROUND_IMAGE' || upper === 'HERO_IMAGE')) {
+      return heroUrl;
+    }
+    return null;
+  }
+
+  return heroUrl;
 }
 
 function isDecorShapeSlot(slotId, role, slot) {
@@ -1423,6 +1624,13 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
   };
   const canvas = doc.canvas;
   const palette = themeTokens?.palette || {};
+  const appearance =
+    themeTokens?.appearance === 'dark' || themeTokens?.appearance === 'light'
+      ? themeTokens.appearance
+      : null;
+  const defaultBg = appearance === 'light' ? '#FFFFFF' : appearance === 'dark' ? '#0B1220' : palette.bg || '#FFFFFF';
+  const defaultSurface =
+    appearance === 'light' ? '#F8FAFC' : appearance === 'dark' ? '#121A2B' : palette.surface || defaultBg;
   const hasBg = doc.elements.some(
     (e) => e.role === 'background' || e.role === 'design_bg' || String(e.id || '').startsWith('bg_')
   );
@@ -1459,12 +1667,12 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
             direction: '135deg',
             stops: [
               {
-                color: palette.gradientStart || palette.bg || '#0B1220',
+                color: palette.gradientStart || palette.bg || defaultBg,
                 colorRole: 'gradientStart',
                 position: 0,
               },
               {
-                color: palette.gradientEnd || palette.surface || '#121A2B',
+                color: palette.gradientEnd || palette.surface || defaultSurface,
                 colorRole: 'gradientEnd',
                 position: 100,
               },
@@ -1472,7 +1680,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
           }
         : {
             type: 'solid',
-            color: palette.bg || '#0B1220',
+            color: palette.bg || defaultBg,
             colorRole: 'bg',
           };
     doc.elements.unshift({
@@ -1514,13 +1722,13 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
   }
 
   const accent = designTokens?.accentPosition || 'none';
-  const accentColor = palette.accent || palette.primary || '#3B82F6';
+  const accentColor = palette.primary || palette.accent || '#3B82F6';
   const barBase = {
     type: 'shape',
     layer: 1,
     content: {
       shape: 'rect',
-      fill: { type: 'solid', color: accentColor, colorRole: 'accent' },
+      fill: { type: 'solid', color: accentColor, colorRole: 'primary' },
     },
     role: 'design_accent',
   };
@@ -1552,9 +1760,14 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
   }
 
   if (designTokens.overlayOpacity > 0 && designTokens.backgroundStyle === 'image') {
+    // Scrim only meaningful when an image is present; finalizeElementsDoc also gates this.
+    // Never force a dark overlay chrome on light solid decks without image.
+    if (appearance === 'light' && !docHasLoadedOverlayImage(doc)) {
+      // skip overlay for light appearance without loaded image
+    } else {
     const scrimColor =
       palette.overlayScrim ||
-      (themeTokens?.appearance === 'light' ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.5)');
+      (appearance === 'light' ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.5)');
     doc.elements.push({
       id: newElementId('ovl'),
       type: 'shape',
@@ -1573,6 +1786,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
       },
       role: 'design_overlay',
     });
+    }
   }
 
   return doc;
@@ -1605,8 +1819,6 @@ function layoutSlotsToElements(
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const elements = [];
   let layer = 1;
-  const multiImageSlotCount = slots.filter((slot) => isMediaImageSlot(slot.id, slot.role, slot)).length;
-  const usedMultiImageUrls = new Set();
 
   for (const slot of slots) {
     const slotId = slot.id || `slot_${layer}`;
@@ -1675,10 +1887,6 @@ function layoutSlotsToElements(
 
     if (isMediaImageSlot(slotId, role, slot)) {
       let url = resolveSlotImageUrl(slotId, content, imageRef, layoutSchema);
-      if (url && multiImageSlotCount > 1) {
-        if (usedMultiImageUrls.has(url)) url = null;
-        else usedMultiImageUrls.add(url);
-      }
       const frameSlot = findDeviceFrameSlot(slots, slotId);
       if (frameSlot) {
         const framePlacement = regionToPlacement(frameSlot.region, canvas, frameSlot, slots);
@@ -1696,9 +1904,18 @@ function layoutSlotsToElements(
       const edgeFade = resolveSplitImageEdgeFade(layoutSchema, slot);
       const imageMask = slot.imageMask && typeof slot.imageMask === 'object' ? slot.imageMask : null;
       const shaped = Boolean(imageMask && imageMask.type && imageMask.type !== 'edgeFade');
+      const isFullBleedBg = String(slotId || '').toUpperCase() === 'BACKGROUND_IMAGE';
       const borderRadius =
-        edgeFade != null || shaped ? 0 : slot.borderRadius != null ? slot.borderRadius : presentation.borderRadius;
-      const shadow = edgeFade != null || shaped ? undefined : slot.shadow ?? presentation.shadow;
+        edgeFade != null || shaped || isFullBleedBg
+          ? 0
+          : slot.borderRadius != null
+            ? slot.borderRadius
+            : presentation.borderRadius;
+      const shadow =
+        edgeFade != null || shaped || isFullBleedBg
+          ? undefined
+          : slot.shadow ?? presentation.shadow;
+      const palette = themeTokens?.palette || {};
       elements.push({
         id: newElementId('img'),
         slotId,
@@ -1709,6 +1926,16 @@ function layoutSlotsToElements(
           url,
           fit: slot.fit || 'cover',
           alt: content.title || '',
+          // Never leave a naked null URL — editor shows a themed skeleton instead of broken <img>.
+          ...(!url
+            ? {
+                placeholderFill:
+                  palette.surface ||
+                  palette.cardBg ||
+                  palette.bg ||
+                  'linear-gradient(145deg, #e2e8f0 0%, #cbd5e1 100%)',
+              }
+            : {}),
           ...(borderRadius != null ? { borderRadius } : {}),
           ...(shadow ? { boxShadow: shadow, shadow } : {}),
           ...(edgeFade ? { edgeFade } : {}),
@@ -1805,7 +2032,7 @@ function layoutSlotsToElements(
       continue;
     }
 
-    const text = textForSlot(slotId, content);
+    const text = textForSlot(slotId, content, layoutSchema);
     const isMainTitle = isMainTitleSlot(slotId, role);
     const style = resolveTextStyle(
       slot,
@@ -2066,8 +2293,28 @@ function layoutRequiresOverlayScrim(layoutSchema) {
   return /full_bg|overlay|statement_top|statement_bottom/i.test(layoutId);
 }
 
+/** True only when a background/hero image element actually has a URL. */
+function docHasLoadedOverlayImage(doc) {
+  const elements = Array.isArray(doc?.elements) ? doc.elements : [];
+  return elements.some((el) => {
+    if (el.type !== 'image') return false;
+    if (!el.content?.url) return false;
+    const slotId = String(el.slotId || '').toUpperCase();
+    const role = String(el.role || '').toLowerCase();
+    if (slotId === 'BACKGROUND_IMAGE' || slotId === 'HERO_IMAGE') return true;
+    if (role === 'background' || el.content?.useAsBackground) return true;
+    const p = el.placement || {};
+    const canvas = doc?.canvas || {};
+    const cw = canvas.width || CANVAS_WIDTH;
+    const ch = canvas.height || CANVAS_HEIGHT;
+    return (p.width || 0) * (p.height || 0) >= cw * ch * 0.7;
+  });
+}
+
 function ensureOverlayScrim(doc, layoutSchema, content, themeTokens, canvas) {
   if (!doc || !layoutRequiresOverlayScrim(layoutSchema)) return doc;
+  // Never darken a slide that never got an image — that produces empty dark slides.
+  if (!docHasLoadedOverlayImage(doc)) return doc;
   const elements = Array.isArray(doc.elements) ? doc.elements : [];
   const hasScrim = elements.some(
     (el) =>
@@ -2106,8 +2353,9 @@ function ensureOverlayScrim(doc, layoutSchema, content, themeTokens, canvas) {
 function applyTextOverImageContrast(elementsDoc, themeTokens = null, layoutSchema = null) {
   if (!elementsDoc || !Array.isArray(elementsDoc.elements)) return elementsDoc;
   const palette = themeTokens?.palette || {};
-  const forceOverlay = layoutRequiresOverlayScrim(layoutSchema);
-  const images = elementsDoc.elements.filter((el) => el.type === 'image');
+  const forceOverlay =
+    layoutRequiresOverlayScrim(layoutSchema) && docHasLoadedOverlayImage(elementsDoc);
+  const images = elementsDoc.elements.filter((el) => el.type === 'image' && el.content?.url);
   if (!images.length && !forceOverlay) return elementsDoc;
 
   for (const el of elementsDoc.elements) {
@@ -2148,6 +2396,108 @@ function applyTextOverImageContrast(elementsDoc, themeTokens = null, layoutSchem
               : 'textOnImage',
         color: undefined,
       }));
+    }
+  }
+  return elementsDoc;
+}
+
+// Kept for backward-compat fallback paths.
+const CREAM_ON_DARK = '#F5EDE3';
+const ESPRESSO_ON_LIGHT = '#2C1810';
+
+function slideBackgroundHex(elementsDoc, themeTokens) {
+  const palette = themeTokens?.palette || {};
+  const bgEl = (elementsDoc?.elements || []).find(
+    (e) => e.role === 'background' || e.role === 'design_bg' || String(e.id || '').startsWith('bg_')
+  );
+  const fill = bgEl?.content?.fill;
+  if (fill?.type === 'solid' && fill.color) return fill.color;
+  return palette.bg || palette.background || '#F5EDE3';
+}
+
+function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema = null) {
+  if (!elementsDoc || !Array.isArray(elementsDoc.elements)) return elementsDoc;
+  const palette = themeTokens?.palette || {};
+  const theme = resolveSemanticTheme(themeTokens);
+  const bg = slideBackgroundHex(elementsDoc, themeTokens);
+  const bgLum = relativeLuminance(bg);
+  const overlay = layoutRequiresOverlayScrim(layoutSchema);
+
+  for (const el of elementsDoc.elements) {
+    if (el.type !== 'text' && el.type !== 'textbox') continue;
+    const role = String(el.content?.colorRole || '').toLowerCase();
+    if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
+    const colorRoleRaw = String(el.content?.colorRole || '');
+
+    // Semantic repair target:
+    // - "muted" and muted-ish roles go to body/muted token
+    // - default text + heading goes to heading token
+    // - accent/primary are left alone (but still repaired if contrast is insufficient)
+    const normalizedColorRole = colorRoleRaw.toLowerCase();
+    let desiredTextRole = 'heading';
+    if (normalizedColorRole.includes('muted')) desiredTextRole = 'body';
+    if (normalizedColorRole.includes('accent')) desiredTextRole = 'accent';
+    if (normalizedColorRole.includes('primary')) desiredTextRole = 'primary';
+    if (normalizedColorRole === 'textonimage') desiredTextRole = 'heading';
+
+    const backgroundMode =
+      overlay ? 'image' : bgLum == null ? 'light' : bgLum < 0.45 ? 'dark' : 'light';
+
+    const beforeColor =
+      el.content?.color || paletteColor(palette, el.content?.colorRole || 'text', null);
+
+    // If the color cannot be resolved, skip (layoutToElements already sets most roles deterministically).
+    if (!beforeColor) continue;
+
+    let attempt = resolveTextColor({
+      theme,
+      textRole: desiredTextRole,
+      backgroundMode,
+      backgroundHex: bg,
+    });
+
+    let ratio = contrastRatioCss(attempt.color, bg);
+    if (ratio == null || ratio < AA_CONTRAST_RATIO) {
+      // Try the safer monotone pair.
+      const fallbackRole = desiredTextRole === 'heading' || desiredTextRole === 'accent' ? 'body' : 'heading';
+      attempt = resolveTextColor({
+        theme,
+        textRole: fallbackRole,
+        backgroundMode,
+        backgroundHex: bg,
+      });
+      ratio = contrastRatioCss(attempt.color, bg);
+    }
+
+    if (ratio != null && ratio >= AA_CONTRAST_RATIO) {
+      const repairedRole =
+        attempt.colorRole === 'muted' ? 'muted' : attempt.colorRole === 'text' ? 'text' : attempt.colorRole;
+      el.content = {
+        ...(el.content || {}),
+        color: attempt.color,
+        colorRole: repairedRole,
+      };
+      if (Array.isArray(el.content.runs) && el.content.runs.length) {
+        el.content.runs = el.content.runs.map((run) => {
+          const runRole = String(run.colorRole || '').toLowerCase();
+          if (runRole === 'accent' || runRole === 'primary') return run;
+          if (runRole === 'muted' && attempt.colorRole === 'muted') return run;
+          return {
+            ...run,
+            color: attempt.color,
+            colorRole: repairedRole,
+          };
+        });
+      }
+    } else {
+      // Last resort: keep legacy fixed contrast colors (should rarely trigger after semantic token repair).
+      const darkBg = bgLum == null ? false : bgLum < 0.45;
+      const nextColor = darkBg ? CREAM_ON_DARK : ESPRESSO_ON_LIGHT;
+      el.content = {
+        ...(el.content || {}),
+        color: nextColor,
+        colorRole: darkBg ? 'textOnImage' : 'text',
+      };
     }
   }
   return elementsDoc;
@@ -2438,7 +2788,8 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, _canvas) {
 }
 
 function docHasFullBleedBackground(doc, layoutSchema) {
-  if (layoutRequiresOverlayScrim(layoutSchema)) return true;
+  // Only treat as full-bleed overlay when a real image URL is present.
+  if (layoutRequiresOverlayScrim(layoutSchema) && docHasLoadedOverlayImage(doc)) return true;
   const canvas = doc?.canvas || {};
   const cw = canvas.width || CANVAS_WIDTH;
   const ch = canvas.height || CANVAS_HEIGHT;
@@ -2457,7 +2808,7 @@ function docHasFullBleedBackground(doc, layoutSchema) {
   });
 }
 
-function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}) {
+function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}, slideDesignPlan = null) {
   if (!doc) return doc;
   const canvas = {
     width: canvasSize.width || doc.canvas?.width || CANVAS_WIDTH,
@@ -2494,7 +2845,11 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   }
 
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
+  next = applyReadableTextContrast(next, themeTokens, layoutSchema);
   next = applySplitImageEdgeFade(next, layoutSchema);
+
+  // Final deterministic design audit/repair.
+  next = repairElementsDoc(next, { themeTokens, layoutSchema, content, slideDesignPlan });
   return next;
 }
 
@@ -2534,12 +2889,6 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
     null;
 
-  const layoutSlots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  const multiImageSlotCount = layoutSlots.filter((slot) =>
-    isMediaImageSlot(slot.id, slot.role, slot)
-  ).length;
-  const usedMultiImageUrls = new Set();
-
   const applyText = (el, nextText, role) => {
     if (nextText == null) return;
     const value = String(nextText);
@@ -2559,9 +2908,9 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     const slotKey = slotId || id;
 
     if (el.type === 'text' || el.type === 'textbox') {
-      let text = slotKey ? textForSlot(slotKey, content) : '';
+      let text = slotKey ? textForSlot(slotKey, content, layoutSchema) : '';
       if ((!text || !String(text).length) && id && id !== slotKey) {
-        text = textForSlot(id, content);
+        text = textForSlot(id, content, layoutSchema);
       }
       if (text != null && String(text).length) {
         applyText(el, text, role);
@@ -2615,10 +2964,6 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       let slotUrl = slotKey
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
-      if (slotUrl && multiImageSlotCount > 1) {
-        if (usedMultiImageUrls.has(slotUrl)) slotUrl = null;
-        else usedMultiImageUrls.add(slotUrl);
-      }
       if (!slotUrl) continue;
       el.content = {
         ...(el.content || {}),
@@ -2638,10 +2983,6 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       let slotUrl = slotKey
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
-      if (slotUrl && multiImageSlotCount > 1) {
-        if (usedMultiImageUrls.has(slotUrl)) slotUrl = null;
-        else usedMultiImageUrls.add(slotUrl);
-      }
       if (!slotUrl) continue;
       el.type = 'image';
       el.content = {
@@ -2683,4 +3024,5 @@ module.exports = {
   injectBrandLogo,
   isPackPlaceholderText,
   isMediaImageSlot,
+  textForSlot,
 };

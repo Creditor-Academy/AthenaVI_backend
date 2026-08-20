@@ -17,7 +17,21 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { selectLayout, filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
+const { filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
+const { pickLayoutForGeneratedSlide } = require('./deckLayout/pickLayoutForGeneratedSlide');
+const { toDeckLayout } = require('./deckLayout/toDeckLayout');
+const { toSlideContentProfile } = require('./deckLayout/toSlideContentProfile');
+const { rankLayouts } = require('./deckLayout/rankLayouts');
+const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
+const {
+  planDeckImageDistribution,
+  applyDeckImageStrategyToVisualNeed,
+} = require('./artDirection/imageDistribution');
+const { buildSlideDesignPlan } = require('./artDirection/buildSlideDesignPlan');
+const { buildDeckArtDirection } = require('./artDirection/buildDeckArtDirection');
+const { resolveStickyBrandColors } = require('./artDirection/semanticTheme');
+const themeService = require('./theme.service');
+const { enforceAppearancePalette } = themeService;
 const {
   enrichOutlineWithArrangement,
   preferredLayoutForSlide,
@@ -31,7 +45,6 @@ const {
 const { resolveTitlePreferredLayoutId } = require('./titleLayout.util');
 const imageCache = require('./imageCache.service');
 const documentParse = require('./documentParse.service');
-const themeService = require('./theme.service');
 const {
   PROMPT_BUNDLE_VERSION,
   getOutlinePrompt,
@@ -46,12 +59,14 @@ const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
 const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
 const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const blueprintSeed = require('./blueprintSeed');
 const templateMediaService = require('../templates/templateMedia.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
 const { AI_SLIDE_MAX } = require('./presentation.constants');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
 const fontPairingService = require('./fontPairing.service');
+const layoutCatalogPolicy = require('./layoutCatalogPolicy');
 
 /** Prefer pack/slide author image brief when present. */
 function resolveAuthorImagePrompt(content) {
@@ -64,7 +79,8 @@ function resolveAuthorImagePrompt(content) {
       typeof hints.imagePromptStyle === 'string' ? hints.imagePromptStyle.trim() : '';
     if (style) return style;
   }
-  return '';
+  const visual = typeof content.visual === 'string' ? content.visual.trim() : '';
+  return visual;
 }
 
 const SINGLE_SUBJECT_NEGATIVES =
@@ -187,7 +203,9 @@ function normalizeMultiColumnContent(content, layoutSchema) {
   const needsColumns =
     slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^body_\d+$/i.test(String(s.id || '')));
+    slots.some((s) => /^body_\d+$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^image_\d+_label$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^IMAGE_\d+$/i.test(String(s.id || '')));
   if (!needsColumns) return content;
 
   let colsKey = Array.isArray(content.columns)
@@ -265,8 +283,15 @@ function normalizeMultiColumnContent(content, layoutSchema) {
     const body = String(copy.body ?? copy.text ?? '').trim();
     const titleLower = title.toLowerCase();
 
+    // Hard rule: never reuse the slide title (or duplicates) as every column heading.
     if (!title || titleLower === slideTitle || seen.has(titleLower)) {
-      title = titleWordsFromBody(body, `Aspect ${index + 1}`);
+      const fromBody = titleWordsFromBody(body, '');
+      const fromBodyLower = String(fromBody || '').trim().toLowerCase();
+      if (fromBody && fromBodyLower !== slideTitle && !seen.has(fromBodyLower)) {
+        title = fromBody;
+      } else {
+        title = `Aspect ${index + 1}`;
+      }
       copy.title = title;
       if (copy.heading != null) copy.heading = title;
       if (copy.label != null) copy.label = title;
@@ -393,8 +418,16 @@ function normalizeGalleryImageContent(content, layoutSchema) {
     const body = String(copy.body ?? copy.text ?? '').trim();
     const titleLower = title.toLowerCase();
     if (!title || titleLower === slideTitleLower || seenTitles.has(titleLower)) {
-      title = titleWordsFromBody(body, `Gallery ${index + 1}`);
+      const fromBody = titleWordsFromBody(body, '');
+      const fromBodyLower = String(fromBody || '').trim().toLowerCase();
+      if (fromBody && fromBodyLower !== slideTitleLower && !seenTitles.has(fromBodyLower)) {
+        title = fromBody;
+      } else {
+        title = `Gallery ${index + 1}`;
+      }
       copy.title = title;
+      if (copy.heading != null) copy.heading = title;
+      if (copy.label != null) copy.label = title;
     }
     seenTitles.add(String(copy.title ?? title).trim().toLowerCase());
     if (body) copy.body = body;
@@ -632,6 +665,24 @@ function normalizeDiagramContent(content, layoutSchema) {
     cells.push({ title, body });
   }
 
+  const slideTitleLower = String(content.title || '').trim().toLowerCase();
+  const seen = new Set();
+  for (let i = 0; i < cells.length; i += 1) {
+    let title = String(cells[i].title || '').trim();
+    const body = String(cells[i].body || '').trim();
+    const titleLower = title.toLowerCase();
+    if (!title || titleLower === slideTitleLower || seen.has(titleLower)) {
+      const fromBody = titleWordsFromBody(body, '');
+      const fromBodyLower = String(fromBody || '').toLowerCase();
+      title =
+        fromBody && fromBodyLower !== slideTitleLower && !seen.has(fromBodyLower)
+          ? fromBody
+          : `Section ${i + 1}`;
+      cells[i] = { ...cells[i], title };
+    }
+    seen.add(String(cells[i].title || '').trim().toLowerCase());
+  }
+
   return {
     ...content,
     diagram: { ...(content.diagram || {}), type: content.diagram?.type || kind, cells },
@@ -706,8 +757,27 @@ async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, 
     for (const slotId of slotIds) {
       const url = next[slotId];
       if (!url) continue;
-      if (seenUrls.has(url)) delete next[slotId];
-      else seenUrls.add(url);
+      if (seenUrls.has(url)) {
+        try {
+          const ph = await generationFlowService.ensurePlaceholderImage({
+            slotIndex: slotIds.indexOf(slotId) + 1,
+            seed: `${slide.id}-${slotId}-dedupe`,
+          });
+          if (ph?.url && ph.url !== url) {
+            next[slotId] = ph.url;
+            seenUrls.add(ph.url);
+          } else {
+            // Keep original rather than leaving empty — compile can still show something.
+            next[slotId] = `${url}${url.includes('?') ? '&' : '?'}slot=${encodeURIComponent(slotId)}`;
+            seenUrls.add(next[slotId]);
+          }
+        } catch {
+          next[slotId] = `${url}${url.includes('?') ? '&' : '?'}slot=${encodeURIComponent(slotId)}`;
+          seenUrls.add(next[slotId]);
+        }
+      } else {
+        seenUrls.add(url);
+      }
     }
   }
 
@@ -739,6 +809,7 @@ async function repairSlotImagesFromQa({ ctx, slide, content, layoutSchema, slotI
         const generated = await generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema });
         if (generated?.url && generated.url !== url) {
           next[slotId] = generated.url;
+          continue;
         }
       } catch (err) {
         logger.warn?.('presentation_slot_image_qa_repair_failed', {
@@ -746,6 +817,15 @@ async function repairSlotImagesFromQa({ ctx, slide, content, layoutSchema, slotI
           slotId,
           error: err.message,
         });
+      }
+      try {
+        const ph = await generationFlowService.ensurePlaceholderImage({
+          slotIndex: slotIds.indexOf(slotId) + 1,
+          seed: `${slide.id}-${slotId}-qa`,
+        });
+        if (ph?.url) next[slotId] = ph.url;
+      } catch {
+        next[slotId] = `${url}${url.includes('?') ? '&' : '?'}slot=${encodeURIComponent(slotId)}`;
       }
     }
   }
@@ -767,6 +847,7 @@ async function repairSlideContentFromQa({
   mergedGenerationHints,
   contentPrompt,
   neighbors = {},
+  outlineSlide = {},
 }) {
   let nextContent = content;
   let qa = validateSlide({ content: nextContent, layoutSchema: template?.schema || null });
@@ -794,6 +875,9 @@ async function repairSlideContentFromQa({
             slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
             title: resolvedTitle || nextContent?.title,
             summary: resolvedSummary,
+            subtitle: outlineSlide.subtitle || nextContent?.subtitle || '',
+            beats: outlineSlide.beats || [],
+            visual: outlineSlide.visual || '',
             suggestedContentType: contentType,
             previousSlideTitle: neighbors.prev?.title,
             nextSlideTitle: neighbors.next?.title,
@@ -918,6 +1002,52 @@ async function resolveLayoutTemplates(contentType, { layoutIdWhitelist = null } 
   return templates || [];
 }
 
+async function loadAllLayoutTemplates(layoutIdWhitelist = null) {
+  return resolveLayoutTemplates(null, { layoutIdWhitelist });
+}
+
+function isOutlineLayoutLocked(outlineSlide, slide) {
+  const raw =
+    outlineSlide?.layoutLocked ??
+    outlineSlide?.layout_locked ??
+    slide?.layoutLocked ??
+    slide?.layout_locked ??
+    false;
+  if (typeof raw === 'string') {
+    const t = raw.trim().toLowerCase();
+    return t === 'true' || t === '1' || t === 'yes' || t === 'locked';
+  }
+  return Boolean(raw);
+}
+
+function outlineLayoutIdForSlide(outlineSlide, slide) {
+  if (!isOutlineLayoutLocked(outlineSlide, slide)) return '';
+  return String(
+    outlineSlide?.layoutId || outlineSlide?.layout_id || slide?.layoutId || slide?.layout_id || ''
+  ).trim();
+}
+
+function finalizeBlueprintOutline(outline, metas, policy, slideCount) {
+  const target = slideCount || outline?.slideCount || outline?.slides?.length;
+  let slides = layoutCatalogPolicy.enforceSlideCount(outline.slides || [], target);
+  slides = layoutCatalogPolicy.coerceOutlineLayouts(slides, metas, {
+    slideCount: target,
+    imageType: policy?.imageType,
+  });
+  slides = layoutCatalogPolicy.ensureDeckMix(slides, metas, policy);
+  slides = layoutCatalogPolicy.coerceOutlineLayouts(slides, metas, {
+    slideCount: target,
+    imageType: policy?.imageType,
+  });
+  slides = layoutCatalogPolicy.enforceChartDensityCap(slides);
+  return {
+    ...outline,
+    slides,
+    slideCount: slides.length,
+    layoutChoices: layoutCatalogPolicy.layoutChoicesForUi(metas),
+  };
+}
+
 function scoreBrandPhoto(photo, searchQuery) {
   const hay = `${photo.name || ''} ${photo.role || ''}`.toLowerCase();
   const tokens = String(searchQuery || '')
@@ -963,6 +1093,7 @@ function contentNeedsFreshGeneration(content, layoutSchema = null) {
   if (!title) return true;
   if (isPackPlaceholderText(title)) return true;
   if (title === 'Untitled Presentation') return true;
+  if (blueprintSeed.contentMissingRequiredCopy(content, layoutSchema)) return true;
 
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
 
@@ -1144,6 +1275,12 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     flowCtx.themeTokens || deck.themeTokens
   );
 
+  const paletteSource = flowCtx.userPrompt || deck.outline?.sourcePrompt || '';
+  flowCtx.themeTokens = layoutCatalogPolicy.biasPaletteFromSourceText(
+    flowCtx.themeTokens || deck.themeTokens,
+    paletteSource
+  );
+
   try {
     flowCtx.themeTokens = await fontPairingService.ensureThemeFonts(flowCtx.themeTokens, {
       prompt: flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
@@ -1156,6 +1293,22 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
     });
   } catch (err) {
     logger.warn('ensureThemeFonts failed during generate', { error: err.message });
+  }
+
+  if (flowCtx.themeTokens?.palette) {
+    flowCtx.themeTokens = enforceAppearancePalette(flowCtx.themeTokens);
+    const brand = resolveStickyBrandColors(flowCtx.themeTokens);
+    flowCtx.stickyBrandColors = brand;
+    flowCtx.themeTokens = {
+      ...flowCtx.themeTokens,
+      appearance: brand.appearance,
+      palette: {
+        ...flowCtx.themeTokens.palette,
+        primary: brand.primary,
+        secondary: brand.secondary,
+        accent: brand.accent,
+      },
+    };
   }
 
   return {
@@ -1350,6 +1503,7 @@ function applyVisualPolicy({
   preferVisuals,
   baseTemplateBias: bias,
   respectOutlineType = false,
+  lockContentType = false,
 }) {
   const type = String(contentType || 'bullet_list').toLowerCase();
   let need = String(visualNeed || 'none').toLowerCase();
@@ -1363,6 +1517,15 @@ function applyVisualPolicy({
       visualNeed: 'chart',
       contentType: 'chart',
       layoutContentType: 'chart',
+      preferImageSlot: false,
+    };
+  }
+
+  if (lockContentType) {
+    return {
+      visualNeed: preferVisuals === false ? need || 'none' : need === 'none' ? 'none' : need || 'photo',
+      contentType: type,
+      layoutContentType: type,
       preferImageSlot: false,
     };
   }
@@ -1570,6 +1733,14 @@ function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, out
 
   if (order === 1) return 'title';
 
+  // Last slide always closes the deck (unless user locked a non-closing layout elsewhere).
+  if (order === total) {
+    const locked =
+      outlineSlide?.layoutLocked === true ||
+      outlineSlide?.layout_locked === true;
+    if (!locked) return 'closing';
+  }
+
   if (type === 'title') {
     const hasBody = Boolean(String(outlineSlide?.summary || '').trim());
     return hasBody ? 'image+text' : 'section_divider';
@@ -1580,6 +1751,23 @@ function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, out
   }
 
   return type;
+}
+
+function outlineSuggestsContactIntent(outlineSlide = {}, content = {}) {
+  const hay = [
+    outlineSlide?.purpose,
+    outlineSlide?.title,
+    outlineSlide?.summary,
+    outlineSlide?.contentIntent,
+    content?.title,
+    content?.cta,
+    content?.contact?.email,
+    content?.contact?.name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /contact|connect|team|cta|invite|booking|viewing|reach|email|phone|schedule/.test(hay);
 }
 
 function withImageStatus(imageRef, status, extra = {}) {
@@ -1642,7 +1830,10 @@ function mergePackOutlineWithLlm(skeleton, llmData, { slideCount, density, local
     return {
       ...sk,
       title: String(llm.title || sk.title || `Slide ${sk.order}`).trim(),
+      subtitle: llm.subtitle != null ? String(llm.subtitle) : sk.subtitle || '',
       summary: llm.summary != null ? String(llm.summary) : sk.summary,
+      beats: Array.isArray(llm.beats) ? llm.beats : sk.beats || [],
+      visual: llm.visual != null ? String(llm.visual) : sk.visual || '',
     };
   });
 
@@ -1679,18 +1870,58 @@ function sanitizePresentationTitle(raw) {
   return title || FALLBACK;
 }
 
+function toBool(value, fallback = false) {
+  if (value == null) return fallback;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  const t = String(value).trim().toLowerCase();
+  if (!t) return fallback;
+  if (['true', '1', 'yes', 'y', 'locked'].includes(t)) return true;
+  if (['false', '0', 'no', 'n', 'unlocked'].includes(t)) return false;
+  return fallback;
+}
+
 function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}) {
   const slides = Array.isArray(data?.slides) ? data.slides : [];
-  const normalizedSlides = slides
+  let normalizedSlides = slides
     .map((s, idx) => ({
       order: Number(s.order) > 0 ? Number(s.order) : idx + 1,
       title: String(s.title || `Slide ${idx + 1}`).trim(),
-      summary: s.summary != null ? String(s.summary) : '',
+      subtitle: s.subtitle != null ? String(s.subtitle).trim() : '',
+      summary: s.summary != null ? String(s.summary) : (s.description != null ? String(s.description) : ''),
+      beats: Array.isArray(s.beats) ? s.beats : [],
+      visual: s.visual != null ? String(s.visual).trim() : '',
+      purpose: s.purpose != null ? String(s.purpose).trim() : (s.intent != null ? String(s.intent).trim() : ''),
+      contentIntent:
+        s.contentIntent != null
+          ? String(s.contentIntent).trim()
+          : (s.summary != null ? String(s.summary).trim() : ''),
+      contentType: Array.isArray(s.contentType)
+        ? s.contentType.map((v) => String(v).trim().toLowerCase()).filter(Boolean)
+        : [],
+      visualIntent: Array.isArray(s.visualIntent)
+        ? s.visualIntent.map((v) => String(v).trim()).filter(Boolean)
+        : [],
       suggestedContentType: s.suggestedContentType || s.content_type || null,
       layoutId: s.layoutId || s.layout_id || null,
+      layoutLocked:
+        s.layoutLocked != null
+          ? toBool(s.layoutLocked, false)
+          : s.layout_locked != null
+            ? toBool(s.layout_locked, false)
+            : false,
+      layoutWhy: s.layoutWhy || s.layout_why || null,
+      visual_need: s.visual_need || s.visualNeed || null,
       intent: s.intent || null,
     }))
     .slice(0, AI_SLIDE_MAX);
+
+  const requested =
+    slideCount != null ? Math.min(AI_SLIDE_MAX, Math.max(1, Number(slideCount) || 12)) : null;
+
+  if (requested) {
+    normalizedSlides = layoutCatalogPolicy.enforceSlideCount(normalizedSlides, requested);
+  }
 
   if (normalizedSlides.length > 0) {
     const first = normalizedSlides.find((s) => Number(s.order) === 1) || normalizedSlides[0];
@@ -1699,8 +1930,10 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     }
   }
 
-  const requested =
-    slideCount != null ? Math.min(AI_SLIDE_MAX, Math.max(1, Number(slideCount) || 12)) : null;
+  normalizedSlides = normalizedSlides.map((s) => ({
+    ...s,
+    layoutId: s.layoutLocked ? s.layoutId || null : null,
+  }));
 
   const sourcePrompt = sourceText != null ? String(sourceText).trim().slice(0, 8000) : data?.sourcePrompt || null;
 
@@ -1711,6 +1944,8 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     locale: locale || 'en',
     slides: normalizedSlides,
     sourcePrompt: sourcePrompt || null,
+    layoutChoices: Array.isArray(data?.layoutChoices) ? data.layoutChoices : undefined,
+    fontPairing: data?.fontPairing || null,
     preferVisuals:
       data?.preferVisuals !== undefined ? Boolean(data.preferVisuals) : detectPreferVisuals(sourcePrompt),
   };
@@ -1835,8 +2070,10 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
 
   if (slotIds.length > 1) {
     const assigned = slotIds.map((id) => slotImageUrls[id]).filter(Boolean);
+    // Same URL on every slot → clear duplicates so we regenerate/stock/placeholder per slot.
+    // Keep the first assignment; clear the rest (do not wipe all).
     if (assigned.length === slotIds.length && new Set(assigned).size === 1) {
-      slotIds.forEach((id) => {
+      slotIds.slice(1).forEach((id) => {
         delete slotImageUrls[id];
       });
     } else if (imageRef?.url) {
@@ -1880,6 +2117,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
         buildSlotImagePrompt(slotId, content, layoutSchema) ||
         imagePrompts[slotId] ||
         imagePrompts[String(slotId).toUpperCase()] ||
+        `Professional presentation visual for ${content?.title || 'slide topic'} (${slotId})` ||
         null;
       if (!prompt) continue;
 
@@ -1912,13 +2150,68 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
           });
         }
       }
+
+      // Stock fallback when AI generation failed for this slot.
+      if (!assigned) {
+        try {
+          const stock = await tryStockImage({
+            query: String(prompt).slice(0, 120),
+            workspaceId: ctx.workspaceId,
+            deckId: ctx.deckId,
+            slideId: slide.id,
+            brief: { subject: prompt },
+          });
+          if (stock?.url && !usedUrls.has(stock.url)) {
+            slotImageUrls[slotId] = stock.url;
+            usedUrls.add(stock.url);
+            missing = missing.filter((id) => id !== slotId);
+            assigned = true;
+          }
+        } catch (stockErr) {
+          logger.warn?.('presentation_slot_image_stock_fallback_failed', {
+            slideId: slide.id,
+            slotId,
+            error: stockErr.message,
+          });
+        }
+      }
     }
   }
 
-  if (slotIds.length === 1 && missing.length === 1 && imageRef?.url && !slotIds.some((id) => slotImageUrls[id] === imageRef.url)) {
-    slotImageUrls[missing[0]] = imageRef.url;
-  } else if (slotIds.length === 1 && imageRef?.url && !slotImageUrls[slotIds[0]]) {
-    slotImageUrls[slotIds[0]] = imageRef.url;
+  // Hero backfill: single-slot layouts, or primary BACKGROUND/HERO in multi-slot layouts.
+  if (imageRef?.url) {
+    const primary = slotIds.find((id) =>
+      /^(BACKGROUND_IMAGE|HERO_IMAGE)$/i.test(String(id))
+    );
+    if (slotIds.length === 1 && !slotImageUrls[slotIds[0]]) {
+      slotImageUrls[slotIds[0]] = imageRef.url;
+    } else if (primary && !slotImageUrls[primary]) {
+      slotImageUrls[primary] = imageRef.url;
+    }
+  }
+
+  // Last-resort placeholder so gallery slots never render as broken <img> icons.
+  // Use per-slot placeholders so distinct-URL logic does not wipe siblings.
+  missing = slotIds.filter((slotId) => !slotImageUrls[slotId]);
+  if (missing.length && ctx.imageSource !== 'none') {
+    for (let i = 0; i < missing.length; i += 1) {
+      const slotId = missing[i];
+      try {
+        const ph = await generationFlowService.ensurePlaceholderImage({
+          slotIndex: slotIds.indexOf(slotId) + 1,
+          seed: `${slide.id}-${slotId}`,
+        });
+        if (ph?.url && !slotImageUrls[slotId]) {
+          slotImageUrls[slotId] = ph.url;
+        }
+      } catch (phErr) {
+        logger.warn?.('presentation_slot_image_placeholder_failed', {
+          slideId: slide.id,
+          slotId,
+          error: phErr.message,
+        });
+      }
+    }
   }
 
   if (!Object.keys(slotImageUrls).length) return content;
@@ -2398,6 +2691,8 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'required_structured' ||
       issue.rule === 'distinct_titles' ||
       issue.rule === 'column_title_matches_slide_title' ||
+      issue.rule === 'distinct_gallery_labels' ||
+      issue.rule === 'gallery_label_matches_slide_title' ||
       issue.rule === 'duplicate_image_prompts' ||
       issue.rule === 'duplicate_slot_image_urls' ||
       issue.rule === 'required_chart_data' ||
@@ -2405,6 +2700,8 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'placeholder_chart_subtitle' ||
       issue.rule === 'placeholder_cta' ||
       issue.rule === 'placeholder_body' ||
+      issue.rule === 'placeholder_heading' ||
+      issue.rule === 'empty_required_slot' ||
       issue.rule === 'placeholder_diagram_body' ||
       issue.rule === 'timeline_missing_details' ||
       (issue.truncated === true && issue.rule === 'max_lines')
@@ -2422,8 +2719,11 @@ async function planDeckLayouts(ctx, slides) {
   const planned = {};
   const usedLayoutIds = new Set();
   let fullBleedUsed = false;
-  let previousLayoutId = null;
   const contentTypeHistory = [];
+  const aiTopN = Math.min(
+    10,
+    Math.max(5, Number(process.env.PPT_LAYOUT_AI_TOP_N || 8) || 8)
+  );
 
   for (const slide of orderedSlides) {
     const outlineSlide =
@@ -2488,47 +2788,56 @@ async function planDeckLayouts(ctx, slides) {
       slideOrder: slide.order,
     });
     if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
-      preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+      // Prefer contact CTA when the outline/content signals contact intent.
+      preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, stubContent)
+        ? 'closing_contact_cta_v1'
+        : 'closing_thank_you_fullbleed_v1';
     }
-    let preferImageSlot = policy.preferImageSlot;
-    if (preferredLayoutId === 'timeline_milestones_image_v1') {
-      preferImageSlot = true;
-    }
-    const { layoutId, template } = selectLayout({
-      contentType: layoutContentType,
-      content: stubContent,
-      previousLayoutId,
-      usedLayoutIds,
-      templates,
-      preferImageSlot,
-      preferredLayoutId,
-      slideOrder: slide.order,
-      totalSlides,
-      excludeLayoutIds,
-    });
-
-    if (layoutId && template) {
-      planned[Number(slide.order)] = {
-        layoutId,
-        template,
-        schema: template.schema || null,
-        layoutContentType,
-        policy,
-      };
-      usedLayoutIds.add(String(layoutId));
-      if (Number(slide.order) === 1) {
-        ctx.titleLayoutId = String(layoutId);
+    let ranked = [];
+    try {
+      const profile = toSlideContentProfile({
+        ...stubContent,
+        purpose: outlineSlide.purpose || outlineSlide.intent || null,
+        suggestedContentType: layoutContentType,
+        slideNumber: Number(slide.order),
+      });
+      const deckLayouts = templates.map((t) => toDeckLayout(t));
+      ranked = rankLayouts(profile, deckLayouts, {
+        topN: aiTopN,
+        previousLayoutIds: [...usedLayoutIds],
+        debug: false,
+      });
+      if (preferredLayoutId) {
+        const idx = ranked.findIndex((r) => String(r.layoutId) === String(preferredLayoutId));
+        if (idx > 0) {
+          const hit = ranked.splice(idx, 1)[0];
+          ranked.unshift(hit);
+        }
       }
-      if (isFullBleedLayoutId(layoutId)) fullBleedUsed = true;
-      previousLayoutId = layoutId;
+    } catch {
+      ranked = [];
+    }
+
+    planned[Number(slide.order)] = {
+      slideNumber: Number(slide.order),
+      layoutContentType,
+      policy,
+      candidateIds: ranked.map((r) => r.layoutId),
+      scores: ranked.map((r) => ({ layoutId: r.layoutId, score: r.score })),
+      diagnosticsOnly: true,
+    };
+
+    const topLayoutId = ranked[0]?.layoutId || null;
+    if (topLayoutId) {
+      usedLayoutIds.add(String(topLayoutId));
+      if (Number(slide.order) === 1) ctx.titleLayoutId = String(topLayoutId);
+      if (isFullBleedLayoutId(topLayoutId)) fullBleedUsed = true;
     }
   }
 
   ctx.plannedLayouts = planned;
   ctx.fullBleedUsed = fullBleedUsed;
-  ctx.layoutIdByOrder = Object.fromEntries(
-    Object.entries(planned).map(([order, entry]) => [order, entry.layoutId])
-  );
+  ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
   ctx.usedLayoutIds = usedLayoutIds;
   return planned;
 }
@@ -2541,6 +2850,7 @@ async function resolvePreGenerationLayout({
   resolvedSummary,
   preferVisuals,
 }) {
+  const layoutDebug = String(process.env.PPT_LAYOUT_DEBUG || '').trim() === '1';
   const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
   if (plannedEntry?.schema) {
     return {
@@ -2593,20 +2903,20 @@ async function resolvePreGenerationLayout({
     preferVisuals,
     slideOrder: slide.order,
   });
-  let preferImageSlot = policy.preferImageSlot;
-  if (preferredLayoutId === 'timeline_milestones_image_v1') {
-    preferImageSlot = true;
-  }
-  const { layoutId, template } = selectLayout({
-    contentType: layoutContentType,
+  const { layoutId, template } = await pickLayoutForGeneratedSlide({
     content: stubContent,
+    templates,
     previousLayoutId,
     usedLayoutIds: ctx.usedLayoutIds || null,
-    templates,
-    preferImageSlot,
     preferredLayoutId,
-    slideOrder: slide.order,
+    preferImageSlot: preferVisuals && Number(slide.order) === 1,
+    ctx,
+    slide,
+    outlineSlide,
     totalSlides,
+    phase: 'pre_content',
+    debug: layoutDebug,
+    theme: ctx.themeTokens || ctx.theme || null,
   });
 
   return {
@@ -2788,6 +3098,7 @@ async function processSlide(ctx, slide) {
   await presentationDao.updateSlide(slide.id, { status: 'GENERATING' });
 
   try {
+    const layoutDebug = String(process.env.PPT_LAYOUT_DEBUG || '').trim() === '1';
     const outlineSlide =
       (ctx.outline?.slides || []).find((s) => Number(s.order) === Number(slide.order)) ||
       (ctx.outline?.slides || [])[slide.order - 1] ||
@@ -2805,7 +3116,7 @@ async function processSlide(ctx, slide) {
       packMeta?.generationHints ||
       (slide.content && slide.content.generationHints) ||
       null;
-    const designTokens =
+    let designTokens =
       packMeta?.designTokens ||
       (slide.content && slide.content.designTokens) ||
       null;
@@ -2859,6 +3170,9 @@ async function processSlide(ctx, slide) {
       resolvedTitle,
       resolvedSummary,
       outlineSlide.suggestedContentType,
+      outlineSlide.subtitle || '',
+      JSON.stringify(outlineSlide.beats || []),
+      outlineSlide.visual || '',
       ctx.userPrompt || '',
       slideIntent || '',
       contentLayoutSchema?.layout_id || '',
@@ -2890,6 +3204,9 @@ async function processSlide(ctx, slide) {
               slideTotal: neighbors.length || ctx.outline?.slideCount || 1,
               title: resolvedTitle || content?.title,
               summary: resolvedSummary,
+              subtitle: outlineSlide.subtitle || '',
+              beats: outlineSlide.beats || [],
+              visual: outlineSlide.visual || '',
               suggestedContentType:
                 packMeta?.contentType ||
                 outlineSlide.suggestedContentType ||
@@ -2953,6 +3270,12 @@ async function processSlide(ctx, slide) {
         notes: '',
       };
     }
+
+    content = blueprintSeed.mergeSeedIntoContent(
+      content,
+      blueprintSeed.seedFromOutlineSlide(outlineSlide),
+      contentLayoutSchema || earlyLayoutSchema
+    );
 
     // 2) Classify
     let contentType = content?.content_type || slide.contentType || outlineSlide.suggestedContentType;
@@ -3030,7 +3353,7 @@ async function processSlide(ctx, slide) {
       }
     }
 
-    if (!ctx.packBound && Number(slide.order) === 1) {
+    if (!ctx.packBound && Number(slide.order) === 1 && !outlineLayoutIdForSlide(outlineSlide, slide)) {
       contentType = 'title';
       if (!visualNeed || String(visualNeed).toLowerCase() === 'none') {
         visualNeed = ctx.preferVisuals !== false ? 'photo' : 'none';
@@ -3044,15 +3367,23 @@ async function processSlide(ctx, slide) {
       Number(slide.order);
     contentType = guardContentTypeForSlideOrder(contentType, slide.order, slideTotal, outlineSlide);
 
+    const blueprintLayoutIdEarly = outlineLayoutIdForSlide(outlineSlide, slide);
+    if (blueprintLayoutIdEarly && outlineSlide.suggestedContentType) {
+      contentType = String(outlineSlide.suggestedContentType).toLowerCase();
+    }
+
     const policy = applyVisualPolicy({
       visualNeed,
       contentType,
       preferVisuals,
       baseTemplateBias: ctx.baseTemplateBias || null,
       respectOutlineType: !ctx.packBound,
+      lockContentType: Boolean(outlineLayoutIdForSlide(outlineSlide, slide)),
     });
     visualNeed = policy.visualNeed;
-    contentType = applyContentDistribution(policy.contentType, ctx);
+    contentType = blueprintLayoutIdEarly
+      ? policy.contentType
+      : applyContentDistribution(policy.contentType, ctx);
     policy.layoutContentType = contentType;
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
@@ -3067,7 +3398,8 @@ async function processSlide(ctx, slide) {
     // 3) Layout select + QA (skip when snapshot/role canvas will rebind)
     let layoutId = null;
     let template = null;
-    const existingLayoutId = slide.layoutId || packMeta?.layout_id || null;
+    const existingLayoutId =
+      outlineLayoutIdForSlide(outlineSlide, slide) || slide.layoutId || packMeta?.layout_id || null;
     const packSnapshotEarly = packMeta?.snapshot?.elements || null;
     const currentElementsEarly =
       slide.elements && typeof slide.elements === 'object' ? slide.elements : null;
@@ -3085,6 +3417,24 @@ async function processSlide(ctx, slide) {
       const existingLayouts = await presentationDao.findLayoutsByLayoutIds([existingLayoutId]);
       template = existingLayouts[0] || null;
       layoutId = existingLayoutId;
+    }
+    if (!template && existingLayoutId) {
+      const blueprintLayouts = await presentationDao.findLayoutsByLayoutIds([existingLayoutId]);
+      template =
+        blueprintLayouts[0] ||
+        loadSeedTemplates(null).find(
+          (t) => String(t.schema?.layout_id || t.variant || '') === String(existingLayoutId)
+        ) ||
+        null;
+      if (template) {
+        layoutId = existingLayoutId;
+        const lockedType = String(template.contentType || template.schema?.content_type || '').toLowerCase();
+        if (lockedType) {
+          contentType = lockedType;
+          policy.layoutContentType = lockedType;
+          if (content && typeof content === 'object') content.content_type = lockedType;
+        }
+      }
     }
     if (!template && !willRebind) {
       const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
@@ -3142,23 +3492,34 @@ async function processSlide(ctx, slide) {
           slideOrder: slide.order,
         });
         if (Number(slide.order) === slideTotal && isSplitHeroLayout(ctx.titleLayoutId)) {
-          preferredLayoutId = 'closing_thank_you_fullbleed_v1';
+          preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, content)
+            ? 'closing_contact_cta_v1'
+            : 'closing_thank_you_fullbleed_v1';
+        } else if (
+          Number(slide.order) === slideTotal &&
+          outlineSuggestsContactIntent(outlineSlide, content)
+        ) {
+          preferredLayoutId = preferredLayoutId || 'closing_contact_cta_v1';
         }
-        let preferImageSlot = policy.preferImageSlot;
-        if (preferredLayoutId === 'timeline_milestones_image_v1') {
-          preferImageSlot = true;
-        }
-        ({ layoutId, template } = selectLayout({
-          contentType: policy.layoutContentType,
+        ({ layoutId, template } = await pickLayoutForGeneratedSlide({
           content,
+          templates,
           previousLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
           usedLayoutIds: ctx.usedLayoutIds || null,
-          templates,
-          preferImageSlot,
           preferredLayoutId,
-          slideOrder: slide.order,
-          totalSlides: slideTotal,
           excludeLayoutIds,
+          preferImageSlot:
+            preferVisuals &&
+            (Number(slide.order) === 1 ||
+              String(visualNeed || '').toLowerCase() === 'photo' ||
+              String(visualNeed || '').toLowerCase() === 'illustration'),
+          ctx,
+          slide,
+          outlineSlide,
+          totalSlides: slideTotal,
+          phase: 'final',
+          debug: layoutDebug,
+          theme: ctx.themeTokens || ctx.theme || null,
         }));
       }
     }
@@ -3172,6 +3533,19 @@ async function processSlide(ctx, slide) {
       if (isFullBleedLayoutId(layoutId)) {
         ctx.fullBleedUsed = true;
       }
+    }
+
+    // Deck art direction: apply deterministic slide-level design tokens
+    // AFTER layoutId is finalized and BEFORE layout compilation.
+    try {
+      const slidePlan = buildSlideDesignPlan({ ctx, slide, outlineSlide });
+      if (slidePlan?.designTokens) {
+        designTokens = { ...(designTokens || {}), ...slidePlan.designTokens };
+      }
+      ctx.slideDesignPlans = ctx.slideDesignPlans || {};
+      ctx.slideDesignPlans[Number(slide.order)] = slidePlan;
+    } catch {
+      // Never block slide generation for art direction failures.
     }
 
     if (template?.schema) {
@@ -3188,7 +3562,11 @@ async function processSlide(ctx, slide) {
     });
     content = qa.content;
 
-    if (qaNeedsContentRepair(qa.issues) && template?.schema) {
+    if (
+      (qaNeedsContentRepair(qa.issues) ||
+        blueprintSeed.contentMissingRequiredCopy(content, template?.schema)) &&
+      template?.schema
+    ) {
       const repaired = await repairSlideContentFromQa({
         ctx,
         slide,
@@ -3203,8 +3581,13 @@ async function processSlide(ctx, slide) {
         mergedGenerationHints,
         contentPrompt,
         neighbors: { prev, next, length: neighbors.length },
+        outlineSlide,
       });
-      content = repaired.content;
+      content = blueprintSeed.mergeSeedIntoContent(
+        repaired.content,
+        blueprintSeed.seedFromOutlineSlide(outlineSlide),
+        template.schema
+      );
       qa = repaired.qa;
     } else if (qa.issues?.length) {
       logger.warn?.('presentation_slide_qa_issues', {
@@ -3213,6 +3596,17 @@ async function processSlide(ctx, slide) {
         issues: qa.issues,
       });
     }
+    // Apply deck-level image strategy (does not affect layoutId selection).
+    // This runs before the visualNeed-driven image brief pipeline starts.
+    const strat = ctx.imageStrategyByOrder?.[Number(slide.order)];
+    if (strat?.usage) {
+      visualNeed = applyDeckImageStrategyToVisualNeed({
+        currentVisualNeed: visualNeed,
+        usage: strat.usage,
+        preferVisuals: ctx.preferVisuals,
+      });
+    }
+
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
       content.content_type = contentType;
@@ -3245,6 +3639,7 @@ async function processSlide(ctx, slide) {
         slide.id,
         PROMPT_BUNDLE_VERSION,
         visualNeed,
+        outlineSlide.visual || '',
         crypto.createHash('sha256').update(JSON.stringify(content || {})).digest('hex'),
       ]);
       const briefJob = await beginJob({
@@ -3265,16 +3660,21 @@ async function processSlide(ctx, slide) {
               themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
               themeColorTreatment: imageColorTreatmentForCtx(ctx),
               wizardBrief: ctx.wizardBrief || '',
-              authorImagePrompt: resolveAuthorImagePrompt(content),
+              authorImagePrompt: resolveAuthorImagePrompt(content) || outlineSlide.visual || '',
               layoutContext: layoutCtx,
               layoutId: template?.schema?.layout_id || layoutId || null,
               hasImageOverlay: layoutCtx.hasImageOverlay,
               visualNeed,
+              visual: outlineSlide.visual || content?.visual || '',
+              suggestedContentType: contentType,
+              previousVisuals: ctx.usedImageSubjects || [],
             }),
             model: DEFAULT_SLIDE_MODEL,
             temperature: 0.3,
           });
           brief = briefResult.data;
+          ctx.usedImageSubjects = ctx.usedImageSubjects || [];
+          if (brief?.subject) ctx.usedImageSubjects.push(String(brief.subject).slice(0, 180));
           await finishJob(briefJob.job.id, {
             status: 'SUCCEEDED',
             usage: briefResult.usage,
@@ -3284,7 +3684,7 @@ async function processSlide(ctx, slide) {
           content = applyDarkExposureOverlay(content, brief, template?.schema || null);
         } catch (err) {
           await finishJob(briefJob.job.id, { status: 'FAILED', error: err.message });
-          const authorBrief = resolveAuthorImagePrompt(content);
+          const authorBrief = resolveAuthorImagePrompt(content) || outlineSlide.visual;
           brief = {
             subject: authorBrief || content?.title || outlineSlide.title,
             search_query: authorBrief || content?.title || outlineSlide.title,
@@ -3404,7 +3804,36 @@ async function processSlide(ctx, slide) {
     elementsDoc = finalizeElementsDoc(elementsDoc, layoutSchema, content, ctx.themeTokens || null, {
       width: canvasSize.width,
       height: canvasSize.height,
+    }, ctx.slideDesignPlans?.[Number(slide.order)] || null);
+
+    const compiledHasEmpty = (elementsDoc?.elements || []).some((el) => {
+      if (el.type !== 'text' && el.type !== 'textbox') return false;
+      const role = String(el.role || '').toLowerCase();
+      if (!['heading', 'title', 'subheading', 'subtitle', 'body', 'bullet'].includes(role)) return false;
+      return blueprintSeed.isWeakText(el.content?.text);
     });
+    if (compiledHasEmpty && layoutSchema?.slots?.length) {
+      content = blueprintSeed.mergeSeedIntoContent(
+        content,
+        blueprintSeed.seedFromOutlineSlide(outlineSlide),
+        layoutSchema
+      );
+      elementsDoc = layoutSlotsToElements(
+        layoutSchema,
+        content,
+        imageRef,
+        { width: canvasSize.width, height: canvasSize.height },
+        {
+          themeTokens: ctx.themeTokens || null,
+          designTokens,
+          applyShapes: false,
+        }
+      );
+      elementsDoc = finalizeElementsDoc(elementsDoc, layoutSchema, content, ctx.themeTokens || null, {
+        width: canvasSize.width,
+        height: canvasSize.height,
+      }, ctx.slideDesignPlans?.[Number(slide.order)] || null);
+    }
 
     if (ctx.themeTokens?.palette?.bg) {
       elementsDoc.backgroundColor = ctx.themeTokens.palette.bg;
@@ -3515,12 +3944,27 @@ async function processDeckGeneration({
       ctx.themeTokens = resolvedFlow.themeTokens;
     }
 
+    // Deck-level visual rhythm + image usage schedule.
+    // Used later inside `processSlide` to influence `visualNeed` before image briefs.
+    const slideCount = Array.isArray(ctx.outline?.slides) ? ctx.outline.slides.length : 1;
+    ctx.visualRhythm = planDeckVisualRhythm({ slideCount });
+    ctx.imageStrategyByOrder = planDeckImageDistribution({ visualRhythm: ctx.visualRhythm });
+
+    // Optional deck-level art direction (semantic-only). v1 is deterministic/no-network.
+    ctx.deckArtDirection = await buildDeckArtDirection({ ctx, themeTokens: ctx.themeTokens });
+
     const pending = (deck.slides || []).filter(
       (s) => s.status === 'PENDING' || s.status === 'GENERATING'
     );
 
     if (!ctx.packBound && pending.length > 0) {
-      await planDeckLayouts(ctx, pending);
+      const outlineHasLockedLayouts = (ctx.outline?.slides || []).some(
+        (s) => (s.layoutId || s.layout_id) && toBool(s.layoutLocked ?? s.layout_locked, false)
+      );
+      ctx.lockBlueprintLayouts = outlineHasLockedLayouts;
+      if (!outlineHasLockedLayouts) {
+        await planDeckLayouts(ctx, pending);
+      }
     }
 
     await mapPool(pending, PPT_SLIDE_CONCURRENCY, async (slide) => processSlide(ctx, slide));
@@ -3609,6 +4053,11 @@ async function generateOutline({
   voiceAndTone = null,
   audience = null,
   purpose = null,
+  imageType = null,
+  imageStyle = null,
+  imageStyleFilter = null,
+  colorTheme = null,
+  optionalOutline = null,
 }) {
   await presentationRateLimit.assertGenerateAllowed(userId, workspaceId);
   const { deck, project } = await loadPresentationDeck(presentationId, {
@@ -3670,6 +4119,26 @@ async function generateOutline({
     }
   }
 
+  const packWhitelist = pack
+    ? (pack.schema?.generationDefaults?.layoutWhitelist ||
+        (pack.schema?.slides || []).map((s) => s.layout_id).filter(Boolean))
+    : null;
+  const allTemplates = await loadAllLayoutTemplates(packWhitelist);
+  const catalogPolicy = layoutCatalogPolicy.buildPolicyFromWizard({
+    density,
+    imageType: imageType || (detectPreferVisuals(sourceText) ? 'ai' : 'none'),
+    imageStyle,
+    imageStyleFilter,
+    sourceText,
+    tone: voiceAndTone,
+    purpose,
+    themeTokens: deck.themeTokens,
+    packBound: Boolean(pack),
+  });
+  const filteredMetas = layoutCatalogPolicy.filterLayoutTemplates(allTemplates, catalogPolicy);
+  const layoutDigest = layoutCatalogPolicy.buildLayoutDigest(filteredMetas);
+  const themeAppearance = catalogPolicy.themeAppearance || '';
+
   if (pack) {
     const packSlides = Array.isArray(pack.schema?.slides) ? pack.schema.slides : [];
     effectiveSlideCount = packSlides.length || slideCount;
@@ -3678,6 +4147,11 @@ async function generateOutline({
       locale,
       sourceText,
     });
+    skeleton.slides = layoutCatalogPolicy.coerceOutlineLayouts(
+      skeleton.slides,
+      filteredMetas,
+      { slideCount: skeleton.slides.length, imageType: catalogPolicy.imageType }
+    );
 
     const llmResult = await chatJson({
       system: outlinePrompt.buildPackEnrichSystem(),
@@ -3721,6 +4195,12 @@ async function generateOutline({
         audience: audience || '',
         voiceAndTone: outlineVoiceAndTone || '',
         purpose: purpose || '',
+        imageType: catalogPolicy.imageType,
+        imageStyle: imageStyle || '',
+        imageStyleFilter: imageStyleFilter || '',
+        themeAppearance,
+        layoutDigest,
+        optionalOutline: optionalOutline || outlineText || '',
       }),
       model: DEFAULT_OUTLINE_MODEL,
     });
@@ -3745,6 +4225,31 @@ async function generateOutline({
       metadata: { projectId: project.id },
     });
     await trackCharge(deck.id, chargeResult);
+  }
+
+  outline = finalizeBlueprintOutline(outline, filteredMetas, catalogPolicy, effectiveSlideCount);
+  if (catalogPolicy.imageType === 'none') {
+    outline.preferVisuals = false;
+  }
+
+  try {
+    const biasedTheme = layoutCatalogPolicy.biasPaletteFromSourceText(deck.themeTokens || {}, sourceText);
+    const themedFonts = await fontPairingService.ensureThemeFonts(biasedTheme, {
+      prompt: sourceText,
+      wizardBrief: [outlineVoiceAndTone, audience, purpose].filter(Boolean).join('\n'),
+      tone: voiceAndTone,
+      audience,
+      purpose,
+      brandKitId: outlineBrandKitId,
+    });
+    await presentationDao.updateDeck(deck.id, { themeTokens: themedFonts });
+    outline.fontPairing = {
+      heading: themedFonts?.fonts?.heading || null,
+      body: themedFonts?.fonts?.body || null,
+      fontPairingId: themedFonts?.fontPairingId || null,
+    };
+  } catch (err) {
+    logger.warn('ensureThemeFonts failed during outline', { error: err.message });
   }
 
   // Persist generated deck title on the Project before returning
@@ -3786,6 +4291,8 @@ async function updateOutline({ presentationId, outline, workspaceId }) {
         outline.preferVisuals !== undefined
           ? outline.preferVisuals
           : deck.outline?.preferVisuals,
+      layoutChoices: outline.layoutChoices || deck.outline?.layoutChoices,
+      fontPairing: outline.fontPairing || deck.outline?.fontPairing,
     },
     {
       slideCount: outline.slideCount,
@@ -3816,8 +4323,9 @@ async function setTheme({ presentationId, themeId, themeTokens, workspaceId }) {
     requireWorkspaceId: workspaceId,
   });
   const resolved = themeService.resolveThemeTokens({ themeId, themeTokens });
+  const merged = fontPairingService.mergeThemeTokensPreservingFonts(deck.themeTokens, resolved);
   const updated = await presentationDao.updateDeck(deck.id, {
-    themeTokens: resolved,
+    themeTokens: merged,
   });
   return {
     deckId: updated.id,

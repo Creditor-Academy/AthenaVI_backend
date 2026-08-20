@@ -688,5 +688,635 @@
         "mood": "fresh"
       }
     }
+  },
+  {
+    "id": "sky_day",
+    "name": "Sky Day",
+    "themeTokens": {
+      "palette": {
+        "bg": "#F5FAFF",
+        "surface": "#E8F4FC",
+        "primary": "#2563EB",
+        "secondary": "#0EA5E9",
+        "text": "#0F2744",
+        "muted": "#5B7A99",
+        "accent": "#38BDF8",
+        "divider": "rgba(15,39,68,0.12)",
+        "cardBg": "rgba(37,99,235,0.06)",
+        "gradientStart": "#F5FAFF",
+        "gradientEnd": "#E8F4FC",
+        "shadow": "rgba(15,39,68,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.4)"
+      },
+      "fontPairingId": "inter_space",
+      "fonts": {
+        "heading": "Inter",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "bright daylight exteriors, clear sky, soft shadows",
+      "colorTreatment": "sky blue on airy white",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "solid",
+        "overlayOpacity": 0.35,
+        "textContrast": "normal"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["sky", "light"],
+        "useCases": ["saas", "product"],
+        "mood": "open"
+      }
+    }
+  },
+  {
+    "id": "rose_quartz",
+    "name": "Rose Quartz",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FFF8F7",
+        "surface": "#FCEEEB",
+        "primary": "#BE185D",
+        "secondary": "#E11D48",
+        "text": "#3F1D2E",
+        "muted": "#8B6B78",
+        "accent": "#FB7185",
+        "divider": "rgba(63,29,46,0.12)",
+        "cardBg": "rgba(190,24,93,0.05)",
+        "gradientStart": "#FFF8F7",
+        "gradientEnd": "#FCEEEB",
+        "shadow": "rgba(63,29,46,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.4)"
+      },
+      "fontPairingId": "manrope_inter",
+      "fonts": {
+        "heading": "Manrope",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "soft lifestyle photography, warm blush tones",
+      "colorTreatment": "rose and blush on cream",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "solid",
+        "overlayOpacity": 0.35,
+        "textContrast": "normal"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["rose", "light"],
+        "useCases": ["brand", "wellness"],
+        "mood": "warm"
+      }
+    }
+  },
+  {
+    "id": "lavender_mist",
+    "name": "Lavender Mist",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FAF8FF",
+        "surface": "#F0ECFA",
+        "primary": "#7C3AED",
+        "secondary": "#A78BFA",
+        "text": "#2E1065",
+        "muted": "#6B7280",
+        "accent": "#C4B5FD",
+        "divider": "rgba(46,16,101,0.12)",
+        "cardBg": "rgba(124,58,237,0.06)",
+        "gradientStart": "#FAF8FF",
+        "gradientEnd": "#F0ECFA",
+        "shadow": "rgba(46,16,101,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.4)"
+      },
+      "fontPairingId": "outfit_source",
+      "fonts": {
+        "heading": "Outfit",
+        "body": "Source Sans 3",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "soft violet studio light, calm interiors",
+      "colorTreatment": "lavender accents on pale lilac",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "solid",
+        "overlayOpacity": 0.35,
+        "textContrast": "normal"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["lavender", "light"],
+        "useCases": ["saas", "creative"],
+        "mood": "calm"
+      }
+    }
+  },
+  {
+    "id": "citrus_fresh",
+    "name": "Citrus Fresh",
+    "themeTokens": {
+      "palette": {
+        "bg": "#FFFEF5",
+        "surface": "#FEF9C3",
+        "primary": "#CA8A04",
+        "secondary": "#65A30D",
+        "text": "#1C1917",
+        "muted": "#78716C",
+        "accent": "#EAB308",
+        "divider": "rgba(28,25,23,0.12)",
+        "cardBg": "rgba(202,138,4,0.06)",
+        "gradientStart": "#FFFEF5",
+        "gradientEnd": "#FEF9C3",
+        "shadow": "rgba(28,25,23,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.4)"
+      },
+      "fontPairingId": "inter_space",
+      "fonts": {
+        "heading": "Inter",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "bright citrus produce, sunny kitchen light",
+      "colorTreatment": "gold and lime on cream",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "solid",
+        "overlayOpacity": 0.35,
+        "textContrast": "normal"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["citrus", "light"],
+        "useCases": ["food", "lifestyle"],
+        "mood": "energetic"
+      }
+    }
+  },
+  {
+    "id": "slate_light",
+    "name": "Slate Light",
+    "themeTokens": {
+      "palette": {
+        "bg": "#F8FAFC",
+        "surface": "#EEF2F6",
+        "primary": "#334155",
+        "secondary": "#64748B",
+        "text": "#0F172A",
+        "muted": "#64748B",
+        "accent": "#475569",
+        "divider": "rgba(15,23,42,0.12)",
+        "cardBg": "rgba(51,65,85,0.05)",
+        "gradientStart": "#F8FAFC",
+        "gradientEnd": "#EEF2F6",
+        "shadow": "rgba(15,23,42,0.08)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.4)"
+      },
+      "fontPairingId": "manrope_inter",
+      "fonts": {
+        "heading": "Manrope",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 56,
+        "title": 42,
+        "subtitle": 26,
+        "body": 18,
+        "caption": 14,
+        "stat": 64
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "clean architectural photography, neutral daylight",
+      "colorTreatment": "slate neutrals on cool gray",
+      "schemaVersion": 2,
+      "appearance": "light",
+      "overlayDefaults": {
+        "backgroundStyle": "solid",
+        "overlayOpacity": 0.35,
+        "textContrast": "normal"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["slate", "light"],
+        "useCases": ["consulting", "corporate"],
+        "mood": "neutral"
+      }
+    }
+  },
+  {
+    "id": "deep_ocean",
+    "name": "Deep Ocean",
+    "themeTokens": {
+      "palette": {
+        "bg": "#06141F",
+        "surface": "#0C2133",
+        "primary": "#38BDF8",
+        "secondary": "#22D3EE",
+        "text": "#E0F2FE",
+        "muted": "#7BA3B8",
+        "accent": "#0EA5E9",
+        "divider": "rgba(224,242,254,0.12)",
+        "cardBg": "rgba(255,255,255,0.05)",
+        "gradientStart": "#06141F",
+        "gradientEnd": "#0C2133",
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
+      },
+      "fontPairingId": "inter_space",
+      "fonts": {
+        "heading": "Inter",
+        "body": "Inter",
+        "headingWeight": 800,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "deep sea and night harbor photography",
+      "colorTreatment": "cyan accents on deep navy",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "gradient",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["ocean", "dark"],
+        "useCases": ["tech", "pitch"],
+        "mood": "deep"
+      }
+    }
+  },
+  {
+    "id": "ember_night",
+    "name": "Ember Night",
+    "themeTokens": {
+      "palette": {
+        "bg": "#1A0C08",
+        "surface": "#2A1410",
+        "primary": "#F97316",
+        "secondary": "#FB923C",
+        "text": "#FFF7ED",
+        "muted": "#C4A484",
+        "accent": "#FDBA74",
+        "divider": "rgba(255,247,237,0.12)",
+        "cardBg": "rgba(255,255,255,0.05)",
+        "gradientStart": "#1A0C08",
+        "gradientEnd": "#2A1410",
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
+      },
+      "fontPairingId": "outfit_source",
+      "fonts": {
+        "heading": "Outfit",
+        "body": "Source Sans 3",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "warm firelight and dusk urban scenes",
+      "colorTreatment": "ember orange on charcoal brown",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "gradient",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["ember", "dark"],
+        "useCases": ["brand", "lifestyle"],
+        "mood": "intense"
+      }
+    }
+  },
+  {
+    "id": "steel_blue",
+    "name": "Steel Blue",
+    "themeTokens": {
+      "palette": {
+        "bg": "#0E1520",
+        "surface": "#172033",
+        "primary": "#60A5FA",
+        "secondary": "#94A3B8",
+        "text": "#F1F5F9",
+        "muted": "#94A3B8",
+        "accent": "#93C5FD",
+        "divider": "rgba(241,245,249,0.12)",
+        "cardBg": "rgba(255,255,255,0.05)",
+        "gradientStart": "#0E1520",
+        "gradientEnd": "#172033",
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
+      },
+      "fontPairingId": "manrope_inter",
+      "fonts": {
+        "heading": "Manrope",
+        "body": "Inter",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "industrial steel and cool blue city night",
+      "colorTreatment": "steel blue on graphite",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "gradient",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["steel", "dark"],
+        "useCases": ["enterprise", "tech"],
+        "mood": "precise"
+      }
+    }
+  },
+  {
+    "id": "plum_dusk",
+    "name": "Plum Dusk",
+    "themeTokens": {
+      "palette": {
+        "bg": "#140B18",
+        "surface": "#221530",
+        "primary": "#C084FC",
+        "secondary": "#F472B6",
+        "text": "#FAF5FF",
+        "muted": "#B4A0C4",
+        "accent": "#E879F9",
+        "divider": "rgba(250,245,255,0.12)",
+        "cardBg": "rgba(255,255,255,0.05)",
+        "gradientStart": "#140B18",
+        "gradientEnd": "#221530",
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
+      },
+      "fontPairingId": "outfit_source",
+      "fonts": {
+        "heading": "Outfit",
+        "body": "Source Sans 3",
+        "headingWeight": 700,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "dusk interiors with plum and magenta light",
+      "colorTreatment": "plum and pink on deep violet",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "gradient",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["plum", "dark"],
+        "useCases": ["creative", "brand"],
+        "mood": "dramatic"
+      }
+    }
+  },
+  {
+    "id": "obsidian_teal",
+    "name": "Obsidian Teal",
+    "themeTokens": {
+      "palette": {
+        "bg": "#061412",
+        "surface": "#0C221E",
+        "primary": "#2DD4BF",
+        "secondary": "#5EEAD4",
+        "text": "#ECFDF5",
+        "muted": "#86A899",
+        "accent": "#14B8A6",
+        "divider": "rgba(236,253,245,0.12)",
+        "cardBg": "rgba(255,255,255,0.05)",
+        "gradientStart": "#061412",
+        "gradientEnd": "#0C221E",
+        "shadow": "rgba(0,0,0,0.45)",
+        "textOnImage": "#FFFFFF",
+        "textOnImageMuted": "rgba(255,255,255,0.85)",
+        "overlayScrim": "rgba(0,0,0,0.5)"
+      },
+      "fontPairingId": "inter_space",
+      "fonts": {
+        "heading": "Inter",
+        "body": "Inter",
+        "headingWeight": 800,
+        "bodyWeight": 400
+      },
+      "typeScale": {
+        "display": 60,
+        "title": 44,
+        "subtitle": 28,
+        "body": 18,
+        "caption": 14,
+        "stat": 68
+      },
+      "scaleRatio": 1.333,
+      "spacingScale": {
+        "xs": 4,
+        "sm": 8,
+        "md": 16,
+        "lg": 24
+      },
+      "imageStyle": "dark teal glass and rainforest night",
+      "colorTreatment": "teal accents on obsidian",
+      "schemaVersion": 2,
+      "appearance": "dark",
+      "overlayDefaults": {
+        "backgroundStyle": "gradient",
+        "overlayOpacity": 0.45,
+        "textContrast": "high"
+      },
+      "shapeDefaults": {
+        "cardBorderRadius": 12,
+        "accentBarWidth": 8
+      },
+      "meta": {
+        "tags": ["teal", "dark"],
+        "useCases": ["tech", "health"],
+        "mood": "sleek"
+      }
+    }
   }
 ]

@@ -183,8 +183,20 @@ function buildUser(vars = {}) {
     `Locale: ${vars.locale || 'en'}`,
     `Max bullets: ${caps.maxBullets} | Max words body: ${hints?.maxBodyWords || caps.maxWordsBody} | Max title lines: ${caps.maxTitleLines}`,
     `Slide order: ${vars.slideOrder || 1}/${vars.slideTotal || 1}`,
-    `Title: ${vars.title || ''}`,
-    `Summary: ${vars.summary || ''}`,
+    `Title (required seed — use as the slide headline / brand name): ${vars.title || ''}`,
+    vars.subtitle ? `Subtitle / tagline (required seed): ${vars.subtitle}` : '',
+    `Summary (this is the argument to place in body slots, not a topic label): ${vars.summary || ''}`,
+    Array.isArray(vars.beats) && vars.beats.length
+      ? `Beats (map into columns[] / bullets[] to match slot count):\n${vars.beats
+          .map((b, i) => {
+            if (typeof b === 'string') return `- ${i + 1}. ${b}`;
+            const label = b.label || b.title || '';
+            const text = b.text || b.body || '';
+            return `- ${i + 1}. ${label}${text && text !== label ? `: ${text}` : ''}`;
+          })
+          .join('\n')}`
+      : '',
+    vars.visual ? `Visual direction for this slide only: ${vars.visual}` : '',
     `Suggested type: ${vars.suggestedContentType || 'bullet_list'}`,
     vars.intent ? `Slide intent (follow closely): ${vars.intent}` : '',
     `Previous slide title: ${vars.previousSlideTitle || '(none)'}`,
@@ -210,6 +222,8 @@ function buildUser(vars = {}) {
     slotLines ? `\nLayout slot constraints (fit the visual container):\n${slotLines}` : '',
     '',
     'Rules:',
+    '- Fill every text slot from the required seed (title, subtitle, beats). Do NOT invent a 25-word recap and leave heading/body empty.',
+    '- Title slides: title = brand or deck name, subtitle = tagline, titleRuns required (2–3 segments).',
     '- Replace any template placeholder wording with original content from the brief.',
     '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
@@ -221,7 +235,7 @@ function buildUser(vars = {}) {
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',
     '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
-    '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block — e.g. lead lines use textOnImage or text, final line uses accent colorRole with fontWeight 700. Set title to the full concatenated string too.',
+    '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block — lead lines use textOnImage or text, final line uses accent colorRole with fontWeight 700. Do NOT set fontFamily on runs; the deck heading font applies. Set title to the full concatenated string too.',
     '',
     'Output JSON schema (fill relevant slots; unused fields null or empty):',
     JSON.stringify(

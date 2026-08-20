@@ -4,7 +4,13 @@ function buildSystem() {
     'Output a JSON image brief — describe a concrete, literal visual, not an abstract theme.',
     '',
     'Rules:',
-    '- Extract 1-3 CONCRETE nouns/entities from the slide content —',
+    '- Prefer the slide visual direction when provided; it is unique to this slide.',
+    '- Do not repeat the same product close-up (mug, cup, logo object) across slides.',
+    '- Title / cover: establishing interior or landscape with negative space for type.',
+    '- Story slides: people or interior, not a product hero.',
+    '- Vision / atmosphere: landscape or weather, not a tabletop still life.',
+    '- Menu / product: food or cup hero at most once in the deck.',
+    '- Extract 1-3 CONCRETE nouns/entities from the visual + slide content —',
     '  never abstract concepts like "growth" or "success" alone.',
     '- Do not describe layout chrome (borders, cards, circles) — shapes are rendered by the layout engine; describe the photo subject only.',
     '- For side-panel hero images: single focal subject, uncluttered background, works in rectangular cover crop.',
@@ -47,7 +53,12 @@ function buildUser(vars = {}) {
 
   return [
     `Slide title: ${vars.slideTitle || ''}`,
+    vars.suggestedContentType ? `Slide job / content type: ${vars.suggestedContentType}` : '',
     vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
+    vars.visual ? `Blueprint visual (primary subject — do not ignore): ${vars.visual}` : '',
+    Array.isArray(vars.previousVisuals) && vars.previousVisuals.length
+      ? `Already used in this deck (do not repeat):\n${vars.previousVisuals.map((v) => `- ${v}`).join('\n')}`
+      : '',
     vars.hasImageOverlay || vars.layoutContext?.hasImageOverlay
       ? 'Overlay slide: prefer darker exposure or natural vignette so white overlay text stays readable.'
       : '',
