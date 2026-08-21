@@ -17,7 +17,7 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
+const { filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout, layoutFamilyExcludeIds } = require('./layoutSelector.service');
 const { pickLayoutForGeneratedSlide } = require('./deckLayout/pickLayoutForGeneratedSlide');
 const { toDeckLayout } = require('./deckLayout/toDeckLayout');
 const { toSlideContentProfile } = require('./deckLayout/toSlideContentProfile');
@@ -292,7 +292,7 @@ function normalizeMultiColumnContent(content, layoutSchema) {
   if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
   const slots = layoutSchema.slots;
   const needsColumns =
-    slots.some((s) => /^(card|col)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^(card|col|row)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^body_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^image_\d+_label$/i.test(String(s.id || ''))) ||
@@ -2942,6 +2942,7 @@ async function planDeckLayouts(ctx, slides) {
       ranked = rankLayouts(profile, deckLayouts, {
         topN: aiTopN,
         previousLayoutIds: [...usedLayoutIds],
+        adjacentLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
         debug: false,
       });
       if (preferredLayoutId) {
@@ -2964,9 +2965,21 @@ async function planDeckLayouts(ctx, slides) {
       diagnosticsOnly: true,
     };
 
-    const topLayoutId = ranked[0]?.layoutId || null;
+    const prevPlannedId = ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null;
+    const banned = new Set();
+    if (prevPlannedId) {
+      layoutFamilyExcludeIds(prevPlannedId).forEach((id) => banned.add(String(id)));
+      banned.add(String(prevPlannedId));
+    }
+    const topLayoutId =
+      ranked.find((r) => r.layoutId && !banned.has(String(r.layoutId)))?.layoutId ||
+      ranked[0]?.layoutId ||
+      null;
     if (topLayoutId) {
       usedLayoutIds.add(String(topLayoutId));
+      ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
+      // Seed neighbor ids for concurrent processSlide so adjacent diversity works.
+      ctx.layoutIdByOrder[Number(slide.order)] = String(topLayoutId);
       if (Number(slide.order) === 1) ctx.titleLayoutId = String(topLayoutId);
       if (isFullBleedLayoutId(topLayoutId)) fullBleedUsed = true;
     }

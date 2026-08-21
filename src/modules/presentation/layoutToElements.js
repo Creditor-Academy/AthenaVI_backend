@@ -104,6 +104,95 @@ function applySplitImageEdgeFade(doc, layoutSchema) {
   return { ...doc, elements };
 }
 
+function textPaddingForRole(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'heading' || r === 'quote' || r === 'title') return { x: 12, y: 8 };
+  if (r === 'caption' || r === 'stat_label' || r === 'eyebrow' || r === 'subheading') {
+    return { x: 8, y: 4 };
+  }
+  return { x: 10, y: 6 };
+}
+
+const COLUMN_STACK_GAP_PX = 14;
+const COLUMN_STACK_MIN_TITLE = 36;
+const COLUMN_STACK_MIN_BODY = 48;
+
+function columnStackKey(slotId) {
+  const m = String(slotId || '').match(
+    /^(CARD|COL|ROW|FEATURE)_(\d+)_(TITLE|SUBTITLE|BODY|TEXT)$/i
+  );
+  if (!m) return null;
+  return `${m[1].toUpperCase()}_${m[2]}`;
+}
+
+function columnStackPartWeight(part, text) {
+  const len = String(text || '').trim().length;
+  const p = String(part || '').toUpperCase();
+  if (p === 'TITLE' || p === 'SUBTITLE') return Math.max(1, Math.min(4, Math.ceil(len / 18) || 1));
+  return Math.max(2, Math.min(10, Math.ceil(len / 40) || 2));
+}
+
+/**
+ * Re-pack CARD/COL/ROW title+body stacks so short titles take less height and
+ * longer bodies expand within the original column band, with a fixed gap.
+ */
+function packColumnTextStacks(elements) {
+  if (!Array.isArray(elements) || !elements.length) return elements;
+  const groups = new Map();
+  for (const el of elements) {
+    if (!el || el.type !== 'text' || !el.placement) continue;
+    const key = columnStackKey(el.slotId);
+    if (!key) continue;
+    const part =
+      String(el.slotId)
+        .match(/_(TITLE|SUBTITLE|BODY|TEXT)$/i)?.[1]
+        ?.toUpperCase() || 'BODY';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ el, part });
+  }
+
+  for (const items of groups.values()) {
+    if (items.length < 2) continue;
+    items.sort((a, b) => (a.el.placement?.y || 0) - (b.el.placement?.y || 0));
+    const first = items[0].el.placement;
+    const last = items[items.length - 1].el.placement;
+    const bandTop = Number(first.y) || 0;
+    const bandBottom = (Number(last.y) || 0) + (Number(last.height) || 0);
+    const bandH = Math.max(0, bandBottom - bandTop);
+    if (bandH < 40) continue;
+
+    const gapsTotal = COLUMN_STACK_GAP_PX * (items.length - 1);
+    const usable = Math.max(0, bandH - gapsTotal);
+    const weights = items.map(({ el, part }) =>
+      columnStackPartWeight(part, el.content?.text)
+    );
+    const weightSum = weights.reduce((a, b) => a + b, 0) || items.length;
+    let heights = items.map(({ part }, i) => {
+      const minH =
+        part === 'TITLE' || part === 'SUBTITLE' ? COLUMN_STACK_MIN_TITLE : COLUMN_STACK_MIN_BODY;
+      return Math.max(minH, Math.round((weights[i] / weightSum) * usable));
+    });
+    let sumH = heights.reduce((a, b) => a + b, 0);
+    if (sumH > usable && sumH > 0) {
+      const scale = usable / sumH;
+      heights = heights.map((h) => Math.max(28, Math.round(h * scale)));
+      sumH = heights.reduce((a, b) => a + b, 0);
+      heights[heights.length - 1] += Math.max(0, usable - sumH);
+    }
+
+    let y = bandTop;
+    items.forEach(({ el }, i) => {
+      el.placement = {
+        ...el.placement,
+        y: Math.round(y),
+        height: Math.max(28, heights[i]),
+      };
+      y += heights[i] + COLUMN_STACK_GAP_PX;
+    });
+  }
+  return elements;
+}
+
 function shouldSplitSharedRow(upperRole, lowerRole) {
   const textRoles = new Set([
     'heading', 'subheading', 'body', 'caption', 'stat', 'stat_label',
@@ -125,10 +214,10 @@ function adjustSlotRegion(reg, slot, allSlots) {
     if (!oreg) continue;
     const otherRole = other.role || 'body';
     if (oreg.r1 === adjusted.r2 && shouldSplitSharedRow(role, otherRole)) {
-      adjusted.r2 -= 0.42;
+      adjusted.r2 -= 0.75;
     }
     if (oreg.r2 === adjusted.r1 && shouldSplitSharedRow(otherRole, role)) {
-      adjusted.r1 += 0.42;
+      adjusted.r1 += 0.75;
     }
   }
   if (adjusted.r2 < adjusted.r1) adjusted.r2 = adjusted.r1 + 0.5;
@@ -430,6 +519,7 @@ const AGENDA_HEADING_RE = /^agenda_col_(\d+)_heading$/;
 const DEPT_HEADING_RE = /^dept_(\d+)_heading$/;
 const CARD_FIELD_RE = /^card_(\d+)_(title|body)$/;
 const COL_FIELD_RE = /^col_(\d+)_(title|body)$/;
+const ROW_FIELD_RE = /^row_(\d+)_(title|body)$/;
 const FEATURE_FIELD_RE = /^feature_(\d+)_(title|body|text)$/;
 const MILESTONE_PART_RE = /^milestone_(\d+)_(label|detail)$/;
 const QUADRANT_FIELD_RE = /^q(\d+)_(title|body)$/;
@@ -773,24 +863,13 @@ function titleWordsFromBodyLocal(body, fallback) {
 
 function layoutHasDedicatedColumnTitleSlots(layoutSchema) {
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  return slots.some((s) => /^(card|col|feature)_\d+_title$/i.test(String(s.id || '')));
+  return slots.some((s) => /^(card|col|row|feature)_\d+_title$/i.test(String(s.id || '')));
 }
 
-function uniqueColumnTitle(rawTitle, body, index, content, fallbackPrefix = 'Aspect') {
-  const slideTitle = String(content?.title || '').trim().toLowerCase();
-  let title = String(rawTitle || '').trim();
+function resolveColumnTitleCandidate(col, index, slideTitle, seen, fallbackPrefix) {
+  let title = String(col?.title ?? col?.heading ?? col?.label ?? '').trim();
+  const body = String(col?.body ?? col?.text ?? col?.description ?? '').trim();
   const titleLower = title.toLowerCase();
-  const cols = content?.columns || content?.cards || content?.features || [];
-  const seen = new Set();
-  if (Array.isArray(cols)) {
-    for (let i = 0; i < index; i += 1) {
-      const prev = cols[i];
-      const prevTitle = String(prev?.title ?? prev?.heading ?? prev?.label ?? '')
-        .trim()
-        .toLowerCase();
-      if (prevTitle) seen.add(prevTitle);
-    }
-  }
   if (!title || titleLower === slideTitle || seen.has(titleLower)) {
     const fromBody = titleWordsFromBodyLocal(body, '');
     const fromBodyLower = String(fromBody || '')
@@ -803,6 +882,27 @@ function uniqueColumnTitle(rawTitle, body, index, content, fallbackPrefix = 'Asp
     }
   }
   return title;
+}
+
+function uniqueColumnTitle(rawTitle, body, index, content, fallbackPrefix = 'Aspect') {
+  const slideTitle = String(content?.title || '').trim().toLowerCase();
+  const cols = content?.columns || content?.cards || content?.features || [];
+  const seen = new Set();
+  // Rebuild uniqueness from prior columns the same way we rewrite them, so `seen`
+  // includes rewritten titles (not only raw LLM duplicates of the slide title).
+  if (Array.isArray(cols)) {
+    for (let i = 0; i < index; i += 1) {
+      const resolved = resolveColumnTitleCandidate(cols[i], i, slideTitle, seen, fallbackPrefix);
+      if (resolved) seen.add(resolved.toLowerCase());
+    }
+  }
+  return resolveColumnTitleCandidate(
+    { title: rawTitle, body },
+    index,
+    slideTitle,
+    seen,
+    fallbackPrefix
+  );
 }
 
 function textForSlot(slotId, content = {}, layoutSchema = null) {
@@ -948,6 +1048,22 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
         Number(colField[1]) - 1,
         content,
         'Aspect'
+      );
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const rowField = id.match(ROW_FIELD_RE);
+  if (rowField) {
+    const col = structuredColumnAt(content, Number(rowField[1]) - 1);
+    if (!col) return '';
+    if (rowField[2] === 'title') {
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        Number(rowField[1]) - 1,
+        content,
+        'Pillar'
       );
     }
     return String(col.body ?? col.text ?? itemToText(col)).trim();
@@ -1157,8 +1273,10 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
   if (
     id.includes('title') &&
     !id.includes('subtitle') &&
-    // Never flood indexed process/card/column slots with the slide title.
-    !/^metric_|^plan_|^col_|^card_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_/.test(id)
+    // Never flood indexed process/card/column/row slots with the slide title.
+    !/^metric_|^plan_|^col_|^card_|^row_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_/.test(
+      id
+    )
   ) {
     return content.title || '';
   }
@@ -2199,6 +2317,9 @@ function layoutSlotsToElements(
     const slotRole = elementRoleFromSlot(slot, slotId);
     const fontFamily = fontFamilyForRole(slotRole, themeTokens);
     if (fontFamily) textContent.fontFamily = fontFamily;
+    const pad = textPaddingForRole(slotRole || role);
+    textContent.padding = pad.y;
+    textContent.paddingX = pad.x;
 
     elements.push({
       id: newElementId('txt'),
@@ -2211,6 +2332,8 @@ function layoutSlotsToElements(
     });
     if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
   }
+
+  packColumnTextStacks(elements);
 
   if (elements.length === 0 && (content.title || content.body)) {
     elements.push({
@@ -2675,13 +2798,15 @@ function resolveImageGenSize(slot, canvas = {}, allSlots = null) {
 }
 
 function isRichTitleSlot(slotId, role) {
+  // Only slide-level title/quote slots get titleRuns — never CARD_/COL_/ROW_ headings.
   const id = String(slotId || '').toUpperCase();
   const r = String(role || '').toLowerCase();
-  return (
-    ['MAIN_TITLE', 'HEADLINE', 'TITLE', 'QUOTE', 'STATEMENT'].includes(id) ||
-    r === 'heading' ||
-    r === 'quote'
-  );
+  if (['MAIN_TITLE', 'HEADLINE', 'TITLE', 'QUOTE', 'STATEMENT', 'HEADING'].includes(id)) {
+    return true;
+  }
+  if (r === 'quote' && /^(QUOTE|STATEMENT)$/i.test(id)) return true;
+  // Do not treat generic role===heading as rich (would stamp slide titleRuns on every card).
+  return false;
 }
 
 function deriveTitleRunsFallback(content, onImage = false) {

@@ -3,6 +3,7 @@ const { toSlideContentProfile } = require('./toSlideContentProfile');
 const { rankLayouts } = require('./rankLayouts');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
+const { layoutFamilyExcludeIds } = require('../layoutSelector.service');
 
 function templateLayoutId(template) {
   return String(template?.schema?.layout_id || template?.variant || template?.id || '').trim();
@@ -15,6 +16,24 @@ function previousIdsFrom(value) {
   if (typeof value.has === 'function') return [...value].map((id) => String(id));
   if (typeof value === 'object') return Object.values(value).map((id) => String(id)).filter(Boolean);
   return [];
+}
+
+/**
+ * Prefer a different layout than the immediately previous slide (exact id or family).
+ */
+function avoidAdjacentSameFormat(selectedId, previousLayoutId, ranked, locked) {
+  if (locked) return selectedId;
+  const prev = String(previousLayoutId || '').trim();
+  const selected = String(selectedId || '').trim();
+  if (!prev || !selected) return selectedId;
+  const banned = new Set(layoutFamilyExcludeIds(prev).map(String));
+  banned.add(prev);
+  if (!banned.has(selected)) return selectedId;
+  const alt = (ranked || []).find((r) => {
+    const id = String(r?.layoutId || '').trim();
+    return id && !banned.has(id);
+  });
+  return alt?.layoutId || selectedId;
 }
 
 function buildPresentationContext({ ctx, slide, outlineSlide, totalSlides }) {
@@ -229,9 +248,14 @@ async function pickLayoutForGeneratedSlide({
   const prev = previousIdsFrom(previousLayoutIds)
     .concat(previousIdsFrom(previousLayoutId))
     .concat(previousIdsFrom(usedLayoutIds));
+  const adjacentLayoutId =
+    String(previousLayoutId || '').trim() ||
+    String(ctx?.layoutIdByOrder?.[Number(slide?.order) - 1] || '').trim() ||
+    null;
   let ranked = rankLayouts(profile, deckLayouts, {
     topN: config.topN,
     previousLayoutIds: prev,
+    adjacentLayoutId,
     debug,
   });
   ranked = promotePreferred(ranked, preferredLayoutId);
@@ -241,6 +265,7 @@ async function pickLayoutForGeneratedSlide({
     return { layoutId: templateLayoutId(fallback) || null, template: fallback };
   }
 
+  const layoutLocked = Boolean(outlineSlide?.layoutLocked);
   const selection = await selectBestLayoutWithAI({
     slide: profile,
     candidates: ranked,
@@ -253,14 +278,20 @@ async function pickLayoutForGeneratedSlide({
       subtitle: content?.subtitle,
       body: content?.body || outlineSlide?.summary,
     },
-    layoutLocked: Boolean(outlineSlide?.layoutLocked),
+    layoutLocked,
     lockedLayoutId,
     phase,
     debug,
     chatJson,
   });
 
-  const layoutId = selection.selectedLayoutId;
+  const preferredId = avoidAdjacentSameFormat(
+    selection.selectedLayoutId,
+    adjacentLayoutId,
+    ranked,
+    layoutLocked
+  );
+  const layoutId = preferredId;
   const template = resolveTemplate(list, layoutId) || resolveTemplate(list, ranked[0].layoutId) || list[0];
   if (ctx && typeof ctx === 'object') {
     if (!Array.isArray(ctx.layoutSelectionLog)) ctx.layoutSelectionLog = [];
@@ -273,6 +304,11 @@ async function pickLayoutForGeneratedSlide({
       aiSelectedLayoutId: selection?.selectedLayoutId || null,
       aiConfidence: selection?.confidence ?? null,
       selectedLayoutId: templateLayoutId(template) || layoutId || null,
+      adjacentAvoided: Boolean(
+        adjacentLayoutId &&
+          selection?.selectedLayoutId &&
+          String(selection.selectedLayoutId) !== String(layoutId)
+      ),
       source: selection?.source || 'deterministic',
     });
   }

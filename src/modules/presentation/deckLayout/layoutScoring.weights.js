@@ -75,6 +75,9 @@ const REPETITION_PENALTIES = {
   3: -20,
 };
 
+/** Strong penalty when the candidate matches the immediately previous slide's layout. */
+const ADJACENT_LAYOUT_PENALTY = -35;
+
 module.exports = {
   DEFAULT_LAYOUT_SCORING_WEIGHTS,
   RELATED_PURPOSES,
@@ -82,4 +85,5 @@ module.exports = {
   RELATED_INDUSTRY_GROUPS,
   CONTENT_TYPE_TO_SUPPORTED,
   REPETITION_PENALTIES,
+  ADJACENT_LAYOUT_PENALTY,
 };

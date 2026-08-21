@@ -5,6 +5,7 @@ const {
   RELATED_INDUSTRY_GROUPS,
   CONTENT_TYPE_TO_SUPPORTED,
   REPETITION_PENALTIES,
+  ADJACENT_LAYOUT_PENALTY,
 } = require('./layoutScoring.weights');
 const { evaluateLayoutCompatibility } = require('./layoutCompatibility');
 
@@ -35,6 +36,12 @@ function repetitionPenaltyFor(layoutId, previousLayoutIds) {
   if (count === 2) return REPETITION_PENALTIES[2];
   if (count === 1) return REPETITION_PENALTIES[1];
   return 0;
+}
+
+function adjacentPenaltyFor(layoutId, adjacentLayoutId) {
+  const adj = String(adjacentLayoutId || '').trim();
+  if (!adj) return 0;
+  return String(layoutId) === adj ? ADJACENT_LAYOUT_PENALTY : 0;
 }
 
 function scorePurpose(slide, layout, max) {
@@ -364,9 +371,13 @@ function scoreLayout(slide, layout, options = {}) {
       `Layout already used ${Array.isArray(options.previousLayoutIds) ? options.previousLayoutIds.filter((id) => String(id) === layoutId).length : 0} time(s)`
     );
   }
+  const adjacentPenalty = adjacentPenaltyFor(layoutId, options.adjacentLayoutId);
+  if (adjacentPenalty) {
+    warnings.push('Same layout as previous slide');
+  }
   const uniqueWarnings = [...new Set(warnings)];
   const domainBoost = scoreDomainIntent(slide, layout, reasons);
-  const score = clamp(scaled + repetitionPenalty + domainBoost, 0, 100);
+  const score = clamp(scaled + repetitionPenalty + adjacentPenalty + domainBoost, 0, 100);
 
   if (!reasons.length) reasons.push('Scored from available layout metadata');
 
@@ -378,6 +389,7 @@ function scoreLayout(slide, layout, options = {}) {
     styleMatch: parts.styleMatch.skipped ? 0 : Number(parts.styleMatch.points) || 0,
     industryMatch: parts.industryMatch.skipped ? 0 : Number(parts.industryMatch.points) || 0,
     repetitionPenalty,
+    adjacentPenalty,
   };
 
   return {

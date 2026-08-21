@@ -33,6 +33,14 @@ const LAYOUT_FAMILIES = {
     'bullet_split_image_v1',
     'para_split_50_50_v1',
   ],
+  three_card_gallery: [
+    'three_cards_image_text_v1',
+    'grid_bento_three_v1',
+    'grid_bento_four_v1',
+    'four_images_text_v1',
+    'grid_images_text_cards_v1',
+    'intro_three_para_icons_v1',
+  ],
 };
 
 function layoutFamilyExcludeIds(layoutId) {
