@@ -82,16 +82,16 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (/three_cards|four_images|cards_image|grid_.*image|device|timeline_milestones_image/.test(id)) {
     lines.push(
-      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, etc.). Each prompt must describe ONE isolated subject matching columns[n].title — explicitly forbid collages, triptychs, and multi-panel images.'
+      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual subject per image slot (IMAGE_1, IMAGE_2, COL_1_IMAGE, etc.). Each prompt must describe ONE isolated subject matching columns[n].title + body — explicitly forbid collages, triptychs, and multi-panel images.'
     );
     lines.push(
-      'Multi-card/gallery layout: REQUIRED columns[] with one entry per image — each { title, body } must have a DISTINCT title (≤4 words) naming a single visual subject. Titles map to IMAGE_n_LABEL captions.'
+      'Multi-card/gallery layout: REQUIRED columns[] with one entry per image — each { title, body } must have a DISTINCT title (≤4 words) naming a single visual subject that matches that card’s text (e.g. tins vs robes vs candles). Titles map to IMAGE_n / COL_n_IMAGE captions.'
     );
   }
 
   if (/^title_hero_|^title_fullbleed|^title_image_logo/.test(id)) {
     lines.push(
-      'Title hero layout: concise title (≤8 words) + short subtitle/tagline. One strong hero imagePrompt matching the deck topic — no collage. Shaped/fade/full-bleed variants use the same copy rules.'
+      'Title hero layout: concise title (≤8 words) + short subtitle/tagline. One strong hero imagePrompt from the overall deck prompt + slide summary (not title alone) — no collage. Shaped/fade/full-bleed variants use the same copy rules.'
     );
   }
 
@@ -229,7 +229,7 @@ function buildUser(vars = {}) {
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
     '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
     '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
-    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated single-subject prompt per IMAGE_n / DEVICE_IMAGE_n slot (no collages or triptychs).',
+    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated single-subject prompt per IMAGE_n / COL_n_IMAGE / DEVICE_IMAGE_n slot matching that column’s title+body (no collages or triptychs).',
     '- Chart slides: analyze the data story first — line for trends, donut/pie only for true part-of-whole (~100% total), bar for rankings; dual-chart only for two distinct metrics. Never duplicate identical chart data.',
     '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',

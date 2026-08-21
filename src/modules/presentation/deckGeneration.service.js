@@ -86,10 +86,66 @@ function resolveAuthorImagePrompt(content) {
 const SINGLE_SUBJECT_NEGATIVES =
   'no triptych, no multi-panel, no split image, no collage, no diptych, no grid, no multiple cups, no comparison sheet, no split frame';
 
-function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null) {
+const CHART_PHOTO_NEGATIVES =
+  'no charts, no graphs, no bar charts, no line charts, no pie charts, no dashboards, no axes, no data visualizations, no spreadsheet screens';
+
+function columnEntryAt(content = {}, index) {
+  const list = content.columns || content.cards || content.features || content.items || [];
+  const col = Array.isArray(list) ? list[index] : null;
+  return col && typeof col === 'object' ? col : null;
+}
+
+function columnSubjectFromEntry(col) {
+  if (!col || typeof col !== 'object') return null;
+  const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+  const body = String(col.body ?? col.text ?? col.description ?? '').trim();
+  if (title && body) return `${title}: ${body.slice(0, 100)}`;
+  if (title) return title;
+  if (body) return body.slice(0, 120);
+  return null;
+}
+
+function numberedImageSlotIndex(slotId) {
   const id = String(slotId || '');
-  const imagePrompts =
-    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+  let m = id.match(/^COL_(\d+)_IMAGE$/i);
+  if (m) return Number(m[1]) - 1;
+  m = id.match(/^METRIC_IMAGE_(\d+)$/i);
+  if (m) return Number(m[1]) - 1;
+  m = id.match(/^(?:GRID_)?IMAGE_(\d+)$/i);
+  if (m) return Number(m[1]) - 1;
+  m = id.match(/^POINT_IMAGE$/i);
+  if (m) return 0;
+  return null;
+}
+
+function layoutHasChartSlot(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots.some((s) => String(s.role || '').toLowerCase() === 'chart');
+}
+
+function overallThemeSubject(content = {}, opts = {}) {
+  const summary = String(
+    content.summary || content.body || content.subtitle || content.visual || ''
+  ).trim();
+  const title = String(content.title || '').trim();
+  const deckSummary = String(
+    opts.deckNarrative || opts.sourceText || content.deckSummary || content.overallSummary || ''
+  )
+    .trim()
+    .slice(0, 220);
+  const parts = [];
+  if (deckSummary) parts.push(deckSummary);
+  if (summary && summary.toLowerCase() !== deckSummary.toLowerCase()) {
+    parts.push(summary.slice(0, 160));
+  }
+  if (title && !parts.some((p) => p.toLowerCase().includes(title.toLowerCase()))) {
+    parts.push(title);
+  }
+  return parts.filter(Boolean).join(' — ') || title || null;
+}
+
+function resolveImagePromptAlias(slotId, imagePrompts = {}) {
+  const id = String(slotId || '');
   const direct =
     imagePrompts[id] ||
     imagePrompts[id.toUpperCase()] ||
@@ -97,37 +153,68 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null) {
     null;
   if (direct) return String(direct).trim();
 
+  // LLM often keys IMAGE_n while layout uses COL_n_IMAGE
+  const colMatch = id.match(/^COL_(\d+)_IMAGE$/i);
+  if (colMatch) {
+    const n = colMatch[1];
+    const alt =
+      imagePrompts[`IMAGE_${n}`] ||
+      imagePrompts[`image_${n}`] ||
+      imagePrompts[`IMAGE_${n}`.toLowerCase()];
+    if (alt) return String(alt).trim();
+  }
   const imageMatch = id.match(/^IMAGE_(\d+)$/i);
   if (imageMatch) {
-    const idx = Number(imageMatch[1]) - 1;
-    const col = (content.columns || content.cards || content.features || [])[idx];
-    if (col && typeof col === 'object') {
-      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
-      const body = String(col.body ?? col.text ?? '').trim();
-      if (title && body) return `${title}: ${body.slice(0, 100)}`;
-      if (title) return title;
-    }
+    const n = imageMatch[1];
+    const alt =
+      imagePrompts[`COL_${n}_IMAGE`] ||
+      imagePrompts[`col_${n}_image`] ||
+      imagePrompts[`COL_${n}_IMAGE`.toLowerCase()];
+    if (alt) return String(alt).trim();
+  }
+  return null;
+}
+
+function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, opts = {}) {
+  const id = String(slotId || '');
+  const imagePrompts =
+    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+  const direct = resolveImagePromptAlias(id, imagePrompts);
+  if (direct) return direct;
+
+  const numberedIdx = numberedImageSlotIndex(id);
+  if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
+    const fromCol = columnSubjectFromEntry(columnEntryAt(content, numberedIdx));
+    if (fromCol) return fromCol;
+  }
+
+  if (/^POINT_IMAGE$/i.test(id)) {
+    const pointTitle = String(
+      content.pointHeading ||
+        content.columns?.[0]?.title ||
+        content.cards?.[0]?.title ||
+        ''
+    ).trim();
+    const pointBody = String(
+      content.pointBody || content.columns?.[0]?.body || content.cards?.[0]?.body || content.summary || ''
+    ).trim();
+    if (pointTitle && pointBody) return `${pointTitle}: ${pointBody.slice(0, 100)}`;
+    if (pointTitle) return pointTitle;
+    if (pointBody) return pointBody.slice(0, 120);
   }
 
   const deviceMatch = id.match(/^DEVICE_IMAGE_(\d+)$/i);
   if (deviceMatch) {
     const idx = Number(deviceMatch[1]) - 1;
-    const col = (content.columns || content.cards || content.features || [])[idx];
-    const label = col
-      ? String(col.title ?? col.heading ?? col.label ?? '').trim()
-      : '';
+    const col = columnEntryAt(content, idx);
+    const label = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
     const base = label || String(content.title || '').trim();
     if (base) return `${base} — app UI screenshot`;
   }
 
-  const gridImageMatch = id.match(/^(?:GRID_)?IMAGE_(\d+)$/i);
-  if (gridImageMatch && !imageMatch) {
-    const idx = Number(gridImageMatch[1]) - 1;
-    const col = (content.columns || content.cards || content.features || [])[idx];
-    if (col) {
-      const title = String(col.title ?? col.heading ?? '').trim();
-      if (title) return title;
-    }
+  if (/^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id)) {
+    const theme = overallThemeSubject(content, opts);
+    if (theme) return theme;
   }
 
   if (content.title) {
@@ -136,56 +223,60 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null) {
     if (imageSlots.length > 1) {
       const slotIndex = imageSlots.findIndex((s) => String(s.id) === id);
       if (slotIndex >= 0) {
+        const fromCol = columnSubjectFromEntry(columnEntryAt(content, slotIndex));
+        if (fromCol) return fromCol;
         return `${content.title} — visual ${slotIndex + 1} of ${imageSlots.length}`;
       }
     }
   }
 
-  return null;
+  return overallThemeSubject(content, opts);
 }
 
-function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
+function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
   const id = String(slotId || '');
-  let subject = deriveSlotImagePromptBase(id, content, layoutSchema) || '';
+  let subject = deriveSlotImagePromptBase(id, content, layoutSchema, opts) || '';
 
-  const imageMatch = id.match(/^IMAGE_(\d+)$/i);
-  if (imageMatch) {
-    const idx = Number(imageMatch[1]) - 1;
-    const col =
-      (content.columns || content.cards || content.features || content.items || [])[idx];
-    if (col && typeof col === 'object') {
-      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
-      const body = String(col.body ?? col.text ?? col.description ?? '').trim();
-      if (title) {
-        subject = body ? `${title}: ${body.slice(0, 80)}` : title;
-      }
-    }
+  const numberedIdx = numberedImageSlotIndex(id);
+  if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
+    const fromCol = columnSubjectFromEntry(columnEntryAt(content, numberedIdx));
+    if (fromCol) subject = fromCol;
   }
 
   if (!subject) {
-    subject = String(content?.title || 'Slide topic').trim();
+    subject =
+      overallThemeSubject(content, opts) ||
+      String(content?.title || 'Slide topic').trim();
   }
 
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
   const slotIndex = Math.max(0, imageSlots.findIndex((s) => String(s.id) === id));
   const layoutId = String(layoutSchema?.layout_id || '').trim();
+  const hasChart = layoutHasChartSlot(layoutSchema);
+  const isHero = /^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id);
 
   return [
-    `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single object on plain background`,
-    /four_images|grid_.*images|three_cards_image/i.test(layoutId)
-      ? 'Gallery slot — ONE single object fills the entire frame edge to edge'
+    isHero
+      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme and slide summary`
+      : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
+    /four_images|grid_.*images|three_cards_image|grid_images_text/i.test(layoutId)
+      ? 'Gallery slot — ONE distinct subject matching this card’s text only'
+      : null,
+    hasChart && !isHero
+      ? 'Slide already has a rendered chart — photograph a related real-world subject, not a chart graphic'
       : null,
     `Single photograph, ONE subject only, no collage: ${subject}`,
     `(variation ${slotIndex + 1})`,
     SINGLE_SUBJECT_NEGATIVES,
+    hasChart ? CHART_PHOTO_NEGATIVES : null,
   ]
     .filter(Boolean)
     .join('. ');
 }
 
-function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null) {
-  return buildSlotImagePrompt(slotId, content, layoutSchema);
+function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
+  return buildSlotImagePrompt(slotId, content, layoutSchema, opts);
 }
 
 function titleWordsFromBody(body, fallback) {
@@ -205,7 +296,8 @@ function normalizeMultiColumnContent(content, layoutSchema) {
     slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^body_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^image_\d+_label$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^IMAGE_\d+$/i.test(String(s.id || '')));
+    slots.some((s) => /^IMAGE_\d+$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^COL_\d+_IMAGE$/i.test(String(s.id || '')));
   if (!needsColumns) return content;
 
   let colsKey = Array.isArray(content.columns)
@@ -336,7 +428,12 @@ function listGalleryImageSlots(layoutSchema) {
   return slots
     .filter((s) => {
       const id = String(s.id || '').toUpperCase();
-      return String(s.role || '').toLowerCase() === 'image' && /^IMAGE_\d+$/.test(id);
+      const role = String(s.role || '').toLowerCase();
+      if (role !== 'image' && role !== 'background') return false;
+      if (/^IMAGE_\d+$/.test(id)) return true;
+      if (/^COL_\d+_IMAGE$/.test(id)) return true;
+      if (/^METRIC_IMAGE_\d+$/.test(id)) return true;
+      return false;
     })
     .sort(
       (a, b) =>
@@ -442,16 +539,18 @@ function normalizeGalleryImageContent(content, layoutSchema) {
     const slotId = String(slot.id);
     const col = next.columns[index];
     const colTitle = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
+    const colBody = col ? String(col.body ?? col.text ?? col.description ?? '').trim() : '';
     let prompt = String(
-      imagePrompts[slotId] || imagePrompts[slotId.toUpperCase()] || imagePrompts[slotId.toLowerCase()] || ''
+      resolveImagePromptAlias(slotId, imagePrompts) || ''
     ).trim();
     if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
       prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
     }
-    if (!prompt && colTitle) {
+    if (!prompt && (colTitle || colBody)) {
+      const subject = colTitle && colBody ? `${colTitle}: ${colBody.slice(0, 80)}` : colTitle || colBody;
       prompt = [
-        `${slotId}: single photograph of ONE ${colTitle} only`,
-        `One isolated ${colTitle}, plain background, centered composition`,
+        `${slotId}: single photograph of ONE subject matching this card`,
+        `One isolated subject — ${subject}`,
         `(variation ${index + 1})`,
         SINGLE_SUBJECT_NEGATIVES,
       ].join('. ');
@@ -766,14 +865,11 @@ async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, 
           if (ph?.url && ph.url !== url) {
             next[slotId] = ph.url;
             seenUrls.add(ph.url);
-          } else {
-            // Keep original rather than leaving empty — compile can still show something.
-            next[slotId] = `${url}${url.includes('?') ? '&' : '?'}slot=${encodeURIComponent(slotId)}`;
-            seenUrls.add(next[slotId]);
           }
+          // Do not append ?slot= to URLs — that breaks AWS signatures and causes broken images.
+          // Prefer a duplicate valid URL over a broken one.
         } catch {
-          next[slotId] = `${url}${url.includes('?') ? '&' : '?'}slot=${encodeURIComponent(slotId)}`;
-          seenUrls.add(next[slotId]);
+          // Keep original URL (may duplicate sibling) rather than invalidate signatures.
         }
       } else {
         seenUrls.add(url);
@@ -923,7 +1019,9 @@ async function generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema }) {
     : prompt;
   const slotDef = (layoutSchema?.slots || []).find((s) => String(s.id) === String(slotId));
   const canvas = ctx.canvasSize || { width: 1920, height: 1080 };
-  const imageSize = slotDef ? resolveImageGenSize(slotDef, canvas) : null;
+  const imageSize = slotDef
+    ? resolveImageGenSize(slotDef, canvas, layoutSchema?.slots || [])
+    : null;
   return generateAiImageRef({
     prompt: `Professional presentation visual. ${fullPrompt}`,
     workspaceId: ctx.workspaceId,
@@ -2067,6 +2165,14 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
   const slotImageUrls = {
     ...(content?.slotImageUrls && typeof content.slotImageUrls === 'object' ? content.slotImageUrls : {}),
   };
+  const slotImageKeys = {
+    ...(content?.slotImageKeys && typeof content.slotImageKeys === 'object' ? content.slotImageKeys : {}),
+  };
+  const assignSlotMedia = (slotId, url, s3Key = null) => {
+    if (!url) return;
+    slotImageUrls[slotId] = url;
+    if (s3Key) slotImageKeys[slotId] = s3Key;
+  };
 
   if (slotIds.length > 1) {
     const assigned = slotIds.map((id) => slotImageUrls[id]).filter(Boolean);
@@ -2075,12 +2181,14 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     if (assigned.length === slotIds.length && new Set(assigned).size === 1) {
       slotIds.slice(1).forEach((id) => {
         delete slotImageUrls[id];
+        delete slotImageKeys[id];
       });
     } else if (imageRef?.url) {
       const sharedRef = slotIds.filter((id) => slotImageUrls[id] === imageRef.url);
       if (sharedRef.length > 1) {
         sharedRef.slice(1).forEach((id) => {
           delete slotImageUrls[id];
+          delete slotImageKeys[id];
         });
       }
     }
@@ -2098,7 +2206,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
       const row = mediaByHint.get(hint);
       if (!row?.s3Key) continue;
       const url = await templateMediaService.resolveMediaUrl(row.s3Key);
-      if (url) slotImageUrls[slotId] = url;
+      if (url) assignSlotMedia(slotId, url, row.s3Key);
     }
   }
 
@@ -2114,7 +2222,10 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     const usedUrls = new Set(Object.values(slotImageUrls).filter(Boolean));
     for (const slotId of [...missing]) {
       const prompt =
-        buildSlotImagePrompt(slotId, content, layoutSchema) ||
+        buildSlotImagePrompt(slotId, content, layoutSchema, {
+          sourceText: ctx.sourceText || ctx.wizardBrief || '',
+          deckNarrative: ctx.deckNarrative || ctx.wizardBrief || '',
+        }) ||
         imagePrompts[slotId] ||
         imagePrompts[String(slotId).toUpperCase()] ||
         `Professional presentation visual for ${content?.title || 'slide topic'} (${slotId})` ||
@@ -2136,7 +2247,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
             layoutSchema,
           });
           if (generated?.url && !usedUrls.has(generated.url)) {
-            slotImageUrls[slotId] = generated.url;
+            assignSlotMedia(slotId, generated.url, generated.s3Key || null);
             usedUrls.add(generated.url);
             missing = missing.filter((id) => id !== slotId);
             assigned = true;
@@ -2162,7 +2273,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
             brief: { subject: prompt },
           });
           if (stock?.url && !usedUrls.has(stock.url)) {
-            slotImageUrls[slotId] = stock.url;
+            assignSlotMedia(slotId, stock.url, stock.s3Key || null);
             usedUrls.add(stock.url);
             missing = missing.filter((id) => id !== slotId);
             assigned = true;
@@ -2184,9 +2295,9 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
       /^(BACKGROUND_IMAGE|HERO_IMAGE)$/i.test(String(id))
     );
     if (slotIds.length === 1 && !slotImageUrls[slotIds[0]]) {
-      slotImageUrls[slotIds[0]] = imageRef.url;
+      assignSlotMedia(slotIds[0], imageRef.url, imageRef.s3Key || null);
     } else if (primary && !slotImageUrls[primary]) {
-      slotImageUrls[primary] = imageRef.url;
+      assignSlotMedia(primary, imageRef.url, imageRef.s3Key || null);
     }
   }
 
@@ -2202,7 +2313,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
           seed: `${slide.id}-${slotId}`,
         });
         if (ph?.url && !slotImageUrls[slotId]) {
-          slotImageUrls[slotId] = ph.url;
+          assignSlotMedia(slotId, ph.url, ph.s3Key || null);
         }
       } catch (phErr) {
         logger.warn?.('presentation_slot_image_placeholder_failed', {
@@ -2232,7 +2343,23 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     slotImageUrls: distinctUrls,
   });
 
-  return { ...content, slotImageUrls: repairedUrls };
+  // Drop keys whose URLs were removed during dedupe/repair.
+  const nextKeys = { ...slotImageKeys };
+  for (const id of Object.keys(nextKeys)) {
+    if (!repairedUrls[id]) delete nextKeys[id];
+  }
+  // Recover keys from public S3 URLs when regenerate paths only stored urls.
+  for (const id of Object.keys(repairedUrls)) {
+    if (nextKeys[id]) continue;
+    const extracted = s3Service.extractS3KeyFromUrl(repairedUrls[id]);
+    if (extracted) nextKeys[id] = extracted;
+  }
+
+  return {
+    ...content,
+    slotImageUrls: repairedUrls,
+    ...(Object.keys(nextKeys).length ? { slotImageKeys: nextKeys } : {}),
+  };
 }
 
 async function resolveSlideImage({
@@ -2242,6 +2369,7 @@ async function resolveSlideImage({
   visualNeed,
   brief,
   pathBSpec,
+  layoutSchema = null,
 }) {
   const imageSource = ctx.imageSource || null;
 
@@ -2550,6 +2678,14 @@ async function resolveSlideImage({
     } else {
       // AI-first (imageType=ai or unset)
       try {
+        const heroSlot =
+          (layoutSchema?.slots || []).find((s) =>
+            /^(BACKGROUND_IMAGE|HERO_IMAGE)$/i.test(String(s.id || ''))
+          ) ||
+          (layoutSchema?.slots || []).find((s) => String(s.role || '').toLowerCase() === 'image');
+        const heroSize = heroSlot
+          ? resolveImageGenSize(heroSlot, ctx.canvasSize || {}, layoutSchema?.slots || [])
+          : '1536x1024';
         imageRef = await generateAiImageRef({
           prompt: buildAiPrompt(),
           workspaceId: ctx.workspaceId,
@@ -2557,6 +2693,7 @@ async function resolveSlideImage({
           slideId: slide.id,
           brief,
           source: 'ai_gen',
+          size: heroSize,
         });
       } catch (aiErr) {
         imageRef = await tryStockImage({
@@ -3657,13 +3794,24 @@ async function processSlide(ctx, slide) {
             user: briefPrompt.buildUser({
               slideTitle: content?.title,
               slideContent: content,
+              slideSummary:
+                content?.summary || content?.body || outlineSlide?.summary || '',
+              deckSummary:
+                ctx.wizardBrief ||
+                ctx.sourceText ||
+                ctx.outline?.sourcePrompt ||
+                '',
               themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
               themeColorTreatment: imageColorTreatmentForCtx(ctx),
               wizardBrief: ctx.wizardBrief || '',
               authorImagePrompt: resolveAuthorImagePrompt(content) || outlineSlide.visual || '',
-              layoutContext: layoutCtx,
+              layoutContext: {
+                ...layoutCtx,
+                hasChartSlot: layoutHasChartSlot(template?.schema),
+              },
               layoutId: template?.schema?.layout_id || layoutId || null,
               hasImageOverlay: layoutCtx.hasImageOverlay,
+              hasChartSlot: layoutHasChartSlot(template?.schema),
               visualNeed,
               visual: outlineSlide.visual || content?.visual || '',
               suggestedContentType: contentType,
@@ -3704,6 +3852,7 @@ async function processSlide(ctx, slide) {
         visualNeed,
         brief,
         pathBSpec: content?.pathBSpec,
+        layoutSchema: template?.schema || null,
       });
       imageRef = withImageStatus(
         imageResult.imageRef || imageRef,
@@ -3921,6 +4070,12 @@ async function processDeckGeneration({
       userPrompt: resolvedFlow.userPrompt || deck.outline?.sourcePrompt || null,
       preferVisuals,
       wizardBrief: resolvedFlow.wizardBrief || '',
+      sourceText: resolvedFlow.userPrompt || deck.outline?.sourcePrompt || '',
+      deckNarrative:
+        resolvedFlow.packNarrative?.summary ||
+        resolvedFlow.wizardBrief ||
+        deck.outline?.sourcePrompt ||
+        '',
       imageSource: resolvedFlow.imageSource || null,
       imageStylePhrase: resolvedFlow.imageStylePhrase || null,
       canvasSize: resolvedFlow.canvas || generationFlowService.resolveCanvas(deck.aspectRatio),
@@ -4680,6 +4835,12 @@ async function regenerateSlide({
     userPrompt: userPrompt || existingTitle || flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
     preferVisuals,
     wizardBrief: flowCtx.wizardBrief || '',
+    sourceText: userPrompt || flowCtx.userPrompt || deck.outline?.sourcePrompt || '',
+    deckNarrative:
+      flowCtx.packNarrative?.summary ||
+      flowCtx.wizardBrief ||
+      deck.outline?.sourcePrompt ||
+      '',
     imageSource: flowCtx.imageSource || null,
     imageStylePhrase: flowCtx.imageStylePhrase || null,
     canvasSize: flowCtx.canvas || generationFlowService.resolveCanvas(deck.aspectRatio),
@@ -4730,9 +4891,9 @@ async function regenerateSlide({
           });
           visualNeed = policy.visualNeed;
           let brief = null;
+          let layoutSchema = null;
           try {
             const briefPrompt = getImageBriefPrompt();
-            let layoutSchema = null;
             if (fresh.layoutId) {
               const rows = await presentationDao.findLayoutsByLayoutIds([fresh.layoutId]);
               layoutSchema = rows[0]?.schema || null;
@@ -4743,13 +4904,23 @@ async function regenerateSlide({
               user: briefPrompt.buildUser({
                 slideTitle: content?.title,
                 slideContent: content,
+                slideSummary: content?.summary || content?.body || '',
+                deckSummary:
+                  ctx.wizardBrief ||
+                  ctx.sourceText ||
+                  ctx.outline?.sourcePrompt ||
+                  '',
                 themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
                 themeColorTreatment: imageColorTreatmentForCtx(ctx),
                 wizardBrief: ctx.wizardBrief || '',
                 authorImagePrompt: resolveAuthorImagePrompt(content),
-                layoutContext: layoutCtx,
+                layoutContext: {
+                  ...layoutCtx,
+                  hasChartSlot: layoutHasChartSlot(layoutSchema),
+                },
                 layoutId: layoutSchema?.layout_id || fresh.layoutId || null,
                 hasImageOverlay: layoutCtx.hasImageOverlay,
+                hasChartSlot: layoutHasChartSlot(layoutSchema),
                 visualNeed,
               }),
             });
@@ -4768,6 +4939,7 @@ async function regenerateSlide({
             visualNeed,
             brief,
             pathBSpec: content?.pathBSpec,
+            layoutSchema: layoutSchema || null,
           });
           const imageRef = withImageStatus(
             imageResult.imageRef,

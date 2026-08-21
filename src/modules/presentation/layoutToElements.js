@@ -135,11 +135,25 @@ function adjustSlotRegion(reg, slot, allSlots) {
   return adjusted;
 }
 
-function placementFromGrid(reg, canvas = {}) {
+function getGridDims(slots = []) {
+  let maxR = 10;
+  let maxC = 12;
+  for (const slot of slots) {
+    const reg = parseRegion(slot.region);
+    if (!reg) continue;
+    maxR = Math.max(maxR, reg.r2);
+    maxC = Math.max(maxC, reg.c2);
+  }
+  return { COLS: Math.max(12, maxC), ROWS: Math.max(10, maxR) };
+}
+
+function placementFromGrid(reg, canvas = {}, grid = null) {
   const width = canvas.width || CANVAS_WIDTH;
   const height = canvas.height || CANVAS_HEIGHT;
-  const colW = width / 12;
-  const rowH = height / 12;
+  const COLS = grid?.COLS || 12;
+  const ROWS = grid?.ROWS || 10;
+  const colW = width / COLS;
+  const rowH = height / ROWS;
   return {
     x: Math.round((reg.c1 - 1) * colW),
     y: Math.round((reg.r1 - 1) * rowH),
@@ -151,7 +165,71 @@ function placementFromGrid(reg, canvas = {}) {
 }
 
 /**
- * Parse region strings like "cols 2-11, rows 4-7" into pixel placement on a 12-col / 12-row grid.
+ * Directional pixel insets for images: flush canvas edges stay 0; card slots pad all sides.
+ */
+function directionalImageInsetsPx(reg, canvas = {}, grid = null, slot = null) {
+  const width = canvas.width || CANVAS_WIDTH;
+  const height = canvas.height || CANVAS_HEIGHT;
+  const COLS = grid?.COLS || 12;
+  const ROWS = grid?.ROWS || 10;
+  const id = String(slot?.id || '');
+  const role = String(slot?.role || '').toLowerCase();
+
+  const flushL = reg.c1 <= 1;
+  const flushR = reg.c2 >= COLS;
+  const flushT = reg.r1 <= 1;
+  const flushB = reg.r2 >= ROWS;
+
+  const isHero = /^(BACKGROUND_IMAGE|HERO_IMAGE)$/i.test(id);
+  const isCardImage =
+    role === 'image' &&
+    /^(IMAGE_\d+|COL_\d+_IMAGE|METRIC_IMAGE_\d+|POINT_IMAGE)$/i.test(id);
+
+  if (isHero) {
+    const soft = Math.round(Math.min(width, height) * 0.012);
+    return {
+      left: flushL ? 0 : soft,
+      right: flushR ? 0 : soft,
+      top: flushT ? 0 : soft,
+      bottom: flushB ? 0 : soft,
+    };
+  }
+
+  if (isCardImage) {
+    const pad = Math.round(Math.min(width, height) * 0.014);
+    return { left: pad, right: pad, top: pad, bottom: pad };
+  }
+
+  if (role === 'image') {
+    const soft = Math.round(Math.min(width, height) * 0.01);
+    return {
+      left: flushL ? 0 : soft,
+      right: flushR ? 0 : soft,
+      top: flushT ? 0 : soft,
+      bottom: flushB ? 0 : soft,
+    };
+  }
+
+  return { left: 0, right: 0, top: 0, bottom: 0 };
+}
+
+function applyDirectionalInsets(placement, insets) {
+  if (!placement || !insets) return placement;
+  const left = Number(insets.left) || 0;
+  const right = Number(insets.right) || 0;
+  const top = Number(insets.top) || 0;
+  const bottom = Number(insets.bottom) || 0;
+  return {
+    ...placement,
+    x: Math.round(placement.x + left),
+    y: Math.round(placement.y + top),
+    width: Math.max(40, Math.round(placement.width - left - right)),
+    height: Math.max(40, Math.round(placement.height - top - bottom)),
+  };
+}
+
+/**
+ * Parse region strings like "cols 2-11, rows 4-7" into pixel placement on a 12-col / dynamic-row grid.
  * @param {string} region
  * @param {{ width?: number, height?: number }} canvas
  * @param {object} [slot]
@@ -159,24 +237,32 @@ function placementFromGrid(reg, canvas = {}) {
  */
 function regionToPlacement(region, canvas = {}, slot = null, allSlots = null) {
   const parsed = parseRegion(region);
+  const grid = getGridDims(allSlots || (slot ? [slot] : []));
   if (parsed && slot && allSlots) {
-    return placementFromGrid(adjustSlotRegion(parsed, slot, allSlots), canvas);
+    let placement = placementFromGrid(adjustSlotRegion(parsed, slot, allSlots), canvas, grid);
+    if (String(slot.role || '').toLowerCase() === 'image' || /image/i.test(String(slot.id || ''))) {
+      placement = applyDirectionalInsets(
+        placement,
+        directionalImageInsetsPx(adjustSlotRegion(parsed, slot, allSlots), canvas, grid, slot)
+      );
+    }
+    return placement;
   }
   const width = canvas.width || CANVAS_WIDTH;
   const height = canvas.height || CANVAS_HEIGHT;
-  const colW = width / 12;
-  const rowH = height / 12;
+  const colW = width / grid.COLS;
+  const rowH = height / grid.ROWS;
 
   const str = String(region || '');
   const cols = str.match(/cols\s+(\d+)\s*-\s*(\d+)/i);
   const rows = str.match(/rows\s+(\d+)\s*-\s*(\d+)/i);
 
   const c1 = cols ? Math.max(1, Number(cols[1])) : 1;
-  const c2 = cols ? Math.max(c1, Number(cols[2])) : 12;
+  const c2 = cols ? Math.max(c1, Number(cols[2])) : grid.COLS;
   const r1 = rows ? Math.max(1, Number(rows[1])) : 1;
-  const r2 = rows ? Math.max(r1, Number(rows[2])) : 12;
+  const r2 = rows ? Math.max(r1, Number(rows[2])) : grid.ROWS;
 
-  return {
+  let placement = {
     x: Math.round((c1 - 1) * colW),
     y: Math.round((r1 - 1) * rowH),
     width: Math.max(40, Math.round((c2 - c1 + 1) * colW)),
@@ -184,6 +270,13 @@ function regionToPlacement(region, canvas = {}, slot = null, allSlots = null) {
     rotation: 0,
     opacity: 1,
   };
+  if (slot && (String(slot.role || '').toLowerCase() === 'image' || /image/i.test(String(slot.id || '')))) {
+    placement = applyDirectionalInsets(
+      placement,
+      directionalImageInsetsPx({ c1, c2, r1, r2 }, canvas, grid, slot)
+    );
+  }
+  return placement;
 }
 
 function findDeviceFrameSlot(slots, imageSlotId) {
@@ -621,6 +714,17 @@ function chartForSlot(slotId, content = {}) {
     return content.chart || null;
   }
   return content.chart || null;
+}
+
+/** True only for real chart data slots — not CHART_HEADING / CHART_CAPTION / titles. */
+function isChartElementSlot(slotId, role) {
+  if (String(role || '').toLowerCase() === 'chart') return true;
+  const id = String(slotId || '').toUpperCase();
+  if (/^(MAIN_CHART|DONUT_CHART|LINE_CHART|BAR_CHART|KPI_CHART|PIE_CHART)(_|$)/.test(id)) {
+    return true;
+  }
+  if (/^CHART_\d+$/.test(id)) return true;
+  return false;
 }
 
 function resolveChartTypeForSlot(slot, chartData, content, layoutSchema) {
@@ -1358,6 +1462,32 @@ function resolveSlotImageUrl(slotId, content = {}, imageRef = null, layoutSchema
   return heroUrl;
 }
 
+function resolveSlotImageS3Key(slotId, content = {}, imageRef = null, layoutSchema = null) {
+  const id = String(slotId || '');
+  const map = content.slotImageKeys;
+  if (map && typeof map === 'object') {
+    if (map[id]) return map[id];
+    if (map[id.toUpperCase()]) return map[id.toUpperCase()];
+    if (map[id.toLowerCase()]) return map[id.toLowerCase()];
+  }
+
+  const heroKey = imageRef?.s3Key || null;
+  let imageSlotCount = 1;
+  if (layoutSchema?.slots?.length) {
+    imageSlotCount = layoutSchema.slots.filter((slot) =>
+      isMediaImageSlot(slot.id, slot.role, slot)
+    ).length;
+  }
+  if (imageSlotCount > 1) {
+    const upper = id.toUpperCase();
+    if (heroKey && (upper === 'BACKGROUND_IMAGE' || upper === 'HERO_IMAGE')) {
+      return heroKey;
+    }
+    return null;
+  }
+  return heroKey;
+}
+
 function isDecorShapeSlot(slotId, role, slot) {
   if (slot?.aiOnly) return false;
   if (isLogoSlot(slotId, role) || isMediaImageSlot(slotId, role, slot)) return false;
@@ -1408,7 +1538,13 @@ function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, can
   const elements = [...(doc.elements || [])];
 
   const overlayDecision = decisions.__overlay__;
-  if (overlayDecision?.enabled !== false && overlayDecision?.scrim > 0) {
+  // Full-slide scrim only over near-full-bleed photos. Split heroes must not
+  // darken the uncovered half into a solid grey slab.
+  if (
+    overlayDecision?.enabled !== false &&
+    overlayDecision?.scrim > 0 &&
+    docHasLoadedOverlayImage(doc)
+  ) {
     const scrimColor = palette.overlayScrim || 'rgba(0,0,0,0.45)';
     elements.push({
       id: newElementId('shp'),
@@ -1887,6 +2023,7 @@ function layoutSlotsToElements(
 
     if (isMediaImageSlot(slotId, role, slot)) {
       let url = resolveSlotImageUrl(slotId, content, imageRef, layoutSchema);
+      const s3Key = resolveSlotImageS3Key(slotId, content, imageRef, layoutSchema);
       const frameSlot = findDeviceFrameSlot(slots, slotId);
       if (frameSlot) {
         const framePlacement = regionToPlacement(frameSlot.region, canvas, frameSlot, slots);
@@ -1895,6 +2032,7 @@ function layoutSlotsToElements(
           ...(presentation.borderRadius != null ? { borderRadius: presentation.borderRadius } : {}),
           ...(presentation.shadow ? { boxShadow: presentation.shadow, shadow: presentation.shadow } : {}),
           alt: content.title || '',
+          ...(s3Key ? { s3Key } : {}),
         });
         elements.push(...frameEls);
         if (slot.layer == null) layer = Math.max(layer, slotLayer + 3);
@@ -1924,6 +2062,7 @@ function layoutSlotsToElements(
         placement,
         content: {
           url,
+          ...(s3Key ? { s3Key } : {}),
           fit: slot.fit || 'cover',
           alt: content.title || '',
           // Never leave a naked null URL — editor shows a themed skeleton instead of broken <img>.
@@ -2001,7 +2140,7 @@ function layoutSlotsToElements(
       continue;
     }
 
-    if (lower.includes('chart') || lower.includes('graph') || role === 'chart') {
+    if (isChartElementSlot(slotId, role)) {
       const chartData = chartForSlot(slotId, content);
       if (!chartData && /^CHART_[2-9]$/i.test(String(slotId))) {
         if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
@@ -2018,6 +2157,7 @@ function layoutSlotsToElements(
           (Array.isArray(content.chart?.colors) && content.chart.colors.length ? content.chart.colors : null) ||
           (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
           (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : []),
+        brandChartColors,
       };
       elements.push({
         id: newElementId('cht'),
@@ -2293,21 +2433,25 @@ function layoutRequiresOverlayScrim(layoutSchema) {
   return /full_bg|overlay|statement_top|statement_bottom/i.test(layoutId);
 }
 
-/** True only when a background/hero image element actually has a URL. */
+/** True only when a near-full-bleed background image is present with a URL. */
 function docHasLoadedOverlayImage(doc) {
   const elements = Array.isArray(doc?.elements) ? doc.elements : [];
+  const canvas = doc?.canvas || {};
+  const cw = canvas.width || CANVAS_WIDTH;
+  const ch = canvas.height || CANVAS_HEIGHT;
+  const minArea = cw * ch * 0.7;
   return elements.some((el) => {
     if (el.type !== 'image') return false;
     if (!el.content?.url) return false;
     const slotId = String(el.slotId || '').toUpperCase();
     const role = String(el.role || '').toLowerCase();
-    if (slotId === 'BACKGROUND_IMAGE' || slotId === 'HERO_IMAGE') return true;
-    if (role === 'background' || el.content?.useAsBackground) return true;
+    // BACKGROUND_IMAGE / explicit background role always qualifies.
+    if (slotId === 'BACKGROUND_IMAGE' || role === 'background' || el.content?.useAsBackground) {
+      return true;
+    }
+    // Split HERO_IMAGE (half-slide) must NOT qualify — full-slide scrim greys the empty half.
     const p = el.placement || {};
-    const canvas = doc?.canvas || {};
-    const cw = canvas.width || CANVAS_WIDTH;
-    const ch = canvas.height || CANVAS_HEIGHT;
-    return (p.width || 0) * (p.height || 0) >= cw * ch * 0.7;
+    return (p.width || 0) * (p.height || 0) >= minArea;
   });
 }
 
@@ -2348,6 +2492,19 @@ function ensureOverlayScrim(doc, layoutSchema, content, themeTokens, canvas) {
       },
     ],
   };
+}
+
+/** Remove full-slide scrims that were injected without a full-bleed image. */
+function stripInvalidOverlayScrims(doc) {
+  if (!doc || docHasLoadedOverlayImage(doc)) return doc;
+  const elements = Array.isArray(doc.elements) ? doc.elements : [];
+  const next = elements.filter(
+    (el) =>
+      el.role !== 'design_overlay' &&
+      String(el.slotId || '').toUpperCase() !== 'OVERLAY_SCRIM'
+  );
+  if (next.length === elements.length) return doc;
+  return { ...doc, elements: next };
 }
 
 function applyTextOverImageContrast(elementsDoc, themeTokens = null, layoutSchema = null) {
@@ -2503,14 +2660,17 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
   return elementsDoc;
 }
 
-function resolveImageGenSize(slot, canvas = {}) {
+function resolveImageGenSize(slot, canvas = {}, allSlots = null) {
   if (!slot?.region) return '1024x1024';
-  const placement = regionToPlacement(slot.region, canvas, slot, null);
+  const slots = Array.isArray(allSlots) && allSlots.length ? allSlots : [slot];
+  const placement = regionToPlacement(slot.region, canvas, slot, slots);
   const w = Number(placement.width) || 1024;
   const h = Number(placement.height) || 1024;
   const ratio = w / Math.max(1, h);
-  if (ratio >= 1.25) return '1536x1024';
-  if (ratio <= 0.8) return '1024x1536';
+  // Prefer landscape/portrait sizes that match the slot so object-fit:cover doesn't over-zoom.
+  // Half-slide heroes (~0.89) should be portrait, not square.
+  if (ratio >= 1.15) return '1536x1024';
+  if (ratio <= 0.95) return '1024x1536';
   return '1024x1024';
 }
 
@@ -2844,6 +3004,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = ensureOverlayScrim(next, layoutSchema, content, themeTokens, canvas);
   }
 
+  next = stripInvalidOverlayScrims(next);
+
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
   next = applyReadableTextContrast(next, themeTokens, layoutSchema);
   next = applySplitImageEdgeFade(next, layoutSchema);
@@ -2965,10 +3127,13 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
       if (!slotUrl) continue;
+      const slotS3Key = slotKey
+        ? resolveSlotImageS3Key(slotKey, content, imageRef, layoutSchema)
+        : imageRef?.s3Key || null;
       el.content = {
         ...(el.content || {}),
         url: slotUrl,
-        s3Key: imageRef?.s3Key || el.content?.s3Key || null,
+        s3Key: slotS3Key || el.content?.s3Key || null,
         fit: el.content?.fit || 'cover',
         alt: content.title || el.content?.alt || '',
       };
@@ -2984,10 +3149,13 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
         ? resolveSlotImageUrl(slotKey, content, imageRef, layoutSchema)
         : imageUrl;
       if (!slotUrl) continue;
+      const slotS3Key = slotKey
+        ? resolveSlotImageS3Key(slotKey, content, imageRef, layoutSchema)
+        : imageRef?.s3Key || null;
       el.type = 'image';
       el.content = {
         url: slotUrl,
-        s3Key: imageRef?.s3Key || null,
+        s3Key: slotS3Key || null,
         fit: 'cover',
         alt: content.title || '',
       };
