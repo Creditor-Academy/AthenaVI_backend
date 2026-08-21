@@ -104,9 +104,9 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
-| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable view-only share link (raw token on first create) |
-| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Share link metadata (masked, no raw token) |
-| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable or set `expiresAt` |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable view-only share link (`share.url` always returned) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Share link + copyable `share.url` |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable or set `expiresAt` (includes `share.url`) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` | Bearer + member | Rotate token; invalidates shared URLs |
 | GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
 | GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer display name + `canOpenInEditor` |

@@ -1,7 +1,16 @@
 $kind: http-request
-description: Metadata only - masked urlDisplay, never the raw token.
+description: Returns share.url + share.token so the FE can copy the same link any time.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share"
 method: GET
 headers:
   Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const token = j && j.data && j.data.share && j.data.share.token;
+        if (token) pm.collectionVariables.set("presentationShareToken", token);
+      }
+    language: text/javascript
 order: 2000

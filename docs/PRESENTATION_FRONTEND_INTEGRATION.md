@@ -339,17 +339,12 @@ Canva-style preview sharing. The owner turns on a link; anyone with it can page 
 | Turn off / set expiry | `PATCH .../presentations/:id/share` `{ enabled, expiresAt }` |
 | Reset link | `POST .../presentations/:id/share/rotate` |
 
-**The raw token is shown exactly once.** Only `PUT` (first create) and `rotate` return `token` + `url`; `GET` and `PATCH` return a masked `urlDisplay` plus `tokenPrefix`. There is no way to read a token back — not even for the owner.
+Every owner response that has a link includes a copyable **`share.url`** (and `share.token`). Open the modal any time, show that URL in a read-only field with Copy, and let the user paste it as often as they need. No “you won’t see this again” warning, and no localStorage of the token.
 
-Because of that, the modal must **force a copy moment**:
-
-- On create/rotate, show the full `url` in a read-only input with a Copy button and keep it on screen until the user copies or explicitly dismisses.
-- Warn on dismiss: "You won't be able to see this link again. You can always reset it to get a new one."
-- `urlDisplay` is a label, not a link. **Never** build an `href` from `tokenPrefix` — it is only the first 8 characters.
-- Rotate = "Reset link". Say plainly that everyone who already has the old link loses access.
-- Turning sharing **off** and back **on** keeps the same link working, so use disable (not rotate) for a temporary pause.
+- Rotate = **"Reset link"**. Say plainly that everyone who already has the old link loses access.
+- Turning sharing **off** and back **on** keeps the same link working, so use disable (not rotate) for a temporary pause. `share.url` is still shown while disabled; guests get 404 until you re-enable.
 - `PUT` returns **409** while the deck is generating — disable the toggle until `status` leaves `GENERATING`.
-
+- If an older link has no `share.url` (pre-persistence rows), call **rotate** once to mint a recoverable URL.
 ### Viewer: the `/p/:token` page
 
 Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the user happens to be logged in; omit it otherwise. Never redirect a guest to login.

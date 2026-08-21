@@ -1,5 +1,8 @@
 const prisma = require('../../shared/config/prismaClient');
 
+/**
+ * Safe for Redis meta cache / public resolve. Never includes the raw capability token.
+ */
 const shareSelect = {
   id: true,
   projectId: true,
@@ -15,10 +18,16 @@ const shareSelect = {
   updatedAt: true,
 };
 
+/** Owner APIs only — includes raw token so the FE can redisplay a copyable URL. */
+const ownerShareSelect = {
+  ...shareSelect,
+  token: true,
+};
+
 const findShareByProjectId = (projectId) => {
   return prisma.presentationShareLink.findUnique({
     where: { projectId },
-    select: shareSelect,
+    select: ownerShareSelect,
   });
 };
 
@@ -51,7 +60,7 @@ const findPresentationForShare = (projectId) => {
 const findShareInternalByProjectId = (projectId) => {
   return prisma.presentationShareLink.findUnique({
     where: { projectId },
-    select: { ...shareSelect, tokenHash: true },
+    select: { ...ownerShareSelect, tokenHash: true },
   });
 };
 
@@ -82,7 +91,7 @@ const getContentVersion = async (projectId) => {
 const createShare = (data) => {
   return prisma.presentationShareLink.create({
     data,
-    select: shareSelect,
+    select: ownerShareSelect,
   });
 };
 
@@ -90,7 +99,7 @@ const updateShareById = (id, data) => {
   return prisma.presentationShareLink.update({
     where: { id },
     data,
-    select: shareSelect,
+    select: ownerShareSelect,
   });
 };
 
@@ -109,20 +118,21 @@ const createAudit = (data) => {
 
 /**
  * Rotate inside a transaction so the audit row and the new hash land together.
- * @param {{ id: string, tokenHash: string, tokenPrefix: string, actorUserId?: string|null, ip?: string|null }} params
+ * @param {{ id: string, token: string, tokenHash: string, tokenPrefix: string, actorUserId?: string|null, ip?: string|null }} params
  */
-const rotateShareToken = ({ id, tokenHash, tokenPrefix, actorUserId = null, ip = null }) => {
+const rotateShareToken = ({ id, token, tokenHash, tokenPrefix, actorUserId = null, ip = null }) => {
   return prisma.$transaction(async (tx) => {
     const share = await tx.presentationShareLink.update({
       where: { id },
       data: {
+        token,
         tokenHash,
         tokenPrefix,
         enabled: true,
         revokedAt: null,
         rotateCount: { increment: 1 },
       },
-      select: shareSelect,
+      select: ownerShareSelect,
     });
 
     await tx.presentationShareAudit.create({
@@ -135,6 +145,7 @@ const rotateShareToken = ({ id, tokenHash, tokenPrefix, actorUserId = null, ip =
 
 module.exports = {
   shareSelect,
+  ownerShareSelect,
   findPresentationForShare,
   findShareByProjectId,
   findShareInternalByProjectId,

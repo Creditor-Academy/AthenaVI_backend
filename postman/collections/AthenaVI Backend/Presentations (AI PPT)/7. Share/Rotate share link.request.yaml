@@ -1,5 +1,5 @@
 $kind: http-request
-description: Mints a new token and kills every URL already shared. Returns the raw token.
+description: Mints a new token and kills every URL already shared. Returns token/url top-level and inside share.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share/rotate"
 method: POST
 headers:
@@ -9,7 +9,8 @@ scripts:
     code: |-
       if (pm.response.code === 200) {
         const j = pm.response.json();
-        const token = j && j.data && j.data.token;
+        const data = j && j.data;
+        const token = (data && data.token) || (data && data.share && data.share.token);
         if (token) pm.collectionVariables.set("presentationShareToken", token);
       }
     language: text/javascript

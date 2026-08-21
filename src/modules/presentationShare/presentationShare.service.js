@@ -48,9 +48,6 @@ function frontendBase() {
 
 const buildShareUrl = (token) => `${frontendBase()}/p/${token}`;
 
-/** Display-only. Never a working link: the prefix cannot reconstruct the token. */
-const buildShareUrlDisplay = (tokenPrefix) => `${frontendBase()}/p/${tokenPrefix}…`;
-
 const isExpired = (share) =>
   Boolean(share?.expiresAt) && new Date(share.expiresAt).getTime() <= Date.now();
 
@@ -62,19 +59,26 @@ function toOwnerShare(share) {
   if (!share) {
     return { enabled: false, exists: false };
   }
-  return {
+
+  const out = {
     exists: true,
     enabled: share.enabled,
     expired: isExpired(share),
     access: share.access,
-    tokenPrefix: share.tokenPrefix,
-    urlDisplay: buildShareUrlDisplay(share.tokenPrefix),
     expiresAt: share.expiresAt,
     rotateCount: share.rotateCount,
     createdBy: share.createdBy,
     createdAt: share.createdAt,
     updatedAt: share.updatedAt,
   };
+
+  // Legacy rows created before token persistence have no recoverable URL — FE should rotate.
+  if (share.token) {
+    out.token = share.token;
+    out.url = buildShareUrl(share.token);
+  }
+
+  return out;
 }
 
 async function invalidateMeta(tokenHash) {
@@ -164,6 +168,7 @@ async function enableShare({ workspaceId, presentationId, userId, ip }) {
       created = await shareDao.createShare({
         projectId: presentationId,
         workspaceId,
+        token,
         tokenHash,
         tokenPrefix,
         createdBy: userId || null,
@@ -275,6 +280,7 @@ async function rotateShare({ workspaceId, presentationId, userId, ip }) {
   try {
     rotated = await shareDao.rotateShareToken({
       id: existing.id,
+      token: minted.token,
       tokenHash: minted.tokenHash,
       tokenPrefix: minted.tokenPrefix,
       actorUserId: userId || null,
@@ -286,6 +292,7 @@ async function rotateShare({ workspaceId, presentationId, userId, ip }) {
     minted = mintToken();
     rotated = await shareDao.rotateShareToken({
       id: existing.id,
+      token: minted.token,
       tokenHash: minted.tokenHash,
       tokenPrefix: minted.tokenPrefix,
       actorUserId: userId || null,

@@ -1,5 +1,5 @@
 $kind: http-request
-description: Idempotent. Returns the raw token ONLY on first create (and on rotate).
+description: Idempotent. share.url is always returned when a link exists (and top-level token/url on first create).
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share"
 method: PUT
 headers:
@@ -9,7 +9,8 @@ scripts:
     code: |-
       if (pm.response.code === 200) {
         const j = pm.response.json();
-        const token = j && j.data && j.data.token;
+        const data = j && j.data;
+        const token = (data && data.token) || (data && data.share && data.share.token);
         if (token) pm.collectionVariables.set("presentationShareToken", token);
       }
     language: text/javascript

@@ -565,7 +565,7 @@ Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
 
 Canva-style preview links. The **token in the URL is the permission** (capability URL): no login and no workspace membership are required, and viewers can never edit. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
 
-Only a **SHA-256 hash** of the token is stored. The raw token is returned **once**, on create and on rotate — see the disclosure rules below.
+Public resolve looks up a **SHA-256 hash** of the token. The raw token is also stored so **workspace members can reopen the share modal and copy the same URL any time**. Only owner share APIs return `token` / `url`; public `/api/p` never echoes them.
 
 ### Enable share link
 
@@ -586,20 +586,20 @@ Idempotent. Mints a token on **first** create; on an existing link it re-enables
     "enabled": true,
     "expired": false,
     "access": "VIEW",
-    "tokenPrefix": "Xk3nQ1pR",
-    "urlDisplay": "https://app.example.com/p/Xk3nQ1pR…",
+    "token": "8Kd…",
+    "url": "https://app.example.com/p/8Kd…",
     "expiresAt": null,
     "rotateCount": 0,
     "createdBy": "<uuid>",
     "createdAt": "2026-08-20T09:00:00.000Z",
     "updatedAt": "2026-08-20T09:00:00.000Z"
   },
-  "token": "8Kd… (raw base64url token, shown once)",
+  "token": "8Kd…",
   "url": "https://app.example.com/p/8Kd…"
 }
 ```
 
-On an already-enabled link the response omits `token` and `url`.
+Top-level `token` / `url` are also present on first create (and on rotate) for convenience. On an already-enabled link they appear only inside `share`.
 
 **409** if the deck is `GENERATING` (`PRESENTATION_ALREADY_GENERATING`).
 
@@ -610,9 +610,9 @@ On an already-enabled link the response omits `token` and `url`.
 | **Method** | `GET` |
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
 
-Metadata only — **never** the raw token. When no link was ever created: `data.share` is `{ "enabled": false, "exists": false }`.
+Returns the same `share` object including a copyable `url` (and `token`). When no link was ever created: `data.share` is `{ "enabled": false, "exists": false }`.
 
-`urlDisplay` is a masked label for the UI. It is **not** a working link; never build an `href` from `tokenPrefix`.
+Legacy rows created before token persistence may omit `token` / `url` — call **rotate** once to mint a recoverable link.
 
 ### Update share link
 
@@ -628,9 +628,9 @@ Metadata only — **never** the raw token. When no link was ever created: `data.
 ```
 
 - `expiresAt`: ISO date, or `null` to clear.
-- Disabling keeps the same hash (so a previously shared URL works again after re-enable) and immediately flushes the viewer room.
+- Disabling keeps the same token (so a previously shared URL works again after re-enable) and immediately flushes the viewer room. `share.url` remains copyable while disabled; public `/api/p` still 404s until re-enabled.
 - Re-enabling while the deck is `GENERATING` → **409**.
-- Returns metadata only, never the raw token.
+- Response includes `share.token` + `share.url` like GET.
 
 ### Rotate share link
 
@@ -639,21 +639,9 @@ Metadata only — **never** the raw token. When no link was ever created: `data.
 | **Method** | `POST` |
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` |
 
-Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` like first create. Allowed even while the deck is `GENERATING`, so a leaked link can always be killed.
+Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` (top-level and inside `share`). Allowed even while the deck is `GENERATING`, so a leaked link can always be killed.
 
 **404** if no link exists yet.
-
-### Token disclosure rules
-
-| Operation | Returns raw `token` + `url` |
-|---|---|
-| `PUT` first create | Yes |
-| `PUT` on existing link | No |
-| `GET` | No |
-| `PATCH` (including re-enable) | No |
-| `POST /rotate` | Yes |
-
-The server cannot recover a token it has already issued. If the owner navigates away before copying, **rotate** is the only way to get a pasteable link — so the share modal must force a copy-to-clipboard moment on create and rotate.
 
 ---
 
