@@ -63,7 +63,7 @@ From a folder Images row:
 1. `POST .../context` as `multipart/form-data`:
    - `files`: up to 5 combined with assets
    - `payload`: JSON string `{ inlineText?, assetIds? }`
-2. Show document excerpts + image vision summaries from `data.context.previews`.
+2. Show document excerpts + image vision summaries from `data.context.previews`. Reference thumbs use `previews.images[].url` (presigned; refresh via GET context).
 3. Pass `data.context.id` as `contextId` on generate.
 4. Chat / regenerate: omit `contextId` to inherit; text snapshot survives TTL; visual refs need live/pinned context.
 

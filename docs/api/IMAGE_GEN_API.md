@@ -101,7 +101,7 @@ Upload documents / reference images (or reference workspace assets) **before** g
   "previews": {
     "inlineText": "...",
     "documents": [{ "name": "brief.pdf", "excerpt": "...", "truncated": false }],
-    "images": [{ "name": "ref.png", "summary": "..." }],
+    "images": [{ "name": "ref.png", "summary": "...", "url": "https://...presigned..." }],
     "assetRefs": [{ "assetId": "...", "name": "...", "role": "reference_image" }]
   },
   "warnings": []
@@ -115,7 +115,7 @@ Upload documents / reference images (or reference workspace assets) **before** g
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/workspaces/:workspaceId/context/:contextId` |
 
-Same preview shape. **404** if missing, expired (and unpinned), or PRIVATE workspace mismatch.
+Same preview shape. `previews.images[].url` is a **presigned S3 GET** generated on each response (not stored in `derived`). Default TTL **3600s** (`IMAGE_GEN_CONTEXT_PREVIEW_URL_TTL_SEC`). **404** if missing, expired (and unpinned), or PRIVATE workspace mismatch.
 
 ### Delete context
 

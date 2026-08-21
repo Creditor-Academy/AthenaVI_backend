@@ -3,7 +3,7 @@ const path = require('path');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { moderateText } = require('../../shared/services/ai/moderation.service');
-const { uploadFileToKey, getObjectBuffer, deleteFile } = require('../s3/s3.service');
+const { uploadFileToKey, getObjectBuffer, deleteFile, getPresignedGetUrl } = require('../s3/s3.service');
 const assetDao = require('../asset/asset.dao');
 const contextDao = require('./imageGen.context.dao');
 const contextRateLimit = require('./imageGen.contextRateLimit.service');
@@ -24,27 +24,68 @@ const TTL_DAYS =
     ? Number(process.env.IMAGE_GEN_CONTEXT_TTL_DAYS)
     : 7;
 
+const PREVIEW_URL_TTL_SEC =
+  Number(process.env.IMAGE_GEN_CONTEXT_PREVIEW_URL_TTL_SEC) > 0
+    ? Number(process.env.IMAGE_GEN_CONTEXT_PREVIEW_URL_TTL_SEC)
+    : 3600;
+
 function getWorkspaceMemberRole(workspace, userId) {
   if (!workspace || !Array.isArray(workspace.members)) return null;
   const member = workspace.members.find((item) => item.userId === userId);
   return member ? member.role : null;
 }
 
-function serializeContext(row) {
+async function attachPreviewImageUrls(previews, files = []) {
+  const images = Array.isArray(previews?.images) ? previews.images : [];
+  if (!images.length) return previews || {};
+
+  const imageFiles = (files || []).filter((file) => file.role === 'reference_image' && file.s3Key);
+  const claimed = new Set();
+  const nextImages = [];
+
+  for (let i = 0; i < images.length; i += 1) {
+    const img = images[i] || {};
+    let fileIndex = imageFiles.findIndex((f, idx) => f.name === img.name && !claimed.has(idx));
+    if (fileIndex < 0) {
+      fileIndex = imageFiles.findIndex((_, idx) => !claimed.has(idx));
+    }
+    const file = fileIndex >= 0 ? imageFiles[fileIndex] : null;
+    if (fileIndex >= 0) claimed.add(fileIndex);
+    let url = null;
+    if (file?.s3Key) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        url = await getPresignedGetUrl(file.s3Key, PREVIEW_URL_TTL_SEC);
+      } catch {
+        url = null;
+      }
+    }
+    nextImages.push({
+      name: img.name,
+      summary: img.summary,
+      url,
+    });
+  }
+
+  return { ...previews, images: nextImages };
+}
+
+async function serializeContext(row) {
   if (!row) return row;
   const derived = row.derived && typeof row.derived === 'object' ? row.derived : {};
+  const basePreviews = derived.previews || {
+    inlineText: row.inlineText || null,
+    documents: [],
+    images: [],
+    assetRefs: [],
+  };
   return {
     id: row.id,
     status: row.status,
     expiresAt: row.expiresAt,
     pinnedAt: row.pinnedAt || null,
     createdAt: row.createdAt,
-    previews: derived.previews || {
-      inlineText: row.inlineText || null,
-      documents: [],
-      images: [],
-      assetRefs: [],
-    },
+    previews: await attachPreviewImageUrls(basePreviews, row.files),
     warnings: Array.isArray(derived.warnings) ? derived.warnings : [],
   };
 }
