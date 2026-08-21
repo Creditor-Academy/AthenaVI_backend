@@ -5,9 +5,19 @@ const PRESIGN_TTL_SECONDS =
     ? Number(process.env.PPT_IMAGE_PRESIGN_TTL_SEC)
     : 3600;
 
+async function signKey(key) {
+  if (!key) return null;
+  try {
+    return await s3Service.getPresignedGetUrl(key, PRESIGN_TTL_SECONDS);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Rewrite private S3 object URLs on a slide to time-limited GET URLs.
  * Persisted `url` / `s3Key` stay as-is in DB; this is response-only.
+ * Prefers per-element `content.s3Key` so gallery slides do not all share hero URL.
  * @param {object|null|undefined} slide
  * @returns {Promise<object|null|undefined>}
  */
@@ -15,17 +25,14 @@ async function attachPresignedMedia(slide) {
   if (!slide || typeof slide !== 'object') return slide;
 
   const next = { ...slide };
-  let signedUrl = null;
+  let heroSignedUrl = null;
+  const heroKey = next.imageRef?.s3Key || null;
 
   if (next.imageRef && typeof next.imageRef === 'object') {
     const imageRef = { ...next.imageRef };
     if (imageRef.s3Key) {
-      try {
-        signedUrl = await s3Service.getPresignedGetUrl(imageRef.s3Key, PRESIGN_TTL_SECONDS);
-        imageRef.url = signedUrl;
-      } catch {
-        // keep stored url
-      }
+      heroSignedUrl = await signKey(imageRef.s3Key);
+      if (heroSignedUrl) imageRef.url = heroSignedUrl;
     }
     next.imageRef = imageRef;
   }
@@ -33,20 +40,44 @@ async function attachPresignedMedia(slide) {
   if (next.elements && typeof next.elements === 'object' && Array.isArray(next.elements.elements)) {
     const elementsDoc = {
       ...next.elements,
-      elements: next.elements.elements.map((el) => {
-        if (!el || el.type !== 'image' || !el.content || typeof el.content !== 'object') {
-          return el;
-        }
-        const key = next.imageRef?.s3Key;
-        if (!signedUrl && !key) return el;
-        return {
-          ...el,
-          content: {
-            ...el.content,
-            url: signedUrl || el.content.url || null,
-          },
-        };
-      }),
+      elements: await Promise.all(
+        next.elements.elements.map(async (el) => {
+          if (!el || el.type !== 'image' || !el.content || typeof el.content !== 'object') {
+            return el;
+          }
+
+          const slotId = String(el.slotId || '').toUpperCase();
+          const role = String(el.role || '').toLowerCase();
+          const isHeroSlot =
+            slotId === 'BACKGROUND_IMAGE' ||
+            slotId === 'HERO_IMAGE' ||
+            role === 'background' ||
+            el.content.useAsBackground;
+
+          const elementKey =
+            el.content.s3Key ||
+            s3Service.extractS3KeyFromUrl(el.content.url || el.content.src) ||
+            null;
+
+          let signed = null;
+          if (elementKey) {
+            signed = await signKey(elementKey);
+          } else if (isHeroSlot && (heroSignedUrl || heroKey)) {
+            signed = heroSignedUrl || (await signKey(heroKey));
+          }
+
+          if (!signed) return el;
+
+          return {
+            ...el,
+            content: {
+              ...el.content,
+              ...(elementKey ? { s3Key: elementKey } : {}),
+              url: signed,
+            },
+          };
+        })
+      ),
     };
     next.elements = elementsDoc;
   }
@@ -84,8 +115,8 @@ async function presignPresentationPayload(data) {
 }
 
 module.exports = {
-  PRESIGN_TTL_SECONDS,
   attachPresignedMedia,
   attachPresignedMediaToSlides,
   presignPresentationPayload,
+  PRESIGN_TTL_SECONDS,
 };

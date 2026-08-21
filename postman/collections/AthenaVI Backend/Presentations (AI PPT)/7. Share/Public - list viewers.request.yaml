@@ -1,0 +1,5 @@
+$kind: http-request
+description: Same payload as the heartbeat without recording one. viewerCount is the full room; viewers is capped at 50.
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/presence"
+method: GET
+order: 8000

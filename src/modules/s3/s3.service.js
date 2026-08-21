@@ -23,6 +23,30 @@ function buildPublicUrl(key) {
   return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
 
+/**
+ * Best-effort extract of an S3 object key from a stored public/presigned URL.
+ * @param {string|null|undefined} url
+ * @returns {string|null}
+ */
+function extractS3KeyFromUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const u = new URL(url);
+    let key = decodeURIComponent(u.pathname.replace(/^\//, ''));
+    if (!key) return null;
+    const host = String(u.hostname || '');
+    // Path-style: s3.region.amazonaws.com/bucket/key
+    if (/^s3[.-]/i.test(host) || host === 's3.amazonaws.com') {
+      const parts = key.split('/');
+      if (parts.length > 1) key = parts.slice(1).join('/');
+    }
+    // Virtual-hosted: bucket.s3.region.amazonaws.com/key — pathname is already the key
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
 async function uploadBodyToKey(body, key, contentType) {
   const command = new PutObjectCommand({
     Bucket: BUCKET,
@@ -367,4 +391,5 @@ module.exports = {
   headRemoteUrlMeta,
   headObjectMeta,
   buildPublicUrl,
+  extractS3KeyFromUrl,
 };

@@ -326,6 +326,57 @@ Docs: [`WORKSPACE_API.md`](api/WORKSPACE_API.md) · [`PROJECT_EDITOR_INTEGRATION
 
 ---
 
+## Share & present mode (view-only link + live viewers)
+
+Canva-style preview sharing. The owner turns on a link; anyone with it can page through the deck but cannot edit. Viewers see each other's names, and guests appear as `Anonymous viewer`.
+
+### Owner: the share modal
+
+| Action | Call |
+|---|---|
+| Open modal | `GET .../presentations/:id/share` |
+| Turn sharing on | `PUT .../presentations/:id/share` |
+| Turn off / set expiry | `PATCH .../presentations/:id/share` `{ enabled, expiresAt }` |
+| Reset link | `POST .../presentations/:id/share/rotate` |
+
+**The raw token is shown exactly once.** Only `PUT` (first create) and `rotate` return `token` + `url`; `GET` and `PATCH` return a masked `urlDisplay` plus `tokenPrefix`. There is no way to read a token back — not even for the owner.
+
+Because of that, the modal must **force a copy moment**:
+
+- On create/rotate, show the full `url` in a read-only input with a Copy button and keep it on screen until the user copies or explicitly dismisses.
+- Warn on dismiss: "You won't be able to see this link again. You can always reset it to get a new one."
+- `urlDisplay` is a label, not a link. **Never** build an `href` from `tokenPrefix` — it is only the first 8 characters.
+- Rotate = "Reset link". Say plainly that everyone who already has the old link loses access.
+- Turning sharing **off** and back **on** keeps the same link working, so use disable (not rotate) for a temporary pause.
+- `PUT` returns **409** while the deck is generating — disable the toggle until `status` leaves `GENERATING`.
+
+### Viewer: the `/p/:token` page
+
+Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the user happens to be logged in; omit it otherwise. Never redirect a guest to login.
+
+1. `GET /api/p/:token` → deck. Cache the response `ETag` and send it as `If-None-Match` on refetch (**304** = nothing changed).
+2. `GET /api/p/:token/session` → `self.displayName`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members, so you can offer an "Open in editor" button.
+3. `PUT /api/p/:token/presence` every **10–15s** with `{ viewerSessionId, slideIndex }` → live viewer list.
+4. `DELETE /api/p/:token/presence?viewerSessionId=…` on unload (best-effort; the server drops silent viewers after 45s anyway).
+
+**`viewerSessionId`**: generate a UUID once, persist in `localStorage`, reuse across reloads. It identifies guests; logged-in users are keyed by account so multiple tabs collapse into one avatar.
+
+**Rendering the room:** `viewerCount` is the true total; `viewers` holds at most the 50 most recently active. Render avatars from `viewers` and "+N more" from `viewerCount - viewers.length`. Each viewer carries `slideIndex`, so you can show who is on which slide. Do not display a name you computed yourself — `displayName` is always server-side, and any `displayName` you send is ignored.
+
+**Live updates:** every presence response includes `contentUpdatedAt`. Refetch the deck **only** when it differs from the value you rendered. Do not poll `GET /api/p/:token` on a timer; it is the expensive call.
+
+**During a regeneration:** the deck call still returns 200, but `status` is `GENERATING` and `slides` holds only finished slides. Show an "Updating…" state instead of an error, and let the presence poll tell you when new slides land.
+
+**Security requirements for the page:**
+
+- Send `Referrer-Policy: no-referrer` on the `/p/:token` document. Slide images are presigned S3 URLs, and without this the token can leak into access logs through the `Referer` header.
+- Keep the token out of analytics events, error reports, and page titles.
+- Treat the page as read-only: no editor API calls, no autosave, no comment posting.
+- Unknown, disabled, and expired links all return **404** with the same message. Show one "This link isn't available" screen — don't try to distinguish them.
+- **429** means the link is being hammered; back off using `Retry-After` rather than retrying immediately.
+
+---
+
 ## Common HTTP statuses
 
 | Code | Meaning |
@@ -387,10 +438,21 @@ POST   .../slides/:slideId/regenerate
 
 POST   .../export
 GET    .../export/:exportId
+
+PUT    .../share
+GET    .../share
+PATCH  .../share
+POST   .../share/rotate
+
+GET    /api/p/:token
+GET    /api/p/:token/session
+PUT    /api/p/:token/presence
+GET    /api/p/:token/presence
+DELETE /api/p/:token/presence
 ```
 
 Postman collection `postman/collections/AthenaVI Backend/` (v3 YAML):
 
-- Folder **Presentations (AI PPT)** — subfolders `0. Pickers` … `6. Export` (URLs use `/api/...`)
+- Folder **Presentations (AI PPT)** — subfolders `0. Pickers` … `7. Share` (URLs use `/api/...`)
 - Folder **Superadmin templates** — `DECK_LAYOUT` / `VIDEO_SCENE` admin CRUD
 - Folder **Video templates** — video editor only (do not use for PPT)

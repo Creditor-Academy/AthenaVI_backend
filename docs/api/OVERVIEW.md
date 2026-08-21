@@ -66,6 +66,7 @@ Authorization: Bearer <access_token>
 ### Unprotected vs protected
 
 - **Unprotected**: OTP generate/resend, register, login, superadmin login, refresh, logout (cookie only), forget-password, reset-password, `GET /api/auth/google` and `GET /api/auth/superadmin/google` (redirect).
+- **Optional auth**: `/api/p/*` (view-only presentation share links — see [PRESENTATION_API.md](PRESENTATION_API.md)). The capability token in the path is the permission; a Bearer token is accepted but never required, and an invalid one is treated as a guest rather than a 401.
 - **Protected**: All `/api/user/*`, `/api/workspaces/*`, `/api/credits/*`, `/api/assets/*`, and `/api/heygen/*` require `Authorization: Bearer <access_token>`. Workspace, project, render, asset, credit, and most HeyGen flows additionally require workspace membership or specific roles where noted. **Project**, **render**, and **HeyGen avatar video** routes under `/api/workspaces/:workspaceId/projects/*` require a workspace **member** role (OWNER, ADMIN, or MEMBER), and the `projectId` must belong to that workspace.
 
 ---

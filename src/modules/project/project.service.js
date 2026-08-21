@@ -20,6 +20,7 @@ const {
 } = require('../../shared/utils/videoStorageKeys');
 const storageAccounting = require('../storage/storageAccounting.service');
 const videoTemplateService = require('./videoTemplate.service');
+const presentationShareService = require('../presentationShare/presentationShare.service');
 
 function buildDefaultProjectData() {
   return {
@@ -576,6 +577,9 @@ const deleteProject = async (workspaceId, projectId) => {
       void error;
     }
   }
+
+  // Drop cached share metadata and the live viewer room before the row (and its FK cascade) goes.
+  await presentationShareService.invalidateForProject(project.id);
 
   await projectDao.deleteProject(project.id);
   const owner = await storageAccounting.getWorkspaceOwnerOrThrow(workspaceId);

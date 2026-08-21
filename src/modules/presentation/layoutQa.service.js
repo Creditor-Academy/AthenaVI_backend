@@ -6,6 +6,7 @@ function countWords(text) {
 }
 
 const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const { isWeakText } = require('./blueprintSeed');
 
 function truncateToWords(text, maxWords) {
   const raw = String(text ?? '');
@@ -47,6 +48,10 @@ function layoutNeedsIndexedColumns(slots) {
     const id = String(slot.id || '');
     return /^body_\d+$/i.test(id) || /^bullet_\d+$/i.test(id);
   });
+}
+
+function layoutNeedsGalleryLabels(slots) {
+  return slots.some((slot) => /^IMAGE_\d+_LABEL$/i.test(String(slot.id || '')));
 }
 
 function layoutNeedsDiagramCells(slots) {
@@ -163,6 +168,31 @@ function validateStructuredFields(content, layoutSchema, issues) {
     }
   }
 
+  if (layoutNeedsGalleryLabels(slots)) {
+    const cols = content?.columns || content?.cards || content?.features || content?.items;
+    const labelSlots = slots.filter((s) => /^IMAGE_\d+_LABEL$/i.test(String(s.id || '')));
+    const minLabels = Math.max(2, labelSlots.length);
+    if (Array.isArray(cols) && cols.length >= 2) {
+      const titles = cols
+        .slice(0, minLabels)
+        .map((col) => {
+          if (typeof col === 'string') return col.trim().toLowerCase();
+          return String(col?.title ?? col?.heading ?? col?.label ?? '').trim().toLowerCase();
+        })
+        .filter(Boolean);
+      const uniqueTitles = new Set(titles);
+      if (titles.length >= 2 && uniqueTitles.size < Math.min(titles.length, minLabels)) {
+        issues.push({ path: 'columns', rule: 'distinct_gallery_labels', repairable: true });
+      }
+      const slideTitle = String(content?.title || '').trim().toLowerCase();
+      if (slideTitle && titles.some((t) => t === slideTitle)) {
+        issues.push({ path: 'columns', rule: 'gallery_label_matches_slide_title', repairable: true });
+      }
+    } else {
+      issues.push({ path: 'columns', rule: 'distinct_gallery_labels', repairable: true });
+    }
+  }
+
   const imageSlotIds = layoutImageSlotIds(slots);
   if (imageSlotIds.length > 1) {
     const prompts = content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
@@ -268,6 +298,41 @@ function validateStructuredFields(content, layoutSchema, issues) {
       if (withDetail.length < 2) {
         issues.push({ path: 'timeline', rule: 'timeline_missing_details', repairable: true });
       }
+    }
+  }
+
+  const headingSlots = slots.filter((s) => {
+    const role = String(s.role || '').toLowerCase();
+    const id = String(s.id || '').toUpperCase();
+    return (
+      role === 'heading' ||
+      role === 'title' ||
+      ['MAIN_TITLE', 'HEADING', 'HEADLINE', 'TITLE', 'STATEMENT'].includes(id)
+    );
+  });
+  if (headingSlots.length && isWeakText(content?.title)) {
+    issues.push({ path: 'title', rule: 'placeholder_heading', repairable: true });
+  }
+  const subSlots = slots.filter(
+    (s) =>
+      String(s.role || '').toLowerCase() === 'subheading' ||
+      /subtitle/i.test(String(s.id || ''))
+  );
+  if (subSlots.length && isWeakText(content?.subtitle) && isWeakText(content?.body)) {
+    issues.push({ path: 'subtitle', rule: 'empty_required_slot', repairable: true });
+  }
+  const copySlots = slots.filter((s) =>
+    ['heading', 'subheading', 'body', 'bullet'].includes(String(s.role || '').toLowerCase())
+  );
+  if (copySlots.length >= 2) {
+    const hasSecond =
+      !isWeakText(content?.subtitle) ||
+      !isWeakText(content?.body) ||
+      (Array.isArray(content?.bullets) && content.bullets.some((b) => !isWeakText(typeof b === 'string' ? b : b?.text))) ||
+      (Array.isArray(content?.columns) &&
+        content.columns.some((c) => !isWeakText(c?.body ?? c?.text ?? c?.title)));
+    if (!hasSecond) {
+      issues.push({ path: 'body', rule: 'empty_required_slot', repairable: true });
     }
   }
 }
@@ -443,4 +508,5 @@ module.exports = {
   truncateToWords,
   truncateToLines,
   countWords,
+  layoutNeedsGalleryLabels,
 };

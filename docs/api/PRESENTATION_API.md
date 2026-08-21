@@ -561,12 +561,228 @@ Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
 
 ---
 
+## View-only share links
+
+Canva-style preview links. The **token in the URL is the permission** (capability URL): no login and no workspace membership are required, and viewers can never edit. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
+
+Only a **SHA-256 hash** of the token is stored. The raw token is returned **once**, on create and on rotate — see the disclosure rules below.
+
+### Enable share link
+
+| | |
+|---|---|
+| **Method** | `PUT` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+| **Auth** | Bearer + member |
+
+Idempotent. Mints a token on **first** create; on an existing link it re-enables (and clears a lapsed `expiresAt`) without minting.
+
+**Response `data` (first create):**
+
+```json
+{
+  "share": {
+    "exists": true,
+    "enabled": true,
+    "expired": false,
+    "access": "VIEW",
+    "tokenPrefix": "Xk3nQ1pR",
+    "urlDisplay": "https://app.example.com/p/Xk3nQ1pR…",
+    "expiresAt": null,
+    "rotateCount": 0,
+    "createdBy": "<uuid>",
+    "createdAt": "2026-08-20T09:00:00.000Z",
+    "updatedAt": "2026-08-20T09:00:00.000Z"
+  },
+  "token": "8Kd… (raw base64url token, shown once)",
+  "url": "https://app.example.com/p/8Kd…"
+}
+```
+
+On an already-enabled link the response omits `token` and `url`.
+
+**409** if the deck is `GENERATING` (`PRESENTATION_ALREADY_GENERATING`).
+
+### Get share link
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+
+Metadata only — **never** the raw token. When no link was ever created: `data.share` is `{ "enabled": false, "exists": false }`.
+
+`urlDisplay` is a masked label for the UI. It is **not** a working link; never build an `href` from `tokenPrefix`.
+
+### Update share link
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+
+**Body** (at least one key):
+
+```json
+{ "enabled": false, "expiresAt": "2026-09-01T00:00:00.000Z" }
+```
+
+- `expiresAt`: ISO date, or `null` to clear.
+- Disabling keeps the same hash (so a previously shared URL works again after re-enable) and immediately flushes the viewer room.
+- Re-enabling while the deck is `GENERATING` → **409**.
+- Returns metadata only, never the raw token.
+
+### Rotate share link
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` |
+
+Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` like first create. Allowed even while the deck is `GENERATING`, so a leaked link can always be killed.
+
+**404** if no link exists yet.
+
+### Token disclosure rules
+
+| Operation | Returns raw `token` + `url` |
+|---|---|
+| `PUT` first create | Yes |
+| `PUT` on existing link | No |
+| `GET` | No |
+| `PATCH` (including re-enable) | No |
+| `POST /rotate` | Yes |
+
+The server cannot recover a token it has already issued. If the owner navigates away before copying, **rotate** is the only way to get a pasteable link — so the share modal must force a copy-to-clipboard moment on create and rotate.
+
+---
+
+## Public preview API (`/api/p`)
+
+Unauthenticated. `Authorization: Bearer <access_token>` is **optional** — send it when present so the viewer appears by name instead of `Anonymous viewer`. An invalid or expired Bearer token never causes a 401 here; it is simply treated as a guest.
+
+Unknown, disabled, and expired tokens all return an identical **404** (`Share link not found`) so the endpoint cannot be used to discover presentations.
+
+All responses carry `Referrer-Policy: no-referrer`. The hosting `/p/:token` page must do the same, or the token can leak through the `Referer` header on presigned image loads.
+
+### Get shared presentation
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/p/:token` |
+| **Cache** | `ETag` + `Cache-Control: private, max-age=30` |
+
+Send back the `ETag` as `If-None-Match` to get a **304**.
+
+**Response `data`:**
+
+```json
+{
+  "id": "<presentationId>",
+  "title": "Q3 Business Review",
+  "permission": "view",
+  "status": "READY",
+  "aspectRatio": "16:9",
+  "locale": "en",
+  "themeTokens": { },
+  "contentUpdatedAt": "2026-08-20T08:59:12.000Z",
+  "slideCount": 12,
+  "slides": [
+    { "id": "…", "order": 0, "status": "READY", "title": "…", "description": ["…"], "elements": { } }
+  ]
+}
+```
+
+- **Only `READY` slides are included.** During a regeneration the call still returns **200** with `status: "GENERATING"` and whatever slides survive, so the UI can show "Updating…" instead of an error.
+- Image URLs are freshly presigned per request, including per-element images on multi-image slides.
+- Editor-only data is stripped: outline, generation metrics, credits, prompt bundle version, folder, workspace, owner, jobs, comments, and internal S3 keys.
+
+### Get viewer session
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/p/:token/session` |
+| **Cache** | `no-store` |
+
+Personalized companion to the cacheable deck payload.
+
+```json
+{
+  "self": { "displayName": "Priya Shah", "isAnonymous": false, "userId": "<uuid>" },
+  "permission": "view",
+  "canOpenInEditor": true,
+  "workspaceId": "<uuid>",
+  "presentationId": "<uuid>"
+}
+```
+
+`canOpenInEditor` is true only when the caller is a member of the owning workspace; `workspaceId` / `presentationId` appear only in that case, so the UI can offer "Open in editor".
+
+Display names are always computed server-side from `User.name`. A logged-in user with a blank name is shown as `Anonymous viewer`. Email is never exposed.
+
+### Presence heartbeat
+
+| | |
+|---|---|
+| **Method** | `PUT` |
+| **Path** | `/api/p/:token/presence` |
+| **Cache** | `no-store` |
+
+**Body:**
+
+```json
+{ "viewerSessionId": "b1f7c0de-…", "slideIndex": 3 }
+```
+
+`viewerSessionId` is a client-generated id (persist it in `localStorage`) used to identify guests. Any `displayName` sent by the client is ignored.
+
+**Response `data`:**
+
+```json
+{
+  "self": { "displayName": "Anonymous viewer", "isAnonymous": true },
+  "viewerCount": 62,
+  "viewers": [
+    { "key": "user:…", "displayName": "Priya Shah", "isAnonymous": false, "slideIndex": 3, "lastSeen": "2026-08-20T09:00:03.000Z" }
+  ],
+  "contentUpdatedAt": "2026-08-20T08:59:12.000Z"
+}
+```
+
+- Heartbeat about every **15s**; a viewer is dropped after **45s** of silence.
+- Logged-in viewers collapse across tabs (keyed by user); guests are keyed by `viewerSessionId`.
+- `viewerCount` is the full room size. `viewers` is capped at the **50 most recently active** — a display cap only, nobody is turned away, so render "+N more" from `viewerCount - viewers.length`.
+- Refetch the deck only when `contentUpdatedAt` changes.
+
+### List / leave presence
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/p/:token/presence` | Same payload without recording a heartbeat |
+| `DELETE` | `/api/p/:token/presence?viewerSessionId=…` | Explicit leave; the TTL covers missed calls |
+
+### Rate limits
+
+**429** with a `Retry-After` header.
+
+| Endpoint | Default |
+|---|---|
+| `GET /api/p/:token` | 60/min per IP, 300/min per link |
+| Presence + session | 120/min per IP |
+
+Configurable — see [ENVIRONMENT.md](ENVIRONMENT.md).
+
+---
+
 ## Notes
 
 - Presentation routes are nested under workspaces (same pattern as projects/folders).
 - Credits are **presentation-specific feature keys** but use the **workspace** credit ledger (`SCOPE.WORKSPACE`).
 - Offline structural checks: `npm run eval:presentation` (see `scripts/presentation-eval/`).
-- Deferred (not this API surface): share links, brand kits, server version history, studio isolation.
+- Share links are **view-only** and free (no credit charge). Presence is polled over HTTP; there is no WebSocket/SSE channel.
+- Deferred (not this API surface): password-protected links, frozen publish snapshots, comments on the preview, brand kits, server version history, studio isolation.
 
 ---
 

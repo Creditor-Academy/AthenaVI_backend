@@ -2,8 +2,19 @@ const zlib = require('zlib');
 const wizardColorThemes = require('./wizardColorThemes.json');
 const s3Service = require('../s3/s3.service');
 const { CANVAS_WIDTH, CANVAS_HEIGHT } = require('./presentation.constants');
+const layoutCatalogPolicy = require('./layoutCatalogPolicy');
 
 const PLACEHOLDER_S3_KEY = 'presentations/_system/placeholder-image.png';
+const PLACEHOLDER_VARIANT_COLORS = [
+  [180, 186, 194],
+  [168, 178, 190],
+  [190, 184, 176],
+  [176, 190, 186],
+  [186, 176, 190],
+  [172, 182, 198],
+  [198, 182, 172],
+  [182, 190, 176],
+];
 
 const IMAGE_STYLE_PHRASES = {
   scene: 'cinematic environmental scene photography',
@@ -49,6 +60,7 @@ const BASE_TEMPLATE_BIAS = {
 };
 
 let placeholderCache = null;
+const placeholderVariantCache = new Map();
 
 function normalizeGenerationFlow(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -235,20 +247,59 @@ function buildSolidGrayPng(width = 64, height = 64, rgb = [180, 186, 194]) {
   ]);
 }
 
-async function ensurePlaceholderImage() {
-  if (placeholderCache) return placeholderCache;
-  try {
-    await s3Service.headObjectMeta(PLACEHOLDER_S3_KEY);
-    const url = s3Service.buildPublicUrl(PLACEHOLDER_S3_KEY);
-    placeholderCache = { s3Key: PLACEHOLDER_S3_KEY, url };
-    return placeholderCache;
-  } catch {
-    // missing — upload
+function placeholderS3KeyForSlot(slotIndex) {
+  const idx = Math.max(0, Number(slotIndex) || 0);
+  if (idx === 0) return PLACEHOLDER_S3_KEY;
+  return `presentations/_system/placeholder-image-v${idx}.png`;
+}
+
+/**
+ * System placeholder image. Pass slotIndex for distinct per-gallery-slot URLs
+ * so multi-image dedupe does not wipe secondary cells.
+ * @param {{ slotIndex?: number, seed?: string|number }} [opts]
+ */
+async function ensurePlaceholderImage(opts = {}) {
+  const slotIndex = Math.max(0, Number(opts.slotIndex) || 0);
+  if (slotIndex === 0 && !opts.seed) {
+    if (placeholderCache) return { ...placeholderCache, source: 'placeholder' };
+    try {
+      await s3Service.headObjectMeta(PLACEHOLDER_S3_KEY);
+      const url = s3Service.buildPublicUrl(PLACEHOLDER_S3_KEY);
+      placeholderCache = { s3Key: PLACEHOLDER_S3_KEY, url };
+      return { ...placeholderCache, source: 'placeholder' };
+    } catch {
+      // missing — upload
+    }
+    const buffer = buildSolidGrayPng(512, 512, PLACEHOLDER_VARIANT_COLORS[0]);
+    const uploaded = await s3Service.uploadFileToKey(buffer, PLACEHOLDER_S3_KEY, 'image/png');
+    placeholderCache = { s3Key: uploaded.key, url: uploaded.url };
+    return { ...placeholderCache, source: 'placeholder' };
   }
-  const buffer = buildSolidGrayPng(512, 512, [180, 186, 194]);
-  const uploaded = await s3Service.uploadFileToKey(buffer, PLACEHOLDER_S3_KEY, 'image/png');
-  placeholderCache = { s3Key: uploaded.key, url: uploaded.url };
-  return placeholderCache;
+
+  const cacheKey = opts.seed != null ? `seed:${opts.seed}` : `slot:${slotIndex}`;
+  if (placeholderVariantCache.has(cacheKey)) {
+    return { ...placeholderVariantCache.get(cacheKey), source: 'placeholder' };
+  }
+
+  const s3Key = opts.seed != null
+    ? `presentations/_system/placeholder-image-${String(opts.seed).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'x'}.png`
+    : placeholderS3KeyForSlot(slotIndex);
+  const color = PLACEHOLDER_VARIANT_COLORS[slotIndex % PLACEHOLDER_VARIANT_COLORS.length];
+
+  try {
+    await s3Service.headObjectMeta(s3Key);
+    const url = s3Service.buildPublicUrl(s3Key);
+    const entry = { s3Key, url };
+    placeholderVariantCache.set(cacheKey, entry);
+    return { ...entry, source: 'placeholder' };
+  } catch {
+    // missing — upload tinted variant
+  }
+  const buffer = buildSolidGrayPng(512, 512, color);
+  const uploaded = await s3Service.uploadFileToKey(buffer, s3Key, 'image/png');
+  const entry = { s3Key: uploaded.key, url: uploaded.url };
+  placeholderVariantCache.set(cacheKey, entry);
+  return { ...entry, source: 'placeholder' };
 }
 
 /**
@@ -292,7 +343,10 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
   const useWizardPalette =
     themeMode === 'palette' || (!themeMode && !s.packId && !s.brandKitId && s.colorTheme);
   const themeTokens = useWizardPalette
-    ? resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter)
+    ? layoutCatalogPolicy.biasPaletteFromSourceText(
+        resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter),
+        s.prompt || s.outlineNotes || ''
+      )
     : null;
   if (themeTokens && imageStylePhrase) {
     themeTokens.imageStyle = imageStylePhrase;

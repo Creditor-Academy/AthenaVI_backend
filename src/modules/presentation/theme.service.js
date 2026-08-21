@@ -6,26 +6,85 @@ const catalog = require('./themes/catalog.json');
 const DEFAULT_THEME_ID = 'midnight_blue';
 const AA_CONTRAST_RATIO = 4.5;
 
+const APPEARANCE_LUM_THRESHOLD = 0.35;
+const SAFE_BG_BY_APPEARANCE = {
+  light: { bg: '#FFFFFF', surface: '#F8FAFC', gradientStart: '#FFFFFF', gradientEnd: '#F8FAFC' },
+  dark: { bg: '#0B1220', surface: '#121A2B', gradientStart: '#0B1220', gradientEnd: '#121A2B' },
+};
+
 function listThemes() {
   return catalog.map((theme) => ({
     id: theme.id,
     name: theme.name,
+    appearance: theme.themeTokens?.appearance || appearanceFromBg(theme.themeTokens?.palette?.bg),
     themeTokens: theme.themeTokens,
   }));
 }
 
+function appearanceFromBg(hex) {
+  const lum = relativeLuminance(hex);
+  if (lum == null) return 'light';
+  return lum < APPEARANCE_LUM_THRESHOLD ? 'dark' : 'light';
+}
+
+function luminanceMatchesAppearance(hex, appearance) {
+  const lum = relativeLuminance(hex);
+  if (lum == null) return true;
+  if (appearance === 'dark') return lum < APPEARANCE_LUM_THRESHOLD;
+  return lum >= APPEARANCE_LUM_THRESHOLD;
+}
+
+/**
+ * Ensure palette bg/surface/gradients match declared appearance (light never uses dark bg).
+ */
+function enforceAppearancePalette(themeTokens) {
+  if (!themeTokens?.palette || typeof themeTokens.palette !== 'object') return themeTokens;
+  const palette = { ...themeTokens.palette };
+  const appearance =
+    themeTokens.appearance === 'dark' || themeTokens.appearance === 'light'
+      ? themeTokens.appearance
+      : appearanceFromBg(palette.bg);
+  const safe = SAFE_BG_BY_APPEARANCE[appearance] || SAFE_BG_BY_APPEARANCE.light;
+
+  for (const key of ['bg', 'surface', 'gradientStart', 'gradientEnd']) {
+    if (palette[key] && !luminanceMatchesAppearance(palette[key], appearance)) {
+      palette[key] = safe[key] || safe.bg;
+    }
+  }
+  if (!palette.gradientStart) palette.gradientStart = palette.bg || safe.bg;
+  if (!palette.gradientEnd) palette.gradientEnd = palette.surface || safe.surface;
+
+  return { ...themeTokens, appearance, palette };
+}
+
 /** Map wizard / FE PDF theme ids onto catalog or wizard-derived tokens later. */
 const THEME_ID_ALIASES = {
-  modern_professional: 'clean_light',
-  'modern-professional': 'clean_light',
-  midnight_dark: 'midnight_blue',
-  'midnight-dark': 'midnight_blue',
-  earthy_sage: 'earthy-sage',
-  'earthy-sage': 'earthy-sage',
+  modern_professional: 'soft-sky',
+  'modern-professional': 'soft-sky',
+  midnight_dark: 'deep-space',
+  'midnight-dark': 'deep-space',
+  soft_sky: 'soft-sky',
+  pastel_dream: 'pastel-dream',
+  nature_fresh: 'nature-fresh',
   ocean_breeze: 'ocean-breeze',
+  urban_cool: 'urban-cool',
+  warm_embrace: 'warm-embrace',
+  deep_space: 'deep-space',
+  modern_dark: 'modern-dark',
+  tech_noir: 'tech-noir',
+  sunset_dark: 'sunset-dark',
+  forest_night: 'forest-night',
+  ocean_deep: 'ocean-deep',
+  luxe_dark: 'luxe-dark',
+  elegant_dark: 'elegant-dark',
+  // legacy catalog aliases
+  clean_light: 'soft-sky',
+  midnight_blue: 'deep-space',
+  earthy_sage: 'nature-fresh',
+  'earthy-sage': 'nature-fresh',
   'ocean-breeze': 'ocean-breeze',
-  vintage_paper: 'vintage-paper',
-  'vintage-paper': 'vintage-paper',
+  vintage_paper: 'ethereal',
+  'vintage-paper': 'ethereal',
 };
 
 function resolveWizardThemeTokens(themeId) {
@@ -107,6 +166,78 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function parseCssColor(color) {
+  const raw = String(color || '').trim();
+  if (!raw) return null;
+
+  // #RRGGBB / #RGB
+  const hex = raw.startsWith('#') ? raw : raw.match(/^[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/) ? raw : null;
+  if (hex) {
+    const rgb = parseHexColor(hex.startsWith('#') ? hex : `#${hex}`);
+    if (!rgb) return null;
+    return { r: rgb.r, g: rgb.g, b: rgb.b, a: 1 };
+  }
+
+  // rgb(r,g,b)
+  const rgbMatch = raw.match(/^rgb\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
+  if (rgbMatch) {
+    return {
+      r: Math.max(0, Math.min(255, Number(rgbMatch[1]))),
+      g: Math.max(0, Math.min(255, Number(rgbMatch[2]))),
+      b: Math.max(0, Math.min(255, Number(rgbMatch[3]))),
+      a: 1,
+    };
+  }
+
+  // rgba(r,g,b,a) where a in [0..1]
+  const rgbaMatch = raw.match(
+    /^rgba\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([01]?\.?\d+)\s*\)$/i
+  );
+  if (rgbaMatch) {
+    return {
+      r: Math.max(0, Math.min(255, Number(rgbaMatch[1]))),
+      g: Math.max(0, Math.min(255, Number(rgbaMatch[2]))),
+      b: Math.max(0, Math.min(255, Number(rgbaMatch[3]))),
+      a: Math.max(0, Math.min(1, Number(rgbaMatch[4]))),
+    };
+  }
+
+  return null;
+}
+
+function rgbaToHex({ r, g, b }) {
+  const to = (n) => {
+    const s = Math.round(Math.max(0, Math.min(255, Number(n)))).toString(16);
+    return s.length === 1 ? `0${s}` : s;
+  };
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+function compositeRgbaOnHex(fgRgba, bgHex) {
+  const bgRgb = parseHexColor(bgHex);
+  if (!bgRgb) return rgbaToHex({ r: fgRgba.r, g: fgRgba.g, b: fgRgba.b });
+  const a = fgRgba.a == null ? 1 : fgRgba.a;
+  if (a >= 1) return rgbaToHex({ r: fgRgba.r, g: fgRgba.g, b: fgRgba.b });
+  const r = a * fgRgba.r + (1 - a) * bgRgb.r;
+  const g = a * fgRgba.g + (1 - a) * bgRgb.g;
+  const b = a * fgRgba.b + (1 - a) * bgRgb.b;
+  return rgbaToHex({ r, g, b });
+}
+
+function contrastRatioCss(fgCss, bgCss) {
+  // fgCss/bgCss can be hex or rgba(...) for token-based palettes.
+  const fg = parseCssColor(fgCss);
+  const bg = parseCssColor(bgCss);
+  if (!fg || !bg) return null;
+
+  const bgHex = rgbaToHex(bg);
+  const bgOpaqueHex = compositeRgbaOnHex(bg, '#FFFFFF');
+  const bgForRatio = bg.a != null && bg.a < 1 ? bgOpaqueHex : bgHex;
+
+  const fgHex = fg.a != null && fg.a < 1 ? compositeRgbaOnHex(fg, bgForRatio) : rgbaToHex(fg);
+  return contrastRatio(fgHex, bgForRatio);
+}
+
 /**
  * WCAG AA check for text vs background (4.5:1).
  * @param {{ bg?: string, text?: string }} palette
@@ -171,6 +302,7 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
     throw new AppError('themeTokens.palette is required', 400);
   }
 
+  resolved = enforceAppearancePalette(resolved);
   assertContrast(resolved.palette);
 
   if (id || (themeId != null && String(themeId).trim() !== '' && getThemeById(themeId))) {
@@ -183,12 +315,20 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
 module.exports = {
   DEFAULT_THEME_ID,
   AA_CONTRAST_RATIO,
+  APPEARANCE_LUM_THRESHOLD,
   THEME_ID_ALIASES,
   normalizeThemeId,
   listThemes,
   getThemeById,
   resolveThemeTokens,
+  enforceAppearancePalette,
+  appearanceFromBg,
   assertContrast,
+  contrastRatio,
+  relativeLuminance,
+  parseHexColor,
+  parseCssColor,
+  contrastRatioCss,
   // path kept for tests / tooling that need the catalog file location
   catalogPath: path.join(__dirname, 'themes', 'catalog.json'),
 };

@@ -104,6 +104,15 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable view-only share link (raw token on first create) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Share link metadata (masked, no raw token) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable or set `expiresAt` |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` | Bearer + member | Rotate token; invalidates shared URLs |
+| GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
+| GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer display name + `canOpenInEditor` |
+| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → live viewer list |
+| GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list |
+| DELETE | `/api/p/:token/presence` | Public (optional Bearer) | Leave preview (`viewerSessionId` query) |
 | GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE / VIDEO_PACK (`?type=`) |
 | GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one video template |
 | POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId` scene or pack) |

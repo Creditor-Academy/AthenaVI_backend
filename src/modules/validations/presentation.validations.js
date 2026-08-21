@@ -150,6 +150,11 @@ const generateOutlineSchema = Joi.object({
     voiceAndTone: Joi.string().trim().max(64).allow('', null).optional(),
     audience: Joi.string().trim().max(64).allow('', null).optional(),
     purpose: Joi.string().trim().max(64).allow('', null).optional(),
+    imageType: Joi.string().valid('ai', 'web', 'stock', 'placeholders', 'none').allow('', null).optional(),
+    imageStyle: Joi.string().trim().max(64).allow('', null).optional(),
+    imageStyleFilter: Joi.string().trim().max(64).allow('', null).optional(),
+    colorTheme: Joi.string().trim().max(64).allow('', null).optional(),
+    optionalOutline: Joi.string().trim().max(50_000).allow('', null).optional(),
   }).required(),
 });
 

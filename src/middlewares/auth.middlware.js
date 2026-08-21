@@ -41,4 +41,45 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   next();
 });
 
-module.exports = { authMiddleware };
+/**
+ * Attaches req.user when a valid Bearer token + live session are present.
+ * Never rejects: public capability-link routes must stay reachable for guests.
+ */
+const optionalAuthMiddleware = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next();
+  }
+
+  let payload;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return next();
+  }
+
+  const { sub: userId, sessionId } = payload;
+  if (!userId || !sessionId) {
+    return next();
+  }
+
+  const session = await redisClient.get(`session:${sessionId}`);
+  if (!session) {
+    return next();
+  }
+
+  req.user = {
+    id: userId,
+    sessionId,
+  };
+
+  return next();
+});
+
+module.exports = { authMiddleware, optionalAuthMiddleware };

@@ -6,6 +6,7 @@ const validate = require('../../middlewares/validate.middleware');
 const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const presentationValidations = require('../validations/presentation.validations');
 const presentationController = require('./presentation.controller');
+const presentationShareRoutes = require('../presentationShare/presentationShare.routes');
 
 const router = express.Router({ mergeParams: true });
 
@@ -48,6 +49,8 @@ router.get(
   validate(presentationValidations.presentationByIdSchema),
   presentationController.getPresentation
 );
+
+router.use('/:presentationId/share', presentationShareRoutes);
 
 router.get(
   '/:presentationId/status',
