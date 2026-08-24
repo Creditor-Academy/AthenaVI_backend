@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/fonts/css?families=Inter,Playfair%20Display"
+method: GET
+queryParams:
+  families: Inter,Playfair Display
+order: 1200

@@ -23,7 +23,8 @@
     "eval:presentation-export": "node scripts/presentation-eval/export-fidelity.js",
     "seed:presentation-templates": "dotenv -e .env.development -- node scripts/seed-presentation-templates.js",
     "seed:presentation-deck-packs": "dotenv -e .env.development -- node scripts/seed-presentation-deck-packs.js",
-    "seed:video-templates": "dotenv -e .env.development -- node scripts/seed-video-templates.js"
+    "seed:video-templates": "dotenv -e .env.development -- node scripts/seed-video-templates.js",
+    "fonts:refresh-catalog": "dotenv -e .env.development -- node scripts/refresh-font-catalog.js"
   },
   "keywords": [],
   "author": "",

@@ -145,6 +145,8 @@ Suggest endpoints return proposals only — client confirms via `PATCH` or `POST
 |--------|------|---------------|----------|
 | `POST` | `/suggest/colors` | multipart `file` **or** `{ mediaId, brandKitId?, tone?, tagline? }` | `{ colors, colorRoles, rationale }` |
 | `POST` | `/suggest/fonts` | `{ tone?, primaryHex?, brandKitId? }` | `{ fonts, rationale }` |
+
+Font family pickers should load options from **[`GET /api/fonts/catalog`](FONTS_API.md)** (shared Google Fonts library + pairings). Suggest fonts returns a pairing from that same catalog.
 | `POST` | `/suggest/voice` | `{ name, tagline?, tone?, brandKitId? }` | `{ voice, rationale }` |
 | `POST` | `/suggest/image-style` | `{ tone?, colors?, colorRoles?, brandKitId? }` | `{ imageStyle, chartStyles, rationale }` |
 | `POST` | `/:brandKitId/suggest/logo-variants` | `{ applyRoles?: string[] }` | `{ generated, missingRoles, variants[] }` |

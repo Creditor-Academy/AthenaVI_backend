@@ -26,6 +26,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |
 | [STOCK_API.md](STOCK_API.md) | `/api/stock` | Stock library search (Pexels, Unsplash, Pixabay) and import |
+| [FONTS_API.md](FONTS_API.md) | `/api/fonts` | Shared Google Fonts catalog + CSS helper (Brand Kit, video editor, PPT) |
 | [IMAGE_GEN_API.md](IMAGE_GEN_API.md) | `/api/image-gen` | AI image studio: folder chats, generate, regen/tweak, download |
 | [CREDITS_API.md](CREDITS_API.md) | `/api/credits` | Balances, history, estimates, TEAM allocation |
 | [SUPERADMIN_API.md](SUPERADMIN_API.md) | `/api/superadmin` | Platform credit + storage admin (superadmin only) |

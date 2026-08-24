@@ -220,6 +220,13 @@ module.exports = {
   STOCK_SEARCH_SUCCESS: 'Stock media search completed',
   STOCK_IMPORTED_SUCCESSFULLY: 'Stock media imported successfully',
 
+  // Fonts catalog
+  FONTS_FETCHED: 'Font catalog fetched',
+  FONT_CSS_BUILT: 'Font stylesheet URL built',
+  FONTS_API_NOT_CONFIGURED: 'Google Fonts API key is not configured',
+  FONTS_PROVIDER_REQUEST_FAILED: 'Google Fonts provider request failed',
+  FONT_FAMILIES_REQUIRED: 'At least one font family is required',
+
   // Video (HeyGen)
   VIDEO_GENERATION_SUCCESS: 'Avatar video generated successfully',
 

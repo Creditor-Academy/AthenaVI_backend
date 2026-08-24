@@ -184,7 +184,7 @@ Canva-style **workspace Brand Kits**. Scoped to one workspace. Used by presentat
 | `colorRoles.bg`, `.text`, `.primary` | **Required**; must reference a color `id` |
 | `colorRoles.secondary`, `.accent`, `.muted` | Optional |
 | Contrast | Server checks bg/text (WCAG AA) on create/update — show friendly error on 400 |
-| `fonts.*.fontPairingId` / `family` | Optional strings (no custom font file upload in v1) |
+| `fonts.*.fontPairingId` / `family` | Optional strings from `GET /api/fonts/catalog` (no custom font file upload in v1). Prefer applying a pairing so heading/body stay coherent. |
 | `voice` | Optional tone/audience/dos/donts/vocabulary |
 | `chartStyles.colorIds` | Optional list of color ids |
 | `imageStyle` | Optional free text for AI image briefs |
@@ -295,6 +295,8 @@ When applied, the backend maps the kit into `deck.themeTokens`, including roughl
 ```
 
 Frontend canvas / export should resolve symbolic fills like `"primary"` from `themeTokens.palette` when rendering shapes.
+
+**Fonts:** Load families from `GET /api/fonts/catalog` (featured grid + search). Presentation GET and public share also return top-level **`fontCssUrl`** — inject it as a stylesheet so the canvas and `/p/:token` view render the deck fonts.
 
 ## 1.5 Using a Brand Kit with presentations
 
@@ -544,7 +546,7 @@ All paths share the **same editor**.
 
 `GET /api/workspaces/:workspaceId/presentations/:presentationId`
 
-**Response `data`:** `{ project, deck, slides }` **plus flat** `id`, `title`, `status`, `themeTokens`, `aspectRatio`, `locale`, `folderId`
+**Response `data`:** `{ project, deck, slides }` **plus flat** `id`, `title`, `status`, `themeTokens`, `fontCssUrl`, `aspectRatio`, `locale`, `folderId`
 
 - `deck`: `themeTokens`, `outline`, `status`, `aspectRatio`, `locale`, `generationMetrics`, `partial`, `creditsChargedSoFar`, …
 - slides: `content`, `layoutId`, `imageRef`, **`elements`**, `status`, `manuallyEdited`, … (+ helper `title` / `description`)

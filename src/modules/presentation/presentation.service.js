@@ -20,6 +20,7 @@ const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
 const { enrichSlidesForClient } = require('./elementContent.normalize');
 const { enrichProjects } = require('../project/project.format');
 const projectDao = require('../project/project.dao');
+const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 
 function withFlatPresentationFields({ project, deck, slides }) {
   const proj = project || {};
@@ -32,6 +33,7 @@ function withFlatPresentationFields({ project, deck, slides }) {
     title: proj.name,
     status: d.status,
     themeTokens: d.themeTokens,
+    fontCssUrl: fontCssUrlFromThemeTokens(d.themeTokens),
     aspectRatio: d.aspectRatio,
     locale: d.locale,
     folderId: proj.folderId,

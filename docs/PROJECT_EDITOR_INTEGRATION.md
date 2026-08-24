@@ -403,7 +403,7 @@ Map your editor **Text Properties** panel to the save payload as follows. Send *
 | UI panel field | JSON path | Type / values | Notes |
 |----------------|-----------|---------------|--------|
 | **Content** (text body) | `content.text` | string | Required for text elements |
-| **Font family** | `style.fontFamily` | string | e.g. `"Inter"`, `"Inter, system-ui, sans-serif"` |
+| **Font family** | `style.fontFamily` | string | Prefer a family from `GET /api/fonts/catalog` (e.g. `"Inter"` or `"Playfair Display"`). CSS stacks like `"Inter, system-ui, sans-serif"` still work; Remotion loads the first named family. |
 | **Font size** | `style.fontSize` | number | Pixels, e.g. `32` (not `"32px"` string) |
 | **Font weight** | `style.fontWeight` | number or string | UI label → API: Light `300`, Regular `400`, Medium `500`, Semi Bold `600`, Bold `700`, Extra Bold `800`, Black `900` |
 | **Font style** | `style.fontStyle` | string | `"normal"` \| `"italic"` |

@@ -113,7 +113,7 @@ src/modules/<feature>/
 
 ### Route registration
 
-- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/image-gen`, `/api/p` (**public** view-only presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401).
+- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** view-only presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401).
 - **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/brand-kits`, `/:workspaceId/presentation-deck-packs`, `/:workspaceId/video-templates` (`VIDEO_SCENE` + `VIDEO_PACK`), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
@@ -231,6 +231,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Image Gen (AI studio) | [`docs/api/IMAGE_GEN_API.md`](docs/api/IMAGE_GEN_API.md) |
 | **Image Gen (frontend)** | [`docs/IMAGE_GEN_FRONTEND_INTEGRATION.md`](docs/IMAGE_GEN_FRONTEND_INTEGRATION.md) |
 | Brand Kits | [`docs/api/BRAND_KIT_API.md`](docs/api/BRAND_KIT_API.md) |
+| Fonts catalog | [`docs/api/FONTS_API.md`](docs/api/FONTS_API.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |

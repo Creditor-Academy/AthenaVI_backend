@@ -15,7 +15,7 @@ const {
   COLORS_SUGGEST_SCHEMA,
   FONTS_SUGGEST_SYSTEM,
   FONTS_SUGGEST_SCHEMA,
-  FONT_PAIRING_CATALOG,
+  formatPairingsForPrompt,
   VOICE_SUGGEST_SYSTEM,
   VOICE_SUGGEST_SCHEMA,
   IMAGE_STYLE_SUGGEST_SYSTEM,
@@ -166,7 +166,8 @@ async function suggestFonts({ workspaceId, userId, tone, primaryHex, brandKitId 
       context,
       tone ? `Tone: ${tone}` : null,
       primaryHex ? `Primary color: ${primaryHex}` : null,
-      `Available pairings: ${FONT_PAIRING_CATALOG.map((p) => p.id).join(', ')}`,
+      'Available pairings by mood (pick one fontPairingId):',
+      formatPairingsForPrompt(),
     ]
       .filter(Boolean)
       .join('\n'),

@@ -1,58 +1,27 @@
 const logger = require('../../shared/utils/logger');
 const { chatJson } = require('../../shared/services/ai/llm.service');
 const {
-  FONT_PAIRING_CATALOG: BRAND_KIT_PAIRINGS,
+  FONT_PAIRING_CATALOG,
+  PAIRING_BY_ID,
+  isAllowedFontFamily,
+  formatPairingsForPrompt,
+} = require('../../shared/fonts/fontPairings');
+const {
   FONTS_SUGGEST_SYSTEM,
   FONTS_SUGGEST_SCHEMA,
 } = require('../brandKit/brandKit.prompts');
 
-/** Extended catalog aligned with themes/catalog.json fontPairingId values. */
-const FONT_PAIRING_CATALOG = [
-  ...BRAND_KIT_PAIRINGS,
-  { id: 'nunito_inter', heading: 'Nunito', subheading: 'Nunito', body: 'Inter' },
-  { id: 'libre_ibm', heading: 'Libre Baskerville', subheading: 'Libre Baskerville', body: 'IBM Plex Sans' },
-];
-
-const ALLOWED_GOOGLE_FONTS = new Set(
-  [
-    'Playfair Display',
-    'Inter',
-    'Plus Jakarta Sans',
-    'Outfit',
-    'Roboto',
-    'Montserrat',
-    'Open Sans',
-    'Poppins',
-    'Syne',
-    'Space Grotesk',
-    'Lora',
-    'Merriweather',
-    'DM Sans',
-    'Cinzel',
-    'Cormorant Garamond',
-    'Oswald',
-    'Raleway',
-    'Ubuntu',
-    'Fraunces',
-    'Source Sans 3',
-    'Manrope',
-    'Nunito',
-    'Libre Baskerville',
-    'IBM Plex Sans',
-    'Lato',
-  ].map((f) => f.toLowerCase())
-);
-
 const VIBE_PAIRING_FALLBACKS = [
   { match: /histor|education|academic|museum|classic|heritage|story/i, id: 'libre_ibm' },
-  { match: /editorial|luxury|elegant|fashion|premium/i, id: 'playfair_lato' },
+  { match: /editorial|luxury|elegant|fashion|premium|wedding/i, id: 'playfair_lato' },
   { match: /startup|tech|modern|innovation|saas|product/i, id: 'outfit_source' },
   { match: /friendly|warm|community|nonprofit|social/i, id: 'nunito_inter' },
   { match: /minimal|clean|corporate|professional|business|pitch/i, id: 'inter_source' },
   { match: /creative|bold|design|agency|marketing/i, id: 'space_grotesk' },
+  { match: /sport|event|impact|loud/i, id: 'oswald_dm' },
+  { match: /gov|government|public|civic/i, id: 'public_sans' },
+  { match: /readab|accessib|lexend|inclusive/i, id: 'lexend_inter' },
 ];
-
-const PAIRING_BY_ID = Object.fromEntries(FONT_PAIRING_CATALOG.map((p) => [p.id, p]));
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -86,11 +55,6 @@ function fontsFromPairingId(pairingId) {
   };
 }
 
-function isAllowedFontFamily(family) {
-  if (!isNonEmptyString(family)) return false;
-  return ALLOWED_GOOGLE_FONTS.has(String(family).trim().toLowerCase());
-}
-
 function normalizeAiFontRole(role, fallbackPairingId) {
   if (!role || typeof role !== 'object') return null;
   const family = role.family || role.heading || role.body;
@@ -118,8 +82,17 @@ function fontsFromAiResponse(data) {
 
   if (!heading?.family || !body?.family) return null;
 
+  // Prefer resolving a known pairing so heading/body stay coherent.
+  if (pairingId && PAIRING_BY_ID[pairingId]) {
+    const fromPairing = fontsFromPairingId(pairingId);
+    return {
+      ...fromPairing,
+      fontRationale: data?.rationale || null,
+    };
+  }
+
   return {
-    fontPairingId: pairingId && PAIRING_BY_ID[pairingId] ? pairingId : null,
+    fontPairingId: null,
     fonts: {
       heading: heading.family,
       subheading: subheading?.family || heading.family,
@@ -214,7 +187,8 @@ async function suggestFontsWithAi({
     style ? `Visual style: ${style}` : null,
     primaryHex ? `Primary color: ${primaryHex}` : null,
     colorTreatment ? `Color treatment: ${colorTreatment}` : null,
-    `Available pairings: ${FONT_PAIRING_CATALOG.map((p) => p.id).join(', ')}`,
+    'Available pairings by mood (pick one fontPairingId):',
+    formatPairingsForPrompt(),
     'Pick fonts that match the topic and tone. Prefer distinctive pairings over generic Inter-only defaults when appropriate.',
   ]
     .filter(Boolean)

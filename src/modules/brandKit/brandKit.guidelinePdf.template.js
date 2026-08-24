@@ -4,6 +4,8 @@
  * shape/tokens, and logo variants — with print margins and no mid-block splits.
  */
 
+const { googleFontsHref } = require('../../shared/fonts/googleFontsCss');
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -57,20 +59,6 @@ function roleLabelForColor(data, colorId) {
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
   return sorted[0];
-}
-
-function googleFontsHref(families) {
-  const unique = [
-    ...new Set(families.map((f) => String(f || '').trim()).filter(Boolean)),
-  ];
-  if (!unique.length) return null;
-  const query = unique
-    .map(
-      (f) =>
-        `family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@300;400;500;600;700;800`
-    )
-    .join('&');
-  return `https://fonts.googleapis.com/css2?${query}&display=swap`;
 }
 
 const FONT_ROLE_ORDER = ['heading', 'subheading', 'body', 'tertiary'];

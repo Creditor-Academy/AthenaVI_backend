@@ -1,0 +1,14 @@
+$kind: collection
+description: |-
+  Shared Google Fonts catalog for Brand Kit, video editor, and PPT canvas.
+
+  Works without `GOOGLE_FONTS_API_KEY` (vendored snapshot). Optional key enables live merge cached in Redis.
+
+  **Flow:** (1) `GET /catalog` — featured grid or search; (2) pick a family or pairing; (3) optional `GET /css` for a combined stylesheet URL; (4) inject CSS in the editor / share view.
+auth:
+  - id: fonts-bearer-auth
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 8100

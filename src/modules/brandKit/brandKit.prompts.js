@@ -1,13 +1,4 @@
-const FONT_PAIRING_CATALOG = [
-  { id: 'inter_space', heading: 'Inter', subheading: 'Space Grotesk', body: 'Inter' },
-  { id: 'inter_source', heading: 'Inter', subheading: 'Inter', body: 'Source Sans 3' },
-  { id: 'fraunces_inter', heading: 'Fraunces', subheading: 'Inter', body: 'Inter' },
-  { id: 'playfair_lato', heading: 'Playfair Display', subheading: 'Plus Jakarta Sans', body: 'Inter' },
-  { id: 'outfit_source', heading: 'Outfit', subheading: 'Space Grotesk', body: 'Inter' },
-  { id: 'space_grotesk', heading: 'Space Grotesk', subheading: 'Inter', body: 'Inter' },
-  { id: 'dm_sans_serif', heading: 'DM Sans', subheading: 'DM Sans', body: 'DM Sans' },
-  { id: 'manrope_inter', heading: 'Manrope', subheading: 'Inter', body: 'Inter' },
-];
+const { FONT_PAIRING_CATALOG, formatPairingsForPrompt } = require('../../shared/fonts/fontPairings');
 
 const COLORS_SUGGEST_SYSTEM = [
   'You are a brand designer extracting a professional color palette from a logo.',
@@ -35,7 +26,9 @@ const COLORS_SUGGEST_SCHEMA = {
 const FONTS_SUGGEST_SYSTEM = [
   'You are a typography expert recommending brand font pairings for presentations.',
   'Return JSON only: fonts (heading, subheading, body each with family, weight, sizePx, lineHeight, fontPairingId), rationale.',
-  'Prefer Google-font-safe families. fontPairingId should match catalog when possible.',
+  'You MUST choose a fontPairingId from the provided mood-grouped catalog.',
+  'Set heading/subheading/body.family to match that pairing exactly (Google-font-safe families only).',
+  'Prefer distinctive pairings over generic Inter-only defaults when tone allows.',
 ].join(' ');
 
 const FONTS_SUGGEST_SCHEMA = {
@@ -77,6 +70,7 @@ const IMAGE_STYLE_SUGGEST_SCHEMA = {
 
 module.exports = {
   FONT_PAIRING_CATALOG,
+  formatPairingsForPrompt,
   COLORS_SUGGEST_SYSTEM,
   COLORS_SUGGEST_SCHEMA,
   FONTS_SUGGEST_SYSTEM,

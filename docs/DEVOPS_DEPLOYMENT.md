@@ -390,6 +390,7 @@ Store secrets in **AWS Secrets Manager** or **SSM Parameter Store**. Inject at d
 | `SMTP_PORT` | `587` (default) or `465` |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth secret |
+| `GOOGLE_FONTS_API_KEY` | Optional Web Fonts Developer API key for live `/api/fonts` merge (snapshot works without it) |
 | `HEYGEN_API_KEY` | HeyGen API key |
 | `PLATFORM_SUPERADMIN_EMAILS` | Comma-separated platform admin emails |
 
@@ -462,6 +463,7 @@ SMTP_PASS=<SMTP_PASS>
 
 GOOGLE_CLIENT_ID=<GOOGLE_CLIENT_ID>
 GOOGLE_CLIENT_SECRET=<GOOGLE_CLIENT_SECRET>
+# GOOGLE_FONTS_API_KEY=<optional Web Fonts Developer API key>
 
 HEYGEN_API_KEY=<HEYGEN_API_KEY>
 HEYGEN_BILLING_MODE=payg
@@ -713,6 +715,7 @@ Provide DevOps / store in Secrets Manager:
 - [ ] `AWS_S3_BUCKET=virtual-instructor`, `AWS_REGION=us-east-1` (existing bucket — reuse current IAM access)
 - [ ] `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_PORT`
 - [ ] `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- [ ] Optional `GOOGLE_FONTS_API_KEY` for live font catalog merge
 - [ ] `HEYGEN_API_KEY`
 - [ ] `PLATFORM_SUPERADMIN_EMAILS`
 - [ ] Stock API keys (if stock feature enabled)

@@ -8,6 +8,7 @@ const workspaceDao = require('../workspace/workspace.dao');
 const shareDao = require('./presentationShare.dao');
 const presence = require('./presentationShare.presence');
 const { presignSlidesForPublic, buildContentVersion } = require('./presentationShare.presign');
+const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 
 const TOKEN_BYTES = 32;
 const TOKEN_PREFIX_LENGTH = 8;
@@ -430,6 +431,7 @@ async function getPublicPresentation(token) {
       aspectRatio: deck.aspectRatio,
       locale: deck.locale,
       themeTokens: deck.themeTokens,
+      fontCssUrl: fontCssUrlFromThemeTokens(deck.themeTokens),
       contentUpdatedAt: version.contentUpdatedAt,
       slideCount: slides.length,
       slides,

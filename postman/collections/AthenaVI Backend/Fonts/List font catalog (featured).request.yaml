@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/fonts/catalog?featured=true&limit=100"
+method: GET
+queryParams:
+  featured: "true"
+  limit: "100"
+  q: ""
+  category: ""
+  subset: ""
+order: 1000

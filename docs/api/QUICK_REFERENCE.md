@@ -144,6 +144,8 @@
 | DELETE | `/api/assets/:workspaceId/:assetId` | Bearer + workspace access | Delete asset |
 | GET | `/api/stock/search` | Bearer | Search stock (`q`, `type=photo\|video`, `provider=pexels\|unsplash\|pixabay\|all`, `page`, `perPage`) |
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
+| GET | `/api/fonts/catalog` | Bearer | Font catalog + pairings (`q`, `category`, `subset`, `featured`, `limit`) |
+| GET | `/api/fonts/css` | Bearer | Build Google Fonts CSS2 URL (`families`) |
 | GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog |
 | GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
