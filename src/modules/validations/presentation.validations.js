@@ -71,6 +71,42 @@ const canvasElementSchema = Joi.object({
   role: Joi.string().trim().allow('', null).optional(),
 }).unknown(true);
 
+const canvasFillSchema = Joi.alternatives()
+  .try(
+    Joi.string().trim().allow('', null),
+    Joi.object({
+      type: Joi.string().valid('solid', 'gradient').optional(),
+      kind: Joi.string().valid('linear', 'radial').optional(),
+      angle: Joi.number().min(0).max(360).optional(),
+      color: Joi.string().trim().max(128).allow('', null).optional(),
+      colorRole: Joi.string().trim().max(64).allow('', null).optional(),
+      stops: Joi.array()
+        .items(
+          Joi.object({
+            color: Joi.string().trim().max(128).optional(),
+            colorRole: Joi.string().trim().max(64).optional(),
+            at: Joi.number().min(0).max(100).optional(),
+            position: Joi.number().min(0).max(100).optional(),
+          }).unknown(true)
+        )
+        .optional(),
+    }).unknown(true)
+  )
+  .optional();
+
+const canvasBackgroundFields = {
+  backgroundColor: Joi.string().trim().max(128).allow('', null).optional(),
+  backgroundImage: Joi.string().trim().allow('', null).optional(),
+  backgroundImageFit: Joi.string().trim().max(32).allow('', null).optional(),
+  backgroundImageElementId: Joi.string().trim().allow('', null).optional(),
+  backgroundGradientStart: Joi.string().trim().max(128).allow('', null).optional(),
+  backgroundGradientEnd: Joi.string().trim().max(128).allow('', null).optional(),
+  backgroundGradientAngle: Joi.number().min(0).max(360).allow(null).optional(),
+  backgroundGradientKind: Joi.string().valid('linear', 'radial').allow('', null).optional(),
+  backgroundGradientStops: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
+  backgroundFill: canvasFillSchema.allow(null),
+};
+
 const canvasDocSchema = Joi.object({
   version: Joi.number().integer().min(1).default(1),
   canvas: Joi.object({
@@ -80,6 +116,9 @@ const canvasDocSchema = Joi.object({
     .default({ width: CANVAS_WIDTH, height: CANVAS_HEIGHT })
     .unknown(true),
   elements: Joi.array().items(canvasElementSchema).max(MAX_ELEMENTS_PER_SLIDE).required(),
+  transition: Joi.string().trim().max(64).allow('', null).optional(),
+  contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
+  ...canvasBackgroundFields,
 }).unknown(true);
 
 const createPresentationSchema = Joi.object({
@@ -297,6 +336,16 @@ const patchSlideSchema = Joi.object({
     })
       .unknown(true)
       .optional(),
+    backgroundColor: Joi.string().trim().max(128).allow('', null).optional(),
+    backgroundImage: Joi.string().trim().allow('', null).optional(),
+    backgroundImageFit: Joi.string().trim().max(32).allow('', null).optional(),
+    backgroundImageElementId: Joi.string().trim().allow('', null).optional(),
+    backgroundGradientStart: Joi.string().trim().max(128).allow('', null).optional(),
+    backgroundGradientEnd: Joi.string().trim().max(128).allow('', null).optional(),
+    backgroundGradientAngle: Joi.number().min(0).max(360).allow(null).optional(),
+    backgroundGradientKind: Joi.string().valid('linear', 'radial').allow('', null).optional(),
+    backgroundGradientStops: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
+    backgroundFill: Joi.any().optional(),
   })
     .min(1)
     .required(),

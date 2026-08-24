@@ -16,6 +16,12 @@ const {
   resolveAspectCanvas,
 } = require('./presentation.constants');
 const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
+const {
+  cssFromFill,
+  firstHexFromFill,
+  slideBackgroundCss,
+  textPaintCss,
+} = require('./canvasFill');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 
@@ -92,6 +98,7 @@ function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
 
 function resolveColor(value, palette, fallback = '111111') {
   if (!value) return String(fallback).replace(/^#/, '');
+  if (typeof value === 'object') return firstHexFromFill(value, palette, fallback);
   const key = String(value);
   if (key === 'primary') return String(palette.primary || palette.text || fallback).replace(/^#/, '');
   if (key === 'secondary') return String(palette.secondary || palette.primary || fallback).replace(/^#/, '');
@@ -116,20 +123,29 @@ function resolveFillForExport(fill, palette, fallback = '0A84FF') {
   if (typeof fill === 'string') {
     return { kind: 'solid', color: resolveColor(fill, palette, fallback) };
   }
-  if (fill.type === 'gradient' && Array.isArray(fill.stops) && fill.stops.length >= 2) {
-    const colors = fill.stops.map((s) =>
-      resolveColor(s.color || s.colorRole, palette, fallback)
-    );
+  if (fill.type === 'gradient' || fill.kind === 'radial' || Array.isArray(fill.stops)) {
+    const stops = Array.isArray(fill.stops) ? fill.stops : [];
+    const colors = (stops.length
+      ? stops
+      : [{ color: fill.from || fill.start }, { color: fill.to || fill.end }]
+    ).map((s) => resolveColor(s?.color || s?.colorRole || s, palette, fallback));
     return {
       kind: 'gradient',
       colors,
       direction: fill.direction || '135deg',
+      angle: fill.angle != null ? Number(fill.angle) : 135,
+      radial: fill.kind === 'radial' || fill.gradientKind === 'radial',
     };
   }
   return {
     kind: 'solid',
     color: resolveColor(fill.color || fill.colorRole, palette, fallback),
   };
+}
+
+function chartColorHexes(colors, palette, fallback = '0A84FF') {
+  if (!Array.isArray(colors) || !colors.length) return [];
+  return colors.map((c) => firstHexFromFill(c, palette, fallback));
 }
 
 function slideHasElements(slide) {
@@ -198,7 +214,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
     const content = el.content || {};
     const rotate = Number(el.placement?.rotation) || 0;
 
-    if (el.type === 'text') {
+    if (el.type === 'text' || el.type === 'textbox') {
       const textColorResolved = resolveColor(
         content.color || content.colorRole,
         palette,
@@ -212,7 +228,9 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
         fontSize: Number(content.fontSize) || 18,
         bold: content.bold === true || Number(content.fontWeight) >= 600,
         italic: content.italic === true,
-        color: textColorResolved,
+        color: content.fill
+          ? firstHexFromFill(content.fill, palette, textColorResolved)
+          : textColorResolved,
         align: content.align || 'left',
         valign: 'top',
         rotate,
@@ -232,7 +250,11 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
             fontSize: Number(content.fontSize) || 18,
             bold: run.bold === true || Number(run.fontWeight) >= 600,
             italic: run.italic === true,
-            color: resolveColor(run.color || run.colorRole, palette, textColorResolved),
+            color: firstHexFromFill(
+              run.fill || run.color || run.colorRole,
+              palette,
+              textColorResolved
+            ),
             fontFace: run.fontFamily || fontFace || undefined,
           },
         }));
@@ -307,8 +329,8 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
           type: 'gradient',
           color: fillResolved.colors[0],
           color2: fillResolved.colors[fillResolved.colors.length - 1],
-          gradientType: 'linear',
-          angle: 135,
+          gradientType: fillResolved.radial ? 'radial' : 'linear',
+          angle: Number.isFinite(fillResolved.angle) ? fillResolved.angle : 135,
         };
       } else {
         shapeOpts.fill = { color: fillResolved.color };
@@ -347,11 +369,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
             (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
             (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : null);
           if (chartColorSource?.length) {
-            chartOpts.chartColors = chartColorSource.map((c) =>
-              String(c || '')
-                .replace(/^#/, '')
-                .toUpperCase()
-            );
+            chartOpts.chartColors = chartColorHexes(chartColorSource, palette, '0A84FF');
           }
           s.addChart(mapChartTypeForPptx(content.chartType || content.chartTypeRaw), chartOpts);
         } catch {
@@ -539,11 +557,49 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
   for (const slide of slides) {
     const slideBg =
       slide.content?.background?.color ||
+      slide.elements?.backgroundColor ||
+      slide.backgroundColor ||
       palette.bg ||
       'FFFFFF';
     const s = pptx.addSlide({
       background: { color: String(slideBg).replace(/^#/, '') },
     });
+    const bgFill = slide.elements?.backgroundFill || slide.backgroundFill;
+    const bgStart = slide.elements?.backgroundGradientStart || slide.backgroundGradientStart;
+    const bgEnd = slide.elements?.backgroundGradientEnd || slide.backgroundGradientEnd;
+    if ((bgFill && bgFill.type === 'gradient') || (bgStart && bgEnd)) {
+      const fillResolved = resolveFillForExport(
+        bgFill && bgFill.type === 'gradient'
+          ? bgFill
+          : {
+              type: 'gradient',
+              kind: slide.elements?.backgroundGradientKind || slide.backgroundGradientKind,
+              angle: slide.elements?.backgroundGradientAngle ?? slide.backgroundGradientAngle,
+              stops: slide.elements?.backgroundGradientStops || [
+                { color: bgStart, at: 0 },
+                { color: bgEnd, at: 1 },
+              ],
+            },
+        palette,
+        slideBg
+      );
+      if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
+        s.addShape('rect', {
+          x: 0,
+          y: 0,
+          w: '100%',
+          h: '100%',
+          line: { type: 'none' },
+          fill: {
+            type: 'gradient',
+            color: fillResolved.colors[0],
+            color2: fillResolved.colors[fillResolved.colors.length - 1],
+            gradientType: fillResolved.radial ? 'radial' : 'linear',
+            angle: Number.isFinite(fillResolved.angle) ? fillResolved.angle : 135,
+          },
+        });
+      }
+    }
     if (slideHasElements(slide)) {
       await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts);
     } else {
@@ -563,9 +619,52 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+function htmlTextInner(c, palette, fallbackColor) {
+  const runs = Array.isArray(c.runs) ? c.runs : [];
+  if (runs.length) {
+    return runs
+      .map((run) => {
+        const paint = textPaintCss(run.fill || run.color || run.colorRole, palette, fallbackColor);
+        return `<span style="${paint}">${escapeHtml(run.text || '')}</span>`;
+      })
+      .join('');
+  }
+  const paint = textPaintCss(c.fill || c.color || c.colorRole, palette, fallbackColor);
+  return `<span style="${paint}">${escapeHtml(c.text || '')}</span>`;
+}
+
+function htmlChartInner(c, palette) {
+  const labels = Array.isArray(c.labels) ? c.labels : Array.isArray(c.data?.labels) ? c.data.labels : [];
+  const series = Array.isArray(c.series) ? c.series : Array.isArray(c.data?.series) ? c.data.series : [];
+  const values = Array.isArray(series[0]?.values)
+    ? series[0].values
+    : Array.isArray(c.series) && typeof c.series[0] === 'number'
+      ? c.series
+      : [];
+  const colors = Array.isArray(c.colors) && c.colors.length ? c.colors : [palette.primary || '#64748b'];
+  if (!values.length) {
+    return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b">chart</div>`;
+  }
+  const max = Math.max(...values.map(Number), 1);
+  const bars = values
+    .map((v, i) => {
+      const fill = cssFromFill(colors[i % colors.length], palette, '#64748b');
+      const h = Math.max(8, (Number(v) / max) * 100);
+      return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><div style="height:${h}%;background:${escapeHtml(fill)};border-radius:4px 4px 0 0"></div></div>`;
+    })
+    .join('');
+  const axis = labels.length
+    ? `<div style="display:flex;gap:4px;margin-top:4px;font-size:11px;color:#64748b">${labels
+        .slice(0, values.length)
+        .map((l) => `<div style="flex:1;text-align:center;overflow:hidden">${escapeHtml(l)}</div>`)
+        .join('')}</div>`
+    : '';
+  return `<div style="width:100%;height:100%;display:flex;flex-direction:column;padding:8px;box-sizing:border-box"><div style="flex:1;display:flex;align-items:stretch;gap:6px">${bars}</div>${axis}</div>`;
+}
+
 function buildSlideHtmlPage(slide, palette) {
-  const bg = palette.bg || '#ffffff';
   const text = palette.text || '#111111';
+  const bg = slideBackgroundCss(slide, palette);
 
   if (slideHasElements(slide)) {
     const canvasW = slide.elements.canvas?.width || CANVAS_WIDTH;
@@ -575,6 +674,7 @@ function buildSlideHtmlPage(slide, palette) {
       .map((el) => {
         const p = el.placement || {};
         const c = el.content || {};
+        const isText = el.type === 'text' || el.type === 'textbox';
         const style = [
           `position:absolute`,
           `left:${Number(p.x) || 0}px`,
@@ -584,15 +684,15 @@ function buildSlideHtmlPage(slide, palette) {
           `opacity:${p.opacity != null ? p.opacity : 1}`,
           `transform:rotate(${Number(p.rotation) || 0}deg)`,
           `box-sizing:border-box`,
-          `overflow:hidden`,
+          `overflow:${isText ? 'visible' : 'hidden'}`,
         ].join(';');
 
-        if (el.type === 'text') {
-          const color = c.color || (c.colorRole && palette[c.colorRole]) || text;
+        if (isText) {
+          const fallback = c.color || (c.colorRole && palette[c.colorRole]) || text;
           const ls =
             c.letterSpacing != null ? `letter-spacing:${Number(c.letterSpacing)}em;` : '';
-          const lh = c.lineHeight != null ? `line-height:${Number(c.lineHeight)};` : '';
-          return `<div style="${style};color:${escapeHtml(color)};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};${ls}${lh}white-space:pre-wrap">${escapeHtml(c.text || '')}</div>`;
+          const lh = c.lineHeight != null ? `line-height:${Number(c.lineHeight)};` : 'line-height:1.25;';
+          return `<div style="${style};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap;${ls}${lh}">${htmlTextInner(c, palette, fallback)}</div>`;
         }
         if (el.type === 'image' || el.type === 'icon') {
           if (c.url) {
@@ -601,28 +701,7 @@ function buildSlideHtmlPage(slide, palette) {
           return `<div style="${style};background:#ddd;display:flex;align-items:center;justify-content:center;color:#666;font-size:14px">${escapeHtml(el.type)}</div>`;
         }
         if (el.type === 'shape') {
-          let bgCss = palette.primary || '#0A84FF';
-          if (typeof c.fill === 'string') {
-            bgCss =
-              c.fill === 'primary'
-                ? palette.primary || '#0A84FF'
-                : palette[c.fill] || c.fill || bgCss;
-          } else if (c.fill && c.fill.type === 'gradient' && Array.isArray(c.fill.stops)) {
-            const stops = c.fill.stops
-              .map((st) => {
-                const col = st.color || palette[st.colorRole] || '#0B1220';
-                const pos = st.position != null ? `${st.position}%` : '';
-                return `${col} ${pos}`.trim();
-              })
-              .join(', ');
-            bgCss = `linear-gradient(${c.fill.direction || '135deg'}, ${stops})`;
-          } else if (c.fill && typeof c.fill === 'object') {
-            bgCss =
-              c.fill.color ||
-              palette[c.fill.colorRole] ||
-              palette.primary ||
-              '#0A84FF';
-          }
+          const bgCss = cssFromFill(c.fill, palette, palette.primary || '#0A84FF');
           const radius =
             c.borderRadius != null
               ? `${c.borderRadius}px`
@@ -645,7 +724,10 @@ function buildSlideHtmlPage(slide, palette) {
           const url = escapeHtml(c.url || c.src || '');
           return `<div style="${style};background:#F8FAFC;border:1px solid #CBD5E1;padding:12px;color:${escapeHtml(text)};font-size:14px"><strong>${title}</strong><div>${url}</div></div>`;
         }
-        if (el.type === 'chart' || el.type === 'table') {
+        if (el.type === 'chart') {
+          return `<div style="${style}">${htmlChartInner(c, palette)}</div>`;
+        }
+        if (el.type === 'table') {
           return `<div style="${style};background:#f5f5f5;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;color:#666">${escapeHtml(el.type)}</div>`;
         }
         return '';
@@ -691,6 +773,7 @@ async function buildDeckHtml(deck, { slideId } = {}) {
     @page { size: 13.333in 7.5in; margin: 0; }
     body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: ${escapeHtml(text)}; }
     .slide { page-break-after: always; }
+    .slide span { background-repeat: no-repeat; }
     .slide.legacy {
       width: 13.333in; height: 7.5in;
       box-sizing: border-box; padding: 0.6in; display: flex; gap: 0.4in;

@@ -30,6 +30,7 @@ function normalizeCanvasPayload(input) {
     throw new AppError(`A slide may have at most ${MAX_ELEMENTS_PER_SLIDE} elements`, 400);
   }
   return normalizeCanvasDoc({
+    ...input,
     version: input?.version || 1,
     canvas: {
       width: Number(canvas.width) || CANVAS_WIDTH,

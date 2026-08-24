@@ -5087,6 +5087,27 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
     data.elements = normalizeCanvasDoc(patch.elements);
   }
 
+  const { CANVAS_BACKGROUND_KEYS } = require('./canvasFill');
+  const bgPatch = {};
+  let hasBgPatch = false;
+  for (const key of CANVAS_BACKGROUND_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(patch, key)) {
+      hasBgPatch = true;
+      bgPatch[key] = patch[key] == null ? undefined : patch[key];
+    }
+  }
+  if (hasBgPatch) {
+    const { normalizeCanvasDoc } = require('./elementContent.normalize');
+    const base = data.elements || slide.elements || {};
+    const nextDoc = { ...base, ...bgPatch };
+    for (const key of CANVAS_BACKGROUND_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(bgPatch, key) && bgPatch[key] == null) {
+        delete nextDoc[key];
+      }
+    }
+    data.elements = normalizeCanvasDoc(nextDoc);
+  }
+
   const updated = await presentationDao.updateSlide(slideId, data);
   const { enrichSlideForClient } = require('./elementContent.normalize');
   return { slide: enrichSlideForClient(updated) };

@@ -120,7 +120,7 @@ function normalizeElementContent(type, content) {
   if (t === 'table') return normalizeTableContent(content);
   if (t === 'shape') return normalizeShapeContent(content);
   if (t === 'embed') return normalizeEmbedContent(content);
-  if (t === 'text') return normalizeTextContent(content);
+  if (t === 'text' || t === 'textbox') return normalizeTextContent(content);
   return { ...content };
 }
 
