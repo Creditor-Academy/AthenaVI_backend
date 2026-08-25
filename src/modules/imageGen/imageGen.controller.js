@@ -18,6 +18,17 @@ const listStyles = asyncHandler(async (req, res) => {
   return successResponse(req, res, { styles }, 200, messages.IMAGE_GEN_STYLES_FETCHED);
 });
 
+const listArchetypes = asyncHandler(async (req, res) => {
+  const archetypes = imageGenService.listArchetypes();
+  return successResponse(
+    req,
+    res,
+    { archetypes },
+    200,
+    messages.IMAGE_GEN_ARCHETYPES_FETCHED
+  );
+});
+
 const estimate = asyncHandler(async (req, res) => {
   const data = imageGenService.creditEstimate(req.query);
   return successResponse(req, res, data, 200, messages.IMAGE_GEN_ESTIMATE);
@@ -48,6 +59,7 @@ const tweak = asyncHandler(async (req, res) => {
     workspace: req.workspace,
     generationId: req.params.generationId,
     instruction: req.body.instruction,
+    editMode: req.body.editMode || null,
   });
   return successResponse(req, res, data, 201, messages.IMAGE_GEN_TWEAKED);
 });
@@ -77,6 +89,7 @@ const sendThreadMessage = asyncHandler(async (req, res) => {
     threadId: req.params.threadId,
     content: req.body.content,
     fromGenerationId: req.body.fromGenerationId,
+    editMode: req.body.editMode || null,
   });
   return successResponse(req, res, data, 201, messages.IMAGE_GEN_MESSAGE_SENT);
 });
@@ -147,6 +160,7 @@ module.exports = {
   listModels,
   listFormats,
   listStyles,
+  listArchetypes,
   estimate,
   generate,
   regenerate,

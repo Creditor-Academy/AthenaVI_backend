@@ -112,6 +112,7 @@ function parseContextPayload(req, res, next) {
 router.get('/models', authMiddleware, imageGenController.listModels);
 router.get('/formats', authMiddleware, imageGenController.listFormats);
 router.get('/styles', authMiddleware, imageGenController.listStyles);
+router.get('/archetypes', authMiddleware, imageGenController.listArchetypes);
 
 router.get(
   '/workspaces/:workspaceId/estimate',

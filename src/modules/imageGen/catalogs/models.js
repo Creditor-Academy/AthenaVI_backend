@@ -1,4 +1,8 @@
-const { IMAGE_GEN_FEATURE, getModelAc } = require('../../../shared/config/imageGenCreditPricing');
+const {
+  IMAGE_GEN_FEATURE,
+  getModelAc,
+  getInfographicAc,
+} = require('../../../shared/config/imageGenCreditPricing');
 
 const MODELS = Object.freeze([
   {
@@ -8,18 +12,18 @@ const MODELS = Object.freeze([
     openaiModel: 'gpt-image-1',
     quality: 'medium',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE,
-    modes: ['image'],
+    modes: ['image', 'infographic'],
     recommended: true,
     supportsEdit: true,
   },
   {
     id: 'gpt-image-1-hd',
     name: 'GPT Image HD',
-    description: 'Same model at high quality.',
+    description: 'Same model at high quality. Recommended default for infographics.',
     openaiModel: 'gpt-image-1',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE_HD,
-    modes: ['image'],
+    modes: ['image', 'infographic'],
     recommended: false,
     supportsEdit: true,
   },
@@ -32,7 +36,7 @@ const MODELS = Object.freeze([
     openaiModel: 'gpt-image-1',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.DALL_E_3,
-    modes: ['image'],
+    modes: ['image', 'infographic'],
     recommended: false,
     supportsEdit: true,
   },
@@ -55,6 +59,7 @@ function listModels() {
 function defaultModelIdForMode(mode, modelId) {
   const trimmed = modelId != null ? String(modelId).trim() : '';
   if (trimmed) return trimmed;
+  if (mode === 'infographic') return 'gpt-image-1-hd';
   return 'gpt-image-1';
 }
 
@@ -64,15 +69,23 @@ function resolveModel(modelId) {
 }
 
 function estimateCredits({ modelId, mode, isTweak = false }) {
-  const resolvedModelId = defaultModelIdForMode(mode || 'image', modelId);
-  const base = getModelAc(resolvedModelId);
+  const resolvedMode = mode || 'image';
+  const resolvedModelId = defaultModelIdForMode(resolvedMode, modelId);
+  const base =
+    resolvedMode === 'infographic'
+      ? getInfographicAc(resolvedModelId)
+      : getModelAc(resolvedModelId);
   return {
     athenaCredits: base,
     breakdown: {
       modelId: resolvedModelId,
       modelAc: base,
       surcharge: 0,
-      mode: isTweak ? 'tweak' : 'image',
+      mode: isTweak ? 'tweak' : resolvedMode,
+      feature:
+        resolvedMode === 'infographic'
+          ? IMAGE_GEN_FEATURE.INFOGRAPHIC
+          : undefined,
     },
   };
 }

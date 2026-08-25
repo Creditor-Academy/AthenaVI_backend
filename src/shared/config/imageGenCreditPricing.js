@@ -7,6 +7,7 @@ const IMAGE_GEN_FEATURE = Object.freeze({
   GPT_IMAGE_HD: 'image_gen_gpt_image_hd',
   DALL_E_3: 'image_gen_dall_e_3',
   TWEAK: 'image_gen_tweak',
+  INFOGRAPHIC: 'image_gen_infographic',
 });
 
 const FLAT_AC = Object.freeze({
@@ -14,6 +15,8 @@ const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 12,
   // Same OpenAI call as HD (dall-e-3 is a catalog alias → gpt-image-1 high)
   [IMAGE_GEN_FEATURE.DALL_E_3]: 12,
+  // Placeholder until ~20% margin pass; prefer getInfographicAc(modelId) which uses model AC
+  [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 12,
 });
 
 const MODEL_FEATURE = Object.freeze({
@@ -26,6 +29,7 @@ const FLAT_ENV_KEYS = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE]: 'IMAGE_GEN_GPT_IMAGE_AC',
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 'IMAGE_GEN_GPT_IMAGE_HD_AC',
   [IMAGE_GEN_FEATURE.DALL_E_3]: 'IMAGE_GEN_DALL_E_3_AC',
+  [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 'IMAGE_GEN_INFOGRAPHIC_AC',
 });
 
 function envNumber(name, fallback) {
@@ -48,9 +52,24 @@ function getModelAc(modelId) {
   return getFlatAc(feature);
 }
 
+/**
+ * Infographic flat charge. Until the margin pricing pass:
+ * - If IMAGE_GEN_INFOGRAPHIC_AC is set, use that override.
+ * - Else use getModelAc(modelId) so dogfood spend tracks the chosen model.
+ */
+function getInfographicAc(modelId) {
+  const envKey = FLAT_ENV_KEYS[IMAGE_GEN_FEATURE.INFOGRAPHIC];
+  const raw = process.env[envKey];
+  if (raw != null && String(raw).trim() !== '') {
+    return getFlatAc(IMAGE_GEN_FEATURE.INFOGRAPHIC);
+  }
+  return getModelAc(modelId || 'gpt-image-1-hd');
+}
+
 module.exports = {
   IMAGE_GEN_FEATURE,
   MODEL_FEATURE,
   getFlatAc,
   getModelAc,
+  getInfographicAc,
 };

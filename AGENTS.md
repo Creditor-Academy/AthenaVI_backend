@@ -226,6 +226,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
 | Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
 | **AI PPT generation (how it works)** | [`docs/AI_PPT_GENERATION_COMPLETE.md`](docs/AI_PPT_GENERATION_COMPLETE.md) |
+| **Image Gen (how it works + Infographics plan)** | [`docs/IMAGE_GEN_COMPLETE.md`](docs/IMAGE_GEN_COMPLETE.md) |
 | **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |
 | **PPT + Image Gen + Brand Kit (A→Z, self-contained)** | [`docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md`](docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) |
 | Image Gen (AI studio) | [`docs/api/IMAGE_GEN_API.md`](docs/api/IMAGE_GEN_API.md) |

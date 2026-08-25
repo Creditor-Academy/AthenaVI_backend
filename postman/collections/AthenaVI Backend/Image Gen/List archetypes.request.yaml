@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/archetypes"
+method: GET
+order: 1250

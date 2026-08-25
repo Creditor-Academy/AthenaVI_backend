@@ -1,12 +1,17 @@
 $kind: collection
 description: |-
-  AI Image Gen (OpenAI): models/formats/styles catalogs, context bundles, generate into a folder chat, thread messages (tweak latest hop), regenerate, download (png/jpg/pdf).
+  AI Image Gen (OpenAI): models/formats/styles/archetypes catalogs, context bundles,
+  generate into a folder chat (`mode: image` or `infographic`), thread messages
+  (spec-patch or pixel tweak), regenerate, download (png/jpg/pdf).
 
-  Requires `OPENAI_API_KEY` and `folderId` on generate. Charges workspace credits on success (context create, open chat, and downloads are free).
+  Requires `OPENAI_API_KEY` and `folderId` on generate. Charges workspace credits on
+  success (context create, open chat, and downloads are free).
 
-  Mode is `image` only. Prompt is required (max 16,000 chars). Formats: square, landscape, portrait.
+  Modes: `image` (default format square) and `infographic` (default format landscape,
+  default model gpt-image-1-hd, spec-first pipeline). Formats: square, landscape, portrait.
 
   After generate/create-context, test scripts save `generationId` / `imageGenThreadId` / `imageGenContextId`.
+  Allow ~120s client timeout for infographic generate (spec LLM + image).
 auth:
   - id: image-gen-bearer-auth
     type: bearer

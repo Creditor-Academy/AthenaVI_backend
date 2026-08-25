@@ -1,12 +1,19 @@
 /**
  * Generic image format catalog.
- * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp cover-crop.
+ * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp crop.
  */
 
 const FULL_BLEED_COMMON = [
   'FULL-BLEED edge-to-edge: fill the entire canvas.',
   'No letterboxing, borders, empty side bars, floating cards, or large plain unused regions.',
   'No separate solid color panels used as filler.',
+];
+
+const INFOGRAPHIC_COMPOSE_COMMON = [
+  'Infographic layout: allow margins, card blocks, legends, and readable whitespace.',
+  'Do NOT use full-bleed photographic fill; prefer clean panels, icons, and typography.',
+  'Keep all text, labels, and numbers fully inside the canvas — never clip edges.',
+  'Leave comfortable padding from the canvas border (safe margins).',
 ];
 
 const FORMATS = Object.freeze([
@@ -20,6 +27,11 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1024x1024',
     safeZone: 'Keep subject centered with comfortable margins.',
     composeRules: [...FULL_BLEED_COMMON, '1:1 square composition; balanced center focus.'],
+    infographicCompose: [
+      ...INFOGRAPHIC_COMPOSE_COMMON,
+      '1:1 square canvas; balanced grid or centered structure; avoid overcrowding.',
+    ],
+    infographicSafeZone: 'Keep title and all labels inside padded margins; no edge clipping.',
   },
   {
     id: 'landscape',
@@ -31,6 +43,11 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1792x1024',
     safeZone: 'Keep focal content in the center third.',
     composeRules: [...FULL_BLEED_COMMON, 'Landscape 3:2; keep hero in the center third.'],
+    infographicCompose: [
+      ...INFOGRAPHIC_COMPOSE_COMMON,
+      'Landscape ~3:2 canvas; prefer left-to-right flows and side-by-side columns when content allows.',
+    ],
+    infographicSafeZone: 'Keep title and all labels inside padded margins; no edge clipping.',
   },
   {
     id: 'portrait',
@@ -42,6 +59,11 @@ const FORMATS = Object.freeze([
     openaiSizeDalle: '1024x1792',
     safeZone: 'Keep focal content in the center third.',
     composeRules: [...FULL_BLEED_COMMON, 'Portrait 2:3; keep hero in the center third.'],
+    infographicCompose: [
+      ...INFOGRAPHIC_COMPOSE_COMMON,
+      'Portrait ~2:3 canvas; prefer top-to-bottom stacks and vertical flows when content allows.',
+    ],
+    infographicSafeZone: 'Keep title and all labels inside padded margins; no edge clipping.',
   },
 ]);
 
@@ -73,10 +95,31 @@ function openaiSizeForFormat(format, openaiModel) {
   return format.openaiSizeGpt;
 }
 
+/**
+ * Compose / safe-zone rules for the given mode.
+ * Image mode keeps full-bleed rules; infographic uses margin-friendly rules.
+ */
+function composeRulesForMode(format, mode = 'image') {
+  if (!format) {
+    return { composeRules: [], safeZone: '' };
+  }
+  if (mode === 'infographic') {
+    return {
+      composeRules: format.infographicCompose || INFOGRAPHIC_COMPOSE_COMMON,
+      safeZone: format.infographicSafeZone || format.safeZone || '',
+    };
+  }
+  return {
+    composeRules: format.composeRules || [],
+    safeZone: format.safeZone || '',
+  };
+}
+
 module.exports = {
   FORMATS,
   FORMAT_BY_ID,
   listFormats,
   resolveFormat,
   openaiSizeForFormat,
+  composeRulesForMode,
 };
