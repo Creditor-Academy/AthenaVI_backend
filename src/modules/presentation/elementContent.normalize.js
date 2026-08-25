@@ -115,7 +115,7 @@ function normalizeTextContent(content = {}) {
 function normalizeElementContent(type, content) {
   if (!content || typeof content !== 'object') return content || {};
   const t = String(type || '').toLowerCase();
-  if (t === 'image' || t === 'icon') return normalizeImageContent(content);
+  if (t === 'image' || t === 'icon' || t === 'graphic') return normalizeImageContent(content);
   if (t === 'chart') return normalizeChartContent(content);
   if (t === 'table') return normalizeTableContent(content);
   if (t === 'shape') return normalizeShapeContent(content);

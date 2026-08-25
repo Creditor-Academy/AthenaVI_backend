@@ -58,6 +58,7 @@ const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
 const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
+const graphicsService = require('../graphics/graphics.service');
 const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
 const blueprintSeed = require('./blueprintSeed');
 const templateMediaService = require('../templates/templateMedia.service');
@@ -4006,6 +4007,17 @@ async function processSlide(ctx, slide) {
       contentType,
       force: Boolean(ctx.packBound || hasBrandKit),
     });
+
+    try {
+      elementsDoc = await graphicsService.maybeInjectSlideGraphics(elementsDoc, {
+        content,
+        visualNeed: content?.visual_need || content?.visualNeed,
+        themeTokens: ctx.themeTokens || null,
+        layoutId: layoutId || slide.layoutId,
+      });
+    } catch (graphicErr) {
+      logger.warn?.({ err: graphicErr?.message }, 'optional graphic inject skipped');
+    }
 
     const updated = await presentationDao.updateSlide(slide.id, {
       status: 'READY',

@@ -233,7 +233,7 @@ function buildUser(vars = {}) {
     '- Chart slides: analyze the data story first — line for trends, donut/pie only for true part-of-whole (~100% total), bar for rankings; dual-chart only for two distinct metrics. Never duplicate identical chart data.',
     '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
-    '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on each column text group. Use "none" only for clean/minimal slides.',
+    '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on EACH column separately (never one full-width bar behind all columns). Leave left/right margin so cards do not touch slide edges. Use "none" only for clean/minimal slides. Prefer Graphics Library icons for list/card markers when available.',
     '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
     '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block — lead lines use textOnImage or text, final line uses accent colorRole with fontWeight 700. Do NOT set fontFamily on runs; the deck heading font applies. Set title to the full concatenated string too.',
     '',

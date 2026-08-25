@@ -65,7 +65,17 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (default `slide:1` for PPT photos / `scene:1` for video templates; use `preview` or `kind=preview` for picker thumb), optional `setAsPreview` (bool), `name` |
 | `DELETE` | `/api/superadmin/templates/:templateId/media/:mediaId` |
 
-List/get template includes `media[]` with presigned `url`. Pack clone maps `slotHint` `slide:{order}` into image elements. Video templates use `scene:{n}` / `element:{id}` / `preview` (system keys under `videos/_system/...`).
+| `GET` | `/api/superadmin/graphics` | List graphics (`q`, `category`, `type`, `style`, `mood`, `colorMode`, `status`, `page`, `limit`) |
+| `POST` | `/api/superadmin/graphics` | Multipart SVG `file` + metadata (`name`, `description`, `type`, `category`, `tags`, `style`, `moods`, `usage`, `colorMode`, `containsText`). Starts as `draft`. |
+| `GET` | `/api/superadmin/graphics/:id` | Get one graphic |
+| `PATCH` | `/api/superadmin/graphics/:id` | Update metadata |
+| `POST` | `/api/superadmin/graphics/:id/publish` | Publish (editor + generation only use published) |
+| `POST` | `/api/superadmin/graphics/:id/unpublish` | Back to draft |
+| `POST` | `/api/superadmin/graphics/:id/archive` | Archive |
+| `DELETE` | `/api/superadmin/graphics/:id` | Delete record + S3 objects |
+
+Published catalog (workspace JWT, not superadmin): `GET /api/graphics`, `POST /api/graphics/search`, `GET /api/graphics/:id`.
+
 
 **Create `DECK_LAYOUT` example**
 

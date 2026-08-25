@@ -936,6 +936,53 @@ model TemplateMedia {
   @@map("template_media")
 }
 
+enum GraphicType {
+  decorative
+  illustration
+  icon
+  abstract
+  pattern
+}
+
+enum GraphicColorMode {
+  recolorable
+  fixed
+}
+
+enum GraphicStatus {
+  draft
+  published
+  archived
+}
+
+/// Platform SVG catalog curated by Superadmin (not workspace Asset).
+model GraphicAsset {
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  fileUrl      String           @map("file_url")
+  s3Key        String           @map("s3_key")
+  previewUrl   String           @map("preview_url")
+  previewS3Key String?          @map("preview_s3_key")
+  type         GraphicType
+  category     String
+  tags         String[]         @default([])
+  style        String?
+  moods        String[]         @default([])
+  usage        String[]         @default([])
+  colorMode    GraphicColorMode @map("color_mode")
+  containsText Boolean          @default(false) @map("contains_text")
+  status       GraphicStatus    @default(draft)
+  createdBy    String           @map("created_by")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  @@index([status, type])
+  @@index([status, category])
+  @@index([createdAt])
+  @@map("graphic_asset")
+}
+
 model WorkspaceBrandKit {
   id          String   @id @default(cuid())
   workspaceId String   @map("workspace_id")

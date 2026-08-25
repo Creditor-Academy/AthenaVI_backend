@@ -271,7 +271,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
         if (fontFace) textOpts.fontFace = fontFace;
         s.addText(String(content.text || ''), textOpts);
       }
-    } else if (el.type === 'image' || el.type === 'icon') {
+    } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
       const b64 = await fetchImageAsBase64(url, key);
@@ -293,7 +293,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
           fill: { color: 'DDDDDD' },
           line: { color: 'AAAAAA', width: 1 },
         });
-        s.addText(el.type === 'icon' ? content.icon || 'icon' : 'image', {
+        s.addText(el.type === 'icon' ? content.icon || 'icon' : el.type === 'graphic' ? 'graphic' : 'image', {
           x: box.x,
           y: box.y,
           w: box.w,
@@ -694,7 +694,7 @@ function buildSlideHtmlPage(slide, palette) {
           const lh = c.lineHeight != null ? `line-height:${Number(c.lineHeight)};` : 'line-height:1.25;';
           return `<div style="${style};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap;${ls}${lh}">${htmlTextInner(c, palette, fallback)}</div>`;
         }
-        if (el.type === 'image' || el.type === 'icon') {
+        if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
           if (c.url) {
             return `<img src="${escapeHtml(c.url)}" alt="" style="${style};object-fit:${escapeHtml(c.fit || 'cover')}" />`;
           }

@@ -6,8 +6,10 @@ const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const superadminController = require('./superadmin.controller');
 const templateAdminController = require('../templates/templateAdmin.controller');
 const templatePublishController = require('../templates/templatePublish.controller');
+const graphicsController = require('../graphics/graphics.controller');
 const superadminValidation = require('../validations/superadmin.validations');
 const videoTemplateValidation = require('../validations/videoTemplate.validations');
+const graphicsValidation = require('../graphics/graphics.validations');
 
 const router = express.Router();
 
@@ -252,6 +254,55 @@ router.post(
   '/projects/:projectId/publish-as-video-pack',
   validate(videoTemplateValidation.publishProjectAsVideoPackSchema),
   templatePublishController.publishProjectAsVideoPack
+);
+
+router.get(
+  '/graphics',
+  validate(graphicsValidation.listGraphicsQuerySchema),
+  graphicsController.listAdmin
+);
+
+router.post(
+  '/graphics',
+  uploadAssetS3.single('file'),
+  validate(graphicsValidation.createGraphicSchema),
+  graphicsController.create
+);
+
+router.get(
+  '/graphics/:id',
+  validate(graphicsValidation.idParams),
+  graphicsController.getAdmin
+);
+
+router.patch(
+  '/graphics/:id',
+  validate(graphicsValidation.updateGraphicSchema),
+  graphicsController.update
+);
+
+router.post(
+  '/graphics/:id/publish',
+  validate(graphicsValidation.idParams),
+  graphicsController.publish
+);
+
+router.post(
+  '/graphics/:id/unpublish',
+  validate(graphicsValidation.idParams),
+  graphicsController.unpublish
+);
+
+router.post(
+  '/graphics/:id/archive',
+  validate(graphicsValidation.idParams),
+  graphicsController.archive
+);
+
+router.delete(
+  '/graphics/:id',
+  validate(graphicsValidation.idParams),
+  graphicsController.remove
 );
 
 module.exports = router;

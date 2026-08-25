@@ -16885,38 +16885,36 @@
             "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "left",
+            "align": "center",
             "lineHeight": 1.15
           },
           "max_lines": 2
         },
         {
           "id": "CARD_1_BG",
-          "region": "cols 1-4, rows 2-6",
+          "region": "cols 2-3, rows 3-9",
           "role": "decoration",
           "layer": 1,
-          "aiOnly": true,
           "shapeHint": {
-            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 10,
+            "borderRadius": 12,
             "pairsWithSlotId": "CARD_1_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 10
+            "borderRadius": 12
           }
         },
         {
           "id": "CARD_1_TITLE",
-          "region": "cols 1-4, rows 2-3",
+          "region": "cols 2-3, rows 4-5",
           "role": "heading",
           "placeholder_text": "Point one",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 18,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -16925,46 +16923,44 @@
         },
         {
           "id": "CARD_1_BODY",
-          "region": "cols 1-4, rows 3-6",
+          "region": "cols 2-3, rows 5-9",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 3
+          "max_lines": 5
         },
         {
           "id": "CARD_2_BG",
-          "region": "cols 5-8, rows 2-6",
+          "region": "cols 5-6, rows 3-9",
           "role": "decoration",
           "layer": 1,
-          "aiOnly": true,
           "shapeHint": {
-            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 10,
+            "borderRadius": 12,
             "pairsWithSlotId": "CARD_2_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 10
+            "borderRadius": 12
           }
         },
         {
           "id": "CARD_2_TITLE",
-          "region": "cols 5-8, rows 2-3",
+          "region": "cols 5-6, rows 4-5",
           "role": "heading",
           "placeholder_text": "Point two",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 18,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -16973,46 +16969,44 @@
         },
         {
           "id": "CARD_2_BODY",
-          "region": "cols 5-8, rows 3-6",
+          "region": "cols 5-6, rows 5-9",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 3
+          "max_lines": 5
         },
         {
           "id": "CARD_3_BG",
-          "region": "cols 9-12, rows 2-6",
+          "region": "cols 8-9, rows 3-9",
           "role": "decoration",
           "layer": 1,
-          "aiOnly": true,
           "shapeHint": {
-            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 10,
+            "borderRadius": 12,
             "pairsWithSlotId": "CARD_3_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 10
+            "borderRadius": 12
           }
         },
         {
           "id": "CARD_3_TITLE",
-          "region": "cols 9-12, rows 2-3",
+          "region": "cols 8-9, rows 4-5",
           "role": "heading",
           "placeholder_text": "Point three",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 18,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -17021,18 +17015,64 @@
         },
         {
           "id": "CARD_3_BODY",
-          "region": "cols 9-12, rows 3-6",
+          "region": "cols 8-9, rows 5-9",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 3
+          "max_lines": 5
+        },
+        {
+          "id": "CARD_4_BG",
+          "region": "cols 10-11, rows 3-9",
+          "role": "decoration",
+          "layer": 1,
+          "shapeHint": {
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 12,
+            "pairsWithSlotId": "CARD_4_TITLE"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 12
+          }
+        },
+        {
+          "id": "CARD_4_TITLE",
+          "region": "cols 10-11, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Point four",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "CARD_4_BODY",
+          "region": "cols 10-11, rows 5-9",
+          "role": "body",
+          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 5
         }
       ],
       "preview": {
@@ -17075,6 +17115,18 @@
             "uppercase": false
           },
           "CARD_3_BODY": {
+            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "CARD_4_TITLE": {
+            "text": "Point four",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "CARD_4_BODY": {
             "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
             "variant": "body",
             "bold": false,

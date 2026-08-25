@@ -1619,6 +1619,7 @@ function isAiOnlyShapeSlot(slot) {
   const id = String(slot.id || '');
   const role = String(slot.role || '').toLowerCase();
   if (/^METRIC_CARD_\d+_BG$/.test(id)) return false;
+  if (/^CARD_\d+_BG$/i.test(id)) return false;
   if (/^TEXT_HALF_BG$/i.test(id)) return false;
   if (/FRAME$/i.test(id) && slot.shapeHint?.pairsWithSlotId) return true;
   if (slot.aiOnly === true) return true;
@@ -1682,6 +1683,11 @@ function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, can
     if (slotId === '__overlay__') continue;
     const behind = decision?.behind || 'none';
     if (behind === 'none') continue;
+
+    // Card/column slots get separate inset cards from applyDefaultCardShapes /
+    // explicit CARD_n_BG — skip AI behind shapes so they don't merge into one bar.
+    const groupKey = cardGroupKey(slotId);
+    if (groupKey && (behind === 'card' || behind === 'surface')) continue;
 
     const targetSlot = slotById[slotId];
     const targetEl = elements.find((el) => el.slotId === slotId);
@@ -2082,7 +2088,7 @@ function layoutSlotsToElements(
     const role = String(slot.role || '').toLowerCase();
     const slotLayer = slot.layer != null ? Number(slot.layer) : layer++;
 
-    if (/^METRIC_CARD_\d+_BG$/.test(String(slotId))) {
+    if (/^METRIC_CARD_\d+_BG$/.test(String(slotId)) || /^CARD_\d+_BG$/i.test(String(slotId))) {
       const fill = resolveFill(slot.shape || { fillColorRole: 'cardBg' }, palette);
       elements.push({
         id: newElementId('shp'),
@@ -2855,6 +2861,8 @@ function cardGroupKey(slotId) {
   if (m) return `step_${m[1]}`;
   m = id.match(/^CARD_(\d+)_(TITLE|BODY)$/i);
   if (m) return `card_${m[1]}`;
+  m = id.match(/^ROW_(\d+)_(TITLE|BODY)$/i);
+  if (m) return `row_${m[1]}`;
   m = id.match(/^BULLET_(\d+)$/i);
   if (m) return `bullet_${m[1]}`;
   m = id.match(/^ITEM_(\d+)$/i);
@@ -2866,6 +2874,249 @@ function cardGroupKey(slotId) {
   return null;
 }
 
+function layoutHasExplicitCardBg(layoutSchema, groupKey) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const m = String(groupKey || '').match(/^(card|row|bullet|item)_(\d+)$/i);
+  if (!m) return false;
+  const n = m[2];
+  return slots.some((s) => {
+    const id = String(s.id || '');
+    return (
+      new RegExp(`^CARD_${n}_BG$`, 'i').test(id) ||
+      new RegExp(`^${m[1]}_${n}_BG$`, 'i').test(id)
+    );
+  });
+}
+
+function countCardGroupsInSchema(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const keys = new Set();
+  for (const slot of slots) {
+    const key = cardGroupKey(slot.id);
+    if (key) keys.add(key);
+  }
+  return keys.size;
+}
+
+function isCardBackgroundElement(el) {
+  if (!el || el.type !== 'shape') return false;
+  const sid = String(el.slotId || '');
+  if (/^(CARD|ROW)_\d+_BG$/i.test(sid)) return true;
+  if (/^AUTO_CARD_BG_/i.test(sid)) return true;
+  if (/__(?:shape_bg)$/i.test(sid) && cardGroupKey(sid.replace(/__shape_bg$/i, ''))) return true;
+  return Boolean(el.content?.layoutSurface && /card|row|bullet|item/i.test(sid));
+}
+
+/** Separate overlapping/abutting card boxes with a gap and keep clear of slide edges. */
+function separateCardBoxes(boxes, canvas, { edgeInset = 56, gap = 24 } = {}) {
+  if (!boxes.length) return boxes;
+  const canvasW = canvas.width || 1920;
+  const canvasH = canvas.height || 1080;
+  const sorted = [...boxes].sort((a, b) => a.x - b.x);
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    const prevRight = prev.x + prev.width;
+    if (cur.x < prevRight + gap) {
+      const mid = (prevRight + cur.x) / 2;
+      const newPrevRight = mid - gap / 2;
+      const newCurLeft = mid + gap / 2;
+      prev.width = Math.max(40, newPrevRight - prev.x);
+      const shrinkLeft = newCurLeft - cur.x;
+      cur.x = newCurLeft;
+      cur.width = Math.max(40, cur.width - shrinkLeft);
+    }
+  }
+
+  return sorted.map((box) => {
+    let x = Math.max(edgeInset, box.x);
+    let y = Math.max(edgeInset * 0.35, box.y);
+    let width = box.width;
+    let height = box.height;
+    if (x + width > canvasW - edgeInset) {
+      width = Math.max(40, canvasW - edgeInset - x);
+    }
+    if (y + height > canvasH - edgeInset * 0.35) {
+      height = Math.max(40, canvasH - edgeInset * 0.35 - y);
+    }
+    return { ...box, x, y, width, height };
+  });
+}
+
+function centerMultiCardHeading(doc, cardGroupCount) {
+  if (!doc || cardGroupCount < 2) return doc;
+  const canvasW = doc.canvas?.width || 1920;
+  const edgeInset = 56;
+  const elements = (doc.elements || []).map((el) => {
+    if (el.type !== 'text' && el.type !== 'textbox') return el;
+    const sid = String(el.slotId || '').toUpperCase();
+    const role = String(el.role || '').toLowerCase();
+    const isMainHeading =
+      sid === 'HEADING' ||
+      sid === 'TITLE' ||
+      sid === 'MAIN_TITLE' ||
+      (role === 'heading' && !/^(CARD_|ROW_|BULLET_|ITEM_|COL_)/i.test(sid));
+    if (!isMainHeading) return el;
+    const p = el.placement || {};
+    return {
+      ...el,
+      placement: {
+        ...p,
+        x: edgeInset,
+        width: Math.max(120, canvasW - edgeInset * 2),
+      },
+      content: {
+        ...(el.content || {}),
+        align: 'center',
+      },
+    };
+  });
+  return { ...doc, elements };
+}
+
+/** Keep explicit / auto card backgrounds as separate inset cards (never one edge-to-edge bar). */
+function refineExistingCardBackgrounds(doc, canvas) {
+  if (!doc?.elements?.length) return doc;
+  const elements = [...doc.elements];
+  const idxs = [];
+  const boxes = [];
+  elements.forEach((el, i) => {
+    if (!isCardBackgroundElement(el)) return;
+    const p = el.placement || {};
+    const w = Number(p.width) || 0;
+    const canvasW = canvas.width || 1920;
+    // Oversized bands are handled by splitOversizedCardBand
+    if (w >= canvasW * 0.82) return;
+    idxs.push(i);
+    boxes.push({
+      elIndex: i,
+      x: Number(p.x) || 0,
+      y: Number(p.y) || 0,
+      width: w,
+      height: Number(p.height) || 0,
+    });
+  });
+  if (boxes.length < 2) return doc;
+  const separated = separateCardBoxes(boxes, canvas, { edgeInset: 56, gap: 24 });
+  separated.forEach((box) => {
+    const el = elements[box.elIndex];
+    if (!el) return;
+    elements[box.elIndex] = {
+      ...el,
+      placement: {
+        ...(el.placement || {}),
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      },
+      content: {
+        ...(el.content || {}),
+        borderRadius: el.content?.borderRadius ?? 12,
+        layoutSurface: true,
+      },
+    };
+  });
+  return { ...doc, elements };
+}
+
+/**
+ * If a single near-full-width surface sits behind multiple columns, split it into
+ * separate inset cards (fixes the "one mint bar" look).
+ */
+function splitOversizedCardBand(doc, layoutSchema, themeTokens, canvas) {
+  if (!doc?.elements?.length || !layoutSchema?.slots?.length) return doc;
+  const canvasW = canvas.width || 1920;
+  const canvasH = canvas.height || 1080;
+  const elements = [...doc.elements];
+  const oversizedIdx = elements.findIndex((el) => {
+    if (el.type !== 'shape') return false;
+    const p = el.placement || {};
+    const w = Number(p.width) || 0;
+    const h = Number(p.height) || 0;
+    if (w < canvasW * 0.82) return false;
+    if (h >= canvasH * 0.88) return false; // full-bleed bg / scrim
+    const sid = String(el.slotId || '');
+    return (
+      isCardBackgroundElement(el) ||
+      /BG|shape_bg|surface|card/i.test(sid) ||
+      el.content?.layoutSurface
+    );
+  });
+  if (oversizedIdx < 0) return doc;
+
+  const slots = layoutSchema.slots;
+  const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
+  const groups = new Map();
+  for (const slot of slots) {
+    const key = cardGroupKey(slot.id);
+    if (!key) continue;
+    const role = String(slot.role || '').toLowerCase();
+    if (!['heading', 'body', 'subheading', 'stat'].includes(role)) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(slot);
+  }
+  if (groups.size < 2) return doc;
+
+  const band = elements[oversizedIdx].placement || {};
+  const pendingBoxes = [];
+  for (const [key, groupSlots] of groups.entries()) {
+    const placements = groupSlots
+      .map((s) => {
+        const el = elements.find((e) => e.slotId === s.id);
+        if (el?.placement) return el.placement;
+        return regionToPlacement(s.region, canvas, s, slots);
+      })
+      .filter(Boolean);
+    if (!placements.length) continue;
+    const x = Math.min(...placements.map((p) => p.x ?? 0));
+    const x2 = Math.max(...placements.map((p) => (p.x ?? 0) + (p.width ?? 0)));
+    const padX = 14;
+    pendingBoxes.push({
+      key,
+      x: x - padX,
+      y: Number(band.y) || Math.min(...placements.map((p) => p.y ?? 0)) - 16,
+      width: Math.max(40, x2 - x + padX * 2),
+      height: Number(band.height) || 320,
+    });
+  }
+  if (pendingBoxes.length < 2) return doc;
+
+  const separated = separateCardBoxes(pendingBoxes, canvas, { edgeInset: 56, gap: 24 });
+  const palette = themeTokens?.palette || {};
+  const template = elements[oversizedIdx];
+  elements.splice(oversizedIdx, 1);
+  for (const box of separated.reverse()) {
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: template.layer ?? 0,
+      placement: {
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'rect',
+        fill: template.content?.fill || {
+          type: 'solid',
+          colorRole: 'cardBg',
+          color: paletteColor(palette, 'cardBg', null),
+        },
+        borderRadius: template.content?.borderRadius ?? 12,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `AUTO_CARD_BG_${box.key}`,
+    });
+  }
+  return { ...doc, elements };
+}
+
 function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas) {
   if (!doc || !layoutSchema?.slots?.length) return doc;
   const decisions = content?.shapeDecisions && typeof content.shapeDecisions === 'object'
@@ -2875,10 +3126,12 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
   const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
   const elements = [...(doc.elements || [])];
   const groups = new Map();
+  const schemaCardCount = countCardGroupsInSchema(layoutSchema);
 
   for (const slot of slots) {
     const key = cardGroupKey(slot.id);
     if (!key) continue;
+    if (layoutHasExplicitCardBg(layoutSchema, key)) continue;
     const role = String(slot.role || '').toLowerCase();
     if (!['heading', 'body', 'subheading', 'stat'].includes(role) && !/^milestone_/i.test(slot.id)) continue;
     if (decisions[slot.id]?.behind === 'none') continue;
@@ -2886,7 +3139,8 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
     groups.get(key).push(slot);
   }
 
-  for (const groupSlots of groups.values()) {
+  const pendingBoxes = [];
+  for (const [key, groupSlots] of groups.entries()) {
     const targetIds = groupSlots.map((s) => s.id);
     if (targetIds.some((id) => decisions[id]?.behind === 'none')) continue;
     const placements = targetIds
@@ -2903,18 +3157,30 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
     const y = Math.min(...placements.map((p) => p.y ?? 0));
     const x2 = Math.max(...placements.map((p) => (p.x ?? 0) + (p.width ?? 0)));
     const y2 = Math.max(...placements.map((p) => (p.y ?? 0) + (p.height ?? 0)));
-    const pad = 12;
-    const palette = themeTokens?.palette || {};
+    const padX = 14;
+    const padY = 16;
+    pendingBoxes.push({
+      key,
+      x: x - padX,
+      y: y - padY,
+      width: Math.max(40, x2 - x + padX * 2),
+      height: Math.max(40, y2 - y + padY * 2),
+    });
+  }
 
+  const separated = separateCardBoxes(pendingBoxes, canvas, { edgeInset: 56, gap: 24 });
+  const palette = themeTokens?.palette || {};
+
+  for (const box of separated) {
     elements.unshift({
       id: newElementId('shp'),
       type: 'shape',
       layer: 0,
       placement: {
-        x: Math.max(0, x - pad),
-        y: Math.max(0, y - pad),
-        width: Math.max(40, x2 - x + pad * 2),
-        height: Math.max(40, y2 - y + pad * 2),
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
         rotation: 0,
         opacity: 1,
       },
@@ -2925,14 +3191,19 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
           colorRole: 'cardBg',
           color: paletteColor(palette, 'cardBg', null),
         },
-        borderRadius: 10,
+        borderRadius: 12,
         layoutSurface: true,
       },
       role: 'decoration',
+      slotId: `AUTO_CARD_BG_${box.key}`,
     });
   }
 
-  return { ...doc, elements };
+  let next = { ...doc, elements };
+  next = refineExistingCardBackgrounds(next, canvas);
+  next = splitOversizedCardBand(next, layoutSchema, themeTokens, canvas);
+  next = centerMultiCardHeading(next, Math.max(separated.length, schemaCardCount));
+  return next;
 }
 
 function applySplitHeroDecorShape(doc, layoutSchema, themeTokens, canvas) {
