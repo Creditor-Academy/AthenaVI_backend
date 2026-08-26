@@ -61,6 +61,16 @@ const searchPublished = asyncHandler(async (req, res) => {
   return successResponse(req, res, { items }, 200, 'Graphics fetched');
 });
 
+const getIllustrationsMeta = asyncHandler(async (req, res) => {
+  const data = await graphicsService.getIllustrationsMeta();
+  return successResponse(req, res, data, 200, 'GetIllustrations meta fetched');
+});
+
+const listGetIllustrationsFree = asyncHandler(async (req, res) => {
+  const data = await graphicsService.listGetIllustrationsFree(req.query || {});
+  return successResponse(req, res, data, 200, 'GetIllustrations free catalog fetched');
+});
+
 module.exports = {
   listAdmin,
   getAdmin,
@@ -73,4 +83,6 @@ module.exports = {
   listPublished,
   getPublished,
   searchPublished,
+  getIllustrationsMeta,
+  listGetIllustrationsFree,
 };

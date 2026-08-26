@@ -220,6 +220,10 @@ module.exports = {
   STOCK_SEARCH_SUCCESS: 'Stock media search completed',
   STOCK_IMPORTED_SUCCESSFULLY: 'Stock media imported successfully',
 
+  GETILLUSTRATIONS_NOT_CONFIGURED:
+    'GetIllustrations is not configured (missing GETILLUSTRATIONS_API_KEY)',
+  GETILLUSTRATIONS_REQUEST_FAILED: 'GetIllustrations API request failed',
+
   // Fonts catalog
   FONTS_FETCHED: 'Font catalog fetched',
   FONT_CSS_BUILT: 'Font stylesheet URL built',

@@ -90,19 +90,107 @@ const SINGLE_SUBJECT_NEGATIVES =
 const CHART_PHOTO_NEGATIVES =
   'no charts, no graphs, no bar charts, no line charts, no pie charts, no dashboards, no axes, no data visualizations, no spreadsheet screens';
 
+/** Ban lettering so image models do not paste slide copy into pixels. */
+const TEXT_NEGATIVES =
+  'no text, no words, no letters, no captions, no typography, no watermarks, no logos, no UI chrome, no posters with headlines';
+
+const DEFAULT_TEXT_NEGATIVE_TERMS = [
+  'text',
+  'words',
+  'letters',
+  'captions',
+  'typography',
+  'watermarks',
+  'logos',
+  'posters with headlines',
+];
+
+function shortVisualPhrase(text, maxWords = 8) {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  const beforeBreak = raw.split(/[:—–|]/)[0].trim();
+  const source = beforeBreak && beforeBreak.split(/\s+/).filter(Boolean).length >= 2 ? beforeBreak : raw;
+  const words = source.split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  return words.slice(0, Math.max(2, maxWords)).join(' ');
+}
+
+function slideCopyCorpus(content = {}) {
+  const parts = [];
+  const push = (v) => {
+    const s = String(v || '').trim();
+    if (s) parts.push(s);
+  };
+  push(content.body);
+  push(content.summary);
+  push(content.subtitle);
+  push(content.left_body);
+  push(content.right_body);
+  for (const col of content.columns || content.cards || content.features || content.items || []) {
+    if (typeof col === 'string') push(col);
+    else if (col && typeof col === 'object') {
+      push(col.body);
+      push(col.text);
+      push(col.description);
+    }
+  }
+  for (const b of content.bullets || []) {
+    if (typeof b === 'string') push(b);
+    else if (b && typeof b === 'object') push(b.text || b.body || b.description);
+  }
+  return parts;
+}
+
+/** True when an image prompt reuses a long phrase from slide body copy. */
+function imagePromptEchoesCopy(prompt, content = {}) {
+  const p = String(prompt || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (p.length < 36) return false;
+  const bodies = slideCopyCorpus(content);
+  for (const body of bodies) {
+    const normalized = String(body).toLowerCase().replace(/\s+/g, ' ').trim();
+    if (normalized.length < 28) continue;
+    const words = normalized.split(/\s+/).filter(Boolean);
+    if (words.length < 6) continue;
+    for (let i = 0; i <= words.length - 6; i += 1) {
+      const ngram = words.slice(i, i + 6).join(' ');
+      if (p.includes(ngram)) return true;
+    }
+  }
+  return false;
+}
+
+function appendImageNegatives(prompt, { isDevice = false, hasChart = false } = {}) {
+  let next = String(prompt || '').trim();
+  if (!next) return next;
+  const lower = next.toLowerCase();
+  if (!isDevice && !lower.includes('no text')) {
+    next = `${next}. ${TEXT_NEGATIVES}`;
+  }
+  if (!lower.includes('no collage') && !lower.includes('no triptych')) {
+    next = `${next}. ${SINGLE_SUBJECT_NEGATIVES}`;
+  }
+  if (hasChart && !lower.includes('no charts')) {
+    next = `${next}. ${CHART_PHOTO_NEGATIVES}`;
+  }
+  return next;
+}
+
 function columnEntryAt(content = {}, index) {
   const list = content.columns || content.cards || content.features || content.items || [];
   const col = Array.isArray(list) ? list[index] : null;
   return col && typeof col === 'object' ? col : null;
 }
 
+/** Short visual noun phrase only — never paste paragraph body into image prompts. */
 function columnSubjectFromEntry(col) {
   if (!col || typeof col !== 'object') return null;
   const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+  if (title) return shortVisualPhrase(title, 8);
   const body = String(col.body ?? col.text ?? col.description ?? '').trim();
-  if (title && body) return `${title}: ${body.slice(0, 100)}`;
-  if (title) return title;
-  if (body) return body.slice(0, 120);
+  if (body) return shortVisualPhrase(body, 8);
   return null;
 }
 
@@ -125,24 +213,21 @@ function layoutHasChartSlot(layoutSchema) {
 }
 
 function overallThemeSubject(content = {}, opts = {}) {
-  const summary = String(
-    content.summary || content.body || content.subtitle || content.visual || ''
-  ).trim();
+  const visual = String(content.visual || '').trim();
+  if (visual) return shortVisualPhrase(visual, 12);
+
   const title = String(content.title || '').trim();
+  if (title) return shortVisualPhrase(title, 10);
+
+  const summary = String(content.summary || content.subtitle || content.body || '').trim();
+  if (summary) return shortVisualPhrase(summary, 10);
+
   const deckSummary = String(
     opts.deckNarrative || opts.sourceText || content.deckSummary || content.overallSummary || ''
-  )
-    .trim()
-    .slice(0, 220);
-  const parts = [];
-  if (deckSummary) parts.push(deckSummary);
-  if (summary && summary.toLowerCase() !== deckSummary.toLowerCase()) {
-    parts.push(summary.slice(0, 160));
-  }
-  if (title && !parts.some((p) => p.toLowerCase().includes(title.toLowerCase()))) {
-    parts.push(title);
-  }
-  return parts.filter(Boolean).join(' — ') || title || null;
+  ).trim();
+  if (deckSummary) return shortVisualPhrase(deckSummary, 12);
+
+  return null;
 }
 
 function resolveImagePromptAlias(slotId, imagePrompts = {}) {
@@ -196,12 +281,11 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
         content.cards?.[0]?.title ||
         ''
     ).trim();
+    if (pointTitle) return shortVisualPhrase(pointTitle, 8);
     const pointBody = String(
       content.pointBody || content.columns?.[0]?.body || content.cards?.[0]?.body || content.summary || ''
     ).trim();
-    if (pointTitle && pointBody) return `${pointTitle}: ${pointBody.slice(0, 100)}`;
-    if (pointTitle) return pointTitle;
-    if (pointBody) return pointBody.slice(0, 120);
+    if (pointBody) return shortVisualPhrase(pointBody, 8);
   }
 
   const deviceMatch = id.match(/^DEVICE_IMAGE_(\d+)$/i);
@@ -209,7 +293,7 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
     const idx = Number(deviceMatch[1]) - 1;
     const col = columnEntryAt(content, idx);
     const label = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
-    const base = label || String(content.title || '').trim();
+    const base = shortVisualPhrase(label || String(content.title || '').trim(), 8);
     if (base) return `${base} — app UI screenshot`;
   }
 
@@ -236,18 +320,37 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
 
 function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
   const id = String(slotId || '');
-  let subject = deriveSlotImagePromptBase(id, content, layoutSchema, opts) || '';
+  const isDevice = /^DEVICE_IMAGE_/i.test(id);
+  const imagePrompts =
+    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
+  const llmPrompt = resolveImagePromptAlias(id, imagePrompts);
+  let subject = '';
 
-  const numberedIdx = numberedImageSlotIndex(id);
-  if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
-    const fromCol = columnSubjectFromEntry(columnEntryAt(content, numberedIdx));
-    if (fromCol) subject = fromCol;
+  if (llmPrompt && !imagePromptEchoesCopy(llmPrompt, content)) {
+    // Keep concrete visual briefs from the content model.
+    subject = String(llmPrompt).trim();
+  } else {
+    const numberedIdx = numberedImageSlotIndex(id);
+    if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
+      subject = columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) || '';
+    }
+    if (!subject) {
+      subject = deriveSlotImagePromptBase(id, content, layoutSchema, opts) || '';
+    }
+    if (subject && imagePromptEchoesCopy(subject, content)) {
+      const fromCol =
+        numberedIdx != null ? columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) : null;
+      subject =
+        fromCol ||
+        overallThemeSubject(content, opts) ||
+        shortVisualPhrase(content?.title || 'Slide topic', 8);
+    }
   }
 
   if (!subject) {
     subject =
       overallThemeSubject(content, opts) ||
-      String(content?.title || 'Slide topic').trim();
+      shortVisualPhrase(content?.title || 'Slide topic', 8);
   }
 
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
@@ -257,23 +360,23 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
   const hasChart = layoutHasChartSlot(layoutSchema);
   const isHero = /^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id);
 
-  return [
+  const assembled = [
     isHero
-      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme and slide summary`
+      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
       : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
     /four_images|grid_.*images|three_cards_image|grid_images_text/i.test(layoutId)
-      ? 'Gallery slot — ONE distinct subject matching this card’s text only'
+      ? 'Gallery slot — ONE distinct visual metaphor of this card’s topic (not the card’s wording)'
       : null,
     hasChart && !isHero
       ? 'Slide already has a rendered chart — photograph a related real-world subject, not a chart graphic'
       : null,
     `Single photograph, ONE subject only, no collage: ${subject}`,
     `(variation ${slotIndex + 1})`,
-    SINGLE_SUBJECT_NEGATIVES,
-    hasChart ? CHART_PHOTO_NEGATIVES : null,
   ]
     .filter(Boolean)
     .join('. ');
+
+  return appendImageNegatives(assembled, { isDevice, hasChart });
 }
 
 function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
@@ -412,9 +515,19 @@ function normalizeMultiColumnContent(content, layoutSchema) {
       if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
         prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
         if (!prompt && colTitle) {
-          prompt = `Single photograph, ONE subject only: ${colTitle} (variation ${index + 1}). ${SINGLE_SUBJECT_NEGATIVES}`;
+          prompt = appendImageNegatives(
+            `Single photograph, ONE subject only: ${shortVisualPhrase(colTitle, 8)} (variation ${index + 1})`,
+            { hasChart: layoutHasChartSlot(layoutSchema) }
+          );
         }
       }
+      if (prompt && imagePromptEchoesCopy(prompt, next)) {
+        prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
+      }
+      prompt = appendImageNegatives(prompt, {
+        isDevice: /^DEVICE_IMAGE_/i.test(slotId),
+        hasChart: layoutHasChartSlot(layoutSchema),
+      });
       usedPrompts.add(prompt.toLowerCase());
       imagePrompts[slotId] = prompt;
     });
@@ -547,16 +660,22 @@ function normalizeGalleryImageContent(content, layoutSchema) {
     if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
       prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
     }
-    if (!prompt && (colTitle || colBody)) {
-      const subject = colTitle && colBody ? `${colTitle}: ${colBody.slice(0, 80)}` : colTitle || colBody;
-      prompt = [
-        `${slotId}: single photograph of ONE subject matching this card`,
-        `One isolated subject — ${subject}`,
-        `(variation ${index + 1})`,
-        SINGLE_SUBJECT_NEGATIVES,
-      ].join('. ');
+    if ((!prompt || imagePromptEchoesCopy(prompt, next)) && (colTitle || colBody)) {
+      const subject = shortVisualPhrase(colTitle || colBody, 8);
+      prompt = appendImageNegatives(
+        [
+          `${slotId}: single photograph of ONE subject for this card’s topic`,
+          `One isolated subject — ${subject}`,
+          `(variation ${index + 1})`,
+        ].join('. '),
+        { hasChart: layoutHasChartSlot(layoutSchema) }
+      );
     }
     if (prompt) {
+      prompt = appendImageNegatives(prompt, {
+        isDevice: /^DEVICE_IMAGE_/i.test(slotId),
+        hasChart: layoutHasChartSlot(layoutSchema),
+      });
       usedPrompts.add(prompt.toLowerCase());
       imagePrompts[slotId] = prompt;
     }
@@ -1015,9 +1134,13 @@ async function repairSlideContentFromQa({
 
 async function generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema }) {
   const isDeviceSlot = /device_/i.test(String(slotId));
-  const fullPrompt = isDeviceSlot
-    ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
-    : prompt;
+  const hasChart = layoutHasChartSlot(layoutSchema);
+  const fullPrompt = appendImageNegatives(
+    isDeviceSlot
+      ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
+      : prompt,
+    { isDevice: isDeviceSlot, hasChart }
+  );
   const slotDef = (layoutSchema?.slots || []).find((s) => String(s.id) === String(slotId));
   const canvas = ctx.canvasSize || { width: 1920, height: 1080 };
   const imageSize = slotDef
@@ -2638,17 +2761,33 @@ async function resolveSlideImage({
       .filter(Boolean)
       .join('. ');
 
-    const buildAiPrompt = () =>
-      [
-        brief?.subject || searchQuery,
+    const buildAiPrompt = () => {
+      const isDiagram = /diagram|chart|infographic/i.test(String(brief?.image_type || ''));
+      const negatives = Array.isArray(brief?.negative_terms) ? [...brief.negative_terms] : [];
+      for (const term of DEFAULT_TEXT_NEGATIVE_TERMS) {
+        if (!negatives.some((t) => String(t).toLowerCase() === term)) negatives.push(term);
+      }
+      if (layoutHasChartSlot(layoutSchema)) {
+        for (const term of ['charts', 'graphs', 'dashboards', 'axes']) {
+          if (!negatives.some((t) => String(t).toLowerCase() === term)) negatives.push(term);
+        }
+      }
+      let subject = String(brief?.subject || searchQuery || '').trim();
+      if (!subject || imagePromptEchoesCopy(subject, content)) {
+        subject =
+          shortVisualPhrase(content?.visual || content?.title || searchQuery, 12) ||
+          shortVisualPhrase(searchQuery, 12);
+      }
+      return [
+        subject,
         brief?.composition || '',
         styleBits,
-        Array.isArray(brief?.negative_terms)
-          ? `Avoid: ${brief.negative_terms.join(', ')}`
-          : '',
+        isDiagram ? null : TEXT_NEGATIVES,
+        negatives.length ? `Avoid: ${negatives.join(', ')}` : null,
       ]
         .filter(Boolean)
         .join('. ');
+    };
 
     // stock/web: stock only. ai (default): AI-first.
     if (imageSource === 'stock') {
@@ -2832,6 +2971,7 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'distinct_gallery_labels' ||
       issue.rule === 'gallery_label_matches_slide_title' ||
       issue.rule === 'duplicate_image_prompts' ||
+      issue.rule === 'image_prompt_echoes_copy' ||
       issue.rule === 'duplicate_slot_image_urls' ||
       issue.rule === 'required_chart_data' ||
       issue.rule === 'generic_chart_labels' ||
@@ -3144,7 +3284,7 @@ function generationHintsFromLayout(layoutSchema) {
     }
   }
   if (imageSlots.length > 1) {
-    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual for each slot: ${imageSlots.map((s) => s.id).join(', ')}. No duplicate subjects.`;
+    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (≤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
   }
   if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
     hints.parallelStructure =

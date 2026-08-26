@@ -262,6 +262,14 @@ router.get(
   graphicsController.listAdmin
 );
 
+router.get('/graphics/getillustrations/meta', graphicsController.getIllustrationsMeta);
+
+router.get(
+  '/graphics/getillustrations/free',
+  validate(graphicsValidation.getIllustrationsFreeQuerySchema),
+  graphicsController.listGetIllustrationsFree
+);
+
 router.post(
   '/graphics',
   uploadAssetS3.single('file'),

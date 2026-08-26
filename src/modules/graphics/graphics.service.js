@@ -6,6 +6,7 @@ const { searchGraphics } = require('./graphics.search');
 const { newElementId } = require('../presentation/layoutToElements');
 const { MAX_ELEMENTS_PER_SLIDE } = require('../presentation/presentation.constants');
 const svglClient = require('./svgl.client');
+const getillustrationsClient = require('./getillustrations.client');
 
 function parseStringList(value) {
   if (Array.isArray(value)) {
@@ -659,6 +660,21 @@ function tokenizeSlide(content = {}) {
     .slice(0, 12);
 }
 
+async function getIllustrationsMeta() {
+  return getillustrationsClient.getMeta();
+}
+
+async function listGetIllustrationsFree(query = {}) {
+  return getillustrationsClient.getFreeCatalog({
+    kind: query.kind,
+    categoryId: query.categoryId,
+    packId: query.packId,
+    q: query.q,
+    page: query.page,
+    limit: query.limit,
+  });
+}
+
 module.exports = {
   serialize,
   createFromUpload,
@@ -672,6 +688,8 @@ module.exports = {
   listPublished,
   getPublished,
   searchPublished,
+  getIllustrationsMeta,
+  listGetIllustrationsFree,
   deriveGraphicNeed,
   findListIconTargets,
   injectListIconsIntoElementsDoc,

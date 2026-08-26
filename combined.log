@@ -8114,3 +8114,118 @@
 {"athenaCredits":2,"deckId":"cmt9pl20t0000ucvq8gicgvhd","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9plygc0003ucvquq3s2uyb","timestamp":"2026-08-26T06:35:50.384Z"}
 {"attempt":1,"issues":[{"path":"agenda.columns","repairable":true,"rule":"required_structured"}],"layoutId":"agenda_three_columns_hero_v1","level":"warn","message":"presentation_slide_qa_issues","slideId":"cmt9plygc0003ucvquq3s2uyb","timestamp":"2026-08-26T06:35:54.157Z"}
 {"athenaCredits":4,"deckId":"cmt9pl20t0000ucvq8gicgvhd","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9plygc0003ucvquq3s2uyb","timestamp":"2026-08-26T06:36:48.826Z"}
+{"level":"error","message":"Error: Validation error\n    at D:\\Athena VS\\AthenaVI_backend\\src\\middlewares\\validate.middleware.js:22:11\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:157:13)\n    at Route.dispatch (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:117:3)\n    at handle (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:435:11)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:295:15\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:600:14)\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:610:14)\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:610:14)\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:664:3)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)\n    at Function.handle (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:186:3)\n    at router (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:60:12)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)","timestamp":"2026-08-26T06:50:14.827Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T07:11:09.498Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T07:11:09.525Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":24.58,"timestamp":"2026-08-26T07:23:01.421Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T07:26:43.402Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T07:35:36.414Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T07:37:15.765Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T07:37:15.785Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T07:37:15.894Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T07:37:15.897Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T07:37:15.900Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":24.58,"timestamp":"2026-08-26T07:37:18.463Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T07:37:39.363Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T07:37:39.370Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T07:37:39.420Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T07:37:39.421Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T07:37:39.423Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":24.58,"timestamp":"2026-08-26T07:37:41.578Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T07:38:12.403Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T07:38:12.409Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T07:38:12.483Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T07:38:12.485Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T07:38:12.489Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":24.58,"timestamp":"2026-08-26T07:38:14.688Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T07:39:08.008Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T07:39:08.026Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T07:39:08.091Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T07:39:08.092Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T07:39:08.094Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":24.58,"timestamp":"2026-08-26T07:39:10.344Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T07:58:14.392Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T08:28:18.689Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:36:38.282Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:36:38.332Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:36:38.510Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:36:38.534Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:36:38.571Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:36:40.948Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:37:09.387Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:37:09.398Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:37:09.520Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:37:09.523Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:37:09.527Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:37:12.001Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:37:42.426Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:37:42.438Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:37:42.521Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:37:42.524Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:37:42.529Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:37:44.797Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:38:17.787Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:38:17.798Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:38:17.860Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:38:17.865Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:38:17.867Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:38:19.992Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:38:53.247Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:38:53.255Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:38:53.304Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:38:53.305Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:38:53.307Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:38:55.351Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:39:21.430Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:39:21.439Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:39:21.507Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:39:21.508Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:39:21.511Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:39:23.866Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:39:38.147Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:39:38.153Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:39:38.200Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:39:38.201Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:39:38.203Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:39:40.484Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:41:26.170Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:41:26.183Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:41:26.242Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:41:26.243Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:41:26.245Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:41:28.467Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-08-26T08:42:01.066Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-08-26T08:42:01.071Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-08-26T08:42:01.121Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-08-26T08:42:01.122Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-08-26T08:42:01.124Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":23.58,"timestamp":"2026-08-26T08:42:03.284Z"}
+{"athenaCredits":370,"deckId":"cmt9ulais0000y8vq3s5qssel","estimateAc":286,"feature":"ppt_outline","inputTokens":2366,"level":"info","message":"presentation_credit_openai_vs_ac","mode":"reconcile","openaiUsd":0.026373,"outputTokens":1285,"timestamp":"2026-08-26T08:44:52.324Z"}
+{"athenaCredits":2,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0003y8vqecv18ysa","timestamp":"2026-08-26T08:45:28.669Z"}
+{"athenaCredits":2,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0002y8vqrg5plg9a","timestamp":"2026-08-26T08:45:30.913Z"}
+{"attempt":1,"issues":[{"path":"agenda.columns","repairable":true,"rule":"required_structured"}],"layoutId":"agenda_three_columns_hero_v1","level":"warn","message":"presentation_slide_qa_issues","slideId":"cmt9um95w0003y8vqecv18ysa","timestamp":"2026-08-26T08:45:32.071Z"}
+{"athenaCredits":2,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0005y8vqnepfw87r","timestamp":"2026-08-26T08:45:32.289Z"}
+{"athenaCredits":2,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0004y8vqk5459kzp","timestamp":"2026-08-26T08:45:32.696Z"}
+{"athenaCredits":4,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0002y8vqrg5plg9a","timestamp":"2026-08-26T08:46:03.971Z"}
+{"athenaCredits":4,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0003y8vqecv18ysa","timestamp":"2026-08-26T08:46:06.930Z"}
+{"athenaCredits":2,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_slide_content","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0006y8vqprrpyjt9","timestamp":"2026-08-26T08:46:36.951Z"}
+{"athenaCredits":4,"deckId":"cmt9ulais0000y8vq3s5qssel","feature":"ppt_image_path_a","level":"info","message":"presentation_credit_openai_vs_ac","mode":"flat","openaiUsd":0,"slideId":"cmt9um95w0006y8vqprrpyjt9","timestamp":"2026-08-26T08:47:12.479Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T09:39:49.370Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":22.58,"timestamp":"2026-08-26T09:42:03.192Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T09:43:00.394Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T09:46:14.377Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:10:47.552Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:10:47.554Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:10:47.555Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:10:47.556Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:10:47.562Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:33:45.388Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:33:45.392Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:33:45.394Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:33:45.399Z"}
+{"level":"error","message":"Error: read ECONNRESET\n    at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20)","timestamp":"2026-08-26T10:33:45.401Z"}
+{"level":"error","message":"Error: Connection terminated unexpectedly\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async PrismaPgAdapter.performIO (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\adapter-pg\\dist\\index.js:652:22)\n    at async PrismaPgAdapter.queryRaw (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\adapter-pg\\dist\\index.js:602:30)\n    at async D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:24331\n    at async fr (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:24170)\n    at async e.interpretNode (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:42277)\n    at async e.interpretNode (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:42701)\n    at async e.interpretNode (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:43875)\n    at async e.run (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:11:41116)\n    at async e.execute (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:57:682)\n    at async Dt.request (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:58:2186)\n    at async Object.singleLoader (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:65:6569)\n    at async qr.request (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:65:7061)\n    at async a (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@prisma\\client\\runtime\\client.js:75:5816)\n    at async Object.countUnreadByUserId (D:\\Athena VS\\AthenaVI_backend\\src\\modules\\inbox\\inbox.dao.js:101:10)","timestamp":"2026-08-26T10:33:45.415Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":22.58,"timestamp":"2026-08-26T10:42:03.110Z"}
+{"level":"error","message":"TypeError: slideMedia.attachSlideAsset is not a function\n    at Object.attachSlideAsset (D:\\Athena VS\\AthenaVI_backend\\src\\modules\\presentation\\presentation.service.js:617:23)\n    at D:\\Athena VS\\AthenaVI_backend\\src\\modules\\presentation\\presentation.controller.js:380:42\n    at D:\\Athena VS\\AthenaVI_backend\\src\\shared\\utils\\asyncHandler.js:2:19\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:157:13)\n    at D:\\Athena VS\\AthenaVI_backend\\src\\middlewares\\validate.middleware.js:29:3\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:157:13)\n    at Route.dispatch (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\route.js:117:3)\n    at handle (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:435:11)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:295:15\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:600:14)\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:610:14)\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:610:14)\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:664:3)","timestamp":"2026-08-26T10:50:35.738Z"}
+{"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-08-26T11:28:56.363Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":22.58,"timestamp":"2026-08-26T11:42:03.529Z"}

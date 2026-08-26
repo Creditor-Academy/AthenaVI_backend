@@ -75,6 +75,19 @@ const searchIntentSchema = Joi.object({
   }),
 });
 
+const getIllustrationsFreeQuerySchema = Joi.object({
+  params: Joi.object().optional(),
+  body: Joi.object().optional(),
+  query: Joi.object({
+    kind: Joi.string().valid('illustration', 'icon').default('illustration'),
+    categoryId: Joi.string().trim().allow('').optional(),
+    packId: Joi.string().trim().allow('').optional(),
+    q: Joi.string().trim().allow('').optional(),
+    page: Joi.number().integer().min(1).optional(),
+    limit: Joi.number().integer().min(1).max(100).optional(),
+  }),
+});
+
 module.exports = {
   GRAPHIC_TYPES,
   COLOR_MODES,
@@ -84,4 +97,5 @@ module.exports = {
   updateGraphicSchema,
   listGraphicsQuerySchema,
   searchIntentSchema,
+  getIllustrationsFreeQuerySchema,
 };

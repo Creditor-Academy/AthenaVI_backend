@@ -121,6 +121,79 @@ function layoutImageSlotIds(slots) {
     .map((slot) => String(slot.id || ''));
 }
 
+function slideCopyCorpus(content = {}) {
+  const parts = [];
+  const push = (v) => {
+    const s = String(v || '').trim();
+    if (s) parts.push(s);
+  };
+  push(content.body);
+  push(content.summary);
+  push(content.subtitle);
+  push(content.left_body);
+  push(content.right_body);
+  for (const col of content.columns || content.cards || content.features || content.items || []) {
+    if (typeof col === 'string') push(col);
+    else if (col && typeof col === 'object') {
+      push(col.body);
+      push(col.text);
+      push(col.description);
+    }
+  }
+  for (const b of content.bullets || []) {
+    if (typeof b === 'string') push(b);
+    else if (b && typeof b === 'object') push(b.text || b.body || b.description);
+  }
+  return parts;
+}
+
+function imagePromptEchoesCopy(prompt, content = {}) {
+  const p = String(prompt || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (p.length < 36) return false;
+  for (const body of slideCopyCorpus(content)) {
+    const normalized = String(body).toLowerCase().replace(/\s+/g, ' ').trim();
+    if (normalized.length < 28) continue;
+    const words = normalized.split(/\s+/).filter(Boolean);
+    if (words.length < 6) continue;
+    for (let i = 0; i <= words.length - 6; i += 1) {
+      const ngram = words.slice(i, i + 6).join(' ');
+      if (p.includes(ngram)) return true;
+    }
+  }
+  return false;
+}
+
+function shortVisualPhrase(text, maxWords = 8) {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  const beforeBreak = raw.split(/[:—–|]/)[0].trim();
+  const source = beforeBreak && beforeBreak.split(/\s+/).filter(Boolean).length >= 2 ? beforeBreak : raw;
+  return source.split(/\s+/).filter(Boolean).slice(0, Math.max(2, maxWords)).join(' ');
+}
+
+function visualSubjectForSlot(slotId, content = {}) {
+  const id = String(slotId || '');
+  const cols = content.columns || content.cards || content.features || content.items || [];
+  let idx = null;
+  let m = id.match(/^COL_(\d+)_IMAGE$/i);
+  if (m) idx = Number(m[1]) - 1;
+  m = id.match(/^(?:GRID_)?IMAGE_(\d+)$/i);
+  if (m) idx = Number(m[1]) - 1;
+  m = id.match(/^METRIC_IMAGE_(\d+)$/i);
+  if (m) idx = Number(m[1]) - 1;
+  if (idx != null && cols[idx] && typeof cols[idx] === 'object') {
+    const title = String(cols[idx].title ?? cols[idx].heading ?? cols[idx].label ?? '').trim();
+    if (title) return shortVisualPhrase(title, 8);
+  }
+  return (
+    shortVisualPhrase(content.visual || content.title || content.summary || 'presentation topic', 10) ||
+    'presentation topic'
+  );
+}
+
 function layoutNeedsComparison(slots) {
   return slots.some(
     (s) => /^(left|right)_/i.test(String(s.id || '')) || /^(pros|cons)$/i.test(String(s.id || ''))
@@ -219,6 +292,34 @@ function validateStructuredFields(content, layoutSchema, issues) {
         }
         seen.set(url, slotId);
       }
+    }
+  }
+
+  if (imageSlotIds.length >= 1) {
+    const prompts =
+      content?.imagePrompts && typeof content.imagePrompts === 'object' ? { ...content.imagePrompts } : {};
+    let rewritten = false;
+    for (const slotId of imageSlotIds) {
+      const key =
+        (prompts[slotId] != null && slotId) ||
+        (prompts[slotId.toUpperCase()] != null && slotId.toUpperCase()) ||
+        (prompts[String(slotId).toLowerCase()] != null && String(slotId).toLowerCase()) ||
+        null;
+      if (!key) continue;
+      const prompt = String(prompts[key] || '').trim();
+      if (!prompt || !imagePromptEchoesCopy(prompt, content)) continue;
+      issues.push({ path: `imagePrompts.${key}`, rule: 'image_prompt_echoes_copy', repairable: true });
+      prompts[key] = visualSubjectForSlot(slotId, content);
+      rewritten = true;
+    }
+    if (rewritten && content && typeof content === 'object') {
+      content.imagePrompts = prompts;
+    }
+
+    const single = String(content?.imagePrompt || '').trim();
+    if (single && imagePromptEchoesCopy(single, content)) {
+      issues.push({ path: 'imagePrompt', rule: 'image_prompt_echoes_copy', repairable: true });
+      content.imagePrompt = visualSubjectForSlot(imageSlotIds[0], content);
     }
   }
 
