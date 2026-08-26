@@ -5,6 +5,7 @@ const { validateSvgBuffer } = require('./svgValidate.service');
 const { searchGraphics } = require('./graphics.search');
 const { newElementId } = require('../presentation/layoutToElements');
 const { MAX_ELEMENTS_PER_SLIDE } = require('../presentation/presentation.constants');
+const svglClient = require('./svgl.client');
 
 function parseStringList(value) {
   if (Array.isArray(value)) {
@@ -285,6 +286,9 @@ function pickCornerPlacement(canvas = {}, index = 0) {
 const LIST_ICON_SLOT_RE = /^(BULLET|ITEM)_\d+$/i;
 const LIST_CARD_TITLE_RE = /^CARD_\d+_TITLE$/i;
 const LIST_ROW_TITLE_RE = /^ROW_\d+_TITLE$/i;
+const LIST_STEP_TITLE_RE = /^(STEP|step)_\d+_TITLE$/i;
+const LIST_COL_TITLE_RE = /^COL_\d+_TITLE$/i;
+const LIST_IMAGE_LABEL_RE = /^IMAGE_\d+_LABEL$/i;
 const LIST_ICON_SIZE = 48;
 const LIST_ICON_GAP = 16;
 
@@ -293,17 +297,37 @@ function slotIndexFromId(slotId) {
   return m ? Number(m[1]) : 0;
 }
 
+function isListIconTitleSlot(slotId) {
+  const sid = String(slotId || '');
+  return (
+    LIST_ICON_SLOT_RE.test(sid) ||
+    LIST_CARD_TITLE_RE.test(sid) ||
+    LIST_ROW_TITLE_RE.test(sid) ||
+    LIST_STEP_TITLE_RE.test(sid) ||
+    LIST_COL_TITLE_RE.test(sid) ||
+    LIST_IMAGE_LABEL_RE.test(sid)
+  );
+}
+
 function findListIconTargets(elementsDoc) {
   const elements = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
   const targets = elements
     .filter((el) => {
       if (!el || (el.type !== 'text' && el.type !== 'textbox')) return false;
-      const sid = String(el.slotId || '');
-      return LIST_ICON_SLOT_RE.test(sid) || LIST_CARD_TITLE_RE.test(sid) || LIST_ROW_TITLE_RE.test(sid);
+      return isListIconTitleSlot(el.slotId);
     })
     .sort((a, b) => slotIndexFromId(a.slotId) - slotIndexFromId(b.slotId));
 
   return targets.slice(0, 5);
+}
+
+function textFromTargetElement(el) {
+  const c = el?.content || {};
+  if (typeof c.text === 'string' && c.text.trim()) return c.text.trim();
+  if (Array.isArray(c.runs) && c.runs.length) {
+    return c.runs.map((r) => String(r?.text || '')).join('').trim();
+  }
+  return '';
 }
 
 function listItemTexts(content = {}) {
@@ -351,11 +375,14 @@ function pickListIconPlacement(textEl, canvas = {}) {
   const textH = Number(p.height) || size;
   const sid = String(textEl?.slotId || '');
 
-  // Card/row titles: sit icon above the title inside the column
-  if (/^(CARD|ROW)_\d+_TITLE$/i.test(sid)) {
-    let x = textX + Math.max(0, (textW - size) / 2);
-    let y = Math.max(8, textY - size - 8);
-    if (y < 8) y = textY + 4;
+  // Card / col / image-label titles: icon to the LEFT of the title (not up into the photo)
+  if (/^(CARD|COL|ROW|STEP)_\d+_TITLE$/i.test(sid) || LIST_IMAGE_LABEL_RE.test(sid)) {
+    let x = textX;
+    let y = textY + Math.max(0, (textH - size) / 2);
+    // If title box is wide, keep icon in the left padding of the column
+    if (textW > size + 24) {
+      x = textX;
+    }
     x = Math.max(8, Math.min(x, canvasW - size - 8));
     y = Math.max(8, Math.min(y, canvasH - size - 8));
     return {
@@ -384,46 +411,71 @@ function pickListIconPlacement(textEl, canvas = {}) {
 }
 
 async function pickIconForBullet(bulletText, themeTokens, usedIds) {
-  const keywords = tokenizeBullet(bulletText);
-  const style = themeTokens?.style || themeTokens?.vibe || '';
-  const mood = themeTokens?.mood || '';
-  const usageFallbacks = ['bullet', 'list', 'content', 'editor'];
+  const appearance =
+    themeTokens?.appearance === 'dark' || themeTokens?.appearance === 'light'
+      ? themeTokens.appearance
+      : 'light';
 
-  for (const usage of usageFallbacks) {
-    const matches = await searchPublished(
+  // 1) SVGL only when point text confidently names a brand
+  try {
+    const brand = await svglClient.findBrandGraphic(bulletText, { appearance, usedIds });
+    if (brand?.fileUrl) return brand;
+  } catch {
+    /* fall through to Graphics Library */
+  }
+
+  // 2) Graphics Library list/bullet icons (non-brand)
+  try {
+    const keywords = tokenizeBullet(bulletText);
+    const style = themeTokens?.style || themeTokens?.vibe || '';
+    const mood = themeTokens?.mood || '';
+    const usageFallbacks = ['bullet', 'list', 'content', 'editor'];
+
+    for (const usage of usageFallbacks) {
+      const matches = await searchPublished(
+        {
+          keywords: keywords.length ? keywords : ['icon'],
+          style,
+          mood,
+          preferredType: 'icon',
+          usage,
+          maxCount: 6,
+        },
+        themeTokens
+      );
+      const fresh = matches.find((g) => g?.id && !usedIds.has(g.id));
+      if (fresh) return fresh;
+      if (matches[0] && !usedIds.size) return matches[0];
+    }
+
+    const anyIcons = await searchPublished(
       {
         keywords: keywords.length ? keywords : ['icon'],
-        style,
-        mood,
         preferredType: 'icon',
-        usage,
-        maxCount: 6,
+        maxCount: 8,
       },
       themeTokens
     );
-    const fresh = matches.find((g) => g?.id && !usedIds.has(g.id));
-    if (fresh) return fresh;
-    if (matches[0] && !usedIds.size) return matches[0];
+    return anyIcons.find((g) => g?.id && !usedIds.has(g.id)) || anyIcons[0] || null;
+  } catch {
+    return null;
   }
-
-  // Last resort: any published icon
-  const anyIcons = await searchPublished(
-    {
-      keywords: keywords.length ? keywords : ['icon'],
-      preferredType: 'icon',
-      maxCount: 8,
-    },
-    themeTokens
-  );
-  return anyIcons.find((g) => g?.id && !usedIds.has(g.id)) || anyIcons[0] || null;
 }
 
 async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTokens = null) {
-  const items = listItemTexts(content);
-  if (items.length < 2 || items.length >= 6) return { doc: elementsDoc, added: 0 };
-
   const targets = findListIconTargets(elementsDoc);
   if (targets.length < 2) return { doc: elementsDoc, added: 0 };
+
+  // Prefer live canvas title text (what the user sees) over content.columns/bullets,
+  // which are often empty or misaligned on image+text card layouts.
+  const pointTexts = targets.map((el, i) => textFromTargetElement(el) || bulletTextAt(content, i));
+  const namedCount = pointTexts.filter((t) => String(t || '').trim().length >= 2).length;
+  if (namedCount < 2) {
+    const fromContent = listItemTexts(content);
+    if (fromContent.length < 2 || fromContent.length >= 6) {
+      return { doc: elementsDoc, added: 0 };
+    }
+  }
 
   const doc =
     elementsDoc && typeof elementsDoc === 'object'
@@ -434,22 +486,55 @@ async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTo
         }
       : { version: 1, canvas: { width: 1920, height: 1080 }, elements: [] };
 
+  // Avoid duplicating icons on regenerate
+  if (doc.elements.some((el) => el.type === 'graphic' && /^LIST_ICON_/i.test(String(el.slotId || '')))) {
+    return { doc: elementsDoc, added: 0 };
+  }
+
   const palette = themeTokens?.palette || {};
   const usedIds = new Set();
   let added = 0;
-  const take = Math.min(targets.length, items.length, 5);
+  const take = Math.min(targets.length, 5);
 
   for (let i = 0; i < take; i += 1) {
     if (doc.elements.length >= MAX_ELEMENTS_PER_SLIDE) break;
     const textEl = targets[i];
-    const graphic = await pickIconForBullet(bulletTextAt(content, i), themeTokens, usedIds);
+    const pointText = pointTexts[i] || bulletTextAt(content, i);
+    if (!String(pointText || '').trim()) continue;
+
+    let graphic = null;
+    try {
+      graphic = await pickIconForBullet(pointText, themeTokens, usedIds);
+    } catch {
+      continue;
+    }
     if (!graphic?.fileUrl) continue;
     usedIds.add(graphic.id);
+
+    const placement = pickListIconPlacement(textEl, doc.canvas);
+    // Nudge title text right when icon sits on the left of a card/col title
+    const sid = String(textEl.slotId || '');
+    if (/^(CARD|COL|ROW|STEP)_\d+_TITLE$/i.test(sid) || LIST_IMAGE_LABEL_RE.test(sid)) {
+      const elIdx = doc.elements.findIndex((e) => e.id === textEl.id || e.slotId === textEl.slotId);
+      if (elIdx >= 0 && doc.elements[elIdx]?.placement) {
+        const tp = doc.elements[elIdx].placement;
+        const shift = LIST_ICON_SIZE + LIST_ICON_GAP;
+        doc.elements[elIdx] = {
+          ...doc.elements[elIdx],
+          placement: {
+            ...tp,
+            x: Math.round((tp.x || 0) + shift),
+            width: Math.max(40, (tp.width || 100) - shift),
+          },
+        };
+      }
+    }
+
     doc.elements.push({
       id: newElementId('graphic'),
       type: 'graphic',
       layer: Math.max(3, (textEl.layer || 10) - 1),
-      placement: pickListIconPlacement(textEl, doc.canvas),
+      placement,
       content: {
         assetId: graphic.id,
         src: graphic.fileUrl,
@@ -457,6 +542,7 @@ async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTo
         previewUrl: graphic.previewUrl,
         s3Key: graphic.s3Key || undefined,
         colorMode: graphic.colorMode,
+        source: graphic.source || 'library',
         colorOverrides:
           graphic.colorMode === 'recolorable'
             ? { primary: palette.primary || palette.accent || true }
@@ -512,17 +598,28 @@ function injectGraphicsIntoElementsDoc(elementsDoc, graphics = [], { themeTokens
 }
 
 async function maybeInjectSlideGraphics(elementsDoc, { content, visualNeed, themeTokens, layoutId } = {}) {
-  // 1) Prefer Graphics Library icons on list/card column titles
+  const lid = String(layoutId || '').toLowerCase();
+  const ct = String(
+    content?.content_type || content?.contentType || content?.type || ''
+  ).toLowerCase();
+  const isStructuralSlide =
+    ['title', 'closing', 'section_divider', 'agenda', 'quote'].includes(ct) ||
+    /^(title_|closing_|section_|quote_|agenda_)/.test(lid) ||
+    /title_centered|title_minimal|title_statement|closing_|thank.?you/i.test(lid);
+
+  // Icons only on list/card points — never on hero/closing/section/quote
+  if (isStructuralSlide) return elementsDoc;
+
+  // 1) List/card column icons (SVGL brand logos when named; else Graphics Library)
   try {
     const listResult = await injectListIconsIntoElementsDoc(elementsDoc, content || {}, themeTokens);
     if (listResult.added > 0) return listResult.doc;
   } catch {
-    /* fall through to corner decorations */
+    /* no corner fallback */
   }
 
-  // Card / multi-column layouts: still try icons even if content used atypical keys
-  const lid = String(layoutId || '').toLowerCase();
-  if (/card|para|column|grid|bullet_list/i.test(lid)) {
+  // Card / multi-column layouts: still try icons when content used atypical keys
+  if (/card|para|column|grid|bullet_list|timeline|process|diagram_process/i.test(lid)) {
     try {
       const targets = findListIconTargets(elementsDoc);
       if (targets.length >= 2) {
@@ -537,34 +634,12 @@ async function maybeInjectSlideGraphics(elementsDoc, { content, visualNeed, them
         if (retry.added > 0) return retry.doc;
       }
     } catch {
-      /* fall through */
+      /* ignore */
     }
   }
 
-  // 2) Otherwise corner decorative accents
-  const need = deriveGraphicNeed({
-    content,
-    elements: elementsDoc?.elements,
-    visualNeed,
-  });
-  if (need === 'none') return elementsDoc;
-
-  const keywords = tokenizeSlide(content);
-  const maxCount = need === 'recommended' ? 2 : 1;
-  const matches = await searchPublished(
-    {
-      keywords,
-      style: themeTokens?.style || themeTokens?.vibe || '',
-      mood: themeTokens?.mood || '',
-      preferredType: 'decorative',
-      usage: 'corner',
-      maxCount,
-    },
-    themeTokens
-  );
-
-  if (!matches.length) return elementsDoc;
-  return injectGraphicsIntoElementsDoc(elementsDoc, matches, { themeTokens, layoutId });
+  // No corner decorative accents — icons are list/point only
+  return elementsDoc;
 }
 
 function tokenizeSlide(content = {}) {

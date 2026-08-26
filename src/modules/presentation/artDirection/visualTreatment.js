@@ -11,7 +11,8 @@ function designTokensForVisualRole({ visualRole = 'text', appearance = 'light' }
 
   if (visualRole === 'closing') {
     return {
-      backgroundStyle: isDark ? 'split' : 'solid',
+      // Prefer solid stage fill in dark mode so closing never renders as an empty black field
+      backgroundStyle: 'solid',
       overlayOpacity: isDark ? 0.35 : 0.2,
       textContrast: 'normal',
     };

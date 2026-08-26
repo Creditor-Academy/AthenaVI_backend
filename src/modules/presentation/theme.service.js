@@ -11,6 +11,21 @@ const SAFE_BG_BY_APPEARANCE = {
   light: { bg: '#FFFFFF', surface: '#F8FAFC', gradientStart: '#FFFFFF', gradientEnd: '#F8FAFC' },
   dark: { bg: '#0B1220', surface: '#121A2B', gradientStart: '#0B1220', gradientEnd: '#121A2B' },
 };
+/** Readable ink roles so dark decks never keep light-theme espresso text (and vice versa). */
+const SAFE_INK_BY_APPEARANCE = {
+  light: {
+    text: '#0F172A',
+    muted: '#64748B',
+    heading: '#0F172A',
+    textOnImage: '#FFFFFF',
+  },
+  dark: {
+    text: '#F8FAFC',
+    muted: '#94A3B8',
+    heading: '#F8FAFC',
+    textOnImage: '#FFFFFF',
+  },
+};
 
 function listThemes() {
   return catalog.map((theme) => ({
@@ -34,25 +49,62 @@ function luminanceMatchesAppearance(hex, appearance) {
   return lum >= APPEARANCE_LUM_THRESHOLD;
 }
 
+function inkMatchesAppearance(hex, appearance) {
+  const lum = relativeLuminance(hex);
+  if (lum == null) return true;
+  // Dark appearance needs light ink; light appearance needs dark ink.
+  if (appearance === 'dark') return lum >= APPEARANCE_LUM_THRESHOLD;
+  return lum < APPEARANCE_LUM_THRESHOLD;
+}
+
 /**
- * Ensure palette bg/surface/gradients match declared appearance (light never uses dark bg).
+ * Ensure palette bg/surface/gradients and text ink match declared appearance.
+ * When appearance is dark and paletteDark exists (brand kit), merge those roles first.
  */
 function enforceAppearancePalette(themeTokens) {
   if (!themeTokens?.palette || typeof themeTokens.palette !== 'object') return themeTokens;
-  const palette = { ...themeTokens.palette };
   const appearance =
     themeTokens.appearance === 'dark' || themeTokens.appearance === 'light'
       ? themeTokens.appearance
-      : appearanceFromBg(palette.bg);
-  const safe = SAFE_BG_BY_APPEARANCE[appearance] || SAFE_BG_BY_APPEARANCE.light;
+      : appearanceFromBg(themeTokens.palette.bg);
+
+  let palette = { ...themeTokens.palette };
+  if (appearance === 'dark' && themeTokens.paletteDark && typeof themeTokens.paletteDark === 'object') {
+    palette = {
+      ...palette,
+      ...themeTokens.paletteDark,
+      // Keep brand accents from the active palette when dark kit omits them
+      primary: themeTokens.paletteDark.primary || palette.primary,
+      secondary: themeTokens.paletteDark.secondary || palette.secondary,
+      accent: themeTokens.paletteDark.accent || palette.accent,
+    };
+  }
+
+  const safeBg = SAFE_BG_BY_APPEARANCE[appearance] || SAFE_BG_BY_APPEARANCE.light;
+  const safeInk = SAFE_INK_BY_APPEARANCE[appearance] || SAFE_INK_BY_APPEARANCE.light;
 
   for (const key of ['bg', 'surface', 'gradientStart', 'gradientEnd']) {
-    if (palette[key] && !luminanceMatchesAppearance(palette[key], appearance)) {
-      palette[key] = safe[key] || safe.bg;
+    if (!palette[key] || !luminanceMatchesAppearance(palette[key], appearance)) {
+      palette[key] = safeBg[key] || safeBg.bg;
     }
   }
-  if (!palette.gradientStart) palette.gradientStart = palette.bg || safe.bg;
-  if (!palette.gradientEnd) palette.gradientEnd = palette.surface || safe.surface;
+  if (!palette.gradientStart) palette.gradientStart = palette.bg || safeBg.bg;
+  if (!palette.gradientEnd) palette.gradientEnd = palette.surface || safeBg.surface;
+
+  for (const key of ['text', 'muted', 'heading']) {
+    if (!palette[key] || !inkMatchesAppearance(palette[key], appearance)) {
+      palette[key] = safeInk[key];
+    }
+  }
+  if (!palette.textOnImage || !inkMatchesAppearance(palette.textOnImage, 'dark')) {
+    // textOnImage is always light ink (for photos/scrims)
+    palette.textOnImage = SAFE_INK_BY_APPEARANCE.dark.textOnImage;
+  }
+
+  // cardBg / surface accents: keep readable vs bg
+  if (palette.cardBg && !luminanceMatchesAppearance(palette.cardBg, appearance)) {
+    palette.cardBg = appearance === 'dark' ? '#1E293B' : '#F1F5F9';
+  }
 
   return { ...themeTokens, appearance, palette };
 }

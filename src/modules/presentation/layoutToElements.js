@@ -1620,7 +1620,10 @@ function isAiOnlyShapeSlot(slot) {
   const role = String(slot.role || '').toLowerCase();
   if (/^METRIC_CARD_\d+_BG$/.test(id)) return false;
   if (/^CARD_\d+_BG$/i.test(id)) return false;
+  if (/^MILESTONE_\d+_CARD_BG$/i.test(id)) return false;
   if (/^TEXT_HALF_BG$/i.test(id)) return false;
+  // Process step circles compile to real canvas nodes
+  if (/^STEP_\d+_CIRCLE$/i.test(id) || slot.shapeHint?.kind === 'stepCircle') return false;
   if (/FRAME$/i.test(id) && slot.shapeHint?.pairsWithSlotId) return true;
   if (slot.aiOnly === true) return true;
   if (slot.shapeHint?.aiOnly) return true;
@@ -1919,7 +1922,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
     return doc;
   }
 
-  if (!hasBg && (designTokens?.backgroundStyle === 'gradient' || designTokens?.backgroundStyle === 'solid')) {
+  if (!hasBg && (designTokens?.backgroundStyle === 'gradient' || designTokens?.backgroundStyle === 'solid' || designTokens?.backgroundStyle === 'split')) {
     const fill =
       designTokens.backgroundStyle === 'gradient'
         ? {
@@ -1939,6 +1942,7 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
             ],
           }
         : {
+            // solid + split both get an explicit stage fill (split without bg looked empty in dark mode)
             type: 'solid',
             color: palette.bg || defaultBg,
             colorRole: 'bg',
@@ -2020,10 +2024,10 @@ function applySlideDesignTokens(elementsDoc, designTokens, themeTokens = {}) {
   }
 
   if (designTokens.overlayOpacity > 0 && designTokens.backgroundStyle === 'image') {
-    // Scrim only meaningful when an image is present; finalizeElementsDoc also gates this.
-    // Never force a dark overlay chrome on light solid decks without image.
-    if (appearance === 'light' && !docHasLoadedOverlayImage(doc)) {
-      // skip overlay for light appearance without loaded image
+    // Scrim only when an image is present — never force a dark veil on empty stages
+    // (same gate for light and dark; previously dark still injected and looked blank).
+    if (!docHasLoadedOverlayImage(doc)) {
+      // skip
     } else {
     const scrimColor =
       palette.overlayScrim ||
@@ -2088,7 +2092,11 @@ function layoutSlotsToElements(
     const role = String(slot.role || '').toLowerCase();
     const slotLayer = slot.layer != null ? Number(slot.layer) : layer++;
 
-    if (/^METRIC_CARD_\d+_BG$/.test(String(slotId)) || /^CARD_\d+_BG$/i.test(String(slotId))) {
+    if (
+      /^METRIC_CARD_\d+_BG$/.test(String(slotId)) ||
+      /^CARD_\d+_BG$/i.test(String(slotId)) ||
+      /^MILESTONE_\d+_CARD_BG$/i.test(String(slotId))
+    ) {
       const fill = resolveFill(slot.shape || { fillColorRole: 'cardBg' }, palette);
       elements.push({
         id: newElementId('shp'),
@@ -2105,6 +2113,61 @@ function layoutSlotsToElements(
         role: 'decoration',
       });
       if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
+      continue;
+    }
+
+    if (/^STEP_\d+_CIRCLE$/i.test(String(slotId)) || slot.shapeHint?.kind === 'stepCircle') {
+      const fill = resolveFill(slot.shape || { fillColorRole: 'accent' }, palette);
+      const size = Math.min(placement.width || 80, placement.height || 80, 64);
+      const cx = (placement.x ?? 0) + (placement.width || size) / 2;
+      const cy = (placement.y ?? 0) + (placement.height || size) / 2;
+      elements.push({
+        id: newElementId('shp'),
+        slotId,
+        type: 'shape',
+        layer: slotLayer,
+        placement: {
+          x: Math.round(cx - size / 2),
+          y: Math.round(cy - size / 2),
+          width: size,
+          height: size,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'ellipse',
+          fill,
+          layoutSurface: true,
+        },
+        role: 'decoration',
+      });
+      const stepNum = String(slotId).match(/(\d+)/)?.[1] || '';
+      if (stepNum) {
+        elements.push({
+          id: newElementId('txt'),
+          slotId: `${slotId}_NUM`,
+          type: 'text',
+          layer: slotLayer + 1,
+          placement: {
+            x: Math.round(cx - size / 2),
+            y: Math.round(cy + size / 2 + 4),
+            width: size,
+            height: 28,
+            rotation: 0,
+            opacity: 1,
+          },
+          content: {
+            text: String(stepNum),
+            align: 'center',
+            fontSize: 16,
+            fontWeight: 700,
+            colorRole: 'text',
+            color: paletteColor(palette, 'text', null),
+          },
+          role: 'caption',
+        });
+      }
+      if (slot.layer == null) layer = Math.max(layer, slotLayer + 2);
       continue;
     }
 
@@ -2859,6 +2922,8 @@ function cardGroupKey(slotId) {
   if (m) return `milestone_${m[1]}`;
   m = id.match(/^step_(\d+)_(title|body)$/i);
   if (m) return `step_${m[1]}`;
+  m = id.match(/^STEP_(\d+)_(TITLE|BODY)$/);
+  if (m) return `step_${m[1]}`;
   m = id.match(/^CARD_(\d+)_(TITLE|BODY)$/i);
   if (m) return `card_${m[1]}`;
   m = id.match(/^ROW_(\d+)_(TITLE|BODY)$/i);
@@ -2876,14 +2941,17 @@ function cardGroupKey(slotId) {
 
 function layoutHasExplicitCardBg(layoutSchema, groupKey) {
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  const m = String(groupKey || '').match(/^(card|row|bullet|item)_(\d+)$/i);
+  const m = String(groupKey || '').match(/^(card|row|bullet|item|milestone|step)_(\d+)$/i);
   if (!m) return false;
+  const kind = m[1].toLowerCase();
   const n = m[2];
   return slots.some((s) => {
     const id = String(s.id || '');
     return (
       new RegExp(`^CARD_${n}_BG$`, 'i').test(id) ||
-      new RegExp(`^${m[1]}_${n}_BG$`, 'i').test(id)
+      new RegExp(`^${kind}_${n}_BG$`, 'i').test(id) ||
+      new RegExp(`^MILESTONE_${n}_CARD_BG$`, 'i').test(id) ||
+      new RegExp(`^STEP_${n}_CIRCLE$`, 'i').test(id)
     );
   });
 }
@@ -2902,9 +2970,10 @@ function isCardBackgroundElement(el) {
   if (!el || el.type !== 'shape') return false;
   const sid = String(el.slotId || '');
   if (/^(CARD|ROW)_\d+_BG$/i.test(sid)) return true;
+  if (/^MILESTONE_\d+_CARD_BG$/i.test(sid)) return true;
   if (/^AUTO_CARD_BG_/i.test(sid)) return true;
   if (/__(?:shape_bg)$/i.test(sid) && cardGroupKey(sid.replace(/__shape_bg$/i, ''))) return true;
-  return Boolean(el.content?.layoutSurface && /card|row|bullet|item/i.test(sid));
+  return Boolean(el.content?.layoutSurface && /card|row|bullet|item|milestone/i.test(sid));
 }
 
 /** Separate overlapping/abutting card boxes with a gap and keep clear of slide edges. */
@@ -2944,8 +3013,12 @@ function separateCardBoxes(boxes, canvas, { edgeInset = 56, gap = 24 } = {}) {
   });
 }
 
-function centerMultiCardHeading(doc, cardGroupCount) {
+function centerMultiCardHeading(doc, cardGroupCount, layoutSchema = null) {
   if (!doc || cardGroupCount < 2) return doc;
+  const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
+  // Timeline / process layouts keep schema align (typically left) — don't force center
+  if (/timeline|process_linear|diagram_process|process_steps/.test(layoutId)) return doc;
+
   const canvasW = doc.canvas?.width || 1920;
   const edgeInset = 56;
   const elements = (doc.elements || []).map((el) => {
@@ -2956,7 +3029,7 @@ function centerMultiCardHeading(doc, cardGroupCount) {
       sid === 'HEADING' ||
       sid === 'TITLE' ||
       sid === 'MAIN_TITLE' ||
-      (role === 'heading' && !/^(CARD_|ROW_|BULLET_|ITEM_|COL_)/i.test(sid));
+      (role === 'heading' && !/^(CARD_|ROW_|BULLET_|ITEM_|COL_|STEP_|MILESTONE_)/i.test(sid));
     if (!isMainHeading) return el;
     const p = el.placement || {};
     return {
@@ -3141,6 +3214,7 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
 
   const pendingBoxes = [];
   for (const [key, groupSlots] of groups.entries()) {
+    if (elements.some((el) => String(el.slotId || '') === `AUTO_CARD_BG_${key}`)) continue;
     const targetIds = groupSlots.map((s) => s.id);
     if (targetIds.some((id) => decisions[id]?.behind === 'none')) continue;
     const placements = targetIds
@@ -3202,7 +3276,7 @@ function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas)
   let next = { ...doc, elements };
   next = refineExistingCardBackgrounds(next, canvas);
   next = splitOversizedCardBand(next, layoutSchema, themeTokens, canvas);
-  next = centerMultiCardHeading(next, Math.max(separated.length, schemaCardCount));
+  next = centerMultiCardHeading(next, Math.max(separated.length, schemaCardCount), layoutSchema);
   return next;
 }
 
@@ -3255,90 +3329,292 @@ function applySplitHeroDecorShape(doc, layoutSchema, themeTokens, canvas) {
   return { ...doc, elements };
 }
 
-function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, _canvas) {
+function isProcessFlowLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return (
+    /timeline/.test(id) ||
+    /process_linear/.test(id) ||
+    /diagram_process/.test(id) ||
+    /process_steps/.test(id) ||
+    /agenda_timeline/.test(id)
+  );
+}
+
+function findProcessAnchorElements(elements) {
+  const anchors = elements.filter((el) => {
+    if (el.type !== 'text' && el.type !== 'textbox') return false;
+    const sid = String(el.slotId || '');
+    return (
+      /^milestone_\d+_label$/i.test(sid) ||
+      /^milestone_\d+$/i.test(sid) ||
+      /^step_\d+_title$/i.test(sid) ||
+      /^STEP_\d+_TITLE$/i.test(sid)
+    );
+  });
+  return anchors.sort((a, b) => {
+    const ay = a.placement?.y ?? 0;
+    const by = b.placement?.y ?? 0;
+    const ax = a.placement?.x ?? 0;
+    const bx = b.placement?.x ?? 0;
+    // Prefer left-to-right; if clearly stacked vertically, top-to-bottom
+    if (Math.abs(ay - by) > 80) return ay - by;
+    return ax - bx;
+  });
+}
+
+function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {}) {
   if (!doc || !layoutSchema?.slots?.length) return doc;
   const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
-  if (!/timeline/.test(layoutId)) return doc;
+  if (!isProcessFlowLayout(layoutId)) return doc;
 
-  const elements = [...(doc.elements || [])];
+  // Idempotent — skip if flow chrome already injected
+  if ((doc.elements || []).some((el) => /^TIMELINE_(NODE|SEG|ARROW|SPINE)_/i.test(String(el.slotId || '')) || String(el.slotId || '') === 'TIMELINE_SPINE')) {
+    return doc;
+  }
+
+  // Skip if STEP circles already compiled (process_linear) — still add chevrons between them
+  let elements = [...(doc.elements || [])];
   const palette = themeTokens?.palette || {};
   const accent = paletteColor(palette, 'accent', paletteColor(palette, 'primary', '#6366F1'));
   const muted = paletteColor(palette, 'muted', '#94A3B8');
+  const textColor = paletteColor(palette, 'text', '#0F172A');
+  const canvasW = canvas.width || doc.canvas?.width || 1920;
+  const canvasH = canvas.height || doc.canvas?.height || 1080;
 
   const imageEls = elements.filter(
     (el) => el.type === 'image' && /^IMAGE_\d+$/i.test(String(el.slotId || ''))
   );
-  const labelEls = elements
-    .filter((el) => {
-      if (el.type !== 'text' && el.type !== 'textbox') return false;
-      return /^milestone_\d+_label$/i.test(String(el.slotId || '').toLowerCase());
-    })
-    .sort((a, b) => (a.placement?.x ?? 0) - (b.placement?.x ?? 0));
-
+  const labelEls = findProcessAnchorElements(elements);
   if (labelEls.length < 2) return doc;
 
-  const columnCenters = labelEls.map((el) => {
+  const isVertical = /timeline_vertical/.test(layoutId);
+  const NODE = 48;
+  const NUM_H = 22;
+
+  const centers = labelEls.map((el, i) => {
     const p = el.placement || {};
     return {
       x: (p.x ?? 0) + (p.width ?? 0) / 2,
       labelTop: p.y ?? 0,
+      labelBottom: (p.y ?? 0) + (p.height ?? 0),
+      index: i + 1,
+      slotId: el.slotId,
     };
   });
 
   let axisY;
   if (/timeline_milestones_image/.test(layoutId) && imageEls.length) {
     axisY =
-      Math.max(...imageEls.map((el) => (el.placement?.y ?? 0) + (el.placement?.height ?? 0))) + 12;
+      Math.max(...imageEls.map((el) => (el.placement?.y ?? 0) + (el.placement?.height ?? 0))) + 28;
+  } else if (isVertical) {
+    axisY = null;
   } else {
-    axisY = Math.min(...columnCenters.map((c) => c.labelTop)) - 20;
+    // Sit above card titles with room for node + number
+    axisY = Math.min(...centers.map((c) => c.labelTop)) - NODE - NUM_H - 12;
+    axisY = Math.max(72, axisY);
   }
 
-  const lineX1 = columnCenters[0].x;
-  const lineX2 = columnCenters[columnCenters.length - 1].x;
+  // Avoid duplicate nodes if STEP_*_CIRCLE already present
+  const hasStepCircles = elements.some((el) => /^STEP_\d+_CIRCLE$/i.test(String(el.slotId || '')));
 
-  elements.unshift({
-    id: newElementId('shp'),
-    type: 'shape',
-    layer: 0,
-    placement: {
-      x: lineX1,
-      y: axisY,
-      width: Math.max(40, lineX2 - lineX1),
-      height: 4,
-      rotation: 0,
-      opacity: 0.9,
-    },
-    content: {
-      shape: 'rect',
-      fill: { type: 'solid', color: muted, colorRole: 'muted' },
-      borderRadius: 2,
-      layoutSurface: true,
-    },
-    role: 'decoration',
-  });
-
-  columnCenters.forEach((c) => {
-    const dotSize = 14;
+  if (isVertical) {
+    const spineX = Math.min(...centers.map((c) => c.x)) - 36;
+    const y1 = centers[0].labelTop + 8;
+    const y2 = centers[centers.length - 1].labelTop + 8;
     elements.unshift({
       id: newElementId('shp'),
       type: 'shape',
-      layer: 3,
+      layer: 0,
       placement: {
-        x: c.x - dotSize / 2,
-        y: axisY - dotSize / 2 + 2,
-        width: dotSize,
-        height: dotSize,
+        x: Math.round(spineX - 1.5),
+        y: Math.round(y1),
+        width: 3,
+        height: Math.max(40, y2 - y1),
+        rotation: 0,
+        opacity: 0.95,
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', color: muted, colorRole: 'muted' },
+        borderRadius: 2,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: 'TIMELINE_SPINE',
+    });
+
+    centers.forEach((c) => {
+      const cy = c.labelTop + 10;
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: 3,
+        placement: {
+          x: Math.round(spineX - NODE / 2),
+          y: Math.round(cy - NODE / 2),
+          width: NODE,
+          height: NODE,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'ellipse',
+          fill: { type: 'solid', color: accent, colorRole: 'accent' },
+          layoutSurface: true,
+        },
+        role: 'decoration',
+        slotId: `TIMELINE_NODE_${c.index}`,
+      });
+      elements.unshift({
+        id: newElementId('txt'),
+        type: 'text',
+        layer: 4,
+        placement: {
+          x: Math.round(spineX - NODE / 2),
+          y: Math.round(cy + NODE / 2 + 2),
+          width: NODE,
+          height: NUM_H,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          text: String(c.index),
+          align: 'center',
+          fontSize: 14,
+          fontWeight: 700,
+          colorRole: 'text',
+          color: textColor,
+        },
+        role: 'caption',
+        slotId: `TIMELINE_NODE_NUM_${c.index}`,
+      });
+    });
+
+    return { ...doc, elements };
+  }
+
+  // Horizontal flowchart: thin segments + chevrons between nodes
+  if (!hasStepCircles) {
+    centers.forEach((c) => {
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: 3,
+        placement: {
+          x: Math.round(c.x - NODE / 2),
+          y: Math.round(axisY - NODE / 2),
+          width: NODE,
+          height: NODE,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'ellipse',
+          fill: { type: 'solid', color: accent, colorRole: 'accent' },
+          layoutSurface: true,
+        },
+        role: 'decoration',
+        slotId: `TIMELINE_NODE_${c.index}`,
+      });
+      elements.unshift({
+        id: newElementId('txt'),
+        type: 'text',
+        layer: 4,
+        placement: {
+          x: Math.round(c.x - NODE / 2),
+          y: Math.round(axisY + NODE / 2 + 2),
+          width: NODE,
+          height: NUM_H,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          text: String(c.index),
+          align: 'center',
+          fontSize: 14,
+          fontWeight: 700,
+          colorRole: 'text',
+          color: textColor,
+        },
+        role: 'caption',
+        slotId: `TIMELINE_NODE_NUM_${c.index}`,
+      });
+    });
+  }
+
+  // Segment + chevron between consecutive centers
+  for (let i = 0; i < centers.length - 1; i += 1) {
+    const a = centers[i];
+    const b = centers[i + 1];
+    const nodeR = hasStepCircles ? 32 : NODE / 2;
+    const x1 = a.x + nodeR + 4;
+    const x2 = b.x - nodeR - 4;
+    const segW = Math.max(8, x2 - x1);
+    const lineY = hasStepCircles
+      ? (() => {
+          const circle = elements.find(
+            (el) => String(el.slotId || '').toUpperCase() === `STEP_${i + 1}_CIRCLE`
+          );
+          if (circle?.placement) {
+            return (circle.placement.y ?? 0) + (circle.placement.height ?? 0) / 2;
+          }
+          return axisY;
+        })()
+      : axisY;
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: {
+        x: Math.round(x1),
+        y: Math.round(lineY - 1.5),
+        width: Math.round(segW),
+        height: 3,
+        rotation: 0,
+        opacity: 0.95,
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', color: muted, colorRole: 'muted' },
+        borderRadius: 2,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `TIMELINE_SEG_${i + 1}`,
+    });
+
+    const midX = (a.x + b.x) / 2;
+    const chevronSize = 18;
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 2,
+      placement: {
+        x: Math.round(midX - chevronSize / 2),
+        y: Math.round(lineY - chevronSize / 2),
+        width: chevronSize,
+        height: chevronSize,
         rotation: 0,
         opacity: 1,
       },
       content: {
-        shape: 'ellipse',
+        shape: 'chevron-right',
         fill: { type: 'solid', color: accent, colorRole: 'accent' },
         layoutSurface: true,
       },
       role: 'decoration',
+      slotId: `TIMELINE_ARROW_${i + 1}`,
     });
-  });
+  }
+
+  // Soft clamp axis nodes inside canvas
+  for (const el of elements) {
+    if (!el.placement) continue;
+    if (!/^TIMELINE_NODE/i.test(String(el.slotId || ''))) continue;
+    el.placement.x = Math.max(56, Math.min(el.placement.x, canvasW - (el.placement.width || NODE) - 56));
+    el.placement.y = Math.max(8, Math.min(el.placement.y, canvasH - (el.placement.height || NODE) - 8));
+  }
 
   return { ...doc, elements };
 }

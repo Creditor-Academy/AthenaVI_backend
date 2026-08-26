@@ -235,6 +235,8 @@ function namedPromptPalette(sourceText) {
 
 function biasPaletteFromSourceText(themeTokens, sourceText) {
   if (!themeTokens || typeof themeTokens !== 'object' || !themeTokens.palette) return themeTokens;
+  // Never overwrite a dark deck with the warm cream/espresso named palette
+  if (themeTokens.appearance === 'dark') return themeTokens;
   const named = namedPromptPalette(sourceText);
   if (!named) return themeTokens;
   return {

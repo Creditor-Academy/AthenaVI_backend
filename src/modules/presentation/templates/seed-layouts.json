@@ -11032,7 +11032,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_horizontal",
         "slots": {
           "HEADING": {
             "text": "Roadmap preview",
@@ -15338,7 +15338,7 @@
         },
         {
           "id": "milestone_1",
-          "region": "cols 2-3, rows 4-5",
+          "region": "cols 2-3, rows 5-6",
           "role": "body",
           "placeholder_text": "1. Milestone label",
           "layer": 10,
@@ -15353,7 +15353,7 @@
         },
         {
           "id": "milestone_2",
-          "region": "cols 4-5, rows 4-5",
+          "region": "cols 5-6, rows 5-6",
           "role": "body",
           "placeholder_text": "2. Milestone label",
           "layer": 10,
@@ -15368,7 +15368,7 @@
         },
         {
           "id": "milestone_3",
-          "region": "cols 6-7, rows 4-5",
+          "region": "cols 8-9, rows 5-6",
           "role": "body",
           "placeholder_text": "3. Milestone label",
           "layer": 10,
@@ -15383,7 +15383,7 @@
         },
         {
           "id": "milestone_4",
-          "region": "cols 8-9, rows 4-5",
+          "region": "cols 10-11, rows 5-6",
           "role": "body",
           "placeholder_text": "4. Milestone label",
           "layer": 10,
@@ -15398,7 +15398,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_horizontal",
         "slots": {
           "HEADING": {
             "text": "Timeline",
@@ -15462,7 +15462,7 @@
         },
         {
           "id": "MILESTONE_1_CARD_BG",
-          "region": "cols 2-3, rows 3-6",
+          "region": "cols 2-3, rows 4-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15481,7 +15481,7 @@
         },
         {
           "id": "milestone_1_label",
-          "region": "cols 2-3, rows 3-4",
+          "region": "cols 2-3, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15496,7 +15496,7 @@
         },
         {
           "id": "milestone_1_detail",
-          "region": "cols 2-3, rows 4-6",
+          "region": "cols 2-3, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15511,7 +15511,7 @@
         },
         {
           "id": "MILESTONE_2_CARD_BG",
-          "region": "cols 4-5, rows 3-6",
+          "region": "cols 5-6, rows 4-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15530,7 +15530,7 @@
         },
         {
           "id": "milestone_2_label",
-          "region": "cols 4-5, rows 3-4",
+          "region": "cols 5-6, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15545,7 +15545,7 @@
         },
         {
           "id": "milestone_2_detail",
-          "region": "cols 4-5, rows 4-6",
+          "region": "cols 5-6, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15560,7 +15560,7 @@
         },
         {
           "id": "MILESTONE_3_CARD_BG",
-          "region": "cols 6-7, rows 3-6",
+          "region": "cols 8-9, rows 4-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15579,7 +15579,7 @@
         },
         {
           "id": "milestone_3_label",
-          "region": "cols 6-7, rows 3-4",
+          "region": "cols 8-9, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15594,7 +15594,7 @@
         },
         {
           "id": "milestone_3_detail",
-          "region": "cols 6-7, rows 4-6",
+          "region": "cols 8-9, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15609,7 +15609,7 @@
         },
         {
           "id": "MILESTONE_4_CARD_BG",
-          "region": "cols 8-9, rows 3-6",
+          "region": "cols 10-11, rows 4-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15628,7 +15628,7 @@
         },
         {
           "id": "milestone_4_label",
-          "region": "cols 8-9, rows 3-4",
+          "region": "cols 10-11, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15643,7 +15643,7 @@
         },
         {
           "id": "milestone_4_detail",
-          "region": "cols 8-9, rows 4-6",
+          "region": "cols 10-11, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15658,7 +15658,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_horizontal",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -15970,7 +15970,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_milestones_image",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -16216,7 +16216,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_vertical",
         "slots": {
           "HEADING": {
             "text": "Project phases",
@@ -16316,7 +16316,7 @@
         },
         {
           "id": "milestone_1_label",
-          "region": "cols 1-3, rows 3-4",
+          "region": "cols 2-3, rows 4-5",
           "role": "subheading",
           "placeholder_text": "Q1",
           "layer": 10,
@@ -16330,7 +16330,7 @@
         },
         {
           "id": "milestone_1_detail",
-          "region": "cols 1-3, rows 4-6",
+          "region": "cols 2-3, rows 5-8",
           "role": "body",
           "placeholder_text": "Foundation release",
           "layer": 10,
@@ -16345,7 +16345,7 @@
         },
         {
           "id": "milestone_2_label",
-          "region": "cols 4-6, rows 3-4",
+          "region": "cols 5-6, rows 4-5",
           "role": "subheading",
           "placeholder_text": "Q2",
           "layer": 10,
@@ -16359,7 +16359,7 @@
         },
         {
           "id": "milestone_2_detail",
-          "region": "cols 4-6, rows 4-6",
+          "region": "cols 5-6, rows 5-8",
           "role": "body",
           "placeholder_text": "Growth features",
           "layer": 10,
@@ -16374,7 +16374,7 @@
         },
         {
           "id": "milestone_3_label",
-          "region": "cols 7-9, rows 3-4",
+          "region": "cols 8-9, rows 4-5",
           "role": "subheading",
           "placeholder_text": "Q3",
           "layer": 10,
@@ -16388,7 +16388,7 @@
         },
         {
           "id": "milestone_3_detail",
-          "region": "cols 7-9, rows 4-6",
+          "region": "cols 8-9, rows 5-8",
           "role": "body",
           "placeholder_text": "Enterprise push",
           "layer": 10,
@@ -16403,7 +16403,7 @@
         },
         {
           "id": "milestone_4_label",
-          "region": "cols 10-12, rows 3-4",
+          "region": "cols 10-11, rows 4-5",
           "role": "subheading",
           "placeholder_text": "Q4",
           "layer": 10,
@@ -16417,7 +16417,7 @@
         },
         {
           "id": "milestone_4_detail",
-          "region": "cols 10-12, rows 4-6",
+          "region": "cols 10-11, rows 5-8",
           "role": "body",
           "placeholder_text": "Scale and optimize",
           "layer": 10,
@@ -16432,7 +16432,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_roadmap",
         "slots": {
           "HEADING": {
             "text": "Product roadmap",
@@ -16520,7 +16520,7 @@
         },
         {
           "id": "step_1_title",
-          "region": "cols 1-3, rows 3-4",
+          "region": "cols 2-3, rows 4-5",
           "role": "heading",
           "placeholder_text": "1. Discover",
           "layer": 10,
@@ -16534,7 +16534,7 @@
         },
         {
           "id": "step_1_body",
-          "region": "cols 1-3, rows 4-6",
+          "region": "cols 2-3, rows 5-8",
           "role": "body",
           "placeholder_text": "Understand the problem",
           "layer": 10,
@@ -16549,7 +16549,7 @@
         },
         {
           "id": "step_2_title",
-          "region": "cols 4-6, rows 3-4",
+          "region": "cols 5-6, rows 4-5",
           "role": "heading",
           "placeholder_text": "2. Design",
           "layer": 10,
@@ -16563,7 +16563,7 @@
         },
         {
           "id": "step_2_body",
-          "region": "cols 4-6, rows 4-6",
+          "region": "cols 5-6, rows 5-8",
           "role": "body",
           "placeholder_text": "Shape the solution",
           "layer": 10,
@@ -16578,7 +16578,7 @@
         },
         {
           "id": "step_3_title",
-          "region": "cols 7-9, rows 3-4",
+          "region": "cols 8-9, rows 4-5",
           "role": "heading",
           "placeholder_text": "3. Build",
           "layer": 10,
@@ -16592,7 +16592,7 @@
         },
         {
           "id": "step_3_body",
-          "region": "cols 7-9, rows 4-6",
+          "region": "cols 8-9, rows 5-8",
           "role": "body",
           "placeholder_text": "Ship the MVP",
           "layer": 10,
@@ -16607,7 +16607,7 @@
         },
         {
           "id": "step_4_title",
-          "region": "cols 10-12, rows 3-4",
+          "region": "cols 10-11, rows 4-5",
           "role": "heading",
           "placeholder_text": "4. Launch",
           "layer": 10,
@@ -16621,7 +16621,7 @@
         },
         {
           "id": "step_4_body",
-          "region": "cols 10-12, rows 4-6",
+          "region": "cols 10-11, rows 5-8",
           "role": "body",
           "placeholder_text": "Go to market",
           "layer": 10,
@@ -16636,7 +16636,7 @@
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "timeline_process_steps",
         "slots": {
           "HEADING": {
             "text": "How it works",
@@ -18209,7 +18209,7 @@
         },
         {
           "id": "step_1_title",
-          "region": "cols 1-3, rows 3-4",
+          "region": "cols 2-3, rows 4-5",
           "role": "heading",
           "placeholder_text": "1. Step 1",
           "layer": 10,
@@ -18224,7 +18224,7 @@
         },
         {
           "id": "step_1_body",
-          "region": "cols 1-3, rows 5-8",
+          "region": "cols 2-3, rows 5-9",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18239,7 +18239,7 @@
         },
         {
           "id": "step_2_title",
-          "region": "cols 4-6, rows 3-4",
+          "region": "cols 5-6, rows 4-5",
           "role": "heading",
           "placeholder_text": "2. Step 2",
           "layer": 10,
@@ -18254,7 +18254,7 @@
         },
         {
           "id": "step_2_body",
-          "region": "cols 4-6, rows 5-8",
+          "region": "cols 5-6, rows 5-9",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18269,7 +18269,7 @@
         },
         {
           "id": "step_3_title",
-          "region": "cols 7-9, rows 3-4",
+          "region": "cols 8-9, rows 4-5",
           "role": "heading",
           "placeholder_text": "3. Step 3",
           "layer": 10,
@@ -18284,7 +18284,7 @@
         },
         {
           "id": "step_3_body",
-          "region": "cols 7-9, rows 5-8",
+          "region": "cols 8-9, rows 5-9",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18299,7 +18299,7 @@
         },
         {
           "id": "step_4_title",
-          "region": "cols 10-12, rows 3-4",
+          "region": "cols 10-11, rows 4-5",
           "role": "heading",
           "placeholder_text": "4. Step 4",
           "layer": 10,
@@ -18314,7 +18314,7 @@
         },
         {
           "id": "step_4_body",
-          "region": "cols 10-12, rows 5-8",
+          "region": "cols 10-11, rows 5-9",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,

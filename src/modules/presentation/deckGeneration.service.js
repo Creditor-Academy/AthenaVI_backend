@@ -4422,11 +4422,12 @@ async function generateOutline({
       purpose,
       brandKitId: outlineBrandKitId,
     });
-    await presentationDao.updateDeck(deck.id, { themeTokens: themedFonts });
+    const enforced = enforceAppearancePalette(themedFonts);
+    await presentationDao.updateDeck(deck.id, { themeTokens: enforced });
     outline.fontPairing = {
-      heading: themedFonts?.fonts?.heading || null,
-      body: themedFonts?.fonts?.body || null,
-      fontPairingId: themedFonts?.fontPairingId || null,
+      heading: enforced?.fonts?.heading || null,
+      body: enforced?.fonts?.body || null,
+      fontPairingId: enforced?.fontPairingId || null,
     };
   } catch (err) {
     logger.warn('ensureThemeFonts failed during outline', { error: err.message });
