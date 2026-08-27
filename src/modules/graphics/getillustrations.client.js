@@ -252,6 +252,20 @@ async function listPackIllustrations(pack) {
   return items;
 }
 
+async function listAllPackIcons(pack) {
+  const packId = String(pack.id);
+  const cacheKey = `gi:pack-icons-all:${packId}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
+  const rawItems = await listAllPages((page) =>
+    giFetch(`/icon-packs/${encodeURIComponent(packId)}/icons`, { page, limit: 100 })
+  );
+  const items = rawItems.map((r) => normalizeIcon(r, pack)).filter(Boolean);
+  cacheSet(cacheKey, items);
+  return items;
+}
+
 async function listPackIconsPage(pack, { page = 1, limit = 48, q = '' } = {}) {
   const packId = String(pack.id);
   const data = await giFetch(`/icon-packs/${encodeURIComponent(packId)}/icons`, {
@@ -269,6 +283,70 @@ async function listPackIconsPage(pack, { page = 1, limit = 48, q = '' } = {}) {
     total: Number(data?.total) || items.length,
     totalPages: Number(data?.totalPages) || 1,
   };
+}
+
+/**
+ * Download a clean SVG for an icon/illustration the account can access.
+ * Prefer /download, fall back to /svg/:type/:id.
+ */
+async function downloadSvgBuffer({ type = 'icon', packId, assetId }) {
+  const key = getApiKey();
+  const attempts = [
+    `${GI_BASE}/download/${encodeURIComponent(type)}/${encodeURIComponent(packId)}/${encodeURIComponent(assetId)}?format=svg`,
+    `${GI_BASE}/svg/${encodeURIComponent(type)}/${encodeURIComponent(assetId)}`,
+  ];
+
+  let lastErr = null;
+  for (const url of attempts) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          Accept: 'image/svg+xml,application/json,*/*',
+        },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      readRateLimit(res);
+      if (!res.ok) {
+        lastErr = new AppError(
+          `GetIllustrations download failed (${res.status})`,
+          res.status === 429 ? 429 : 502
+        );
+        continue;
+      }
+      const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('json')) {
+        const body = await res.json();
+        const inline = body?.svg_inline || body?.svg || body?.data?.svg_inline;
+        if (inline && String(inline).includes('<svg')) {
+          return Buffer.from(String(inline), 'utf8');
+        }
+        const svgUrl = body?.svg_url || body?.url;
+        if (svgUrl) {
+          const svgRes = await fetch(svgUrl, {
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          });
+          if (!svgRes.ok) continue;
+          const text = await svgRes.text();
+          if (text.includes('<svg')) return Buffer.from(text, 'utf8');
+        }
+        continue;
+      }
+      const text = await res.text();
+      if (text && text.includes('<svg')) return Buffer.from(text, 'utf8');
+      lastErr = new AppError('Downloaded asset was not a valid SVG', 502);
+    } catch (err) {
+      if (err instanceof AppError) lastErr = err;
+      else lastErr = new AppError(messages.GETILLUSTRATIONS_REQUEST_FAILED, 502);
+    }
+  }
+  throw lastErr || new AppError(messages.GETILLUSTRATIONS_REQUEST_FAILED, 502);
+}
+
+async function getFreeIconPackById(packId) {
+  const packs = await listFreeIconPacks();
+  return packs.find((p) => String(p.id) === String(packId)) || null;
 }
 
 function matchesQuery(item, q) {
@@ -481,6 +559,10 @@ module.exports = {
   listStyles,
   listFreeIllustrationPacks,
   listFreeIconPacks,
+  listAllPackIcons,
+  listPackIconsPage,
+  downloadSvgBuffer,
+  getFreeIconPackById,
   getFreeCatalog,
   getMeta,
   clearCacheForTests,

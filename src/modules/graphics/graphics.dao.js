@@ -87,9 +87,16 @@ function listWhere({ q, category, type, style, mood, colorMode, status } = {}) {
   return where;
 }
 
+function findByExternalTag(tag) {
+  return prisma.graphicAsset.findFirst({
+    where: { tags: { has: String(tag) } },
+  });
+}
+
 module.exports = {
   create,
   findById,
+  findByExternalTag,
   update,
   remove,
   list,

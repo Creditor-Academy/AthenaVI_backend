@@ -71,6 +71,15 @@ const listGetIllustrationsFree = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, 'GetIllustrations free catalog fetched');
 });
 
+const importGetIllustrationsIconPack = asyncHandler(async (req, res) => {
+  const data = await graphicsService.importGetIllustrationsIconPack({
+    packId: req.params.packId,
+    userId: req.user.id,
+    publishAssets: req.body?.publishAssets !== false,
+  });
+  return successResponse(req, res, data, 200, 'GetIllustrations icon pack saved');
+});
+
 module.exports = {
   listAdmin,
   getAdmin,
@@ -85,4 +94,5 @@ module.exports = {
   searchPublished,
   getIllustrationsMeta,
   listGetIllustrationsFree,
+  importGetIllustrationsIconPack,
 };

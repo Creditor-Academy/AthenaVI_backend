@@ -1,4 +1,5 @@
 const AppError = require('../../shared/utils/AppError');
+const messages = require('../../shared/utils/messages');
 const s3Service = require('../s3/s3.service');
 const dao = require('./graphics.dao');
 const { validateSvgBuffer } = require('./svgValidate.service');
@@ -7,6 +8,7 @@ const { newElementId } = require('../presentation/layoutToElements');
 const { MAX_ELEMENTS_PER_SLIDE } = require('../presentation/presentation.constants');
 const svglClient = require('./svgl.client');
 const getillustrationsClient = require('./getillustrations.client');
+const crypto = require('crypto');
 
 function parseStringList(value) {
   if (Array.isArray(value)) {
@@ -675,6 +677,137 @@ async function listGetIllustrationsFree(query = {}) {
   });
 }
 
+function giIconExternalTag(iconId) {
+  return `gi:icon:${String(iconId)}`;
+}
+
+function giPackExternalTag(packId) {
+  return `gi:pack:${String(packId)}`;
+}
+
+function slugCategory(name) {
+  const slug = String(name || 'icons')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return slug || 'icons';
+}
+
+/**
+ * Download every free icon in a GetIllustrations pack and upsert into GraphicAsset.
+ */
+async function importGetIllustrationsIconPack({ packId, userId, publishAssets = true } = {}) {
+  if (!getillustrationsClient.isConfigured()) {
+    throw new AppError(messages.GETILLUSTRATIONS_NOT_CONFIGURED, 503);
+  }
+  if (!packId) throw new AppError('packId is required', 400);
+
+  const pack = await getillustrationsClient.getFreeIconPackById(packId);
+  if (!pack) throw new AppError('Icon pack not found or not available on free tier', 404);
+
+  const icons = await getillustrationsClient.listAllPackIcons(pack);
+  if (!icons.length) {
+    return {
+      packId: pack.id,
+      packName: pack.name,
+      total: 0,
+      saved: 0,
+      skipped: 0,
+      failed: 0,
+      rateLimit: getillustrationsClient.getRateLimit(),
+      errors: [],
+    };
+  }
+
+  const packTag = giPackExternalTag(pack.id);
+  const category = `icons/${slugCategory(pack.name)}`;
+
+  let saved = 0;
+  let skipped = 0;
+  let failed = 0;
+  let rateLimited = false;
+  const errors = [];
+
+  const concurrency = 3;
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, icons.length) || 1 }, async () => {
+    while (next < icons.length && !rateLimited) {
+      const i = next;
+      next += 1;
+      const icon = icons[i];
+      const externalTag = giIconExternalTag(icon.id);
+      try {
+        const existing = await dao.findByExternalTag(externalTag);
+        if (existing) {
+          skipped += 1;
+          continue;
+        }
+
+        const buffer = await getillustrationsClient.downloadSvgBuffer({
+          type: 'icon',
+          packId: pack.id,
+          assetId: icon.id,
+        });
+        validateSvgBuffer(buffer, { mimeType: 'image/svg+xml' });
+
+        const id = crypto.randomBytes(12).toString('hex');
+        const stored = await uploadOriginalAndPreview(id, buffer);
+        const tags = Array.from(
+          new Set([
+            externalTag,
+            packTag,
+            'getillustrations',
+            ...(icon.tags || []).slice(0, 12),
+          ])
+        );
+
+        await dao.create({
+          id,
+          name: String(icon.name || `Icon ${icon.id}`).slice(0, 120),
+          description: pack.name ? `From GetIllustrations pack: ${pack.name}` : null,
+          type: 'icon',
+          category,
+          tags,
+          style: pack.style?.name || null,
+          moods: [],
+          usage: ['bullet', 'list', 'editor', 'content'],
+          colorMode: 'recolorable',
+          containsText: false,
+          status: publishAssets ? 'published' : 'draft',
+          createdBy: userId || 'system',
+          ...stored,
+        });
+        saved += 1;
+      } catch (err) {
+        failed += 1;
+        if (errors.length < 20) {
+          errors.push({
+            iconId: icon?.id,
+            name: icon?.name,
+            message: err?.message || 'Failed to import icon',
+          });
+        }
+        if (err?.statusCode === 429 || err?.status === 429) {
+          rateLimited = true;
+        }
+      }
+    }
+  });
+  await Promise.all(workers);
+
+  return {
+    packId: pack.id,
+    packName: pack.name,
+    total: icons.length,
+    saved,
+    skipped,
+    failed,
+    rateLimit: getillustrationsClient.getRateLimit(),
+    errors,
+  };
+}
+
 module.exports = {
   serialize,
   createFromUpload,
@@ -690,6 +823,7 @@ module.exports = {
   searchPublished,
   getIllustrationsMeta,
   listGetIllustrationsFree,
+  importGetIllustrationsIconPack,
   deriveGraphicNeed,
   findListIconTargets,
   injectListIconsIntoElementsDoc,

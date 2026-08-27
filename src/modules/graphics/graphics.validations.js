@@ -88,6 +88,16 @@ const getIllustrationsFreeQuerySchema = Joi.object({
   }),
 });
 
+const importGetIllustrationsIconPackSchema = Joi.object({
+  params: Joi.object({
+    packId: Joi.string().trim().required(),
+  }),
+  query: Joi.object().optional(),
+  body: Joi.object({
+    publishAssets: Joi.boolean().optional(),
+  }).optional(),
+});
+
 module.exports = {
   GRAPHIC_TYPES,
   COLOR_MODES,
@@ -98,4 +108,5 @@ module.exports = {
   listGraphicsQuerySchema,
   searchIntentSchema,
   getIllustrationsFreeQuerySchema,
+  importGetIllustrationsIconPackSchema,
 };

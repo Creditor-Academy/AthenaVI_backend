@@ -271,6 +271,12 @@ router.get(
 );
 
 router.post(
+  '/graphics/getillustrations/icon-packs/:packId/save',
+  validate(graphicsValidation.importGetIllustrationsIconPackSchema),
+  graphicsController.importGetIllustrationsIconPack
+);
+
+router.post(
   '/graphics',
   uploadAssetS3.single('file'),
   validate(graphicsValidation.createGraphicSchema),
