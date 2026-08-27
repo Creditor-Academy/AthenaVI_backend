@@ -41,8 +41,16 @@ const {
   analyzeChartStory,
   chartDatasetCount: countChartDatasets,
   inferChartTypeFromStory,
+  demoteSpuriousChart,
 } = require('./chartStory.util');
 const { resolveTitlePreferredLayoutId } = require('./titleLayout.util');
+const {
+  countProcessSteps,
+  looksLikeLinearProcessSlide,
+  hasUsablePathBSpec,
+  preferredProcessLayoutId,
+  resolveDiagramVisualPolicy,
+} = require('./diagramPathPolicy.util');
 const imageCache = require('./imageCache.service');
 const documentParse = require('./documentParse.service');
 const {
@@ -1717,7 +1725,7 @@ function detectPreferVisuals(text) {
 
 /**
  * Force photo/illustration visuals for most slides when preferVisuals is on.
- * Chart / path_b keep their specialized modes.
+ * Chart / path_b / diagram_template keep their specialized modes.
  */
 function applyVisualPolicy({
   visualNeed,
@@ -1732,6 +1740,16 @@ function applyVisualPolicy({
 
   if (need === 'path_b') {
     return { visualNeed: 'path_b', contentType: type, layoutContentType: type, preferImageSlot: false };
+  }
+
+  if (need === 'diagram_template') {
+    const layoutType = type === 'diagram' || type === 'timeline' ? type : 'diagram';
+    return {
+      visualNeed: 'diagram_template',
+      contentType: layoutType,
+      layoutContentType: layoutType,
+      preferImageSlot: false,
+    };
   }
 
   if (type === 'chart' || need === 'chart') {
@@ -1761,7 +1779,7 @@ function applyVisualPolicy({
     };
   }
 
-  if (need === 'none' || need === 'icon' || need === 'diagram_template' || !need) {
+  if (need === 'none' || need === 'icon' || !need) {
     need = type === 'quote' || type === 'stat' ? 'illustration' : 'photo';
   }
 
@@ -1940,6 +1958,30 @@ function resolvePreferredLayoutIdForSlide({
   const order = Number(slideOrder) > 0 ? Number(slideOrder) : Number(slide?.order) || 1;
   if (order === 1 && String(layoutContentType || '').toLowerCase() === 'title') {
     return resolveTitlePreferredLayoutId(ctx, preferVisuals !== false, usedLayoutIds);
+  }
+
+  const outlineSlide =
+    (Array.isArray(outlineSlides)
+      ? outlineSlides.find((s) => Number(s.order) === order)
+      : null) || {};
+  const processSignals = {
+    title: content?.title || outlineSlide?.title,
+    summary: content?.summary || content?.body || outlineSlide?.summary,
+    beats: outlineSlide?.beats || content?.beats,
+    bullets: content?.bullets,
+    columns: content?.columns,
+    visual: outlineSlide?.visual,
+    intent: outlineSlide?.intent || outlineSlide?.purpose || content?.intent,
+    contentType: layoutContentType,
+  };
+  if (
+    String(layoutContentType || '').toLowerCase() === 'diagram' ||
+    looksLikeLinearProcessSlide(processSignals)
+  ) {
+    if (looksLikeLinearProcessSlide(processSignals)) {
+      const steps = countProcessSteps(processSignals);
+      return preferredProcessLayoutId(steps, usedLayoutIds);
+    }
   }
 
   return preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, order);
@@ -2611,9 +2653,23 @@ async function resolveSlideImage({
   }
 
   if (need === 'path_b') {
+    const resolvedSpec = pathBSpec || content?.pathBSpec || {};
+    if (!hasUsablePathBSpec(resolvedSpec)) {
+      // Empty Path B spec → treat as diagram_template (layout path); do not charge Path B.
+      return {
+        imageRef: withImageStatus(
+          { source: 'none', visual_need: 'diagram_template', brief: brief || null },
+          'ready',
+          { reason: 'path_b_missing_spec' }
+        ),
+        chargedFeature: null,
+        cacheHit: false,
+        visionScore: null,
+      };
+    }
     const pathBPrompt = getPathBPrompt();
     const promptText = pathBPrompt.buildUser({
-      pathBSpec: pathBSpec || content?.pathBSpec || {},
+      pathBSpec: resolvedSpec,
       brandPalette: ctx.themeTokens?.palette?.primary || undefined,
     });
     const requestHash = hashPayload([
@@ -3066,10 +3122,10 @@ async function planDeckLayouts(ctx, slides) {
       slideOrder: slide.order,
     });
     if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
-      // Prefer contact CTA when the outline/content signals contact intent.
+      // Match title energy with a text/CTA close — avoid default full-bleed photo closings.
       preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, stubContent)
         ? 'closing_contact_cta_v1'
-        : 'closing_thank_you_fullbleed_v1';
+        : 'closing_thank_you_v1';
     }
     let ranked = [];
     try {
@@ -3675,6 +3731,46 @@ async function processSlide(ctx, slide) {
     contentType = blueprintLayoutIdEarly
       ? policy.contentType
       : applyContentDistribution(policy.contentType, ctx);
+
+    // Path B vs process layouts: linear how-it-works → diagram_template;
+    // path_b without usable pathBSpec → diagram_template.
+    if (!blueprintLayoutIdEarly) {
+      const diagramPolicy = resolveDiagramVisualPolicy({
+        visualNeed,
+        contentType,
+        content,
+        outlineSlide,
+      });
+      visualNeed = diagramPolicy.visualNeed;
+      contentType = applyContentDistribution(diagramPolicy.contentType, ctx);
+      if (String(visualNeed).toLowerCase() === 'diagram_template') {
+        policy.visualNeed = 'diagram_template';
+        policy.preferImageSlot = false;
+      }
+      if (String(visualNeed).toLowerCase() === 'path_b') {
+        policy.preferImageSlot = false;
+      }
+
+      // Block invented charts for qualitative topics (e.g. Security & Isolation bars).
+      const chartGate = demoteSpuriousChart({
+        contentType,
+        visualNeed,
+        content,
+        outlineSlide,
+        preferVisuals,
+      });
+      if (chartGate.demoted) {
+        contentType = applyContentDistribution(chartGate.contentType, ctx);
+        visualNeed = chartGate.visualNeed;
+        policy.visualNeed = visualNeed;
+        if (content && typeof content === 'object') {
+          delete content.chart;
+          delete content.chart2;
+          delete content.charts;
+        }
+      }
+    }
+
     policy.layoutContentType = contentType;
     if (content && typeof content === 'object') {
       content.visual_need = visualNeed;
@@ -3785,7 +3881,7 @@ async function processSlide(ctx, slide) {
         if (Number(slide.order) === slideTotal && isSplitHeroLayout(ctx.titleLayoutId)) {
           preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, content)
             ? 'closing_contact_cta_v1'
-            : 'closing_thank_you_fullbleed_v1';
+            : 'closing_thank_you_v1';
         } else if (
           Number(slide.order) === slideTotal &&
           outlineSuggestsContactIntent(outlineSlide, content)
@@ -3906,7 +4002,10 @@ async function processSlide(ctx, slide) {
     }
 
     const layoutSchemaForImages = template?.schema || null;
-    if (layoutUsesPerSlotGalleryImages(layoutSchemaForImages)) {
+    if (
+      layoutUsesPerSlotGalleryImages(layoutSchemaForImages) &&
+      String(visualNeed || '').toLowerCase() !== 'path_b'
+    ) {
       visualNeed = 'none';
       if (content && typeof content === 'object') {
         content.visual_need = 'none';
@@ -5056,6 +5155,17 @@ async function regenerateSlide({
             baseTemplateBias: ctx.baseTemplateBias || null,
           });
           visualNeed = policy.visualNeed;
+          const diagramPolicy = resolveDiagramVisualPolicy({
+            visualNeed,
+            contentType: fresh.contentType || content?.content_type || policy.contentType,
+            content,
+            outlineSlide: {},
+          });
+          visualNeed = diagramPolicy.visualNeed;
+          if (content && typeof content === 'object') {
+            content.visual_need = visualNeed;
+            content.content_type = diagramPolicy.contentType;
+          }
           let brief = null;
           let layoutSchema = null;
           try {

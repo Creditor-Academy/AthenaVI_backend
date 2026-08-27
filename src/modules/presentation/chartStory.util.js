@@ -139,10 +139,95 @@ function inferChartTypeFromStory(chart, content = {}, layoutSchema = null) {
   return analysis.chartType || 'bar';
 }
 
+/**
+ * True only when the slide has a real quantitative reason to be a chart.
+ * Blocks invented bars for qualitative topics (security, features, benefits).
+ */
+function slideJustifiesChart({ content = {}, outlineSlide = {}, contentType, visualNeed } = {}) {
+  const type = String(contentType || content?.content_type || '').toLowerCase();
+  const need = String(visualNeed || content?.visual_need || '').toLowerCase();
+  if (type !== 'chart' && need !== 'chart') return true;
+
+  const hay = [
+    content?.title,
+    content?.summary,
+    content?.body,
+    content?.subtitle,
+    Array.isArray(content?.bullets) ? content.bullets.join(' ') : '',
+    outlineSlide?.title,
+    outlineSlide?.summary,
+    outlineSlide?.subtitle,
+    Array.isArray(outlineSlide?.beats) ? outlineSlide.beats.join(' ') : '',
+    outlineSlide?.visual,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  // Clear quantitative signals in copy
+  if (
+    /\b(\d+\s*%|\d+\.\d+\s*%|\$\s*\d|\d+\s*(million|billion|k|m|bn)|revenue|arr\b|mrr\b|growth rate|market share|nps\b|cac\b|ltv\b|churn|conversion rate|yoy|qoq|quarterly|forecast|benchmark)\b/i.test(
+      hay
+    )
+  ) {
+    return true;
+  }
+  if (/\b(chart|graph|kpi|metrics?|statistics|analytics)\b/i.test(hay) && /\d/.test(hay)) {
+    return true;
+  }
+
+  const chart = content?.chart;
+  if (chart && typeof chart === 'object') {
+    if (chartLabelLooksTemporal(chart.labels)) return true;
+    if (chartLooksLikeComposition(chart)) return true;
+    const labels = Array.isArray(chart.labels) ? chart.labels : [];
+    // Labels that are just qualitative pillars (no units / periods) → not a real chart need
+    const qualitativeOnly =
+      labels.length > 0 &&
+      labels.every((label) => {
+        const s = String(label || '').trim();
+        return s && !/\d|%|q[1-4]|20\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(s);
+      });
+    if (qualitativeOnly && /security|isolation|compliance|encryption|audit|feature|benefit|risk reduction/i.test(hay)) {
+      return false;
+    }
+  }
+
+  // Qualitative topic words without numbers → demote
+  if (
+    /security|isolation|compliance|encryption|audit trail|tenant isolation|key management|feature|benefit/i.test(
+      hay
+    ) &&
+    !/\d/.test(hay)
+  ) {
+    return false;
+  }
+
+  // No numbers anywhere in the narrative → do not force a chart layout
+  if (!/\d/.test(hay)) return false;
+
+  return true;
+}
+
+/**
+ * If chart was chosen without quantitative basis, fall back to image+text + photo.
+ */
+function demoteSpuriousChart({ contentType, visualNeed, content, outlineSlide, preferVisuals = true } = {}) {
+  if (slideJustifiesChart({ content, outlineSlide, contentType, visualNeed })) {
+    return { contentType, visualNeed, demoted: false };
+  }
+  return {
+    contentType: 'image+text',
+    visualNeed: preferVisuals === false ? 'none' : 'photo',
+    demoted: true,
+  };
+}
+
 module.exports = {
   analyzeChartStory,
   chartDatasetCount,
   chartLooksLikeComposition,
   chartLabelLooksTemporal,
   inferChartTypeFromStory,
+  slideJustifiesChart,
+  demoteSpuriousChart,
 };

@@ -16,7 +16,8 @@ function buildSystem() {
     'Fill content slots only. No layout coordinates or color hex values.',
     'Enforce hard density limits and any slide intent / generation hints provided.',
     'Always include speaker notes in "notes".',
-    'If the slide needs a bespoke multi-panel diagram, fill pathBSpec with exact panel titles, labels, and legend — copy is decided here; the image model only typesets later.',
+    'pathBSpec: ONLY for irregular untemplatable diagrams (architecture, ERD, branching systems). Leave pathBSpec null for linear how-it-works / SWOT / funnel / process layouts — those use editable layout slots.',
+    'When pathBSpec is required, fill exact panel titles, labels, and legend — copy is decided here; the image model only typesets later.',
     'Return JSON only.',
   ].join(' ');
 }
@@ -207,7 +208,7 @@ function buildUser(vars = {}) {
       ? '\nImage-heavy slide: text renders over a photo with an automatic dark scrim and light text. Keep titles ≤6 words; body ≤2 short lines. Set shapeDecisions.__overlay__.enabled to true.'
       : '',
     String(vars.layoutId || '').includes('grid_metrics_masonry')
-      ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for METRIC_TITLE_n / METRIC_BODY_n cards (1–2 short lines each). Fill stats[] with { value, label } for STAT_n_VALUE / STAT_n_LABEL. Do NOT put bullets or long body copy into metric or stat slots.'
+      ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for the two para cards METRIC_TITLE_1/METRIC_BODY_1 and METRIC_TITLE_3/METRIC_BODY_3. Fill stats[] with { value, label } for STAT_1 (wide bottom) and STAT_2 (top). One image slot METRIC_IMAGE_2 sits between the top stat and the right card. Do NOT put bullets or long body copy into metric or stat slots.'
       : '',
     vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
     layoutSpecificRules(vars.layoutId, vars.slideOrder, vars.suggestedContentType),

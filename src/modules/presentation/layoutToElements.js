@@ -806,6 +806,25 @@ function chartForSlot(slotId, content = {}) {
   return content.chart || null;
 }
 
+/** Distinct demo datasets so empty CHART_1/2/3 slots all render. */
+function sampleChartDataset(index = 0, layoutId = '') {
+  const i = Math.max(0, Number(index) || 0);
+  if (/donut|pie/i.test(String(layoutId || ''))) {
+    const sets = [
+      { labels: ['A', 'B', 'C', 'D'], values: [40, 25, 20, 15] },
+      { labels: ['A', 'B', 'C', 'D'], values: [30, 30, 25, 15] },
+      { labels: ['A', 'B', 'C', 'D'], values: [50, 20, 18, 12] },
+    ];
+    return sets[i % sets.length];
+  }
+  const sets = [
+    { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 58, 51, 67] },
+    { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [28, 36, 44, 39] },
+    { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [55, 48, 62, 71] },
+  ];
+  return sets[i % sets.length];
+}
+
 /** True only for real chart data slots — not CHART_HEADING / CHART_CAPTION / titles. */
 function isChartElementSlot(slotId, role) {
   if (String(role || '').toLowerCase() === 'chart') return true;
@@ -2274,17 +2293,32 @@ function layoutSlotsToElements(
     }
 
     if (isDecorShapeSlot(slotId, role, slot)) {
+      const isIconSlot = /icon|avatar/i.test(String(slotId || ''));
       const fill = resolveFill(
-        slot.shape || { fillColorRole: role === 'divider' ? 'accent' : 'primary' },
+        slot.shape || {
+          fillColorRole: role === 'divider' ? 'accent' : isIconSlot ? 'primary' : 'primary',
+        },
         palette
       );
+      let iconPlacement = placement;
+      if (isIconSlot && !slot.shape) {
+        const size = Math.round(Math.min(placement.width, placement.height) * 0.36);
+        iconPlacement = {
+          x: Math.round(placement.x + (placement.width - size) / 2),
+          y: Math.round(placement.y + (placement.height - size) / 2),
+          width: Math.max(size, 28),
+          height: Math.max(size, 28),
+          rotation: placement.rotation || 0,
+          opacity: placement.opacity != null ? placement.opacity : 1,
+        };
+      }
       elements.push({
         id: newElementId('shp'),
         type: 'shape',
         layer: slotLayer,
-        placement,
+        placement: iconPlacement,
         content: {
-          shape: slot.shape?.type || 'rect',
+          shape: slot.shape?.type || (isIconSlot ? 'ellipse' : 'rect'),
           fill,
           borderRadius: slot.shape?.borderRadius,
         },
@@ -2328,10 +2362,11 @@ function layoutSlotsToElements(
     }
 
     if (isChartElementSlot(slotId, role)) {
-      const chartData = chartForSlot(slotId, content);
-      if (!chartData && /^CHART_[2-9]$/i.test(String(slotId))) {
-        if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
-        continue;
+      let chartData = chartForSlot(slotId, content);
+      // Multi-chart layouts must still emit CHART_2/CHART_3 when datasets are missing
+      if (!chartData && /^CHART_\d+$/i.test(String(slotId))) {
+        const idx = Math.max(0, Number(String(slotId).match(/(\d+)/)?.[1] || 1) - 1);
+        chartData = sampleChartDataset(idx, layoutSchema?.layout_id);
       }
       const brandChartColors = themeTokens?.brand?.chartColors;
       const rawChart = {

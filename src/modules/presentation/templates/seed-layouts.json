@@ -2037,14 +2037,14 @@
         },
         {
           "id": "IMAGE_1",
-          "region": "cols 1-4, rows 3-6",
+          "region": "cols 1-4, rows 3-7",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "CARD_1_TITLE",
-          "region": "cols 1-4, rows 6-7",
+          "region": "cols 1-4, rows 7-8",
           "role": "heading",
           "placeholder_text": "Feature A",
           "layer": 10,
@@ -2058,7 +2058,7 @@
         },
         {
           "id": "CARD_1_BODY",
-          "region": "cols 1-4, rows 7-9",
+          "region": "cols 1-4, rows 8-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -2073,14 +2073,14 @@
         },
         {
           "id": "IMAGE_2",
-          "region": "cols 5-8, rows 3-6",
+          "region": "cols 5-8, rows 3-7",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "CARD_2_TITLE",
-          "region": "cols 5-8, rows 6-7",
+          "region": "cols 5-8, rows 7-8",
           "role": "heading",
           "placeholder_text": "Feature B",
           "layer": 10,
@@ -2094,7 +2094,7 @@
         },
         {
           "id": "CARD_2_BODY",
-          "region": "cols 5-8, rows 7-9",
+          "region": "cols 5-8, rows 8-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -2109,14 +2109,14 @@
         },
         {
           "id": "IMAGE_3",
-          "region": "cols 9-12, rows 3-6",
+          "region": "cols 9-12, rows 3-7",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "CARD_3_TITLE",
-          "region": "cols 9-12, rows 6-7",
+          "region": "cols 9-12, rows 7-8",
           "role": "heading",
           "placeholder_text": "Feature C",
           "layer": 10,
@@ -2130,7 +2130,7 @@
         },
         {
           "id": "CARD_3_BODY",
-          "region": "cols 9-12, rows 7-9",
+          "region": "cols 9-12, rows 8-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -3066,8 +3066,14 @@
           }
         },
         {
-          "id": "ROW_1_TITLE",
+          "id": "ROW_1_ICON",
           "region": "cols 2-4, rows 3-4",
+          "role": "decoration",
+          "layer": 8
+        },
+        {
+          "id": "ROW_1_TITLE",
+          "region": "cols 2-4, rows 4-5",
           "role": "heading",
           "placeholder_text": "Pillar 1",
           "layer": 10,
@@ -3081,7 +3087,7 @@
         },
         {
           "id": "ROW_1_BODY",
-          "region": "cols 2-4, rows 4-6",
+          "region": "cols 2-4, rows 5-8",
           "role": "body",
           "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
           "layer": 10,
@@ -3095,8 +3101,14 @@
           "max_lines": 3
         },
         {
-          "id": "ROW_2_TITLE",
+          "id": "ROW_2_ICON",
           "region": "cols 5-7, rows 3-4",
+          "role": "decoration",
+          "layer": 8
+        },
+        {
+          "id": "ROW_2_TITLE",
+          "region": "cols 5-7, rows 4-5",
           "role": "heading",
           "placeholder_text": "Pillar 2",
           "layer": 10,
@@ -3110,7 +3122,7 @@
         },
         {
           "id": "ROW_2_BODY",
-          "region": "cols 5-7, rows 4-6",
+          "region": "cols 5-7, rows 5-8",
           "role": "body",
           "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
           "layer": 10,
@@ -3124,8 +3136,14 @@
           "max_lines": 3
         },
         {
-          "id": "ROW_3_TITLE",
+          "id": "ROW_3_ICON",
           "region": "cols 8-10, rows 3-4",
+          "role": "decoration",
+          "layer": 8
+        },
+        {
+          "id": "ROW_3_TITLE",
+          "region": "cols 8-10, rows 4-5",
           "role": "heading",
           "placeholder_text": "Pillar 3",
           "layer": 10,
@@ -3139,7 +3157,7 @@
         },
         {
           "id": "ROW_3_BODY",
-          "region": "cols 8-10, rows 4-6",
+          "region": "cols 8-10, rows 5-8",
           "role": "body",
           "placeholder_text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
           "layer": 10,
@@ -3154,7 +3172,7 @@
         }
       ],
       "preview": {
-        "mode": null,
+        "mode": "intro_three_para_icons",
         "slots": {
           "INTRO": {
             "text": "Three pillars",
@@ -4912,14 +4930,14 @@
       "slots": [
         {
           "id": "COL_1_IMAGE",
-          "region": "cols 1-4, rows 1-5",
+          "region": "cols 1-4, rows 2-6",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "COL_1_TITLE",
-          "region": "cols 1-4, rows 5-6",
+          "region": "cols 1-4, rows 6-7",
           "role": "heading",
           "placeholder_text": "Feature A",
           "layer": 10,
@@ -4934,7 +4952,7 @@
         },
         {
           "id": "COL_1_BODY",
-          "region": "cols 1-4, rows 6-8",
+          "region": "cols 1-4, rows 7-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -4949,14 +4967,14 @@
         },
         {
           "id": "COL_2_IMAGE",
-          "region": "cols 5-8, rows 1-5",
+          "region": "cols 5-8, rows 2-6",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "COL_2_TITLE",
-          "region": "cols 5-8, rows 5-6",
+          "region": "cols 5-8, rows 6-7",
           "role": "heading",
           "placeholder_text": "Feature B",
           "layer": 10,
@@ -4971,7 +4989,7 @@
         },
         {
           "id": "COL_2_BODY",
-          "region": "cols 5-8, rows 6-8",
+          "region": "cols 5-8, rows 7-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -4986,14 +5004,14 @@
         },
         {
           "id": "COL_3_IMAGE",
-          "region": "cols 9-12, rows 1-5",
+          "region": "cols 9-12, rows 2-6",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "COL_3_TITLE",
-          "region": "cols 9-12, rows 5-6",
+          "region": "cols 9-12, rows 6-7",
           "role": "heading",
           "placeholder_text": "Feature C",
           "layer": 10,
@@ -5008,7 +5026,7 @@
         },
         {
           "id": "COL_3_BODY",
-          "region": "cols 9-12, rows 6-8",
+          "region": "cols 9-12, rows 7-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
@@ -5567,7 +5585,7 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-12, rows 1-2",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
           "placeholder_text": "Performance highlights",
           "layer": 10,
@@ -5582,7 +5600,7 @@
         },
         {
           "id": "METRIC_CARD_1_BG",
-          "region": "cols 1-5, rows 3-6",
+          "region": "cols 2-6, rows 3-7",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -5591,7 +5609,7 @@
             "kind": "cardBehind",
             "suggestedBehind": "card",
             "borderRadius": 12,
-            "pairsWithSlotId": null
+            "pairsWithSlotId": "METRIC_TITLE_1"
           },
           "shape": {
             "type": "rect",
@@ -5601,7 +5619,7 @@
         },
         {
           "id": "METRIC_TITLE_1",
-          "region": "cols 1-5, rows 3-4",
+          "region": "cols 2-6, rows 3-4",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
@@ -5616,30 +5634,22 @@
         },
         {
           "id": "METRIC_BODY_1",
-          "region": "cols 1-5, rows 4-5",
+          "region": "cols 2-6, rows 4-7",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 2
-        },
-        {
-          "id": "METRIC_IMAGE_1",
-          "region": "cols 1-5, rows 5-6",
-          "role": "image",
-          "layer": 2,
-          "fit": "cover",
-          "imageStyle": "card"
+          "max_lines": 4
         },
         {
           "id": "METRIC_CARD_2_BG",
-          "region": "cols 6-12, rows 3-4",
+          "region": "cols 7-11, rows 3-5",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -5648,7 +5658,7 @@
             "kind": "cardBehind",
             "suggestedBehind": "card",
             "borderRadius": 12,
-            "pairsWithSlotId": null
+            "pairsWithSlotId": "STAT_2_VALUE"
           },
           "shape": {
             "type": "rect",
@@ -5658,12 +5668,12 @@
         },
         {
           "id": "STAT_2_VALUE",
-          "region": "cols 6-8, rows 3-4",
+          "region": "cols 7-9, rows 3-5",
           "role": "stat",
           "placeholder_text": "95%",
           "layer": 10,
           "typography": {
-            "fontSize": 44,
+            "fontSize": 40,
             "fontWeight": 900,
             "colorRole": "accent",
             "align": "left",
@@ -5673,7 +5683,7 @@
         },
         {
           "id": "STAT_2_LABEL",
-          "region": "cols 9-12, rows 3-4",
+          "region": "cols 9-11, rows 3-5",
           "role": "stat_label",
           "placeholder_text": "Explain the meaning of this metric",
           "layer": 10,
@@ -5687,35 +5697,17 @@
           "max_lines": 3
         },
         {
-          "id": "METRIC_CARD_3_BG",
-          "region": "cols 6-8, rows 5-6",
-          "role": "decoration",
-          "layer": 1,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "cardBehind",
-            "suggestedBehind": "card",
-            "borderRadius": 12,
-            "pairsWithSlotId": null
-          },
-          "shape": {
-            "type": "rect",
-            "fillColorRole": "cardBg",
-            "borderRadius": 12
-          }
-        },
-        {
           "id": "METRIC_IMAGE_2",
-          "region": "cols 6-8, rows 5-6",
+          "region": "cols 7-8, rows 6-8",
           "role": "image",
           "layer": 2,
           "fit": "cover",
-          "imageStyle": "card"
+          "imageStyle": "card",
+          "borderRadius": 12
         },
         {
           "id": "METRIC_CARD_4_BG",
-          "region": "cols 1-8, rows 7-8",
+          "region": "cols 2-8, rows 9-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -5724,7 +5716,7 @@
             "kind": "cardBehind",
             "suggestedBehind": "card",
             "borderRadius": 12,
-            "pairsWithSlotId": null
+            "pairsWithSlotId": "STAT_1_VALUE"
           },
           "shape": {
             "type": "rect",
@@ -5734,12 +5726,12 @@
         },
         {
           "id": "STAT_1_VALUE",
-          "region": "cols 1-3, rows 7-8",
+          "region": "cols 2-4, rows 9-10",
           "role": "stat",
           "placeholder_text": "100k",
           "layer": 10,
           "typography": {
-            "fontSize": 44,
+            "fontSize": 40,
             "fontWeight": 900,
             "colorRole": "accent",
             "align": "left",
@@ -5749,12 +5741,12 @@
         },
         {
           "id": "STAT_1_LABEL",
-          "region": "cols 4-8, rows 7-8",
+          "region": "cols 5-8, rows 9-10",
           "role": "stat_label",
           "placeholder_text": "Explain the meaning of this metric",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
@@ -5764,7 +5756,7 @@
         },
         {
           "id": "METRIC_CARD_5_BG",
-          "region": "cols 9-12, rows 5-10",
+          "region": "cols 9-11, rows 6-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -5773,7 +5765,7 @@
             "kind": "cardBehind",
             "suggestedBehind": "card",
             "borderRadius": 12,
-            "pairsWithSlotId": null
+            "pairsWithSlotId": "METRIC_TITLE_3"
           },
           "shape": {
             "type": "rect",
@@ -5783,7 +5775,7 @@
         },
         {
           "id": "METRIC_TITLE_3",
-          "region": "cols 9-12, rows 5-6",
+          "region": "cols 9-11, rows 6-7",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
@@ -5798,26 +5790,18 @@
         },
         {
           "id": "METRIC_BODY_3",
-          "region": "cols 9-12, rows 6-7",
+          "region": "cols 9-11, rows 7-10",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 2
-        },
-        {
-          "id": "METRIC_IMAGE_3",
-          "region": "cols 9-12, rows 7-10",
-          "role": "image",
-          "layer": 2,
-          "fit": "cover",
-          "imageStyle": "card"
+          "max_lines": 4
         }
       ],
       "preview": {
@@ -5840,9 +5824,6 @@
             "variant": "body",
             "bold": false,
             "uppercase": false
-          },
-          "METRIC_IMAGE_1": {
-            "variant": "image"
           },
           "STAT_2_VALUE": {
             "text": "95%",
@@ -5882,9 +5863,6 @@
             "variant": "body",
             "bold": false,
             "uppercase": false
-          },
-          "METRIC_IMAGE_3": {
-            "variant": "image"
           }
         }
       }

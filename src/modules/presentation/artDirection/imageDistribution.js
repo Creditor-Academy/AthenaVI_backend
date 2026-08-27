@@ -2,8 +2,8 @@ function applyDeckImageStrategyToVisualNeed({ currentVisualNeed, usage, preferVi
   const need = String(currentVisualNeed || '').toLowerCase();
   const allowVisuals = preferVisuals !== false;
 
-  // Do not override chart/icon/diagram templates; those have their own deterministic paths.
-  if (['chart', 'icon', 'diagram_template'].includes(need)) return currentVisualNeed;
+  // Do not override specialized visuals; those have their own deterministic paths.
+  if (['chart', 'icon', 'diagram_template', 'path_b'].includes(need)) return currentVisualNeed;
 
   if (!allowVisuals && usage !== 'none') return 'none';
 

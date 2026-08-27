@@ -118,7 +118,9 @@ function buildUser(vars = {}) {
     '- Chart density: N≤10 slides → max 2 charts; N≤16 → max 3; else max 4. Do not stack three chart slides in a short deck.',
     '- Deck title: concise natural title (3–10 words). Do NOT paste the prompt.',
     '- suggestedContentType should align with expected content structure',
-    '- visual_need: none|photo|illustration|chart — none when the layout has no image slots',
+    '- How-it-works / N-step workflow / pipeline slides → suggestedContentType "diagram" (process layouts), not grid or bullet_list',
+    '- visual_need: none|photo|illustration|chart|diagram_template — none when the layout has no image slots; diagram_template for process/SWOT/funnel layouts',
+    '- Do NOT use path_b in the outline; Path B is decided later only for architecture/ERD-style slides',
     '',
     'Output JSON schema:',
     JSON.stringify(

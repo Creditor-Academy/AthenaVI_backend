@@ -149,11 +149,9 @@
                 "body": "Transparent tiers with no hidden fees"
               }
             ],
-            "imagePrompt": "Three distinct SaaS website page screenshots in a bento grid, muted professional aesthetic",
+            "imagePrompt": "SaaS product UI screenshot for metrics masonry accent image, muted professional aesthetic",
             "imagePrompts": {
-              "METRIC_IMAGE_1": "SaaS website homepage screenshot, clean hero section, muted professional aesthetic",
-              "METRIC_IMAGE_2": "SaaS product page screenshot detail, feature highlights, muted professional aesthetic",
-              "METRIC_IMAGE_3": "SaaS pricing page screenshot, transparent tiers, muted professional aesthetic"
+              "METRIC_IMAGE_2": "SaaS product page screenshot detail, feature highlights, muted professional aesthetic"
             }
           }
         },

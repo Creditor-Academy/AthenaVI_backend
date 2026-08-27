@@ -3,6 +3,8 @@
  * Applied after outline generation and during deck-wide layout planning.
  */
 
+const { looksLikeLinearProcessSlide } = require('./diagramPathPolicy.util');
+
 const ARCHETYPES = {
   general: {
     id: 'general',
@@ -47,7 +49,7 @@ const ARCHETYPES = {
       timeline: ['timeline_milestones_v1', 'timeline_roadmap_v1', 'timeline_process_steps_v1', 'timeline_milestones_image_v1', 'timeline_horizontal_v1', 'timeline_vertical_v1'],
       diagram: ['diagram_process_steps_v1', 'diagram_swot_v1', 'diagram_matrix_v1', 'diagram_funnel_v1'],
       section_divider: ['section_divider_split_v1', 'section_divider_numbered_v1', 'section_divider_band_v1', 'section_divider_centered_v1'],
-      closing: ['closing_thank_you_fullbleed_v1', 'closing_thank_you_v1', 'closing_contact_cta_v1', 'centered_text_cta_v1', 'para_image_cta_v1'],
+      closing: ['closing_thank_you_v1', 'closing_contact_cta_v1', 'centered_text_cta_v1', 'para_image_cta_v1', 'closing_thank_you_fullbleed_v1'],
     },
   },
   pitch: {
@@ -79,7 +81,7 @@ const ARCHETYPES = {
       chart: ['chart_single_v1', 'chart_with_description_v1', 'chart_exponential_desc_v1', 'chart_donut_context_v1', 'chart_two_v1'],
       device_frames: ['grid_device_mockups_v1'],
       'image+text': ['three_cards_image_text_v1', 'two_para_right_image_v1', 'section_with_image_v1'],
-      closing: ['closing_thank_you_fullbleed_v1', 'closing_contact_cta_v1', 'closing_thank_you_v1', 'centered_text_cta_v1'],
+      closing: ['closing_contact_cta_v1', 'closing_thank_you_v1', 'centered_text_cta_v1', 'closing_thank_you_fullbleed_v1'],
     },
   },
   educational: {
@@ -129,7 +131,7 @@ const ARCHETYPES = {
       device_frames: ['grid_device_mockups_v1'],
       grid: ['grid_bento_three_v1', 'grid_text_image_cards_v1'],
       timeline: ['timeline_milestones_image_v1', 'timeline_roadmap_v1', 'timeline_milestones_v1'],
-      diagram: ['diagram_funnel_v1', 'diagram_process_steps_v1', 'diagram_pyramid_v1'],
+      diagram: ['diagram_process_steps_v1', 'diagram_funnel_v1', 'diagram_pyramid_v1'],
     },
   },
   corporate: {
@@ -146,7 +148,7 @@ const ARCHETYPES = {
       stat: ['metric_three_v1', 'metric_four_v1', 'metric_six_para_v1'],
       chart: ['chart_single_v1', 'chart_with_description_v1', 'chart_exponential_desc_v1', 'chart_donut_context_v1', 'chart_two_v1', 'grid_insights_chart_v1'],
       comparison: ['comparison_table_v1', 'comparison_side_by_side_v1'],
-      diagram: ['diagram_swot_v1', 'diagram_matrix_v1', 'diagram_process_steps_v1'],
+      diagram: ['diagram_process_steps_v1', 'diagram_swot_v1', 'diagram_matrix_v1'],
       grid: ['grid_metrics_masonry_v1', 'grid_insights_chart_v1'],
       section_divider: ['section_divider_band_v1', 'section_divider_numbered_v1'],
     },
@@ -242,10 +244,31 @@ function enrichOutlineWithArrangement(outline, { sourceText = '', userPrompt = '
     const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
     const seqIndex = order - 1;
     const hint = sequence[seqIndex] || 'image+text';
+    let suggested =
+      slide.suggestedContentType || slide.content_type || hint;
+    const processSignals = {
+      title: slide.title,
+      summary: slide.summary,
+      beats: slide.beats,
+      visual: slide.visual,
+      intent: slide.intent || slide.purpose,
+      contentType: suggested,
+    };
+    // Prefer process layouts for how-it-works style beats (not architecture/ERD).
+    if (
+      looksLikeLinearProcessSlide(processSignals) &&
+      !['title', 'closing', 'chart', 'section_divider'].includes(String(suggested).toLowerCase())
+    ) {
+      suggested = 'diagram';
+    }
     return {
       ...slide,
       order,
-      suggestedContentType: slide.suggestedContentType || slide.content_type || hint,
+      suggestedContentType: suggested,
+      visual_need:
+        String(suggested).toLowerCase() === 'diagram' && !slide.visual_need
+          ? 'diagram_template'
+          : slide.visual_need || slide.visualNeed || undefined,
       arrangementHint: hint,
     };
   });
