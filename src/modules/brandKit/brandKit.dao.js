@@ -88,6 +88,42 @@ async function createKit({ workspaceId, name, data, isDefault, createdBy }) {
   });
 }
 
+/**
+ * Clone a kit (data + media rows reusing the same S3 keys) into another workspace.
+ * Used when OWNER/ADMIN applies a personal kit inside a team workspace.
+ */
+async function cloneKitToWorkspace({ sourceKit, targetWorkspaceId, createdBy, name }) {
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.workspaceBrandKit.create({
+      data: {
+        workspaceId: targetWorkspaceId,
+        name: name || sourceKit.name || 'Brand Kit',
+        data: sourceKit.data,
+        isDefault: false,
+        createdBy,
+        media: {
+          create: (sourceKit.media || []).map((m, index) => ({
+            kind: m.kind,
+            role: m.role,
+            name: m.name,
+            assetId: m.assetId,
+            s3Key: m.s3Key,
+            mimeType: m.mimeType,
+            sortOrder: m.sortOrder ?? index,
+          })),
+        },
+      },
+      include: {
+        media: {
+          orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        _count: { select: { media: true } },
+      },
+    });
+    return created;
+  });
+}
+
 async function updateKit({ workspaceId, brandKitId, name, data, isDefault }) {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.workspaceBrandKit.findFirst({
@@ -185,6 +221,7 @@ module.exports = {
   findAllMediaByKindRole,
   logoRoleCandidates,
   createKit,
+  cloneKitToWorkspace,
   updateKit,
   setDefault,
   deleteKit,

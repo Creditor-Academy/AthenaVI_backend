@@ -92,6 +92,7 @@ const slideEditor = Object.fromEntries(
 
 async function resolveCreateThemeTokens({
   workspaceId,
+  userId,
   themeId,
   themeTokens,
   brandKitId,
@@ -108,7 +109,9 @@ async function resolveCreateThemeTokens({
   }
 
   const { themeTokens: kitTokens, brandKitId: resolvedKitId } =
-    await brandKitService.loadKitThemeTokensResolved(workspaceId, brandKitId);
+    await brandKitService.loadKitThemeTokensResolved(workspaceId, brandKitId, {
+      userId,
+    });
   if (kitTokens) {
     return { themeTokens: kitTokens, brandKitId: resolvedKitId };
   }
@@ -177,6 +180,7 @@ async function createPresentation({
   const { themeTokens: resolvedTokens, brandKitId: effectiveBrandKitId } =
     await resolveCreateThemeTokens({
       workspaceId,
+      userId,
       themeId,
       themeTokens,
       brandKitId,
@@ -401,7 +405,7 @@ async function getPresentationDeckPack(packId) {
   return deckPackGalleryService.getActiveDeckPack(packId);
 }
 
-async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
+async function applyBrandKit({ workspaceId, presentationId, brandKitId, userId }) {
   const { deck } = await deckGeneration.loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
@@ -409,7 +413,10 @@ async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
     throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
   }
 
-  const themeTokens = await brandKitService.loadKitThemeTokens(workspaceId, brandKitId);
+  const { themeTokens, brandKitId: resolvedKitId } =
+    await brandKitService.loadKitThemeTokensResolved(workspaceId, brandKitId, {
+      userId,
+    });
   const logo = brandKitService.pickLogoForBackground(themeTokens);
   const metrics = {
     ...(deck.generationMetrics && typeof deck.generationMetrics === 'object'
@@ -417,7 +424,7 @@ async function applyBrandKit({ workspaceId, presentationId, brandKitId }) {
       : {}),
     deckPack: {
       ...((deck.generationMetrics && deck.generationMetrics.deckPack) || {}),
-      brandKitId,
+      brandKitId: resolvedKitId || brandKitId,
     },
   };
 

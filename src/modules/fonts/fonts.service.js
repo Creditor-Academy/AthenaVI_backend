@@ -1,6 +1,7 @@
 const { getCatalogFonts } = require('./fontCatalog.service');
 const { FONT_PAIRING_CATALOG } = require('../../shared/fonts/fontPairings');
 const { googleFontsHref } = require('../../shared/fonts/googleFontsCss');
+const { isSystemFontFamily } = require('../../shared/fonts/builtinFonts');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 
@@ -54,7 +55,8 @@ async function getCatalog({ q, category, subset, featured, limit } = {}) {
     variants: f.variants,
     subsets: f.subsets,
     featured: Boolean(f.featured),
-    cssUrl: googleFontsHref(f.family),
+    source: f.source || (isSystemFontFamily(f.family) ? 'system' : 'google'),
+    cssUrl: isSystemFontFamily(f.family) ? null : googleFontsHref(f.family),
   }));
 
   return {

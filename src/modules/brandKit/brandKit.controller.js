@@ -12,12 +12,19 @@ const brandKitCredit = require('./brandKitCredit.service');
 const crypto = require('crypto');
 
 const listBrandKits = asyncHandler(async (req, res) => {
-  const data = await brandKitService.listBrandKits(req.params.workspaceId);
+  const data = await brandKitService.listUsableBrandKits(
+    req.params.workspaceId,
+    req.user?.id
+  );
   return successResponse(req, res, { brandKits: data }, 200, messages.BRAND_KITS_FETCHED);
 });
 
 const getBrandKit = asyncHandler(async (req, res) => {
-  const data = await brandKitService.getBrandKit(req.params.workspaceId, req.params.brandKitId);
+  const data = await brandKitService.getBrandKit(
+    req.params.workspaceId,
+    req.params.brandKitId,
+    { userId: req.user?.id }
+  );
   return successResponse(req, res, { brandKit: data }, 200, messages.BRAND_KIT_FETCHED);
 });
 

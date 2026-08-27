@@ -3,6 +3,7 @@ const fs = require('fs');
 const logger = require('../../shared/utils/logger');
 const { redisClient } = require('../../shared/config/redis');
 const { FEATURED_FAMILIES } = require('../../shared/fonts/fontPairings');
+const { mergeBuiltinFonts } = require('../../shared/fonts/builtinFonts');
 const googleFontsClient = require('./googleFonts.client');
 
 const CACHE_KEY = 'fonts:catalog:v1';
@@ -87,7 +88,7 @@ async function writeCache(fonts) {
  */
 async function getCatalogFonts() {
   const cached = await readCache();
-  if (cached?.length) return cached;
+  if (cached?.length) return mergeBuiltinFonts(cached);
 
   const snapshot = loadSnapshot();
   let fonts = snapshot;
@@ -103,7 +104,7 @@ async function getCatalogFonts() {
   }
 
   await writeCache(fonts);
-  return fonts;
+  return mergeBuiltinFonts(fonts);
 }
 
 module.exports = {

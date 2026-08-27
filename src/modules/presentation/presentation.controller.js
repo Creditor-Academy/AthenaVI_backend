@@ -361,6 +361,7 @@ const applyBrandKit = asyncHandler(async (req, res) => {
     workspaceId: req.params.workspaceId,
     presentationId: req.params.presentationId,
     brandKitId: req.body.brandKitId,
+    userId: req.user?.id,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_BRAND_KIT_APPLIED);
 });

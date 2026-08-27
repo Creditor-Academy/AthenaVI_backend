@@ -2,7 +2,10 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const s3Service = require('../s3/s3.service');
 const themeService = require('../presentation/theme.service');
+const workspaceDao = require('../workspace/workspace.dao');
 const brandKitDao = require('./brandKit.dao');
+
+const WRITE_ROLES = new Set(['OWNER', 'ADMIN']);
 
 const LOGO_ROLES = new Set([
   'primary',
@@ -478,8 +481,85 @@ async function listBrandKits(workspaceId) {
   return kits.map(serializeKitSummary);
 }
 
-async function getBrandKit(workspaceId, brandKitId) {
-  const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+/**
+ * Kits in this workspace, plus (for OWNER/ADMIN) kits from the caller's
+ * personal PRIVATE workspace so Brand Kits page kits appear in team PPT flows.
+ */
+async function listUsableBrandKits(workspaceId, userId) {
+  const local = await listBrandKits(workspaceId);
+  if (!userId) return local;
+
+  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  if (!membership || !WRITE_ROLES.has(membership.role)) {
+    return local;
+  }
+
+  const personal = await workspaceDao.findPrivateWorkspaceByOwnerId(userId);
+  if (!personal?.id || String(personal.id) === String(workspaceId)) {
+    return local;
+  }
+
+  const personalMembership = await workspaceDao.findWorkspaceMember(personal.id, userId);
+  if (!personalMembership || !WRITE_ROLES.has(personalMembership.role)) {
+    return local;
+  }
+
+  const seen = new Set(local.map((k) => String(k.id)));
+  const personalKits = (await listBrandKits(personal.id)).filter((kit) => {
+    const id = String(kit.id);
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  return [...local, ...personalKits].sort((a, b) => {
+    if (Boolean(b.isDefault) !== Boolean(a.isDefault)) return b.isDefault ? 1 : -1;
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}
+
+/**
+ * If brandKitId is not in target workspace but the user is OWNER/ADMIN of both
+ * the target and the kit's workspace, clone the kit into the target and return it.
+ */
+async function ensureKitInWorkspace({ workspaceId, brandKitId, userId }) {
+  if (!workspaceId || !brandKitId) return null;
+
+  const existing = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+  if (existing) return existing;
+
+  if (!userId) return null;
+
+  const targetMembership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  if (!targetMembership || !WRITE_ROLES.has(targetMembership.role)) {
+    return null;
+  }
+
+  const source = await brandKitDao.findById(brandKitId);
+  if (!source) return null;
+  if (String(source.workspaceId) === String(workspaceId)) return source;
+
+  const sourceMembership = await workspaceDao.findWorkspaceMember(
+    source.workspaceId,
+    userId
+  );
+  if (!sourceMembership || !WRITE_ROLES.has(sourceMembership.role)) {
+    return null;
+  }
+
+  return brandKitDao.cloneKitToWorkspace({
+    sourceKit: source,
+    targetWorkspaceId: workspaceId,
+    createdBy: userId,
+    name: source.name,
+  });
+}
+
+async function getBrandKit(workspaceId, brandKitId, { userId } = {}) {
+  let kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+  if (!kit && userId) {
+    kit = await ensureKitInWorkspace({ workspaceId, brandKitId, userId });
+  }
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
   return attachPresignedMedia(kit);
 }
@@ -631,18 +711,35 @@ async function deleteMedia({ workspaceId, brandKitId, mediaId }) {
   return { id: mediaId, deleted: true };
 }
 
-async function loadKitThemeTokens(workspaceId, brandKitId) {
-  const kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+async function loadKitThemeTokens(workspaceId, brandKitId, { userId } = {}) {
+  let kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+  if (!kit && userId) {
+    kit = await ensureKitInWorkspace({ workspaceId, brandKitId, userId });
+  }
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
   const kitWithUrls = await attachPresignedMedia(kit);
   return brandKitToThemeTokens(kitWithUrls);
 }
 
-async function loadKitThemeTokensResolved(workspaceId, brandKitId) {
+async function loadKitThemeTokensResolved(workspaceId, brandKitId, { userId } = {}) {
   const resolvedId = await resolveBrandKitId(workspaceId, brandKitId);
   if (!resolvedId) return { themeTokens: null, brandKitId: null };
-  const themeTokens = await loadKitThemeTokens(workspaceId, resolvedId);
-  return { themeTokens, brandKitId: resolvedId };
+
+  let kit = await brandKitDao.findInWorkspace(workspaceId, resolvedId);
+  if (!kit && userId && brandKitId) {
+    kit = await ensureKitInWorkspace({
+      workspaceId,
+      brandKitId: resolvedId,
+      userId,
+    });
+  }
+  if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
+
+  const kitWithUrls = await attachPresignedMedia(kit);
+  return {
+    themeTokens: brandKitToThemeTokens(kitWithUrls),
+    brandKitId: kit.id,
+  };
 }
 
 async function streamMedia({ workspaceId, brandKitId, mediaId, req, res }) {
@@ -658,6 +755,8 @@ async function streamMedia({ workspaceId, brandKitId, mediaId, req, res }) {
 
 module.exports = {
   listBrandKits,
+  listUsableBrandKits,
+  ensureKitInWorkspace,
   getBrandKit,
   createBrandKit,
   updateBrandKit,

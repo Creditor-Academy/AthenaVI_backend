@@ -13,6 +13,8 @@ Envelope: [OVERVIEW.md](OVERVIEW.md).
 
 Works **without** `GOOGLE_FONTS_API_KEY` via a vendored snapshot under `src/modules/fonts/catalog/googleFonts.snapshot.json`. When the key is set, the server merges a live Google Web Fonts directory (cached in Redis ~24h) on top of the snapshot.
 
+**Built-in fonts** (Inter, Arial, Helvetica, Georgia, Times New Roman, Courier New, Montserrat, Roboto, Open Sans, Poppins, Lato, Playfair Display, Outfit, Space Grotesk, monospace) are always prepended to catalog responses so previous editor options remain available alongside Google fonts. System fonts return `source: "system"` and `cssUrl: null`.
+
 ---
 
 ## `GET /api/fonts/catalog`

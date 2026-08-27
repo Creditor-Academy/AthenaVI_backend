@@ -102,9 +102,9 @@ When mapped to presentations, kits produce `themeTokens` with `palette`, optiona
 
 | Method | Path | Role | Purpose |
 |--------|------|------|---------|
-| `GET` | `/` | member | List kits (summary + mediaCount) |
+| `GET` | `/` | member | List kits (summary + mediaCount). **OWNER/ADMIN** also receive kits from their personal (`PRIVATE`) workspace so Brand Kits created on the personal Brand Kits page can be used when creating decks in a team workspace. |
 | `POST` | `/` | OWNER/ADMIN | Create kit `{ name, data, isDefault? }` |
-| `GET` | `/:brandKitId` | member | Full kit + media (presigned URLs) |
+| `GET` | `/:brandKitId` | member | Full kit + media (presigned URLs). OWNER/ADMIN may resolve a kit they own in another workspace by auto-importing a copy into this workspace. |
 | `PATCH` | `/:brandKitId` | OWNER/ADMIN | Update name / data / isDefault |
 | `DELETE` | `/:brandKitId` | OWNER/ADMIN | Delete kit + S3 media |
 | `POST` | `/:brandKitId/set-default` | OWNER/ADMIN | Set as workspace default |
@@ -113,6 +113,10 @@ When mapped to presentations, kits produce `themeTokens` with `palette`, optiona
 ### Default kit resolution
 
 If `brandKitId` is omitted on presentation **create** or **generate**, the workspace kit with `isDefault: true` is applied when present.
+
+### Cross-workspace use (OWNER/ADMIN)
+
+When creating a presentation or applying a brand kit with a `brandKitId` that lives in another workspace the caller owns (typically personal), the API **clones** the kit (data + media references) into the presentation workspace and uses the new id. Members only see / use kits that already belong to the current workspace.
 
 ---
 

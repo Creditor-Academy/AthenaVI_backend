@@ -3,12 +3,15 @@
  * Shared by brand-kit PDF, fonts catalog API, and Remotion.
  */
 
+const { isSystemFontFamily } = require('./builtinFonts');
+
 function googleFontsHref(families, { weights } = {}) {
   const unique = [
     ...new Set(
       (Array.isArray(families) ? families : [families])
         .map((f) => String(f || '').trim())
         .filter(Boolean)
+        .filter((f) => !isSystemFontFamily(f))
     ),
   ];
   if (!unique.length) return null;
