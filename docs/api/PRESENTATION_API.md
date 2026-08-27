@@ -173,6 +173,7 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
 - Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` (or `src` alias) for canvas render.
 - Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed`. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
+- Image/icon `content.flipHorizontal` / `content.flipVertical` (optional) and `placement.rotation` (degrees, images **and** text) are persisted on canvas write and honored on PPTX/PDF/PNG/JPEG export. Live editor rotation snaps every 90°.
 
 Also: `GET .../slides/:slideId` returns a single presigned slide.
 

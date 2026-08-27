@@ -178,12 +178,14 @@ FE: show “No visuals” only when `status === "skipped"` or there is no image 
 | `type` | Typical `content` |
 |--------|-------------------|
 | `text` | `text`, `fontSize`, `bold`, `italic`, `color`, `align` |
-| `image` / `icon` | `url` (presigned S3 GET, ~1h TTL — refetch presentation if expired), `fit`, `alt` / `icon` |
-
-**Images / “Visual failed”:** After generate, refetch `GET .../presentations/:id`. Render canvas `type: "image"` via `content.url`, or `slide.imageRef.url`. If `imageRef.source === "none"` and `imageRef.error` is set, that slide’s visual failed on the server (content timeout or image provider). Many slides legitimately have no image (`source: "none"` without `error`) when the classifier picks text/chart layouts.
+| `image` / `icon` | `url` (presigned S3 GET, ~1h TTL — refetch presentation if expired), `fit`, `alt` / `icon`, optional `flipHorizontal` / `flipVertical` |
 | `shape` | `shape`: `rect` \| `ellipse` \| `line`, `fill`, `line` |
 | `chart` | `chartType`, `labels`, `series` |
 | `table` | `rows`: string[][] |
+
+**Flip / rotate (canvas editor):** Persist image flips on `content.flipHorizontal` / `content.flipVertical` (also `scaleX` / `scaleY` of `-1`). Persist rotation on `placement.rotation` (degrees) for **images and text**. The editor snaps live mouse rotation to 90° detents.
+
+**Images / “Visual failed”:** After generate, refetch `GET .../presentations/:id`. Render canvas `type: "image"` via `content.url`, or `slide.imageRef.url`. If `imageRef.source === "none"` and `imageRef.error` is set, that slide’s visual failed on the server (content timeout or image provider). Many slides legitimately have no image (`source: "none"` without `error`) when the classifier picks text/chart layouts.
 
 **Drag / resize / snap / guides:** frontend only. Persist with:
 

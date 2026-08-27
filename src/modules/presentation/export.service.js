@@ -96,6 +96,22 @@ function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
   };
 }
 
+function contentFlipFlags(content = {}) {
+  return {
+    flipH: content.flipHorizontal === true || content.scaleX === -1,
+    flipV: content.flipVertical === true || content.scaleY === -1,
+  };
+}
+
+function placementTransformCss(placement = {}, content = {}) {
+  const rotate = Number(placement.rotation) || 0;
+  const { flipH, flipV } = contentFlipFlags(content);
+  const parts = [];
+  if (rotate) parts.push(`rotate(${rotate}deg)`);
+  if (flipH || flipV) parts.push(`scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+
 function resolveColor(value, palette, fallback = '111111') {
   if (!value) return String(fallback).replace(/^#/, '');
   if (typeof value === 'object') return firstHexFromFill(value, palette, fallback);
@@ -276,6 +292,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
       const key = content.s3Key || slide.imageRef?.s3Key || null;
       const b64 = await fetchImageAsBase64(url, key);
       if (b64) {
+        const { flipH, flipV } = contentFlipFlags(content);
         s.addImage({
           data: b64,
           x: box.x,
@@ -283,6 +300,8 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
           w: box.w,
           h: box.h,
           rotate,
+          flipH,
+          flipV,
         });
       } else {
         s.addShape('rect', {
@@ -675,6 +694,7 @@ function buildSlideHtmlPage(slide, palette) {
         const p = el.placement || {};
         const c = el.content || {};
         const isText = el.type === 'text' || el.type === 'textbox';
+        const transformCss = placementTransformCss(p, isText ? {} : c);
         const style = [
           `position:absolute`,
           `left:${Number(p.x) || 0}px`,
@@ -682,7 +702,8 @@ function buildSlideHtmlPage(slide, palette) {
           `width:${Number(p.width) || 100}px`,
           `height:${Number(p.height) || 100}px`,
           `opacity:${p.opacity != null ? p.opacity : 1}`,
-          `transform:rotate(${Number(p.rotation) || 0}deg)`,
+          `transform:${transformCss}`,
+          `transform-origin:center center`,
           `box-sizing:border-box`,
           `overflow:${isText ? 'visible' : 'hidden'}`,
         ].join(';');
