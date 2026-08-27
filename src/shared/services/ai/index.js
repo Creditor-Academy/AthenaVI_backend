@@ -7,6 +7,8 @@ const {
 } = require('./llm.service');
 const { generateImage, editImage, generateImageWithReferences, DEFAULT_IMAGE_MODEL } = require('./image.service');
 const { checkImageRelevance, summarizeReferenceImage } = require('./vision.service');
+const { getGemini, isGeminiConfigured } = require('./gemini.client');
+const { generateForModel, editForModel } = require('./imageProvider.service');
 
 module.exports = {
   getOpenAI,
@@ -20,4 +22,8 @@ module.exports = {
   DEFAULT_IMAGE_MODEL,
   checkImageRelevance,
   summarizeReferenceImage,
+  getGemini,
+  isGeminiConfigured,
+  generateForModel,
+  editForModel,
 };

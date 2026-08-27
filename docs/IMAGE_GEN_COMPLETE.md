@@ -102,7 +102,10 @@ Mounted at **`/api/image-gen`** from `src/app.js` (not under `/api/workspaces`).
 | `prompts/contextEnrichment.prompt.js` | Append context block + ref index hints |
 | `prompts/chatEdit.prompt.js` | Compose chat edit instruction for OpenAI |
 | `validations/imageGen.validations.js` | Joi schemas |
-| `shared/services/ai/image.service.js` | `generateImage`, `editImage`, `generateImageWithReferences` |
+| `shared/services/ai/image.service.js` | OpenAI `generateImage`, `editImage`, `generateImageWithReferences` |
+| `shared/services/ai/geminiImage.service.js` | Gemini equivalents (aspect ratio + clamped `imageSize`, timeout, 429 retry) |
+| `shared/services/ai/imageProvider.service.js` | Provider router: `generateForModel` / `editForModel` |
+| `shared/services/ai/gemini.client.js` | Lazy `GEMINI_API_KEY` client (503 when unset) |
 | `shared/config/imageGenCreditPricing.js` | Flat AC per feature / env overrides |
 | `shared/jobs/imageGenContextCleanup.job.js` | Purge expired unpinned contexts |
 | `workspaceLibrary.service.js` | Folder library `category=image` → threads |
@@ -177,13 +180,24 @@ Assets link back via `stockMetadata.generationId` (+ mode, model, format, action
 
 ### 5.1 Models — `GET /api/image-gen/models`
 
-| `id` | OpenAI under the hood | Quality | Default AC | Notes |
-|------|----------------------|---------|------------|--------|
-| `gpt-image-1` | `gpt-image-1` | medium | **6** | Default; recommended |
-| `gpt-image-1-hd` | `gpt-image-1` | high | **12** | |
-| `dall-e-3` | `gpt-image-1` | high | **12** | Compat alias (DALL·E 3 retired) |
+| `id` | Provider | Model under the hood | Default AC | Notes |
+|------|----------|----------------------|------------|--------|
+| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Default for `image`; recommended |
+| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `infographic` |
+| `dall-e-3` | openai | `gpt-image-1` (high) | **12** | Compat alias (DALL·E 3 retired) |
+| `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K |
+| `gemini-3.1-flash-image` | gemini | `gemini-3.1-flash-image` | **8** | Nano Banana 2; balanced; ≤4K |
+| `gemini-3.1-flash-lite-image` | gemini | `gemini-3.1-flash-lite-image` | **4** | Nano Banana 2 Lite; **1K only** |
 
-Each model lists `modes: ["image"]`, `supportsEdit: true`, `creditEstimate`.
+Each model lists `provider`, `maxImageSize` (Gemini only), `modes: ["image","infographic"]`, `supportsEdit: true`, `creditEstimate`.
+
+**Provider routing.** `imageGen.service` never calls a vendor SDK directly; it calls
+`generateForModel` / `editForModel` in `shared/services/ai/imageProvider.service.js`, which
+dispatches on `model.provider` and returns one normalized shape
+(`{ b64, buffer, revised_prompt, usage, latencyMs, model }`) so crop, asset persistence, and
+serialization are provider-agnostic. OpenAI receives a `WxH` size string; Gemini receives a
+native `aspectRatio` plus a resolution tier clamped to `model.maxImageSize`. Pixel edits stay on
+the parent generation's provider.
 
 ### 5.2 Formats — `GET /api/image-gen/formats`
 
@@ -336,13 +350,19 @@ Keys are per user and per workspace.
 
 ## Part 8 — Environment checklist
 
-Requires **`OPENAI_API_KEY`**.
+Requires **`OPENAI_API_KEY`** (moderation + infographic spec LLM always run on OpenAI).
+**`GEMINI_API_KEY`** is required only to use the Gemini model ids; without it they return 503.
 
 | Variable | Role | Typical default |
 |----------|------|-----------------|
 | `IMAGE_GEN_GPT_IMAGE_AC` | AC for gpt-image-1 | 6 |
 | `IMAGE_GEN_GPT_IMAGE_HD_AC` | AC for HD | 12 |
 | `IMAGE_GEN_DALL_E_3_AC` | AC for alias | 12 |
+| `IMAGE_GEN_GEMINI_PRO_AC` | AC for Nano Banana Pro | 12 |
+| `IMAGE_GEN_GEMINI_FLASH_AC` | AC for Nano Banana 2 | 8 |
+| `IMAGE_GEN_GEMINI_FLASH_LITE_AC` | AC for Nano Banana 2 Lite | 4 |
+| `IMAGE_GEN_GEMINI_IMAGE_SIZE` | Gemini resolution tier, clamped per model | 2K |
+| `IMAGE_GEN_GEMINI_TIMEOUT_MS` | Gemini request abort | 300000 |
 | `IMAGE_GEN_RATE_LIMIT_*` | Generate throttle | 30 / 3600 |
 | `IMAGE_GEN_REGENERATE_RATE_LIMIT_*` | Regen/tweak throttle | 60 / 3600 |
 | `IMAGE_GEN_CONTEXT_*` | Files, TTL, cleanup, preview URL TTL | see ENVIRONMENT.md |

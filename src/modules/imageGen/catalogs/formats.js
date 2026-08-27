@@ -1,7 +1,10 @@
 /**
  * Generic image format catalog.
  * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp crop.
+ * geminiAspectRatio = native Gemini ratio so the render matches the target shape.
  */
+
+const { resolveImageSize } = require('../../../shared/services/ai/geminiImage.service');
 
 const FULL_BLEED_COMMON = [
   'FULL-BLEED edge-to-edge: fill the entire canvas.',
@@ -25,6 +28,7 @@ const FORMATS = Object.freeze([
     height: 1024,
     openaiSizeGpt: '1024x1024',
     openaiSizeDalle: '1024x1024',
+    geminiAspectRatio: '1:1',
     safeZone: 'Keep subject centered with comfortable margins.',
     composeRules: [...FULL_BLEED_COMMON, '1:1 square composition; balanced center focus.'],
     infographicCompose: [
@@ -41,6 +45,7 @@ const FORMATS = Object.freeze([
     height: 1024,
     openaiSizeGpt: '1536x1024',
     openaiSizeDalle: '1792x1024',
+    geminiAspectRatio: '3:2',
     safeZone: 'Keep focal content in the center third.',
     composeRules: [...FULL_BLEED_COMMON, 'Landscape 3:2; keep hero in the center third.'],
     infographicCompose: [
@@ -57,6 +62,7 @@ const FORMATS = Object.freeze([
     height: 1536,
     openaiSizeGpt: '1024x1536',
     openaiSizeDalle: '1024x1792',
+    geminiAspectRatio: '2:3',
     safeZone: 'Keep focal content in the center third.',
     composeRules: [...FULL_BLEED_COMMON, 'Portrait 2:3; keep hero in the center third.'],
     infographicCompose: [
@@ -85,14 +91,26 @@ function resolveFormat(formatId) {
   return FORMAT_BY_ID[formatId] || null;
 }
 
-function openaiSizeForFormat(format, openaiModel) {
+function openaiSizeForFormat(format, providerModel) {
   if (!format) {
     return '1024x1024';
   }
-  if (String(openaiModel || '').startsWith('dall-e')) {
+  if (String(providerModel || '').startsWith('dall-e')) {
     return format.openaiSizeDalle;
   }
   return format.openaiSizeGpt;
+}
+
+/**
+ * Native Gemini image config for a format, clamped to what the model supports.
+ * @param {object} format
+ * @param {{ maxImageSize?: string }} [model]
+ */
+function geminiImageConfigForFormat(format, model = {}) {
+  return {
+    aspectRatio: (format && format.geminiAspectRatio) || '1:1',
+    imageSize: resolveImageSize(undefined, model.maxImageSize),
+  };
 }
 
 /**
@@ -121,5 +139,6 @@ module.exports = {
   listFormats,
   resolveFormat,
   openaiSizeForFormat,
+  geminiImageConfigForFormat,
   composeRulesForMode,
 };

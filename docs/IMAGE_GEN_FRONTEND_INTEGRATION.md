@@ -1,6 +1,6 @@
 # Image Gen — frontend integration
 
-Studio for AI **images** and **infographics** (OpenAI).  
+Studio for AI **images** and **infographics** (OpenAI + Gemini models).  
 HTTP details: [`docs/api/IMAGE_GEN_API.md`](api/IMAGE_GEN_API.md).  
 **Complete backend guide:** [`IMAGE_GEN_COMPLETE.md`](IMAGE_GEN_COMPLETE.md).  
 **Infographic PRD:** [`INFOGRAPHIC_MODE_PRD.md`](INFOGRAPHIC_MODE_PRD.md).
@@ -31,6 +31,7 @@ Workspace → Folder → Image/Infographic chat
 3. User is inside a **folder**. Generate requires `folderId`.
 4. **Image:** default model `gpt-image-1`, format `square`. Timeout **30–90s**.
 5. **Infographic:** default model `gpt-image-1-hd`, format `landscape`. Optional archetype picker (or “auto”). Style = free-text `styleHint` and/or existing style chips. Timeout **≥ 120s**.
+5b. **Model picker:** group by `model.provider` (`openai` | `gemini`). Every model works in both modes and supports edits. Gemini options: `gemini-3-pro-image` (best in-image text), `gemini-3.1-flash-image` (balanced), `gemini-3.1-flash-lite-image` (cheapest, `maxImageSize: "1K"` — label as draft quality since landscape/portrait get upscaled). Show `creditEstimate` per model; it varies (4–12 AC).
 6. Optional context attach → `POST .../context` → pass `contextId`.
 7. `GET .../estimate?mode=&modelId=&tweak=`.
 8. After success: preview `actions.viewUrl`; open `actions.threadId`. For infographic, optional collapsible `generation.infographicSpec`.
@@ -75,12 +76,12 @@ Open chat free; send charges tweak/infographic AC. Prefer regenerate-from-spec a
 
 | Status | Meaning |
 |--------|---------|
-| 400 | Validation / invalid mode / invalid or failed infographic spec / mode mismatch |
+| 400 | Validation / invalid mode / invalid or failed infographic spec / mode mismatch / provider safety block |
 | 402 | Insufficient credits |
 | 404 | Missing generation/thread/folder/expired context |
 | 409 | Delete pinned context |
 | 429 | Rate limited |
-| 502/503 | OpenAI failure / not configured |
+| 502/503 | OpenAI or Gemini failure / provider not configured |
 
 ---
 

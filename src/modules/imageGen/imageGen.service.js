@@ -1,11 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
-const {
-  generateImage,
-  editImage,
-  generateImageWithReferences,
-} = require('../../shared/services/ai');
+const { generateForModel, editForModel } = require('../../shared/services/ai');
 const { getObjectBuffer } = require('../s3/s3.service');
 const { persistWorkspaceAsset } = require('../asset/asset.service');
 const prisma = require('../../shared/config/prismaClient');
@@ -21,6 +17,7 @@ const {
   listFormats,
   resolveFormat,
   openaiSizeForFormat,
+  geminiImageConfigForFormat,
 } = require('./catalogs/formats');
 const { listStyles, resolveStyle } = require('./catalogs/styles');
 const { listArchetypes } = require('./catalogs/archetypes');
@@ -193,6 +190,22 @@ function resolveRequestFormat(formatId) {
     return format;
   }
   return resolveFormat('square');
+}
+
+/**
+ * Per-provider sizing. OpenAI takes a WxH string; Gemini takes an aspect ratio
+ * plus a resolution tier, so we persist the target WxH for parity in the DB.
+ */
+function providerSizingFor(model, format) {
+  if (model && model.provider === 'gemini') {
+    const { aspectRatio } = geminiImageConfigForFormat(format, model);
+    const size = format ? `${format.width}x${format.height}` : '1024x1024';
+    return { size, aspectRatio };
+  }
+  return {
+    size: openaiSizeForFormat(format, model && model.providerModel),
+    aspectRatio: null,
+  };
 }
 
 function assertModeModelCompatible(mode, model) {
@@ -460,21 +473,15 @@ async function runPipeline({
     );
   }
 
-  const openaiSize = openaiSizeForFormat(format, model.openaiModel);
-  const generated = useRefs
-    ? await generateImageWithReferences({
-        prompt: enrichedPrompt,
-        referenceBuffers,
-        model: model.openaiModel,
-        quality: model.quality,
-        size: openaiSize,
-      })
-    : await generateImage({
-        prompt: enrichedPrompt,
-        model: model.openaiModel,
-        quality: model.quality,
-        size: openaiSize,
-      });
+  const { size: requestedSize, aspectRatio } = providerSizingFor(model, format);
+  const generated = await generateForModel({
+    model,
+    prompt: enrichedPrompt,
+    size: requestedSize,
+    aspectRatio,
+    referenceBuffers: useRefs ? referenceBuffers : [],
+  });
+  const openaiSize = requestedSize;
 
   const cropped = await cropToFormat(generated.buffer, format, {
     fit: mode === 'infographic' ? 'contain' : 'cover',
@@ -632,14 +639,14 @@ async function runTweakOnParent({
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
   const sourceBuffer = await getObjectBuffer(parent.s3Key);
-  const openaiSize = openaiSizeForFormat(format, 'gpt-image-1');
-  const openaiInstruction = String(editPrompt || instruction).trim();
-  const edited = await editImage({
+  const { size: openaiSize, aspectRatio } = providerSizingFor(model, format);
+  const editInstruction = String(editPrompt || instruction).trim();
+  const edited = await editForModel({
+    model,
     imageBuffer: sourceBuffer,
-    instruction: openaiInstruction,
-    model: 'gpt-image-1',
-    quality: model.quality === 'high' ? 'high' : 'medium',
+    instruction: editInstruction,
     size: openaiSize,
+    aspectRatio,
   });
 
   const cropped = await cropToFormat(edited.buffer, format, {

@@ -5,7 +5,7 @@ Base path: **`/api/image-gen`**
 **Internal complete guide + Infographics research:** [`docs/IMAGE_GEN_COMPLETE.md`](../IMAGE_GEN_COMPLETE.md).  
 **Infographic PRD:** [`docs/INFOGRAPHIC_MODE_PRD.md`](../INFOGRAPHIC_MODE_PRD.md).
 
-OpenAI workspace image studio for **general images** and **infographics**. Results are saved as workspace **Assets** (`source: "ai_gen"`) and downloadable as PNG / JPG / JPEG / PDF.
+Workspace image studio for **general images** and **infographics**, backed by **OpenAI** and **Google Gemini** models. Results are saved as workspace **Assets** (`source: "ai_gen"`) and downloadable as PNG / JPG / JPEG / PDF.
 
 **Auth:** `Authorization: Bearer <access_token>` on all routes.  
 **Workspace routes:** `checkWorkspaceAccess` (PRIVATE = owner; TEAM = any member).
@@ -31,13 +31,20 @@ OpenAI workspace image studio for **general images** and **infographics**. Resul
 | **Method** | `GET` |
 | **Path** | `/api/image-gen/models` |
 
-**Response (200)** – `data.models[]`: `id`, `name`, `description`, `modes` (`["image","infographic"]`), `recommended`, `supportsEdit`, `creditEstimate`.
+**Response (200)** – `data.models[]`: `id`, `name`, `description`, `provider` (`openai` \| `gemini`), `maxImageSize` (Gemini only, else `null`), `modes` (`["image","infographic"]`), `recommended`, `supportsEdit`, `creditEstimate`.
 
-| `id` | Notes |
-|------|--------|
-| `gpt-image-1` | Default for `image` |
-| `gpt-image-1-hd` | Default for `infographic` |
-| `dall-e-3` | Compat alias → gpt-image-1 high |
+All models support **both modes** and **edits** (tweak / chat pixel edits stay on the parent's provider).
+
+| `id` | Provider | AC | Notes |
+|------|----------|----|-------|
+| `gpt-image-1` | openai | 6 | Default for `image` |
+| `gpt-image-1-hd` | openai | 12 | Default for `infographic` |
+| `dall-e-3` | openai | 12 | Compat alias → gpt-image-1 high |
+| `gemini-3-pro-image` | gemini | 12 | Nano Banana Pro — best in-image text; up to 4K |
+| `gemini-3.1-flash-image` | gemini | 8 | Nano Banana 2 — balanced; up to 4K |
+| `gemini-3.1-flash-lite-image` | gemini | 4 | Nano Banana 2 Lite — **1K only**, draft quality; weaker with multiple reference images |
+
+Gemini models require **`GEMINI_API_KEY`**; without it those ids return **503**. `OPENAI_API_KEY` is still required regardless, because moderation and the infographic spec LLM run on OpenAI.
 
 ### Formats
 
@@ -47,7 +54,8 @@ OpenAI workspace image studio for **general images** and **infographics**. Resul
 | **Path** | `/api/image-gen/formats` |
 
 Generic ids: `square` (1024×1024), `landscape` (1536×1024), `portrait` (1024×1536).  
-Infographic uses margin-friendly compose rules (not full-bleed). If OpenAI returns a mismatched aspect, `contain` letterboxes on a light background rather than clipping labels.
+Infographic uses margin-friendly compose rules (not full-bleed). If the provider returns a mismatched aspect, `contain` letterboxes on a light background rather than clipping labels.  
+Gemini renders natively at `1:1` / `3:2` / `2:3` to match these formats. `gemini-3.1-flash-lite-image` caps at 1K, so landscape and portrait outputs are upscaled to the target size and look softer.
 
 ### Styles
 
@@ -153,9 +161,10 @@ Same routes as before. Thread payload includes `mode` and `archetype` from the h
 { "content": "Swap step 2 and 3", "fromGenerationId": "optional", "editMode": "spec" }
 ```
 
-- Infographic: server routes to **spec patch + re-render** (content/structure/design language) or **pixel `editImage`** (pure visual). Prefer `editMode: "spec" | "pixel"` to override. Pixel path sets `request.pixelEdited: true`.
+- Infographic: server routes to **spec patch + re-render** (content/structure/design language) or **pixel edit** (pure visual). Prefer `editMode: "spec" | "pixel"` to override. Pixel path sets `request.pixelEdited: true`.
 - Image: existing chat edit composition + pixel edit.
 - Sticky mode: cannot change mode mid-thread.
+- Pixel edits run on the parent generation's provider: Gemini parents edit on the same Gemini model, OpenAI parents on `gpt-image-1`.
 
 ---
 
@@ -180,9 +189,14 @@ Same routes as before. Thread payload includes `mode` and `archetype` from the h
 | `image_gen_gpt_image` | 6 | `IMAGE_GEN_GPT_IMAGE_AC` |
 | `image_gen_gpt_image_hd` | 12 | `IMAGE_GEN_GPT_IMAGE_HD_AC` |
 | `image_gen_dall_e_3` | 12 | `IMAGE_GEN_DALL_E_3_AC` |
+| `image_gen_gemini_pro_image` | 12 | `IMAGE_GEN_GEMINI_PRO_AC` |
+| `image_gen_gemini_flash_image` | 8 | `IMAGE_GEN_GEMINI_FLASH_AC` |
+| `image_gen_gemini_flash_lite_image` | 4 | `IMAGE_GEN_GEMINI_FLASH_LITE_AC` |
 | `image_gen_infographic` | model AC until margin pass | `IMAGE_GEN_INFOGRAPHIC_AC` (optional override) |
 
-Requires **`OPENAI_API_KEY`**. Optional `IMAGE_GEN_SPEC_MODEL` for the infographic spec LLM (defaults to `PPT_SLIDE_MODEL` / `gpt-4.1-mini`).
+Gemini AC values are placeholders until the margin pass, sized to Google's list-price gaps.
+
+Requires **`OPENAI_API_KEY`**; **`GEMINI_API_KEY`** additionally for Gemini models. Optional `IMAGE_GEN_SPEC_MODEL` for the infographic spec LLM (defaults to `PPT_SLIDE_MODEL` / `gpt-4.1-mini`), `IMAGE_GEN_GEMINI_IMAGE_SIZE` (`512` \| `1K` \| `2K` \| `4K`, default `2K`, clamped per model), `IMAGE_GEN_GEMINI_TIMEOUT_MS` (default 300000).
 
 ---
 
