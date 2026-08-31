@@ -14,6 +14,50 @@ const { resolveSemanticTheme } = require('./artDirection/semanticTheme');
 const { resolveTextColor } = require('./artDirection/resolveTextColor');
 const { inferTypographyRole } = require('./artDirection/typographyRoles');
 const { repairElementsDoc } = require('./artDirection/validateDesign');
+const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements } = require('./diagramCycleSvg');
+const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements } = require('./diagramFunnelSvg');
+const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements } = require('./diagramMatrixSvg');
+const {
+  PYRAMID_N,
+  PYRAMID_COLORS,
+  pyramidStagePlacement,
+  pyramidStageInlineSvg,
+  pyramidGraphicBox,
+  pyramidLegendPlacements,
+  PYRAMID_BADGE_CLIP,
+} = require('./diagramPyramid');
+const {
+  SWOT_N,
+  SWOT_LETTERS,
+  SWOT_COLORS,
+  SWOT_LABELS,
+  swotPetalPlacement,
+  swotPetalInlineSvg,
+  swotIconInlineSvg,
+  swotDashInlineSvg,
+  swotGraphicBox,
+  swotOverlayPlacements,
+} = require('./diagramSwotSvg');
+const {
+  VENN_N,
+  VENN_COLORS,
+  vennRingColor,
+  vennCoreInlineSvg,
+  vennIconInlineSvg,
+  vennFrame,
+  vennSetGeom,
+} = require('./diagramVennSvg');
+const {
+  QUOTE_GRID_N,
+  QUOTE_MARK_COLOR,
+  QUOTE_CARD_BORDER,
+  quoteMarkInlineSvg,
+  quoteGridFrame,
+  quoteGridCardGeom,
+  quotePortraitGeom,
+  quoteTestimonialGeom,
+  quoteStatementLeftGeom,
+} = require('./quoteGridLayout');
 
 function parseRegion(region) {
   const str = String(region || '');
@@ -528,6 +572,8 @@ const FUNNEL_FIELD_RE = /^funnel_(\d+)_(title|body)$/;
 const ITEM_FIELD_RE = /^item_(\d+)$/i;
 const QUOTE_SLOT_RE = /^quote_(\d+)$/;
 const ATTR_SLOT_RE = /^attr_(\d+)$/;
+const NAME_SLOT_RE = /^name_(\d+)$/;
+const ROLE_SLOT_RE = /^role_(\d+)$/;
 const CONTACT_VALUE_RE = /^contact_(address|phone|email)$/;
 const CENTERED_LAYOUT_RE = /centered|thank_you|big_number|banner/;
 const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
@@ -1000,10 +1046,26 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
 
   const quoteSlot = id.match(QUOTE_SLOT_RE);
   if (quoteSlot) {
-    const quotes = content.quotes || (content.quote ? [content.quote] : []);
+    const quotes = content.quotes || content.testimonials || (content.quote ? [content.quote] : []);
     const raw = Array.isArray(quotes) ? quotes[Number(quoteSlot[1]) - 1] : null;
     if (typeof raw === 'string') return raw.trim();
     return String(raw?.text ?? raw?.quote ?? '').trim();
+  }
+
+  const nameSlot = id.match(NAME_SLOT_RE);
+  if (nameSlot) {
+    const attrs = content.testimonials || content.attributions || content.quotes || [];
+    const raw = Array.isArray(attrs) ? attrs[Number(nameSlot[1]) - 1] : null;
+    if (typeof raw === 'string') return raw.trim();
+    return String(raw?.name ?? raw?.author ?? raw?.attribution ?? '').trim();
+  }
+
+  const roleSlot = id.match(ROLE_SLOT_RE);
+  if (roleSlot) {
+    const attrs = content.testimonials || content.attributions || content.quotes || [];
+    const raw = Array.isArray(attrs) ? attrs[Number(roleSlot[1]) - 1] : null;
+    if (typeof raw === 'string') return '';
+    return String(raw?.role ?? raw?.title ?? raw?.org ?? raw?.company ?? '').trim();
   }
 
   const attrSlot = id.match(ATTR_SLOT_RE);
@@ -1156,7 +1218,11 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     case 'center_body':
       return String(content.diagram?.center ?? content.center ?? content.overlap ?? '').trim();
     case 'attribution':
-      return String(content.attribution || content.author || content.source || '').trim();
+      return String(content.attribution || content.author || content.name || content.source || '').trim();
+    case 'name':
+      return String(content.name || content.author || content.attribution || '').trim();
+    case 'role':
+      return String(content.role || content.authorTitle || content.titleLine || '').trim();
     case 'cta':
       return String(
         content.cta ||
@@ -1307,7 +1373,13 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
       ''
     );
   }
-  if (id.includes('quote')) return content.quote || content.body || '';
+  if (id === 'name' || id === 'author_name') {
+    return String(content.name || content.author || content.attribution || '').trim();
+  }
+  if (id === 'role' || id === 'author_title') {
+    return String(content.role || content.authorTitle || content.titleLine || '').trim();
+  }
+  if (id.includes('quote') || id === 'statement') return content.quote || content.body || '';
   if (id === 'bullets' || id === 'bullet_list') return bulletBlock(bullets);
 
   const indexedBody = id.match(/^body_(\d+)$/);
@@ -2809,6 +2881,16 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
 
   for (const el of elementsDoc.elements) {
     if (el.type !== 'text' && el.type !== 'textbox') continue;
+    if (
+      /^CYCLE_NUM_[1-4]$/i.test(String(el.slotId || '')) ||
+      /^FUNNEL_NUM_[1-4]$/i.test(String(el.slotId || '')) ||
+      /^PYRAMID_NUM_[1-5]$/i.test(String(el.slotId || '')) ||
+      /^SWOT_LETTER_[1-4]$/i.test(String(el.slotId || '')) ||
+      /^SWOT_HUB_(TITLE|SUB)$/i.test(String(el.slotId || '')) ||
+      /^funnel_[1-5]_title$/i.test(String(el.slotId || '')) ||
+      /^Q[1-4]_(TITLE|BODY)$/i.test(String(el.slotId || '')) ||
+      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || ''))
+    ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
     const colorRoleRaw = String(el.content?.colorRole || '');
@@ -3375,6 +3457,1804 @@ function isProcessFlowLayout(layoutId) {
   );
 }
 
+function isDiagramProcessStepsLayout(layoutId) {
+  return /diagram_process_steps/.test(String(layoutId || '').toLowerCase());
+}
+
+function isDiagramCycleLayout(layoutId) {
+  return /diagram_cycle/.test(String(layoutId || '').toLowerCase());
+}
+
+function layoutDiagramCycle(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const colors = [
+    paletteColor(palette, 'accent', CYCLE_SEGMENT_COLORS[0]),
+    paletteColor(palette, 'secondary', CYCLE_SEGMENT_COLORS[1]),
+    paletteColor(palette, 'primary', CYCLE_SEGMENT_COLORS[2]),
+    paletteColor(palette, 'highlight', CYCLE_SEGMENT_COLORS[3]),
+  ];
+
+  const insetX = 56;
+  const headingH = 72;
+  const headingY = 52;
+  const bottomPad = 56;
+  const cycleSize = Math.min(620, canvasH - headingY - headingH - bottomPad - 24);
+  const cycleX = Math.round((canvasW - cycleSize) / 2);
+  const spaceBelowTitle = canvasH - headingY - headingH - bottomPad;
+  const cycleY = Math.round(headingY + headingH + Math.max(24, (spaceBelowTitle - cycleSize) / 2));
+  const sideW = Math.max(260, cycleX - insetX - 28);
+  const titleH = 44;
+  const bodyH = 88;
+  const topBlockY = cycleY + Math.round(cycleSize * 0.16);
+  const bottomBlockY = cycleY + Math.round(cycleSize * 0.58);
+
+  const overlay = cycleOverlayPlacements(cycleX, cycleY, cycleSize);
+
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^CYCLE_(SEG_[1-4]|HUB)$/i.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) => !/^CYCLE_(RING|SEG_[1-4]|HUB)$/i.test(String(el.slotId || ''))
+  );
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          ...(el.placement || {}),
+          x: insetX,
+          y: headingY,
+          width: canvasW - insetX * 2,
+          height: headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: Math.min(Number(el.content?.fontSize) || 34, 36),
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    if (sid.toUpperCase() === 'CYCLE_CENTER') {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...(el.placement || {}), ...overlay.center, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          text: el.content?.text || 'CYCLE',
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 20,
+          fontWeight: 800,
+          letterSpacing: '0.12em',
+          wrap: 'nowrap',
+          color: textColor,
+        },
+      };
+    }
+    const numM = sid.match(/^CYCLE_NUM_([1-4])$/i);
+    if (numM) {
+      const idx = Number(numM[1]) - 1;
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...(el.placement || {}), ...overlay.numbers[idx], rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          text: el.content?.text || String(idx + 1),
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 36,
+          fontWeight: 800,
+          lineHeight: 1,
+          wrap: 'nowrap',
+          color: '#ffffff',
+        },
+      };
+    }
+    const m = sid.match(/^Q([1-4])_(TITLE|BODY)$/i);
+    if (!m) return el;
+    const q = Number(m[1]);
+    const isTitle = String(m[2]).toUpperCase() === 'TITLE';
+    const leftSide = q === 3 || q === 4;
+    const topSide = q === 1 || q === 4;
+    const x = leftSide ? insetX : canvasW - insetX - sideW;
+    const y = topSide ? topBlockY : bottomBlockY;
+    if (isTitle) {
+      return {
+        ...el,
+        layer: Math.max(el.layer || 0, 10),
+        placement: {
+          ...(el.placement || {}),
+          x,
+          y,
+          width: sideW,
+          height: titleH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: leftSide ? 'right' : 'left',
+          verticalAlign: 'flex-end',
+          fontSize: 22,
+          fontWeight: 700,
+          color: textColor,
+        },
+      };
+    }
+    return {
+      ...el,
+      layer: Math.max(el.layer || 0, 10),
+      placement: {
+        ...(el.placement || {}),
+        x,
+        y: y + titleH + 6,
+        width: sideW,
+        height: bodyH,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        ...base,
+        align: leftSide ? 'right' : 'left',
+        verticalAlign: 'flex-start',
+        fontSize: 16,
+        fontWeight: 400,
+        color: muted,
+        lineHeight: 1.4,
+      },
+    };
+  });
+
+  const extras = [];
+  if (!elements.some((el) => String(el.slotId || '').toUpperCase() === 'CYCLE_CENTER')) {
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId: 'CYCLE_CENTER',
+      role: 'heading',
+      layer: 12,
+      placement: { ...overlay.center, rotation: 0, opacity: 1 },
+      content: {
+        text: 'CYCLE',
+        align: 'center',
+        verticalAlign: 'center',
+        fontSize: 20,
+        fontWeight: 800,
+        letterSpacing: '0.12em',
+        wrap: 'nowrap',
+        color: textColor,
+        padding: 0,
+        paddingX: 0,
+      },
+    });
+  }
+  for (let i = 0; i < 4; i += 1) {
+    const slotId = `CYCLE_NUM_${i + 1}`;
+    if (elements.some((el) => String(el.slotId || '').toUpperCase() === slotId)) continue;
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId,
+      role: 'caption',
+      layer: 12,
+      placement: { ...overlay.numbers[i], rotation: 0, opacity: 1 },
+      content: {
+        text: String(i + 1),
+        align: 'center',
+        verticalAlign: 'center',
+        fontSize: 36,
+        fontWeight: 800,
+        lineHeight: 1,
+        wrap: 'nowrap',
+        color: '#ffffff',
+        padding: 0,
+        paddingX: 0,
+      },
+    });
+  }
+
+  const segs = [0, 1, 2, 3].map((i) => {
+    const slotId = `CYCLE_SEG_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const fill = prev?.content?.fill || colors[i];
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 2 + i,
+      placement: { ...cycleSegmentPlacement(cycleX, cycleY, cycleSize, i), rotation: 0, opacity: 1 },
+      content: {
+        svg: cycleSegmentInlineSvg(i),
+        colorMode: 'recolorable',
+        fill,
+        stroke: typeof fill === 'string' ? fill : fill?.color,
+        alt: `Cycle segment ${i + 1}`,
+      },
+      role: 'decoration',
+      slotId,
+    };
+  });
+  const prevHub = prevBySlot.get('CYCLE_HUB');
+  const hub = {
+    id: prevHub?.id || newElementId('shp'),
+    type: 'shape',
+    layer: 8,
+    placement: { ...overlay.hub, rotation: 0, opacity: 1 },
+    content: {
+      shape: 'ellipse',
+      fill: prevHub?.content?.fill || '#ffffff',
+    },
+    role: 'decoration',
+    slotId: 'CYCLE_HUB',
+  };
+
+  return { ...doc, elements: [...segs, hub, ...elements, ...extras] };
+}
+
+function isDiagramFunnelLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_funnel/.test(id) && !/pyramid/.test(id);
+}
+
+function isDiagramPyramidLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_pyramid/.test(id);
+}
+
+function layoutDiagramPyramid(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const frame = pyramidGraphicBox(canvasW, canvasH);
+  const legend = pyramidLegendPlacements(frame);
+  const colors = [
+    paletteColor(palette, 'accent', PYRAMID_COLORS[0]),
+    paletteColor(palette, 'secondary', PYRAMID_COLORS[1]),
+    paletteColor(palette, 'primary', PYRAMID_COLORS[2]),
+    paletteColor(palette, 'highlight', PYRAMID_COLORS[3]),
+    paletteColor(palette, 'accent', PYRAMID_COLORS[4]),
+  ];
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^PYRAMID_(SEG|BADGE)_[1-5]$/i.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter((el) => !/^PYRAMID_(SEG|BADGE|BAR)_/i.test(String(el.slotId || '')));
+  const extras = [];
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          ...(el.placement || {}),
+          x: 56,
+          y: frame.headingY,
+          width: canvasW - 112,
+          height: frame.headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 40,
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    const numM = sid.match(/^PYRAMID_NUM_([1-5])$/i);
+    if (numM) {
+      const i = Number(numM[1]) - 1;
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...legend[i].num, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          text: el.content?.text || String(i + 1).padStart(2, '0'),
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 20,
+          fontWeight: 800,
+          wrap: 'nowrap',
+          lineHeight: 1,
+          color: '#ffffff',
+        },
+      };
+    }
+    const titleM = sid.match(/^funnel_([1-5])_title$/i);
+    if (titleM) {
+      const i = Number(titleM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...legend[i].title, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 22,
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    const bodyM = sid.match(/^funnel_([1-5])_body$/i);
+    if (bodyM) {
+      const i = Number(bodyM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...legend[i].body, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 15,
+          fontWeight: 400,
+          color: muted,
+          lineHeight: 1.35,
+        },
+      };
+    }
+    return el;
+  });
+
+  for (let i = 0; i < PYRAMID_N; i += 1) {
+    const numId = `PYRAMID_NUM_${i + 1}`;
+    if (elements.some((el) => String(el.slotId || '').toUpperCase() === numId)) continue;
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId: numId,
+      role: 'caption',
+      layer: 12,
+      placement: { ...legend[i].num, rotation: 0, opacity: 1 },
+      content: {
+        text: String(i + 1).padStart(2, '0'),
+        align: 'center',
+        verticalAlign: 'center',
+        fontSize: 20,
+        fontWeight: 800,
+        wrap: 'nowrap',
+        lineHeight: 1,
+        color: '#ffffff',
+        padding: 0,
+        paddingX: 0,
+      },
+    });
+  }
+
+  const { graphicX, graphicY, graphicW, graphicH } = frame;
+  const segs = [0, 1, 2, 3, 4].map((i) => {
+    const slotId = `PYRAMID_SEG_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const fill = prev?.content?.fill || colors[i];
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 3 + i,
+      placement: { ...pyramidStagePlacement(graphicX, graphicY, graphicW, graphicH, i), rotation: 0, opacity: 1 },
+      content: {
+        svg: pyramidStageInlineSvg(i),
+        colorMode: 'recolorable',
+        fill,
+        alt: `Pyramid stage ${i + 1}`,
+      },
+      role: 'decoration',
+      slotId,
+    };
+  });
+
+  const badges = [0, 1, 2, 3, 4].map((i) => {
+    const slotId = `PYRAMID_BADGE_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 4,
+      placement: { ...legend[i].badge, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        fill: prev?.content?.fill || colors[i],
+        clipPath: PYRAMID_BADGE_CLIP,
+      },
+      role: 'decoration',
+      slotId,
+    };
+  });
+
+  return { ...doc, elements: [...segs, ...badges, ...elements, ...extras] };
+}
+
+function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+
+  const headingY = 36;
+  const headingH = 78;
+  const graphicH = Math.min(900, canvasH - headingY - headingH - 40);
+  const graphicW = Math.round(graphicH * (FUNNEL_GEOM.viewW / FUNNEL_GEOM.viewH));
+  const graphicY = headingY + headingH + 6;
+  const graphicX = 72;
+  const colors = [
+    paletteColor(palette, 'accent', FUNNEL_STAGE_COLORS[0]),
+    paletteColor(palette, 'secondary', FUNNEL_STAGE_COLORS[1]),
+    paletteColor(palette, 'primary', FUNNEL_STAGE_COLORS[2]),
+    paletteColor(palette, 'highlight', FUNNEL_STAGE_COLORS[3]),
+  ];
+  const overlay = funnelOverlayPlacements(graphicX, graphicY, graphicW, graphicH);
+  const textX = graphicX + graphicW + 28;
+  const textWidth = Math.max(360, canvasW - textX - 72);
+
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^FUNNEL_SEG_[1-4]$/i.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) =>
+      !/^FUNNEL_(SEG|TAB|LID|SHADE|RING)_/i.test(String(el.slotId || '')) &&
+      String(el.slotId || '') !== 'FUNNEL_RING'
+  );
+  const extras = [];
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          ...(el.placement || {}),
+          x: 64,
+          y: headingY,
+          width: canvasW - 128,
+          height: headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 42,
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    const numM = sid.match(/^FUNNEL_NUM_([1-4])$/i);
+    if (numM) {
+      const i = Number(numM[1]) - 1;
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...overlay.stages[i].num, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          text: el.content?.text || String(i + 1).padStart(2, '0'),
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 28,
+          fontWeight: 800,
+          wrap: 'nowrap',
+          lineHeight: 1,
+          color: '#ffffff',
+        },
+      };
+    }
+    const titleM = sid.match(/^funnel_([1-4])_title$/i);
+    if (titleM) {
+      const i = Number(titleM[1]) - 1;
+      const st = overlay.stages[i];
+      return {
+        ...el,
+        layer: 10,
+        placement: {
+          x: textX,
+          y: st.y + Math.round(st.h * 0.22),
+          width: textWidth,
+          height: 38,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 22,
+          fontWeight: 700,
+          color: FUNNEL_TITLE_COLORS[i],
+        },
+      };
+    }
+    const bodyM = sid.match(/^funnel_([1-4])_body$/i);
+    if (bodyM) {
+      const i = Number(bodyM[1]) - 1;
+      const st = overlay.stages[i];
+      return {
+        ...el,
+        layer: 10,
+        placement: {
+          x: textX,
+          y: st.y + Math.round(st.h * 0.22) + 40,
+          width: textWidth,
+          height: Math.max(40, st.h - 88),
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 16,
+          fontWeight: 400,
+          color: muted,
+          lineHeight: 1.4,
+        },
+      };
+    }
+    return el;
+  });
+
+  for (let i = 0; i < 4; i += 1) {
+    const numId = `FUNNEL_NUM_${i + 1}`;
+    if (elements.some((el) => String(el.slotId || '').toUpperCase() === numId)) continue;
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId: numId,
+      role: 'caption',
+      layer: 12,
+      placement: { ...overlay.stages[i].num, rotation: 0, opacity: 1 },
+      content: {
+        text: String(i + 1).padStart(2, '0'),
+        align: 'center',
+        verticalAlign: 'center',
+        fontSize: 28,
+        fontWeight: 800,
+        wrap: 'nowrap',
+        lineHeight: 1,
+        color: '#ffffff',
+        padding: 0,
+        paddingX: 0,
+      },
+    });
+  }
+
+  const segs = [0, 1, 2, 3].map((i) => {
+    const slotId = `FUNNEL_SEG_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const fill = prev?.content?.fill || colors[i];
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 2 + i,
+      placement: { ...funnelStagePlacement(graphicX, graphicY, graphicW, graphicH, i), rotation: 0, opacity: 1 },
+      content: {
+        svg: funnelStageInlineSvg(i),
+        colorMode: 'recolorable',
+        fill,
+        stroke: typeof fill === 'string' ? fill : fill?.color,
+        alt: `Funnel stage ${i + 1}`,
+      },
+      role: 'decoration',
+      slotId,
+    };
+  });
+
+  return { ...doc, elements: [...segs, ...elements, ...extras] };
+}
+function isDiagramMatrixLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_matrix/.test(id);
+}
+
+function layoutDiagramMatrix(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+
+  const headingY = 56;
+  const headingH = 72;
+  const graphicY = headingY + headingH + 28;
+  const graphicH = Math.min(820, canvasH - graphicY - 48);
+  const graphicW = Math.round(graphicH * (MATRIX_GEOM.viewW / MATRIX_GEOM.viewH));
+  const graphicX = Math.round((canvasW - graphicW) / 2);
+  const overlay = matrixOverlayPlacements(graphicX, graphicY, graphicW, graphicH);
+  const colors = [
+    paletteColor(palette, 'accent', MATRIX_QUAD_COLORS[0]),
+    paletteColor(palette, 'secondary', MATRIX_QUAD_COLORS[1]),
+    paletteColor(palette, 'primary', MATRIX_QUAD_COLORS[2]),
+    paletteColor(palette, 'highlight', MATRIX_QUAD_COLORS[3]),
+  ];
+  const arrowFill = paletteColor(palette, 'accent', MATRIX_ARROW_COLOR);
+
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^MATRIX_(QUAD_[1-4]|ARROW_[XY]|HUB)$/i.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) => !/^MATRIX_(RING|QUAD_[1-4]|ARROW_[XY]|HUB)$/i.test(String(el.slotId || ''))
+  );
+  const extras = [];
+  const textBase = (el) => ({
+    ...(el.content || {}),
+    letterSpacing: '0',
+    padding: 0,
+    paddingX: 0,
+    stroke: undefined,
+    strokeWidth: 0,
+  });
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = textBase(el);
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          x: 72,
+          y: headingY,
+          width: canvasW - 144,
+          height: headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 36,
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    const qM = sid.match(/^Q([1-4])_(TITLE|BODY)$/i);
+    if (qM) {
+      const i = Number(qM[1]) - 1;
+      const isTitle = String(qM[2]).toUpperCase() === 'TITLE';
+      const box = isTitle ? overlay.cells[i].title : overlay.cells[i].body;
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...box, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: isTitle ? 'flex-end' : 'flex-start',
+          fontSize: isTitle ? 22 : 15,
+          fontWeight: isTitle ? 800 : 400,
+          color: '#ffffff',
+          lineHeight: isTitle ? 1.15 : 1.35,
+        },
+      };
+    }
+    if (sid.toUpperCase() === 'MATRIX_CENTER') {
+      return {
+        ...el,
+        layer: 14,
+        placement: { ...overlay.center, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 16,
+          fontWeight: 800,
+          color: '#111827',
+          lineHeight: 1.2,
+        },
+      };
+    }
+    if (sid.toUpperCase() === 'MATRIX_Y_LABEL') {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...overlay.yLabel, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 16,
+          fontWeight: 700,
+          color: '#ffffff',
+          wrap: 'nowrap',
+        },
+      };
+    }
+    if (sid.toUpperCase() === 'MATRIX_X_LABEL') {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...overlay.xLabel, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 16,
+          fontWeight: 700,
+          color: '#ffffff',
+          wrap: 'nowrap',
+        },
+      };
+    }
+    return el;
+  });
+
+  const ensureText = (slotId, placement, content) => {
+    if (elements.some((el) => String(el.slotId || '').toUpperCase() === slotId)) return;
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId,
+      role: 'caption',
+      layer: 12,
+      placement: { ...placement, rotation: placement.rotation || 0, opacity: 1 },
+      content: { padding: 0, paddingX: 0, ...content },
+    });
+  };
+  ensureText('MATRIX_CENTER', overlay.center, {
+    text: 'Insert your desired text here.',
+    align: 'center',
+    verticalAlign: 'center',
+    fontSize: 16,
+    fontWeight: 800,
+    color: '#111827',
+    lineHeight: 1.2,
+  });
+  ensureText('MATRIX_Y_LABEL', overlay.yLabel, {
+    text: 'Placeholder',
+    align: 'center',
+    verticalAlign: 'center',
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#ffffff',
+    wrap: 'nowrap',
+  });
+  ensureText('MATRIX_X_LABEL', overlay.xLabel, {
+    text: 'Placeholder',
+    align: 'center',
+    verticalAlign: 'center',
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#ffffff',
+    wrap: 'nowrap',
+  });
+
+  const quads = [0, 1, 2, 3].map((i) => {
+    const slotId = `MATRIX_QUAD_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const place = matrixQuadPlacement(graphicX, graphicY, graphicW, graphicH, i);
+    const { borderRadius, ...placement } = place;
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 3,
+      placement: { ...placement, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        borderRadius,
+        fill: prev?.content?.fill || colors[i],
+      },
+      role: 'decoration',
+      slotId,
+    };
+  });
+  const prevAy = prevBySlot.get('MATRIX_ARROW_Y');
+  const prevAx = prevBySlot.get('MATRIX_ARROW_X');
+  const arrows = [
+    {
+      id: prevAy?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 2,
+      placement: { ...matrixArrowPlacement(graphicX, graphicY, graphicW, graphicH, 'y'), rotation: 0, opacity: 1 },
+      content: {
+        svg: matrixArrowInlineSvg('y'),
+        colorMode: 'recolorable',
+        fill: prevAy?.content?.fill || arrowFill,
+        alt: 'Matrix Y axis',
+      },
+      role: 'decoration',
+      slotId: 'MATRIX_ARROW_Y',
+    },
+    {
+      id: prevAx?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 2,
+      placement: { ...matrixArrowPlacement(graphicX, graphicY, graphicW, graphicH, 'x'), rotation: 0, opacity: 1 },
+      content: {
+        svg: matrixArrowInlineSvg('x'),
+        colorMode: 'recolorable',
+        fill: prevAx?.content?.fill || arrowFill,
+        alt: 'Matrix X axis',
+      },
+      role: 'decoration',
+      slotId: 'MATRIX_ARROW_X',
+    },
+  ];
+  const prevHub = prevBySlot.get('MATRIX_HUB');
+  const hub = {
+    id: prevHub?.id || newElementId('shp'),
+    type: 'shape',
+    layer: 8,
+    placement: { ...overlay.hub, rotation: 0, opacity: 1 },
+    content: {
+      shape: 'ellipse',
+      fill: prevHub?.content?.fill || '#ffffff',
+    },
+    role: 'decoration',
+    slotId: 'MATRIX_HUB',
+  };
+
+  return { ...doc, elements: [...arrows, ...quads, hub, ...elements, ...extras] };
+}
+
+function isDiagramSwotLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_swot/.test(id);
+}
+
+function layoutDiagramSwot(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const frame = swotGraphicBox(canvasW, canvasH);
+  const overlay = swotOverlayPlacements(frame);
+  const colors = [
+    paletteColor(palette, 'accent', SWOT_COLORS[0]),
+    paletteColor(palette, 'secondary', SWOT_COLORS[1]),
+    paletteColor(palette, 'primary', SWOT_COLORS[2]),
+    paletteColor(palette, 'highlight', SWOT_COLORS[3]),
+  ];
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^SWOT_(SEG|ICON)_[1-4]$/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'SWOT_HUB')
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter((el) => !/^(SWOT_SEG_[1-4]|SWOT_ICON_[1-4]|SWOT_DASH_[1-4]|SWOT_HUB|SWOT_LETTER_[1-4])$/i.test(String(el.slotId || '')));
+  const extras = [];
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: { ...(el.placement || {}), x: 48, y: frame.headingY, width: canvasW - 96, height: frame.headingH, rotation: 0, opacity: 1 },
+        content: { ...base, align: 'left', verticalAlign: 'center', fontSize: 28, fontWeight: 800, color: textColor, lineHeight: 1.2 },
+      };
+    }
+    if (sid.toUpperCase() === 'SWOT_HUB_TITLE') {
+      return {
+        ...el,
+        layer: 14,
+        placement: { ...overlay.hubTitle, rotation: 0, opacity: 1 },
+        content: { ...base, text: el.content?.text || 'SWOT', align: 'center', verticalAlign: 'center', fontSize: 36, fontWeight: 800, wrap: 'nowrap', lineHeight: 1, color: '#111827' },
+      };
+    }
+    if (sid.toUpperCase() === 'SWOT_HUB_SUB') {
+      return {
+        ...el,
+        layer: 14,
+        placement: { ...overlay.hubSub, rotation: 0, opacity: 1 },
+        content: { ...base, text: el.content?.text || 'Analysis', align: 'center', verticalAlign: 'center', fontSize: 16, fontWeight: 600, lineHeight: 1.15, color: muted },
+      };
+    }
+    const titleM = sid.match(/^Q([1-4])_TITLE$/i);
+    if (titleM) {
+      const i = Number(titleM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...overlay.rows[i].title, rotation: 0, opacity: 1 },
+        content: { ...base, align: 'left', verticalAlign: 'center', fontSize: 20, fontWeight: 800, color: colors[i] },
+      };
+    }
+    const bodyM = sid.match(/^Q([1-4])_BODY$/i);
+    if (bodyM) {
+      const i = Number(bodyM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...overlay.rows[i].body, rotation: 0, opacity: 1 },
+        content: { ...base, align: 'left', verticalAlign: 'flex-start', fontSize: 15, fontWeight: 400, color: muted, lineHeight: 1.35 },
+      };
+    }
+    return el;
+  });
+
+  const ensure = (slotId, placement, content) => {
+    if (elements.some((el) => String(el.slotId || '').toUpperCase() === slotId)) return;
+    extras.push({
+      id: newElementId('txt'),
+      type: 'text',
+      slotId,
+      role: 'caption',
+      layer: 12,
+      placement: { ...placement, rotation: 0, opacity: 1 },
+      content: { padding: 0, paddingX: 0, ...content },
+    });
+  };
+  ensure('SWOT_HUB_TITLE', overlay.hubTitle, { text: 'SWOT', align: 'center', verticalAlign: 'center', fontSize: 36, fontWeight: 800, wrap: 'nowrap', lineHeight: 1, color: '#111827' });
+  ensure('SWOT_HUB_SUB', overlay.hubSub, { text: 'Analysis', align: 'center', verticalAlign: 'center', fontSize: 16, fontWeight: 600, lineHeight: 1.15, color: muted });
+
+  const { graphicX, graphicY, graphicW, graphicH } = frame;
+  const petals = [0, 1, 2, 3].map((i) => {
+    const slotId = `SWOT_SEG_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const fill = prev?.content?.fill || colors[i];
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 3,
+      placement: { ...swotPetalPlacement(graphicX, graphicY, graphicW, graphicH, i), rotation: 0, opacity: 1 },
+      content: { svg: swotPetalInlineSvg(i), colorMode: 'recolorable', fill, alt: `SWOT ${SWOT_LETTERS[i]}` },
+      role: 'decoration',
+      slotId,
+    };
+  });
+  const prevHub = prevBySlot.get('SWOT_HUB');
+  const hub = {
+    id: prevHub?.id || newElementId('shp'),
+    type: 'shape',
+    layer: 8,
+    placement: { ...overlay.hub, rotation: 0, opacity: 1 },
+    content: { shape: 'ellipse', fill: prevHub?.content?.fill || '#ffffff' },
+    role: 'decoration',
+    slotId: 'SWOT_HUB',
+  };
+  const icons = [0, 1, 2, 3].map((i) => {
+    const slotId = `SWOT_ICON_${i + 1}`;
+    const prev = prevBySlot.get(slotId);
+    const fill = prev?.content?.fill || colors[i];
+    return {
+      id: prev?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 5,
+      placement: { ...overlay.rows[i].icon, rotation: 0, opacity: 1 },
+      content: { svg: swotIconInlineSvg(i), colorMode: 'recolorable', fill, alt: SWOT_LABELS[i] },
+      role: 'decoration',
+      slotId,
+    };
+  });
+  const dashes = [0, 1, 2, 3].map((i) => ({
+    id: newElementId('shp'),
+    type: 'graphic',
+    layer: 2,
+    placement: { ...overlay.rows[i].dash, rotation: 0, opacity: 1 },
+    content: { svg: swotDashInlineSvg(), colorMode: 'fixed', alt: '' },
+    role: 'decoration',
+    slotId: `SWOT_DASH_${i + 1}`,
+  }));
+
+  return { ...doc, elements: [...dashes, ...petals, hub, ...icons, ...elements, ...extras] };
+}
+
+function isDiagramVennLayout(layoutId) {
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_venn/.test(id);
+}
+
+function layoutDiagramVenn(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const frame = vennFrame(canvasW, canvasH);
+  const colors = [
+    paletteColor(palette, 'secondary', VENN_COLORS[0]),
+    paletteColor(palette, 'accent', VENN_COLORS[1]),
+    paletteColor(palette, 'primary', VENN_COLORS[2]),
+  ];
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => /^VENN_(OUTER|MID|CORE)_[1-3]$/i.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) =>
+      !/^(VENN_(OUTER|MID|CORE|ICON)_[1-3])$/i.test(String(el.slotId || '')) &&
+      String(el.slotId || '').toUpperCase() !== 'CENTER_BODY'
+  );
+  const geoms = [0, 1, 2].map((i) => vennSetGeom(i, frame));
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: { ...(el.placement || {}), x: 56, y: frame.headingY, width: canvasW - 112, height: frame.headingH, rotation: 0, opacity: 1 },
+        content: { ...base, align: 'left', verticalAlign: 'center', fontSize: 36, fontWeight: 800, lineHeight: 1.15, color: textColor },
+      };
+    }
+    const titleM = sid.match(/^Q([1-3])_TITLE$/i);
+    if (titleM) {
+      const i = Number(titleM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...geoms[i].title, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 22,
+          fontWeight: 800,
+          lineHeight: 1.2,
+          color: textColor,
+          wrap: 'wrap',
+        },
+      };
+    }
+    const bodyM = sid.match(/^Q([1-3])_BODY$/i);
+    if (bodyM) {
+      const i = Number(bodyM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...geoms[i].body, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'flex-start',
+          fontSize: 16,
+          fontWeight: 400,
+          color: muted,
+          lineHeight: 1.45,
+          wrap: 'wrap',
+        },
+      };
+    }
+    return el;
+  });
+
+  const rings = [];
+  for (let i = 0; i < VENN_N; i += 1) {
+    const g = geoms[i];
+    const base = colors[i];
+    const outerId = `VENN_OUTER_${i + 1}`;
+    const midId = `VENN_MID_${i + 1}`;
+    const coreId = `VENN_CORE_${i + 1}`;
+    const prevO = prevBySlot.get(outerId);
+    const prevM = prevBySlot.get(midId);
+    const prevC = prevBySlot.get(coreId);
+    rings.push({
+      id: prevO?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 2,
+      placement: { ...g.outer, rotation: 0, opacity: 0.88 },
+      content: { shape: 'ellipse', fill: prevO?.content?.fill || vennRingColor(base, 'outer') },
+      role: 'decoration',
+      slotId: outerId,
+    });
+    rings.push({
+      id: prevM?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 4,
+      placement: { ...g.mid, rotation: 0, opacity: 0.94 },
+      content: { shape: 'ellipse', fill: prevM?.content?.fill || vennRingColor(base, 'mid') },
+      role: 'decoration',
+      slotId: midId,
+    });
+    rings.push({
+      id: prevC?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 7,
+      placement: { ...g.core, rotation: 0, opacity: 1 },
+      content: {
+        svg: vennCoreInlineSvg(),
+        colorMode: 'recolorable',
+        fill: prevC?.content?.fill || vennRingColor(base, 'core'),
+        alt: `Venn core ${i + 1}`,
+      },
+      role: 'decoration',
+      slotId: coreId,
+    });
+    rings.push({
+      id: newElementId('shp'),
+      type: 'graphic',
+      layer: 8,
+      placement: { ...g.icon, rotation: 0, opacity: 1 },
+      content: { svg: vennIconInlineSvg(i), colorMode: 'fixed', alt: '' },
+      role: 'decoration',
+      slotId: `VENN_ICON_${i + 1}`,
+    });
+  }
+
+  return { ...doc, elements: [...rings, ...elements] };
+}
+
+function isQuoteGridLayout(layoutId) {
+  return /quote_grid/.test(String(layoutId || '').toLowerCase());
+}
+
+function isQuotePortraitLayout(layoutId) {
+  return /quote_portrait/.test(String(layoutId || '').toLowerCase());
+}
+
+function isQuoteTestimonialLayout(layoutId) {
+  return /quote_testimonial/.test(String(layoutId || '').toLowerCase());
+}
+
+function isStatementLargeLayout(layoutId) {
+  return /statement_large/.test(String(layoutId || '').toLowerCase());
+}
+
+function isStatementLeftLayout(layoutId) {
+  return /statement_left/.test(String(layoutId || '').toLowerCase());
+}
+
+function isQuoteAttributionLayout(layoutId) {
+  return /quote_attribution_v1|quote_with_attribution/.test(String(layoutId || '').toLowerCase());
+}
+
+function isQuoteSingleCardFromSlots(schema) {
+  const ids = (schema?.slots || []).map((s) => String(s.id || '').toUpperCase());
+  if (ids.some((id) => /^QUOTE_[123]$/.test(id))) return false;
+  const hasQuote = ids.includes('QUOTE') || ids.includes('STATEMENT');
+  const hasPerson = ids.includes('NAME') || ids.includes('ATTRIBUTION') || ids.includes('ROLE');
+  const hasPhoto = ids.some((id) => id === 'PORTRAIT_IMAGE' || id === 'AVATAR' || /^AVATAR_\d+$/.test(id));
+  return hasQuote && hasPerson && hasPhoto;
+}
+
+const QUOTE_PORTRAIT_DECO = /^(QUOTE_CARD|QUOTE_MARK|QUOTE_AVATAR_BG)$/i;
+
+function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const cardFill = paletteColor(palette, 'cardBg', '#FFFFFF');
+  const markFill = paletteColor(palette, 'primary', QUOTE_MARK_COLOR);
+  const compact = isQuoteTestimonialLayout(layoutSchema?.layout_id);
+  const large = isStatementLargeLayout(layoutSchema?.layout_id);
+  const fromSlots = isQuoteSingleCardFromSlots(layoutSchema);
+  const left =
+    isStatementLeftLayout(layoutSchema?.layout_id) ||
+    isQuoteAttributionLayout(layoutSchema?.layout_id) ||
+    (fromSlots && !compact && !large && !isQuotePortraitLayout(layoutSchema?.layout_id));
+  const g = compact
+    ? quoteTestimonialGeom(canvasW, canvasH)
+    : left
+      ? quoteStatementLeftGeom(canvasW, canvasH)
+      : quotePortraitGeom(canvasW, canvasH);
+  const quoteSize = compact ? 26 : large ? 36 : left ? 30 : 32;
+  const quoteWeight = compact ? 600 : 700;
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => QUOTE_PORTRAIT_DECO.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) =>
+      !QUOTE_PORTRAIT_DECO.test(String(el.slotId || '')) &&
+      !/^(HEADING|BODY|EYEBROW)$/i.test(String(el.slotId || ''))
+  );
+  const hasName = elements.some((el) => /^NAME(_\d+)?$/i.test(String(el.slotId || '')));
+  if (hasName) {
+    elements = elements.filter((el) => String(el.slotId || '').toUpperCase() !== 'ATTRIBUTION');
+  }
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '').toUpperCase();
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+      fontStyle: 'normal',
+    };
+    if (sid === 'QUOTE' || sid === 'STATEMENT') {
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...g.quote, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: quoteSize,
+          fontWeight: quoteWeight,
+          lineHeight: 1.4,
+          color: textColor,
+          wrap: 'wrap',
+        },
+      };
+    }
+    if (sid === 'NAME' || sid === 'AUTHOR_NAME' || sid === 'ATTRIBUTION') {
+      return {
+        ...el,
+        layer: 11,
+        placement: { ...g.name, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 18,
+          fontWeight: 700,
+          lineHeight: 1.2,
+          color: textColor,
+          wrap: 'wrap',
+        },
+      };
+    }
+    if (sid === 'ROLE' || sid === 'AUTHOR_TITLE') {
+      return {
+        ...el,
+        layer: 11,
+        placement: { ...g.role, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 15,
+          fontWeight: 400,
+          lineHeight: 1.3,
+          color: muted,
+          wrap: 'wrap',
+        },
+      };
+    }
+    if (/^(PORTRAIT_IMAGE|AVATAR|AVATAR_\d+)$/i.test(sid)) {
+      const url = el.content?.url || el.content?.src;
+      return {
+        ...el,
+        layer: 13,
+        placement: { ...g.avatar, rotation: 0, opacity: url ? 1 : 0.02 },
+        content: { ...(el.content || {}), fit: 'cover', borderRadius: 999, shadow: undefined, boxShadow: undefined },
+      };
+    }
+    return el;
+  });
+  const hasAvatar = elements.some((el) => /^(PORTRAIT_IMAGE|AVATAR)$/i.test(String(el.slotId || '')));
+  const prevC = prevBySlot.get('QUOTE_CARD');
+  const prevM = prevBySlot.get('QUOTE_MARK');
+  const deco = [
+    {
+      id: prevC?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: { ...g.card, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        fill: prevC?.content?.fill || cardFill,
+        borderRadius: 22,
+        stroke: QUOTE_CARD_BORDER,
+        strokeWidth: 1.5,
+        boxShadow: compact ? '0 12px 32px rgba(15, 23, 42, 0.08)' : undefined,
+        shadow: compact ? '0 12px 32px rgba(15, 23, 42, 0.08)' : undefined,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: 'QUOTE_CARD',
+    },
+    {
+      id: prevM?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 8,
+      placement: { ...g.mark, rotation: 0, opacity: 1 },
+      content: {
+        svg: quoteMarkInlineSvg(),
+        colorMode: 'recolorable',
+        fill: prevM?.content?.fill || markFill,
+        alt: 'Quote',
+      },
+      role: 'decoration',
+      slotId: 'QUOTE_MARK',
+    },
+    {
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 11,
+      placement: { ...g.avatar, rotation: 0, opacity: 1 },
+      content: { shape: 'ellipse', fill: paletteColor(palette, 'surface', '#D5DCE6') },
+      role: 'decoration',
+      slotId: 'QUOTE_AVATAR_BG',
+    },
+  ];
+  if (!hasAvatar) {
+    deco.push({
+      id: newElementId('img'),
+      type: 'image',
+      layer: 12,
+      placement: { ...g.avatar, rotation: 0, opacity: 1 },
+      content: { fit: 'cover', borderRadius: 999, placeholderFill: '#D5DCE6' },
+      role: 'image',
+      slotId: 'PORTRAIT_IMAGE',
+    });
+  }
+  return { ...doc, elements: [...deco, ...elements] };
+}
+
+const QUOTE_GRID_DECO = /^(QUOTE_CARD_|QUOTE_MARK_)/i;
+
+function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const cardFill = paletteColor(palette, 'cardBg', '#FFFFFF');
+  const markFill = paletteColor(palette, 'primary', QUOTE_MARK_COLOR);
+  const frame = quoteGridFrame(canvasW, canvasH, QUOTE_GRID_N);
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => QUOTE_GRID_DECO.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter((el) => !QUOTE_GRID_DECO.test(String(el.slotId || '')));
+  const geoms = [0, 1, 2].map((i) => quoteGridCardGeom(i, frame));
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+      fontStyle: 'normal',
+    };
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          ...(el.placement || {}),
+          x: frame.insetX,
+          y: frame.insetY,
+          width: canvasW - frame.insetX * 2,
+          height: frame.headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 36,
+          fontWeight: 800,
+          lineHeight: 1.15,
+          color: textColor,
+        },
+      };
+    }
+    const quoteM = sid.match(/^QUOTE_([1-3])$/i);
+    if (quoteM) {
+      const i = Number(quoteM[1]) - 1;
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...geoms[i].quote, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 22,
+          fontWeight: 700,
+          lineHeight: 1.45,
+          color: textColor,
+          wrap: 'wrap',
+        },
+      };
+    }
+    const nameM = sid.match(/^(NAME|ATTR)_([1-3])$/i);
+    if (nameM) {
+      const i = Number(nameM[2]) - 1;
+      return {
+        ...el,
+        layer: 11,
+        placement: { ...geoms[i].name, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'center',
+          fontSize: 16,
+          fontWeight: 700,
+          lineHeight: 1.2,
+          color: textColor,
+          wrap: 'wrap',
+        },
+      };
+    }
+    const roleM = sid.match(/^ROLE_([1-3])$/i);
+    if (roleM) {
+      const i = Number(roleM[1]) - 1;
+      return {
+        ...el,
+        layer: 11,
+        placement: { ...geoms[i].role, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 13,
+          fontWeight: 400,
+          lineHeight: 1.3,
+          color: muted,
+          wrap: 'wrap',
+        },
+      };
+    }
+    const avM = sid.match(/^AVATAR_([1-3])$/i);
+    if (avM) {
+      const i = Number(avM[1]) - 1;
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...geoms[i].avatar, rotation: 0, opacity: 1 },
+        content: { ...(el.content || {}), fit: 'cover', borderRadius: 999 },
+      };
+    }
+    return el;
+  });
+
+  const deco = [];
+  const seenAvatar = new Set(
+    elements.filter((el) => /^AVATAR_[1-3]$/i.test(String(el.slotId || ''))).map((el) => String(el.slotId).toUpperCase())
+  );
+  for (let i = 0; i < QUOTE_GRID_N; i += 1) {
+    const g = geoms[i];
+    const cardId = `QUOTE_CARD_${i + 1}`;
+    const markId = `QUOTE_MARK_${i + 1}`;
+    const prevC = prevBySlot.get(cardId);
+    const prevM = prevBySlot.get(markId);
+    deco.push({
+      id: prevC?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: { ...g.card, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        fill: prevC?.content?.fill || cardFill,
+        borderRadius: 18,
+        stroke: QUOTE_CARD_BORDER,
+        strokeWidth: 1.5,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: cardId,
+    });
+    deco.push({
+      id: prevM?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 8,
+      placement: { ...g.mark, rotation: 0, opacity: 1 },
+      content: {
+        svg: quoteMarkInlineSvg(),
+        colorMode: 'recolorable',
+        fill: prevM?.content?.fill || markFill,
+        alt: 'Quote',
+      },
+      role: 'decoration',
+      slotId: markId,
+    });
+    const avId = `AVATAR_${i + 1}`;
+    if (!seenAvatar.has(avId)) {
+      deco.push({
+        id: newElementId('img'),
+        type: 'image',
+        layer: 12,
+        placement: { ...g.avatar, rotation: 0, opacity: 1 },
+        content: { fit: 'cover', borderRadius: 999, placeholderFill: '#E5E7EB' },
+        role: 'image',
+        slotId: avId,
+      });
+    }
+  }
+
+  return { ...doc, elements: [...deco, ...elements] };
+}
+
+function layoutDiagramProcessSteps(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const cardBg = paletteColor(palette, 'cardBg', '#EDE4D4');
+
+  let elements = (doc.elements || []).filter((el) => {
+    const sid = String(el.slotId || '');
+    return !/^AUTO_CARD_BG_/i.test(sid) && !/^TIMELINE_(NODE|SEG|ARROW|SPINE)/i.test(sid);
+  });
+
+  const stepNums = [
+    ...new Set(
+      elements
+        .map((el) => String(el.slotId || '').match(/^step_(\d+)_(title|body)$/i)?.[1])
+        .filter(Boolean)
+        .map((n) => Number(n))
+    ),
+  ].sort((a, b) => a - b);
+  const n = stepNums.length || 4;
+  const insetX = 64;
+  const insetY = 52;
+  const headingH = 88;
+  const nodeSize = 48;
+  const numH = 36;
+  const titleToTimeline = 32;
+  const numToCards = 72;
+  const cardGap = 22;
+  const bottomInset = 72;
+  const cardTop = insetY + headingH + titleToTimeline + nodeSize + numH + numToCards;
+  const cardH = Math.min(520, Math.max(360, canvasH - cardTop - bottomInset));
+  const usableW = canvasW - insetX * 2;
+  const cardW = (usableW - cardGap * (n - 1)) / n;
+  const axisY = insetY + headingH + titleToTimeline + nodeSize / 2;
+  const centers = Array.from({ length: n }, (_, i) => insetX + i * (cardW + cardGap) + cardW / 2);
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    if (sid.toUpperCase() === 'HEADING') {
+      return {
+        ...el,
+        placement: {
+          ...(el.placement || {}),
+          x: insetX,
+          y: insetY,
+          width: canvasW - insetX * 2,
+          height: headingH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...(el.content || {}),
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: Math.min(Number(el.content?.fontSize) || 34, 36),
+          fontWeight: 800,
+          letterSpacing: '0',
+          lineHeight: 1.15,
+          padding: 0,
+          paddingX: 0,
+          stroke: undefined,
+          strokeWidth: 0,
+        },
+      };
+    }
+    const titleM = sid.match(/^step_(\d+)_title$/i);
+    const bodyM = sid.match(/^step_(\d+)_body$/i);
+    const idx = titleM
+      ? stepNums.indexOf(Number(titleM[1]))
+      : bodyM
+        ? stepNums.indexOf(Number(bodyM[1]))
+        : -1;
+    if (idx < 0) return el;
+    const cardX = insetX + idx * (cardW + cardGap);
+    const padX = 28;
+    const padY = 40;
+    const titleH = 72;
+    if (titleM) {
+      return {
+        ...el,
+        layer: Math.max(el.layer || 0, 10),
+        placement: {
+          ...(el.placement || {}),
+          x: Math.round(cardX + padX),
+          y: Math.round(cardTop + padY),
+          width: Math.round(cardW - padX * 2),
+          height: titleH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          ...(el.content || {}),
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 22,
+          fontWeight: 700,
+          letterSpacing: '0',
+          lineHeight: 1.25,
+          padding: 0,
+          paddingX: 0,
+        },
+      };
+    }
+    return {
+      ...el,
+      layer: Math.max(el.layer || 0, 10),
+      placement: {
+        ...(el.placement || {}),
+        x: Math.round(cardX + padX),
+        y: Math.round(cardTop + padY + titleH + 12),
+        width: Math.round(cardW - padX * 2),
+        height: Math.round(Math.max(80, cardH - padY * 2 - titleH - 12)),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        ...(el.content || {}),
+        align: 'center',
+        verticalAlign: 'flex-start',
+        fontSize: 16,
+        fontWeight: 400,
+        lineHeight: 1.4,
+        padding: 0,
+        paddingX: 0,
+      },
+    };
+  });
+
+  const chrome = [];
+  for (let i = 0; i < n; i += 1) {
+    const cardX = insetX + i * (cardW + cardGap);
+    chrome.push({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 0,
+      placement: {
+        x: Math.round(cardX),
+        y: Math.round(cardTop),
+        width: Math.round(cardW),
+        height: Math.round(cardH),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', colorRole: 'cardBg', color: cardBg },
+        borderRadius: 18,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `AUTO_CARD_BG_step_${stepNums[i] || i + 1}`,
+    });
+    chrome.push({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 3,
+      placement: {
+        x: Math.round(centers[i] - nodeSize / 2),
+        y: Math.round(axisY - nodeSize / 2),
+        width: nodeSize,
+        height: nodeSize,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'ellipse',
+        fill: { type: 'solid', colorRole: 'text', color: textColor },
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `TIMELINE_NODE_${i + 1}`,
+    });
+    chrome.push({
+      id: newElementId('txt'),
+      type: 'text',
+      layer: 4,
+      placement: {
+        x: Math.round(centers[i] - nodeSize / 2),
+        y: Math.round(axisY + nodeSize / 2 + 8),
+        width: nodeSize,
+        height: numH,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        text: String(i + 1),
+        align: 'center',
+        verticalAlign: 'center',
+        fontSize: 18,
+        fontWeight: 700,
+        letterSpacing: '0',
+        padding: 0,
+        paddingX: 0,
+        colorRole: 'text',
+        color: textColor,
+      },
+      role: 'caption',
+      slotId: `TIMELINE_NODE_NUM_${i + 1}`,
+    });
+  }
+
+  for (let i = 0; i < n - 1; i += 1) {
+    const x1 = centers[i] + nodeSize / 2 + 6;
+    const x2 = centers[i + 1] - nodeSize / 2 - 6;
+    chrome.push({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: {
+        x: Math.round(x1),
+        y: Math.round(axisY - 2.5),
+        width: Math.round(Math.max(8, x2 - x1)),
+        height: 5,
+        rotation: 0,
+        opacity: 0.95,
+      },
+      content: {
+        shape: 'rect',
+        fill: { type: 'solid', colorRole: 'text', color: textColor },
+        borderRadius: 2,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `TIMELINE_SEG_${i + 1}`,
+    });
+  }
+
+  return { ...doc, elements: [...chrome, ...elements] };
+}
+
 function findProcessAnchorElements(elements) {
   const anchors = elements.filter((el) => {
     if (el.type !== 'text' && el.type !== 'textbox') return false;
@@ -3691,9 +5571,36 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = applyRuntimeShapeDecisions(next, layoutSchema, content, themeTokens, canvas);
   }
 
-  next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
-  next = applySplitHeroDecorShape(next, layoutSchema, themeTokens, canvas);
-  next = applyTimelineConnectorShapes(next, layoutSchema, themeTokens, canvas);
+  if (isDiagramProcessStepsLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramProcessSteps(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramCycleLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramCycle(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramFunnelLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramFunnel(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramPyramidLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramPyramid(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramMatrixLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramMatrix(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramSwotLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramSwot(next, layoutSchema, themeTokens, canvas);
+  } else if (isDiagramVennLayout(layoutSchema?.layout_id)) {
+    next = layoutDiagramVenn(next, layoutSchema, themeTokens, canvas);
+  } else if (isQuoteGridLayout(layoutSchema?.layout_id)) {
+    next = layoutQuoteGrid(next, layoutSchema, themeTokens, canvas);
+  } else if (
+    isQuotePortraitLayout(layoutSchema?.layout_id) ||
+    isQuoteTestimonialLayout(layoutSchema?.layout_id) ||
+    isStatementLargeLayout(layoutSchema?.layout_id) ||
+    isStatementLeftLayout(layoutSchema?.layout_id) ||
+    isQuoteAttributionLayout(layoutSchema?.layout_id) ||
+    isQuoteSingleCardFromSlots(layoutSchema)
+  ) {
+    next = layoutQuotePortrait(next, layoutSchema, themeTokens, canvas);
+  } else {
+    next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
+    next = applySplitHeroDecorShape(next, layoutSchema, themeTokens, canvas);
+    next = applyTimelineConnectorShapes(next, layoutSchema, themeTokens, canvas);
+  }
 
   if (docHasFullBleedBackground(next, layoutSchema)) {
     const enriched = {
@@ -3717,8 +5624,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   next = applyReadableTextContrast(next, themeTokens, layoutSchema);
   next = applySplitImageEdgeFade(next, layoutSchema);
 
-  // Final deterministic design audit/repair.
-  next = repairElementsDoc(next, { themeTokens, layoutSchema, content, slideDesignPlan });
+  if (
+    !isDiagramProcessStepsLayout(layoutSchema?.layout_id) &&
+    !isDiagramCycleLayout(layoutSchema?.layout_id) &&
+    !isDiagramFunnelLayout(layoutSchema?.layout_id) &&
+    !isDiagramMatrixLayout(layoutSchema?.layout_id)
+  ) {
+    next = repairElementsDoc(next, { themeTokens, layoutSchema, content, slideDesignPlan });
+  }
   return next;
 }
 

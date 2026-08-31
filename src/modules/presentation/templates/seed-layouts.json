@@ -1023,51 +1023,82 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
-          "id": "EYEBROW",
-          "region": "cols 2-10, rows 3-4",
-          "role": "eyebrow",
-          "placeholder_text": "Section context",
-          "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.3,
-            "letterSpacing": 0.08
-          },
-          "max_lines": 1
-        },
-        {
           "id": "STATEMENT",
-          "region": "cols 2-10, rows 4-7",
+          "region": "cols 2-7, rows 3-6",
           "role": "quote",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
           "layer": 10,
           "typography": {
             "fontSize": 30,
             "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.35
+            "lineHeight": 1.4
           },
-          "max_lines": 4
+          "max_lines": 5
+        },
+        {
+          "id": "NAME",
+          "region": "cols 3-7, rows 8-9",
+          "role": "attribution",
+          "placeholder_text": "Gemine Macberry",
+          "layer": 12,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE",
+          "region": "cols 3-7, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 12,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "PORTRAIT_IMAGE",
+          "region": "cols 2-3, rows 8-10",
+          "role": "image",
+          "layer": 13,
+          "fit": "cover",
+          "borderRadius": 999
         }
       ],
       "preview": {
         "mode": "quote_attribution",
         "slots": {
-          "EYEBROW": {
-            "text": "Section context",
+          "STATEMENT": {
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "NAME": {
+            "text": "Gemine Macberry",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE": {
+            "text": "VP of Engineering at Acme Inc.",
             "variant": "caption",
             "bold": false,
             "uppercase": false
           },
-          "STATEMENT": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
+          "PORTRAIT_IMAGE": {
+            "variant": "image"
           }
         }
       }
@@ -1086,28 +1117,81 @@
       "slots": [
         {
           "id": "STATEMENT",
-          "region": "cols 2-10, rows 3-7",
+          "region": "cols 2-10, rows 3-6",
           "role": "quote",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
           "layer": 10,
           "typography": {
-            "fontSize": 60,
-            "fontWeight": 800,
+            "fontSize": 36,
+            "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.1
+            "lineHeight": 1.4
           },
-          "max_lines": 4
+          "max_lines": 5
+        },
+        {
+          "id": "NAME",
+          "region": "cols 3-8, rows 8-9",
+          "role": "attribution",
+          "placeholder_text": "Gemine Macberry",
+          "layer": 12,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE",
+          "region": "cols 3-8, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 12,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "PORTRAIT_IMAGE",
+          "region": "cols 2-3, rows 8-10",
+          "role": "image",
+          "layer": 13,
+          "fit": "cover",
+          "borderRadius": 999
         }
       ],
       "preview": {
         "mode": "quote_attribution",
         "slots": {
           "STATEMENT": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "NAME": {
+            "text": "Gemine Macberry",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE": {
+            "text": "VP of Engineering at Acme Inc.",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "PORTRAIT_IMAGE": {
+            "variant": "image"
           }
         }
       }
@@ -17207,42 +17291,56 @@
       "slots": [
         {
           "id": "QUOTE",
-          "region": "cols 5-11, rows 2-6",
+          "region": "cols 2-10, rows 3-6",
           "role": "quote",
           "placeholder_text": "Customer quote goes here — keep it under 25 words.",
           "layer": 10,
           "typography": {
-            "fontSize": 28,
+            "fontSize": 32,
             "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.35
+            "lineHeight": 1.4
           },
-          "max_lines": 4
+          "max_lines": 5
         },
         {
-          "id": "ATTRIBUTION",
-          "region": "cols 5-11, rows 6-7",
+          "id": "NAME",
+          "region": "cols 3-8, rows 8-9",
           "role": "attribution",
-          "placeholder_text": "Name, Title",
-          "layer": 10,
+          "placeholder_text": "Gemine Macberry",
+          "layer": 11,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 18,
             "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE",
+          "region": "cols 3-8, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 11,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.3
-          }
+          },
+          "max_lines": 2
         },
         {
           "id": "PORTRAIT_IMAGE",
-          "region": "cols 1-4, rows 2-8",
+          "region": "cols 2-3, rows 8-10",
           "role": "image",
-          "layer": 2,
+          "layer": 12,
           "fit": "cover",
-          "imageStyle": "card",
-          "borderRadius": 12,
-          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+          "borderRadius": 999
         }
       ],
       "preview": {
@@ -17254,9 +17352,15 @@
             "bold": true,
             "uppercase": false
           },
-          "ATTRIBUTION": {
-            "text": "Name, Title",
+          "NAME": {
+            "text": "Gemine Macberry",
             "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE": {
+            "text": "VP of Engineering at Acme Inc.",
+            "variant": "caption",
             "bold": false,
             "uppercase": false
           },
@@ -17279,91 +17383,175 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
-          "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
-          "role": "heading",
-          "placeholder_text": "What customers say",
-          "layer": 10,
-          "typography": {
-            "fontSize": 36,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
-        },
-        {
           "id": "QUOTE",
-          "region": "cols 2-11, rows 3-5",
+          "region": "cols 3-10, rows 3-6",
           "role": "quote",
           "placeholder_text": "Testimonial quote in a card-friendly length.",
           "layer": 10,
           "typography": {
             "fontSize": 26,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.4
+          },
+          "max_lines": 5
+        },
+        {
+          "id": "NAME",
+          "region": "cols 4-9, rows 8-9",
+          "role": "attribution",
+          "placeholder_text": "Gemine Macberry",
+          "layer": 12,
+          "typography": {
+            "fontSize": 18,
             "fontWeight": 700,
             "colorRole": "text",
-            "align": "center",
-            "lineHeight": 1.35
+            "align": "left",
+            "lineHeight": 1.2
           },
-          "max_lines": 4
+          "max_lines": 1
         },
         {
-          "id": "ATTRIBUTION",
-          "region": "cols 2-11, rows 5-6",
-          "role": "attribution",
-          "placeholder_text": "Customer name · Role · Company",
-          "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "center",
-            "lineHeight": 1.3
-          }
-        },
-        {
-          "id": "BODY",
-          "region": "cols 3-10, rows 6-8",
-          "role": "body",
-          "placeholder_text": "A concise testimonial or supporting line that reinforces credibility without overwhelming the slide.",
-          "layer": 10,
+          "id": "ROLE",
+          "region": "cols 4-9, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 12,
           "typography": {
             "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
-            "align": "center",
-            "lineHeight": 1.45
+            "align": "left",
+            "lineHeight": 1.3
           },
           "max_lines": 2
+        },
+        {
+          "id": "PORTRAIT_IMAGE",
+          "region": "cols 3-4, rows 8-10",
+          "role": "image",
+          "layer": 13,
+          "fit": "cover",
+          "borderRadius": 999
         }
       ],
       "preview": {
         "mode": "quote_attribution",
         "slots": {
-          "HEADING": {
-            "text": "What customers say",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
           "QUOTE": {
             "text": "Testimonial quote in a card-friendly length.",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "ATTRIBUTION": {
-            "text": "Customer name · Role · Company",
+          "NAME": {
+            "text": "Gemine Macberry",
             "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE": {
+            "text": "VP of Engineering at Acme Inc.",
+            "variant": "caption",
             "bold": false,
             "uppercase": false
           },
-          "BODY": {
-            "text": "A concise testimonial or supporting line that reinforces credibility without overwhelming the slide.",
+          "PORTRAIT_IMAGE": {
+            "variant": "image"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Quote With Attribution",
+    "contentType": "quote",
+    "variant": "quote_attribution_v1",
+    "schema": {
+      "layout_id": "quote_attribution_v1",
+      "content_type": "quote",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "QUOTE",
+          "region": "cols 2-7, rows 3-6",
+          "role": "quote",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 30,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.4
+          },
+          "max_lines": 5
+        },
+        {
+          "id": "NAME",
+          "region": "cols 3-7, rows 8-9",
+          "role": "attribution",
+          "placeholder_text": "Gemine Macberry",
+          "layer": 12,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE",
+          "region": "cols 3-7, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 12,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "PORTRAIT_IMAGE",
+          "region": "cols 2-3, rows 8-10",
+          "role": "image",
+          "layer": 13,
+          "fit": "cover",
+          "borderRadius": 999
+        }
+      ],
+      "preview": {
+        "mode": "quote_attribution",
+        "slots": {
+          "QUOTE": {
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "NAME": {
+            "text": "Gemine Macberry",
             "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE": {
+            "text": "VP of Engineering at Acme Inc.",
+            "variant": "caption",
             "bold": false,
             "uppercase": false
+          },
+          "PORTRAIT_IMAGE": {
+            "variant": "image"
           }
         }
       }
@@ -17397,97 +17585,166 @@
         },
         {
           "id": "QUOTE_1",
-          "region": "cols 1-4, rows 2-5",
+          "region": "cols 1-4, rows 3-6",
           "role": "quote",
-          "placeholder_text": "Short quote one",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
           "layer": 10,
           "typography": {
-            "fontSize": 16,
-            "fontWeight": 400,
-            "colorRole": "muted",
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.45,
-            "fontStyle": "italic"
+            "lineHeight": 1.45
           },
-          "max_lines": 4
+          "max_lines": 8
         },
         {
-          "id": "ATTR_1",
-          "region": "cols 1-4, rows 5-6",
+          "id": "NAME_1",
+          "region": "cols 2-4, rows 8-9",
           "role": "attribution",
-          "placeholder_text": "Name · Role",
-          "layer": 10,
+          "placeholder_text": "Gemine Macberry",
+          "layer": 11,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE_1",
+          "region": "cols 2-4, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 11,
           "typography": {
             "fontSize": 13,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.3
-          }
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AVATAR_1",
+          "region": "cols 1-2, rows 8-10",
+          "role": "image",
+          "layer": 12,
+          "fit": "cover",
+          "borderRadius": 999
         },
         {
           "id": "QUOTE_2",
-          "region": "cols 5-8, rows 2-5",
+          "region": "cols 5-8, rows 3-6",
           "role": "quote",
-          "placeholder_text": "Short quote two",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
           "layer": 10,
           "typography": {
-            "fontSize": 16,
-            "fontWeight": 400,
-            "colorRole": "muted",
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.45,
-            "fontStyle": "italic"
+            "lineHeight": 1.45
           },
-          "max_lines": 4
+          "max_lines": 8
         },
         {
-          "id": "ATTR_2",
-          "region": "cols 5-8, rows 5-6",
+          "id": "NAME_2",
+          "region": "cols 6-8, rows 8-9",
           "role": "attribution",
-          "placeholder_text": "Name · Role",
-          "layer": 10,
+          "placeholder_text": "Gemine Macberry",
+          "layer": 11,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE_2",
+          "region": "cols 6-8, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 11,
           "typography": {
             "fontSize": 13,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.3
-          }
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AVATAR_2",
+          "region": "cols 5-6, rows 8-10",
+          "role": "image",
+          "layer": 12,
+          "fit": "cover",
+          "borderRadius": 999
         },
         {
           "id": "QUOTE_3",
-          "region": "cols 9-12, rows 2-5",
+          "region": "cols 9-12, rows 3-6",
           "role": "quote",
-          "placeholder_text": "Short quote three",
+          "placeholder_text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
           "layer": 10,
           "typography": {
-            "fontSize": 16,
-            "fontWeight": 400,
-            "colorRole": "muted",
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.45,
-            "fontStyle": "italic"
+            "lineHeight": 1.45
           },
-          "max_lines": 4
+          "max_lines": 8
         },
         {
-          "id": "ATTR_3",
-          "region": "cols 9-12, rows 5-6",
+          "id": "NAME_3",
+          "region": "cols 10-12, rows 8-9",
           "role": "attribution",
-          "placeholder_text": "Name · Role",
-          "layer": 10,
+          "placeholder_text": "Gemine Macberry",
+          "layer": 11,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ROLE_3",
+          "region": "cols 10-12, rows 9-10",
+          "role": "caption",
+          "placeholder_text": "VP of Engineering at Acme Inc.",
+          "layer": 11,
           "typography": {
             "fontSize": 13,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.3
-          }
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "AVATAR_3",
+          "region": "cols 9-10, rows 8-10",
+          "role": "image",
+          "layer": 12,
+          "fit": "cover",
+          "borderRadius": 999
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "quote_grid",
         "slots": {
           "HEADING": {
             "text": "Voices from our users",
@@ -17496,37 +17753,55 @@
             "uppercase": false
           },
           "QUOTE_1": {
-            "text": "Short quote one",
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "ATTR_1": {
-            "text": "Name · Role",
+          "NAME_1": {
+            "text": "Gemine Macberry",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE_1": {
+            "text": "VP of Engineering at Acme Inc.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "QUOTE_2": {
-            "text": "Short quote two",
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "ATTR_2": {
-            "text": "Name · Role",
+          "NAME_2": {
+            "text": "Gemine Macberry",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE_2": {
+            "text": "VP of Engineering at Acme Inc.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "QUOTE_3": {
-            "text": "Short quote three",
+            "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "ATTR_3": {
-            "text": "Name · Role",
+          "NAME_3": {
+            "text": "Gemine Macberry",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ROLE_3": {
+            "text": "VP of Engineering at Acme Inc.",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -17683,7 +17958,7 @@
         }
       ],
       "preview": {
-        "mode": "diagram_quadrants",
+        "mode": "diagram_swot",
         "slots": {
           "HEADING": {
             "text": "SWOT analysis",
@@ -18096,10 +18371,55 @@
             "lineHeight": 1.45
           },
           "max_lines": 4
+        },
+        {
+          "id": "MATRIX_CENTER",
+          "region": "cols 5-8, rows 5-7",
+          "role": "heading",
+          "placeholder_text": "Insert your desired text here.",
+          "layer": 14,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MATRIX_Y_LABEL",
+          "region": "cols 1-1, rows 3-9",
+          "role": "caption",
+          "placeholder_text": "Placeholder",
+          "layer": 12,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 700,
+            "colorRole": "textOnImage",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MATRIX_X_LABEL",
+          "region": "cols 3-11, rows 11-12",
+          "role": "caption",
+          "placeholder_text": "Placeholder",
+          "layer": 12,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 700,
+            "colorRole": "textOnImage",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
         }
       ],
       "preview": {
-        "mode": "diagram_quadrants",
+        "mode": "diagram_matrix",
         "slots": {
           "HEADING": {
             "text": "2×2 matrix",
@@ -18172,7 +18492,7 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
           "placeholder_text": "Process steps",
           "layer": 10,
@@ -18180,14 +18500,14 @@
             "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "left",
+            "align": "center",
             "lineHeight": 1.15
           },
           "max_lines": 2
         },
         {
           "id": "step_1_title",
-          "region": "cols 2-3, rows 4-5",
+          "region": "cols 1-3, rows 6-7",
           "role": "heading",
           "placeholder_text": "1. Step 1",
           "layer": 10,
@@ -18202,7 +18522,7 @@
         },
         {
           "id": "step_1_body",
-          "region": "cols 2-3, rows 5-9",
+          "region": "cols 1-3, rows 8-10",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18217,7 +18537,7 @@
         },
         {
           "id": "step_2_title",
-          "region": "cols 5-6, rows 4-5",
+          "region": "cols 4-6, rows 6-7",
           "role": "heading",
           "placeholder_text": "2. Step 2",
           "layer": 10,
@@ -18232,7 +18552,7 @@
         },
         {
           "id": "step_2_body",
-          "region": "cols 5-6, rows 5-9",
+          "region": "cols 4-6, rows 8-10",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18247,7 +18567,7 @@
         },
         {
           "id": "step_3_title",
-          "region": "cols 8-9, rows 4-5",
+          "region": "cols 7-9, rows 6-7",
           "role": "heading",
           "placeholder_text": "3. Step 3",
           "layer": 10,
@@ -18262,7 +18582,7 @@
         },
         {
           "id": "step_3_body",
-          "region": "cols 8-9, rows 5-9",
+          "region": "cols 7-9, rows 8-10",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18277,7 +18597,7 @@
         },
         {
           "id": "step_4_title",
-          "region": "cols 10-11, rows 4-5",
+          "region": "cols 10-12, rows 6-7",
           "role": "heading",
           "placeholder_text": "4. Step 4",
           "layer": 10,
@@ -18292,7 +18612,7 @@
         },
         {
           "id": "step_4_body",
-          "region": "cols 10-11, rows 5-9",
+          "region": "cols 10-12, rows 8-10",
           "role": "body",
           "placeholder_text": "Two to three lines explaining this section.",
           "layer": 10,
@@ -18515,8 +18835,7 @@
         }
       ],
       "preview": {
-        "mode": "diagram_quadrants",
-        "diagramVariant": "cycle",
+        "mode": "diagram_cycle",
         "slots": {
           "HEADING": {
             "text": "Continuous cycle",
@@ -18905,11 +19224,40 @@
             "lineHeight": 1.45
           },
           "max_lines": 2
+        },
+        {
+          "id": "funnel_5_title",
+          "region": "cols 7-12, rows 11-11",
+          "role": "heading",
+          "placeholder_text": "Title 05",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "funnel_5_body",
+          "region": "cols 7-12, rows 12-12",
+          "role": "body",
+          "placeholder_text": "Enter your business insights or key data here. Keep it concise and relevant.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
         }
       ],
       "preview": {
-        "mode": "diagram_funnel",
-        "diagramVariant": "pyramid",
+        "mode": "diagram_pyramid",
         "slots": {
           "HEADING": {
             "text": "Priority pyramid",
@@ -18918,7 +19266,7 @@
             "uppercase": false
           },
           "funnel_1_title": {
-            "text": "Stage 1",
+            "text": "Title 01",
             "variant": "title",
             "bold": true,
             "uppercase": false
@@ -18930,7 +19278,7 @@
             "uppercase": false
           },
           "funnel_2_title": {
-            "text": "Stage 2",
+            "text": "Title 02",
             "variant": "title",
             "bold": true,
             "uppercase": false
@@ -18942,7 +19290,7 @@
             "uppercase": false
           },
           "funnel_3_title": {
-            "text": "Stage 3",
+            "text": "Title 03",
             "variant": "title",
             "bold": true,
             "uppercase": false
@@ -18954,13 +19302,25 @@
             "uppercase": false
           },
           "funnel_4_title": {
-            "text": "Stage 4",
+            "text": "Title 04",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "funnel_4_body": {
             "text": "Two to three lines explaining this section.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "funnel_5_title": {
+            "text": "Title 05",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "funnel_5_body": {
+            "text": "Enter your business insights or key data here. Keep it concise and relevant.",
             "variant": "body",
             "bold": false,
             "uppercase": false
