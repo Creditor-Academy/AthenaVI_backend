@@ -14,9 +14,9 @@ const { resolveSemanticTheme } = require('./artDirection/semanticTheme');
 const { resolveTextColor } = require('./artDirection/resolveTextColor');
 const { inferTypographyRole } = require('./artDirection/typographyRoles');
 const { repairElementsDoc } = require('./artDirection/validateDesign');
-const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements } = require('./diagramCycleSvg');
-const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements } = require('./diagramFunnelSvg');
-const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements } = require('./diagramMatrixSvg');
+const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements } = require('./diagrams/diagramCycleSvg');
+const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
+const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements } = require('./diagrams/diagramMatrixSvg');
 const {
   PYRAMID_N,
   PYRAMID_COLORS,
@@ -25,7 +25,7 @@ const {
   pyramidGraphicBox,
   pyramidLegendPlacements,
   PYRAMID_BADGE_CLIP,
-} = require('./diagramPyramid');
+} = require('./diagrams/diagramPyramid');
 const {
   SWOT_N,
   SWOT_LETTERS,
@@ -37,7 +37,7 @@ const {
   swotDashInlineSvg,
   swotGraphicBox,
   swotOverlayPlacements,
-} = require('./diagramSwotSvg');
+} = require('./diagrams/diagramSwotSvg');
 const {
   VENN_N,
   VENN_COLORS,
@@ -46,7 +46,7 @@ const {
   vennIconInlineSvg,
   vennFrame,
   vennSetGeom,
-} = require('./diagramVennSvg');
+} = require('./diagrams/diagramVennSvg');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -57,7 +57,7 @@ const {
   quotePortraitGeom,
   quoteTestimonialGeom,
   quoteStatementLeftGeom,
-} = require('./quoteGridLayout');
+} = require('./quotes/quoteGridLayout');
 const {
   compileLayoutGeometry,
   getSlotPlacement,
