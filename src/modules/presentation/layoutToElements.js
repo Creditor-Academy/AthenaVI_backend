@@ -58,6 +58,19 @@ const {
   quoteTestimonialGeom,
   quoteStatementLeftGeom,
 } = require('./quoteGridLayout');
+const {
+  compileLayoutGeometry,
+  getSlotPlacement,
+  gridRegionToPlacement,
+  resolveSlotPaddingPx,
+  applySlotGeometryTransform,
+} = require('./compileLayoutGeometry');
+const {
+  timelineNodeInlineSvg,
+  timelineSpineSegmentInlineSvg,
+  timelineChevronInlineSvg,
+  processPhaseCircleInlineSvg,
+} = require('./timelineProcessSvg');
 
 function parseRegion(region) {
   const str = String(region || '');
@@ -281,69 +294,15 @@ function getGridDims(slots = []) {
 }
 
 function placementFromGrid(reg, canvas = {}, grid = null) {
-  const width = canvas.width || CANVAS_WIDTH;
-  const height = canvas.height || CANVAS_HEIGHT;
-  const COLS = grid?.COLS || 12;
-  const ROWS = grid?.ROWS || 10;
-  const colW = width / COLS;
-  const rowH = height / ROWS;
-  return {
-    x: Math.round((reg.c1 - 1) * colW),
-    y: Math.round((reg.r1 - 1) * rowH),
-    width: Math.max(40, Math.round((reg.c2 - reg.c1 + 1) * colW)),
-    height: Math.max(40, Math.round((reg.r2 - reg.r1 + 1) * rowH)),
-    rotation: 0,
-    opacity: 1,
-  };
+  return gridRegionToPlacement(reg, grid, canvas, { left: 0, right: 0, top: 0, bottom: 0 });
 }
 
 /**
- * Directional pixel insets for images: flush canvas edges stay 0; card slots pad all sides.
+ * Directional pixel insets — deprecated; only used when slot.padding is explicitly set.
+ * @deprecated Use slot.padding in layout schema instead.
  */
 function directionalImageInsetsPx(reg, canvas = {}, grid = null, slot = null) {
-  const width = canvas.width || CANVAS_WIDTH;
-  const height = canvas.height || CANVAS_HEIGHT;
-  const COLS = grid?.COLS || 12;
-  const ROWS = grid?.ROWS || 10;
-  const id = String(slot?.id || '');
-  const role = String(slot?.role || '').toLowerCase();
-
-  const flushL = reg.c1 <= 1;
-  const flushR = reg.c2 >= COLS;
-  const flushT = reg.r1 <= 1;
-  const flushB = reg.r2 >= ROWS;
-
-  const isHero = /^(BACKGROUND_IMAGE|HERO_IMAGE)$/i.test(id);
-  const isCardImage =
-    role === 'image' &&
-    /^(IMAGE_\d+|COL_\d+_IMAGE|METRIC_IMAGE_\d+|POINT_IMAGE)$/i.test(id);
-
-  if (isHero) {
-    const soft = Math.round(Math.min(width, height) * 0.012);
-    return {
-      left: flushL ? 0 : soft,
-      right: flushR ? 0 : soft,
-      top: flushT ? 0 : soft,
-      bottom: flushB ? 0 : soft,
-    };
-  }
-
-  if (isCardImage) {
-    const pad = Math.round(Math.min(width, height) * 0.014);
-    return { left: pad, right: pad, top: pad, bottom: pad };
-  }
-
-  if (role === 'image') {
-    const soft = Math.round(Math.min(width, height) * 0.01);
-    return {
-      left: flushL ? 0 : soft,
-      right: flushR ? 0 : soft,
-      top: flushT ? 0 : soft,
-      bottom: flushB ? 0 : soft,
-    };
-  }
-
-  return { left: 0, right: 0, top: 0, bottom: 0 };
+  return resolveSlotPaddingPx(slot, grid, canvas);
 }
 
 function applyDirectionalInsets(placement, insets) {
@@ -352,62 +311,35 @@ function applyDirectionalInsets(placement, insets) {
   const right = Number(insets.right) || 0;
   const top = Number(insets.top) || 0;
   const bottom = Number(insets.bottom) || 0;
+  if (left === 0 && right === 0 && top === 0 && bottom === 0) return placement;
   return {
     ...placement,
     x: Math.round(placement.x + left),
     y: Math.round(placement.y + top),
-    width: Math.max(40, Math.round(placement.width - left - right)),
-    height: Math.max(40, Math.round(placement.height - top - bottom)),
+    width: Math.max(1, Math.round(placement.width - left - right)),
+    height: Math.max(1, Math.round(placement.height - top - bottom)),
   };
 }
 
 /**
- * Parse region strings like "cols 2-11, rows 4-7" into pixel placement on a 12-col / dynamic-row grid.
- * @param {string} region
- * @param {{ width?: number, height?: number }} canvas
- * @param {object} [slot]
- * @param {object[]} [allSlots]
+ * Parse region strings into authoritative pixel placement (no implicit insets).
  */
 function regionToPlacement(region, canvas = {}, slot = null, allSlots = null) {
   const parsed = parseRegion(region);
   const grid = getGridDims(allSlots || (slot ? [slot] : []));
-  if (parsed && slot && allSlots) {
-    let placement = placementFromGrid(adjustSlotRegion(parsed, slot, allSlots), canvas, grid);
-    if (String(slot.role || '').toLowerCase() === 'image' || /image/i.test(String(slot.id || ''))) {
-      placement = applyDirectionalInsets(
-        placement,
-        directionalImageInsetsPx(adjustSlotRegion(parsed, slot, allSlots), canvas, grid, slot)
-      );
-    }
-    return placement;
+  if (!parsed) {
+    return { x: 0, y: 0, width: 1, height: 1, rotation: 0, opacity: 1 };
   }
-  const width = canvas.width || CANVAS_WIDTH;
-  const height = canvas.height || CANVAS_HEIGHT;
-  const colW = width / grid.COLS;
-  const rowH = height / grid.ROWS;
 
-  const str = String(region || '');
-  const cols = str.match(/cols\s+(\d+)\s*-\s*(\d+)/i);
-  const rows = str.match(/rows\s+(\d+)\s*-\s*(\d+)/i);
+  let reg = { ...parsed };
+  if (slot?.allowRowSplit === true && allSlots) {
+    reg = adjustSlotRegion(reg, slot, allSlots);
+  }
 
-  const c1 = cols ? Math.max(1, Number(cols[1])) : 1;
-  const c2 = cols ? Math.max(c1, Number(cols[2])) : grid.COLS;
-  const r1 = rows ? Math.max(1, Number(rows[1])) : 1;
-  const r2 = rows ? Math.max(r1, Number(rows[2])) : grid.ROWS;
-
-  let placement = {
-    x: Math.round((c1 - 1) * colW),
-    y: Math.round((r1 - 1) * rowH),
-    width: Math.max(40, Math.round((c2 - c1 + 1) * colW)),
-    height: Math.max(40, Math.round((r2 - r1 + 1) * rowH)),
-    rotation: 0,
-    opacity: 1,
-  };
-  if (slot && (String(slot.role || '').toLowerCase() === 'image' || /image/i.test(String(slot.id || '')))) {
-    placement = applyDirectionalInsets(
-      placement,
-      directionalImageInsetsPx({ c1, c2, r1, r2 }, canvas, grid, slot)
-    );
+  const paddingPx = slot ? resolveSlotPaddingPx(slot, grid, canvas) : { left: 0, right: 0, top: 0, bottom: 0 };
+  let placement = gridRegionToPlacement(reg, grid, canvas, paddingPx);
+  if (slot) {
+    placement = applySlotGeometryTransform(slot, placement);
   }
   return placement;
 }
@@ -2509,7 +2441,9 @@ function layoutSlotsToElements(
     if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
   }
 
-  packColumnTextStacks(elements);
+  if (opts.packColumnStacks === true) {
+    packColumnTextStacks(elements);
+  }
 
   if (elements.length === 0 && (content.title || content.body)) {
     elements.push({
@@ -3068,7 +3002,8 @@ function layoutHasExplicitCardBg(layoutSchema, groupKey) {
       new RegExp(`^CARD_${n}_BG$`, 'i').test(id) ||
       new RegExp(`^${kind}_${n}_BG$`, 'i').test(id) ||
       new RegExp(`^MILESTONE_${n}_CARD_BG$`, 'i').test(id) ||
-      new RegExp(`^STEP_${n}_CIRCLE$`, 'i').test(id)
+      new RegExp(`^STEP_${n}_CIRCLE$`, 'i').test(id) ||
+      new RegExp(`^STEP_${n}_CARD_BG$`, 'i').test(id)
     );
   });
 }
@@ -3134,7 +3069,7 @@ function centerMultiCardHeading(doc, cardGroupCount, layoutSchema = null) {
   if (!doc || cardGroupCount < 2) return doc;
   const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
   // Timeline / process layouts keep schema align (typically left) — don't force center
-  if (/timeline|process_linear|diagram_process|process_steps/.test(layoutId)) return doc;
+  if (/timeline|process_linear|process_linner|diagram_process|process_steps/.test(layoutId)) return doc;
 
   const canvasW = doc.canvas?.width || 1920;
   const edgeInset = 56;
@@ -3309,6 +3244,7 @@ function splitOversizedCardBand(doc, layoutSchema, themeTokens, canvas) {
 
 function applyDefaultCardShapes(doc, layoutSchema, content, themeTokens, canvas) {
   if (!doc || !layoutSchema?.slots?.length) return doc;
+  if (isProcessLinnerLayout(layoutSchema.layout_id)) return doc;
   const decisions = content?.shapeDecisions && typeof content.shapeDecisions === 'object'
     ? content.shapeDecisions
     : {};
@@ -3446,8 +3382,339 @@ function applySplitHeroDecorShape(doc, layoutSchema, themeTokens, canvas) {
   return { ...doc, elements };
 }
 
+function isProcessLinnerLayout(layoutId) {
+  return /^process_linner_/i.test(String(layoutId || ''));
+}
+
+function isProcessLinnerHortiLayout(layoutId) {
+  return /^process_linner_horti/i.test(String(layoutId || ''));
+}
+
+function isProcessLinnerNumericLayout(layoutId) {
+  return /^process_linner_numeric/i.test(String(layoutId || ''));
+}
+
+function findStepTitleElements(elements) {
+  return elements
+    .filter(
+      (el) =>
+        (el.type === 'text' || el.type === 'textbox') &&
+        /^STEP_\d+_TITLE$/i.test(String(el.slotId || ''))
+    )
+    .sort((a, b) => (a.placement?.x ?? 0) - (b.placement?.x ?? 0));
+}
+
+function applyProcessLinnerHortiShapes(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc || !layoutSchema?.slots?.length) return doc;
+  const layoutId = String(layoutSchema.layout_id || '');
+  if (!isProcessLinnerHortiLayout(layoutId)) return doc;
+  if ((doc.elements || []).some((el) => String(el.slotId || '') === 'PROCESS_LINNER_SPINE')) return doc;
+
+  const palette = themeTokens?.palette || {};
+  const spineColor = paletteColor(palette, 'text', '#0F172A');
+  const phaseFill = paletteColor(palette, 'cardBg', 'color-mix(in srgb, #e8b4a0 42%, #ffffff)');
+  const primaryColor = paletteColor(palette, 'primary', paletteColor(palette, 'accent', '#2563EB'));
+  const white = '#FFFFFF';
+
+  let elements = [...(doc.elements || [])];
+  const titleEls = findStepTitleElements(elements);
+  if (titleEls.length < 2) return doc;
+
+  const SPINE_NODE = 28;
+  const NUM_H = 18;
+  const minTitleY = Math.min(...titleEls.map((t) => t.placement?.y ?? 0));
+  const spineY = Math.max(96, minTitleY - 100);
+
+  const centers = titleEls.map((el, i) => {
+    const p = el.placement || {};
+    return {
+      x: (p.x ?? 0) + (p.width ?? 0) / 2,
+      titleSlotId: el.slotId,
+      index: i + 1,
+    };
+  });
+
+  const spineX1 = centers[0].x;
+  const spineX2 = centers[centers.length - 1].x;
+  elements.unshift({
+    id: newElementId('shp'),
+    type: 'shape',
+    layer: 1,
+    placement: {
+      x: Math.round(spineX1),
+      y: Math.round(spineY - 1),
+      width: Math.round(Math.max(8, spineX2 - spineX1)),
+      height: 2,
+      rotation: 0,
+      opacity: 1,
+    },
+    content: { shape: 'rect', fill: { type: 'solid', color: spineColor, colorRole: 'text' }, layoutSurface: true },
+    role: 'decoration',
+    slotId: 'PROCESS_LINNER_SPINE',
+  });
+
+  centers.forEach((c) => {
+    const phaseRadius = c.index % 2 === 0 ? 105 : 90;
+    const phaseSize = phaseRadius * 2;
+    const phaseY = spineY + SPINE_NODE / 2 + 28 + phaseRadius;
+    const phaseBottom = phaseY + phaseRadius;
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 3,
+      placement: {
+        x: Math.round(c.x - SPINE_NODE / 2),
+        y: Math.round(spineY - SPINE_NODE / 2),
+        width: SPINE_NODE,
+        height: SPINE_NODE,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'ellipse',
+        fill: { type: 'solid', color: spineColor, colorRole: 'text' },
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `STEP_${c.index}_SPINE_NODE`,
+    });
+
+    elements.unshift({
+      id: newElementId('txt'),
+      type: 'text',
+      layer: 4,
+      placement: {
+        x: Math.round(c.x - SPINE_NODE / 2),
+        y: Math.round(spineY - NUM_H / 2),
+        width: SPINE_NODE,
+        height: NUM_H,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        text: String(c.index),
+        align: 'center',
+        fontSize: 12,
+        fontWeight: 700,
+        color: white,
+      },
+      role: 'caption',
+      slotId: `STEP_${c.index}_SPINE_NUM`,
+    });
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'graphic',
+      layer: 2,
+      placement: {
+        x: Math.round(c.x - phaseRadius),
+        y: Math.round(phaseY - phaseRadius),
+        width: phaseSize,
+        height: phaseSize,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: timelineGraphicContent(processPhaseCircleInlineSvg(), { type: 'solid', color: phaseFill, colorRole: 'cardBg' }, `Phase ${c.index}`),
+      role: 'decoration',
+      slotId: `STEP_${c.index}_PHASE_CIRCLE`,
+    });
+
+    const titleIdx = elements.findIndex((el) => el.slotId === c.titleSlotId);
+    if (titleIdx >= 0) {
+      const titleEl = elements[titleIdx];
+      const titleHeight = Math.max(28, titleEl.placement?.height ?? 32);
+      elements[titleIdx] = {
+        ...titleEl,
+        layer: 5,
+        placement: {
+          ...titleEl.placement,
+          x: Math.round(c.x - phaseRadius + 16),
+          y: Math.round(phaseY - titleHeight / 2),
+          width: Math.round(phaseSize - 32),
+          height: titleHeight,
+        },
+        content: {
+          ...(titleEl.content || {}),
+          align: 'center',
+          color: primaryColor,
+          colorRole: 'primary',
+        },
+      };
+    }
+
+    const ANCHOR = 14;
+    const anchorY = phaseBottom + 36;
+    const connectorHeight = Math.max(12, anchorY - ANCHOR / 2 - phaseBottom - 4);
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: {
+        x: Math.round(c.x - 1),
+        y: Math.round(phaseBottom + 4),
+        width: 2,
+        height: Math.round(connectorHeight),
+        rotation: 0,
+        opacity: 1,
+      },
+      content: { shape: 'rect', fill: { type: 'solid', color: spineColor, colorRole: 'text' }, layoutSurface: true },
+      role: 'decoration',
+      slotId: `STEP_${c.index}_CONNECTOR`,
+    });
+
+    elements.unshift({
+      id: newElementId('shp'),
+      type: 'shape',
+      layer: 2,
+      placement: {
+        x: Math.round(c.x - ANCHOR / 2),
+        y: Math.round(anchorY - ANCHOR / 2),
+        width: ANCHOR,
+        height: ANCHOR,
+        rotation: 0,
+        opacity: 1,
+      },
+      content: {
+        shape: 'ellipse',
+        fill: { type: 'solid', color: 'transparent' },
+        stroke: spineColor,
+        strokeWidth: 2,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: `STEP_${c.index}_ANCHOR`,
+    });
+
+    const bodySlotId = `STEP_${c.index}_BODY`;
+    const bodyIdx = elements.findIndex((el) => el.slotId === bodySlotId);
+    if (bodyIdx >= 0) {
+      const bodyEl = elements[bodyIdx];
+      const titleWidth = elements.find((el) => el.slotId === c.titleSlotId)?.placement?.width;
+      const bodyWidth = Math.max(bodyEl.placement?.width ?? 0, titleWidth ?? 200);
+      const bodyTop = anchorY + ANCHOR / 2 + 14;
+      elements[bodyIdx] = {
+        ...bodyEl,
+        placement: {
+          ...bodyEl.placement,
+          x: Math.round(c.x - bodyWidth / 2),
+          y: Math.round(bodyTop),
+          width: bodyWidth,
+        },
+        content: {
+          ...(bodyEl.content || {}),
+          align: 'center',
+        },
+      };
+    }
+  });
+
+  return { ...doc, elements };
+}
+
+function applyProcessLinnerNumericShapes(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc || !layoutSchema?.slots?.length) return doc;
+  const layoutId = String(layoutSchema.layout_id || '');
+  if (!isProcessLinnerNumericLayout(layoutId)) return doc;
+
+  const palette = themeTokens?.palette || {};
+  const lineColor = paletteColor(palette, 'text', '#0F172A');
+  const shadowColor = 'rgba(15, 23, 42, 0.12)';
+  let elements = [...(doc.elements || [])];
+
+  const numberEls = elements
+    .filter((el) => el.type === 'text' && /^STEP_\d+_NUMBER$/i.test(String(el.slotId || '')))
+    .sort((a, b) => (a.placement?.x ?? 0) - (b.placement?.x ?? 0));
+
+  numberEls.forEach((numEl) => {
+    const m = String(numEl.slotId || '').match(/^STEP_(\d+)_NUMBER$/i);
+    if (!m) return;
+    const n = m[1];
+    const p = numEl.placement || {};
+    const slotLineY = (p.y ?? 0) + (p.height ?? 0) - 8;
+    const lineWidth = Math.max(60, (p.width ?? 0) * 0.85);
+    const lineX = (p.x ?? 0) + ((p.width ?? 0) - lineWidth) / 2;
+
+    if (!elements.some((el) => el.slotId === `STEP_${n}_NUMBER_SLOT`)) {
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: 1,
+        placement: {
+          x: Math.round(lineX),
+          y: Math.round(slotLineY),
+          width: Math.round(lineWidth),
+          height: 3,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: { shape: 'rect', fill: { type: 'solid', color: lineColor, colorRole: 'text' }, layoutSurface: true },
+        role: 'decoration',
+        slotId: `STEP_${n}_NUMBER_SLOT`,
+      });
+
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: 0,
+        placement: {
+          x: Math.round((p.x ?? 0) + 4),
+          y: Math.round(slotLineY + 2),
+          width: Math.round(lineWidth - 8),
+          height: 6,
+          rotation: 0,
+          opacity: 0.35,
+        },
+        content: { shape: 'rect', fill: { type: 'solid', color: shadowColor }, borderRadius: 3, layoutSurface: true },
+        role: 'decoration',
+        slotId: `STEP_${n}_NUMBER_SHADOW`,
+      });
+    }
+
+    const iconSlotId = `STEP_${n}_ICON`;
+    const iconIdx = elements.findIndex((el) => el.slotId === iconSlotId);
+    if (iconIdx >= 0 && elements[iconIdx].type === 'text') {
+      const iconEl = elements[iconIdx];
+      const ip = iconEl.placement || {};
+      const size = Math.min(ip.width ?? 48, ip.height ?? 48, 48);
+      const cx = (ip.x ?? 0) + (ip.width ?? size) / 2;
+      const cy = (ip.y ?? 0) + (ip.height ?? size) / 2;
+      elements.splice(iconIdx, 1);
+      elements.push({
+        id: newElementId('shp'),
+        type: 'shape',
+        slotId: iconSlotId,
+        layer: iconEl.layer ?? 8,
+        placement: {
+          x: Math.round(cx - size / 2),
+          y: Math.round(cy - size / 2),
+          width: size,
+          height: size,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'circle',
+          fill: {
+            type: 'solid',
+            color: paletteColor(palette, 'iconFill', 'color-mix(in srgb, #64748b 18%, transparent)'),
+          },
+          stroke: paletteColor(palette, 'iconRing', 'color-mix(in srgb, #6366f1 32%, transparent)'),
+          strokeWidth: 1.5,
+          layoutSurface: true,
+        },
+        role: 'decoration',
+      });
+    }
+  });
+
+  return { ...doc, elements };
+}
+
 function isProcessFlowLayout(layoutId) {
   const id = String(layoutId || '').toLowerCase();
+  if (/^process_linner_horti/.test(id)) return false;
   return (
     /timeline/.test(id) ||
     /process_linear/.test(id) ||
@@ -3458,7 +3725,12 @@ function isProcessFlowLayout(layoutId) {
 }
 
 function isDiagramProcessStepsLayout(layoutId) {
-  return /diagram_process_steps/.test(String(layoutId || '').toLowerCase());
+  const id = String(layoutId || '').toLowerCase();
+  return /diagram_process_steps|timeline_process_steps/.test(id);
+}
+
+function timelineGraphicContent(svg, fill, alt = '') {
+  return { svg, colorMode: 'recolorable', fill, alt };
 }
 
 function isDiagramCycleLayout(layoutId) {
@@ -5179,7 +5451,7 @@ function layoutDiagramProcessSteps(doc, layoutSchema, themeTokens, canvas = {}) 
     });
     chrome.push({
       id: newElementId('shp'),
-      type: 'shape',
+      type: 'graphic',
       layer: 3,
       placement: {
         x: Math.round(centers[i] - nodeSize / 2),
@@ -5189,11 +5461,7 @@ function layoutDiagramProcessSteps(doc, layoutSchema, themeTokens, canvas = {}) 
         rotation: 0,
         opacity: 1,
       },
-      content: {
-        shape: 'ellipse',
-        fill: { type: 'solid', colorRole: 'text', color: textColor },
-        layoutSurface: true,
-      },
+      content: timelineGraphicContent(timelineNodeInlineSvg(), { type: 'solid', colorRole: 'text', color: textColor }, `Step ${i + 1}`),
       role: 'decoration',
       slotId: `TIMELINE_NODE_${i + 1}`,
     });
@@ -5280,6 +5548,8 @@ function findProcessAnchorElements(elements) {
 function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {}) {
   if (!doc || !layoutSchema?.slots?.length) return doc;
   const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
+  if (isProcessLinnerLayout(layoutId)) return doc;
+  if (isProcessLinnerHortiLayout(layoutId)) return doc;
   if (!isProcessFlowLayout(layoutId)) return doc;
 
   // Idempotent — skip if flow chrome already injected
@@ -5362,7 +5632,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
       const cy = c.labelTop + 10;
       elements.unshift({
         id: newElementId('shp'),
-        type: 'shape',
+        type: 'graphic',
         layer: 3,
         placement: {
           x: Math.round(spineX - NODE / 2),
@@ -5372,11 +5642,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
           rotation: 0,
           opacity: 1,
         },
-        content: {
-          shape: 'ellipse',
-          fill: { type: 'solid', color: accent, colorRole: 'accent' },
-          layoutSurface: true,
-        },
+        content: timelineGraphicContent(timelineNodeInlineSvg(), { type: 'solid', color: accent, colorRole: 'accent' }, `Timeline node ${c.index}`),
         role: 'decoration',
         slotId: `TIMELINE_NODE_${c.index}`,
       });
@@ -5413,7 +5679,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
     centers.forEach((c) => {
       elements.unshift({
         id: newElementId('shp'),
-        type: 'shape',
+        type: 'graphic',
         layer: 3,
         placement: {
           x: Math.round(c.x - NODE / 2),
@@ -5423,11 +5689,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
           rotation: 0,
           opacity: 1,
         },
-        content: {
-          shape: 'ellipse',
-          fill: { type: 'solid', color: accent, colorRole: 'accent' },
-          layoutSurface: true,
-        },
+        content: timelineGraphicContent(timelineNodeInlineSvg(), { type: 'solid', color: accent, colorRole: 'accent' }, `Timeline node ${c.index}`),
         role: 'decoration',
         slotId: `TIMELINE_NODE_${c.index}`,
       });
@@ -5479,7 +5741,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
 
     elements.unshift({
       id: newElementId('shp'),
-      type: 'shape',
+      type: 'graphic',
       layer: 1,
       placement: {
         x: Math.round(x1),
@@ -5489,12 +5751,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
         rotation: 0,
         opacity: 0.95,
       },
-      content: {
-        shape: 'rect',
-        fill: { type: 'solid', color: muted, colorRole: 'muted' },
-        borderRadius: 2,
-        layoutSurface: true,
-      },
+      content: timelineGraphicContent(timelineSpineSegmentInlineSvg(), { type: 'solid', color: muted, colorRole: 'muted' }, 'Timeline segment'),
       role: 'decoration',
       slotId: `TIMELINE_SEG_${i + 1}`,
     });
@@ -5503,7 +5760,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
     const chevronSize = 18;
     elements.unshift({
       id: newElementId('shp'),
-      type: 'shape',
+      type: 'graphic',
       layer: 2,
       placement: {
         x: Math.round(midX - chevronSize / 2),
@@ -5513,11 +5770,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
         rotation: 0,
         opacity: 1,
       },
-      content: {
-        shape: 'chevron-right',
-        fill: { type: 'solid', color: accent, colorRole: 'accent' },
-        layoutSurface: true,
-      },
+      content: timelineGraphicContent(timelineChevronInlineSvg(), { type: 'solid', color: accent, colorRole: 'accent' }, 'Timeline arrow'),
       role: 'decoration',
       slotId: `TIMELINE_ARROW_${i + 1}`,
     });
@@ -5599,6 +5852,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   } else {
     next = applyDefaultCardShapes(next, layoutSchema, content, themeTokens, canvas);
     next = applySplitHeroDecorShape(next, layoutSchema, themeTokens, canvas);
+    next = applyProcessLinnerHortiShapes(next, layoutSchema, themeTokens, canvas);
+    next = applyProcessLinnerNumericShapes(next, layoutSchema, themeTokens, canvas);
     next = applyTimelineConnectorShapes(next, layoutSchema, themeTokens, canvas);
   }
 

@@ -181,17 +181,20 @@
       "preview": {
         "mode": null,
         "slots": {
+          "HERO_IMAGE": {
+            "variant": "image"
+          },
           "MAIN_TITLE": {
             "text": "Presentation title",
             "variant": "title",
-            "bold": true
+            "bold": true,
+            "uppercase": false
           },
           "SUBTITLE": {
             "text": "Tagline or company name",
-            "variant": "subheading"
-          },
-          "HERO_IMAGE": {
-            "variant": "image"
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
           }
         }
       }
@@ -257,11 +260,14 @@
           "MAIN_TITLE": {
             "text": "Presentation title",
             "variant": "title",
-            "bold": true
+            "bold": true,
+            "uppercase": false
           },
           "SUBTITLE": {
             "text": "Tagline or company name",
-            "variant": "subheading"
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
           },
           "HERO_IMAGE": {
             "variant": "image"
@@ -287,7 +293,9 @@
           "role": "image",
           "layer": 2,
           "fit": "cover",
-          "imageStyle": "hero"
+          "imageStyle": "hero",
+          "borderRadius": 18,
+          "shadow": "0 14px 40px rgba(15, 23, 42, 0.14), 0 4px 14px rgba(99, 102, 241, 0.12)"
         },
         {
           "id": "MAIN_TITLE",
@@ -323,17 +331,20 @@
       "preview": {
         "mode": null,
         "slots": {
+          "HERO_IMAGE": {
+            "variant": "image"
+          },
           "MAIN_TITLE": {
             "text": "Presentation title",
             "variant": "title",
-            "bold": true
+            "bold": true,
+            "uppercase": false
           },
           "SUBTITLE": {
             "text": "Tagline or company name",
-            "variant": "subheading"
-          },
-          "HERO_IMAGE": {
-            "variant": "image"
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
           }
         }
       }
@@ -386,7 +397,9 @@
           "role": "image",
           "layer": 2,
           "fit": "cover",
-          "imageStyle": "hero"
+          "imageStyle": "hero",
+          "borderRadius": 18,
+          "shadow": "0 14px 40px rgba(15, 23, 42, 0.14), 0 4px 14px rgba(99, 102, 241, 0.12)"
         }
       ],
       "preview": {
@@ -395,11 +408,14 @@
           "MAIN_TITLE": {
             "text": "Presentation title",
             "variant": "title",
-            "bold": true
+            "bold": true,
+            "uppercase": false
           },
           "SUBTITLE": {
             "text": "Tagline or company name",
-            "variant": "subheading"
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
           },
           "HERO_IMAGE": {
             "variant": "image"
@@ -488,11 +504,14 @@
           "MAIN_TITLE": {
             "text": "Presentation title",
             "variant": "title",
-            "bold": true
+            "bold": true,
+            "uppercase": false
           },
           "SUBTITLE": {
             "text": "Tagline or company name",
-            "variant": "subheading"
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
           }
         }
       }
@@ -7277,11 +7296,11 @@
     }
   },
   {
-    "name": "Process Linear",
+    "name": "Process Linner Horti",
     "contentType": "chart",
-    "variant": "process_linear_v1",
+    "variant": "process_linner_horti_v1",
     "schema": {
-      "layout_id": "process_linear_v1",
+      "layout_id": "process_linner_horti_v1",
       "content_type": "chart",
       "schemaVersion": 2,
       "grid": "12-col",
@@ -7303,36 +7322,24 @@
           "max_lines": 2
         },
         {
-          "id": "STEP_1_CIRCLE",
-          "region": "cols 2-3, rows 4-5",
-          "role": "decoration",
-          "layer": 2,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "stepCircle",
-            "suggestedBehind": "none"
-          }
-        },
-        {
           "id": "STEP_1_TITLE",
-          "region": "cols 2-3, rows 5-6",
+          "region": "cols 2-3, rows 4-5",
           "role": "heading",
-          "placeholder_text": "Discover",
+          "placeholder_text": "Phase 1",
           "layer": 10,
           "typography": {
             "fontSize": 18,
             "fontWeight": 800,
-            "colorRole": "text",
+            "colorRole": "primary",
             "align": "center",
             "lineHeight": 1.15
           }
         },
         {
           "id": "STEP_1_BODY",
-          "region": "cols 2-3, rows 6-8",
+          "region": "cols 2-3, rows 8-10",
           "role": "body",
-          "placeholder_text": "Research and define",
+          "placeholder_text": "Research and define the problem space.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -7341,39 +7348,27 @@
             "align": "center",
             "lineHeight": 1.45
           },
-          "max_lines": 2
-        },
-        {
-          "id": "STEP_2_CIRCLE",
-          "region": "cols 5-6, rows 4-5",
-          "role": "decoration",
-          "layer": 2,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "stepCircle",
-            "suggestedBehind": "none"
-          }
+          "max_lines": 3
         },
         {
           "id": "STEP_2_TITLE",
-          "region": "cols 5-6, rows 5-6",
+          "region": "cols 5-6, rows 4-5",
           "role": "heading",
-          "placeholder_text": "Build",
+          "placeholder_text": "Phase 2",
           "layer": 10,
           "typography": {
             "fontSize": 18,
             "fontWeight": 800,
-            "colorRole": "text",
+            "colorRole": "primary",
             "align": "center",
             "lineHeight": 1.15
           }
         },
         {
           "id": "STEP_2_BODY",
-          "region": "cols 5-6, rows 6-8",
+          "region": "cols 5-6, rows 8-10",
           "role": "body",
-          "placeholder_text": "Design and iterate",
+          "placeholder_text": "Design and iterate on the solution.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -7382,39 +7377,27 @@
             "align": "center",
             "lineHeight": 1.45
           },
-          "max_lines": 2
-        },
-        {
-          "id": "STEP_3_CIRCLE",
-          "region": "cols 8-9, rows 4-5",
-          "role": "decoration",
-          "layer": 2,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "stepCircle",
-            "suggestedBehind": "none"
-          }
+          "max_lines": 3
         },
         {
           "id": "STEP_3_TITLE",
-          "region": "cols 8-9, rows 5-6",
+          "region": "cols 8-9, rows 4-5",
           "role": "heading",
-          "placeholder_text": "Launch",
+          "placeholder_text": "Phase 3",
           "layer": 10,
           "typography": {
             "fontSize": 18,
             "fontWeight": 800,
-            "colorRole": "text",
+            "colorRole": "primary",
             "align": "center",
             "lineHeight": 1.15
           }
         },
         {
           "id": "STEP_3_BODY",
-          "region": "cols 8-9, rows 6-8",
+          "region": "cols 8-9, rows 8-10",
           "role": "body",
-          "placeholder_text": "Ship and measure",
+          "placeholder_text": "Ship, measure, and improve.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -7423,11 +7406,11 @@
             "align": "center",
             "lineHeight": 1.45
           },
-          "max_lines": 2
+          "max_lines": 3
         }
       ],
       "preview": {
-        "mode": "process_flow",
+        "mode": "process_linner_horti",
         "slots": {
           "HEADING": {
             "text": "How it works",
@@ -7436,37 +7419,485 @@
             "uppercase": false
           },
           "STEP_1_TITLE": {
-            "text": "Discover",
+            "text": "Phase 1",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "STEP_1_BODY": {
-            "text": "Research and define",
+            "text": "Research and define the problem space.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "STEP_2_TITLE": {
-            "text": "Build",
+            "text": "Phase 2",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "STEP_2_BODY": {
-            "text": "Design and iterate",
+            "text": "Design and iterate on the solution.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "STEP_3_TITLE": {
-            "text": "Launch",
+            "text": "Phase 3",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "STEP_3_BODY": {
-            "text": "Ship and measure",
+            "text": "Ship, measure, and improve.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Process Linner Horti Four",
+    "contentType": "chart",
+    "variant": "process_linner_horti_four_v1",
+    "schema": {
+      "layout_id": "process_linner_horti_four_v1",
+      "content_type": "chart",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "How it works",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "STEP_1_TITLE",
+          "region": "cols 1-3, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Phase 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_1_BODY",
+          "region": "cols 1-3, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Research and define.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_2_TITLE",
+          "region": "cols 4-6, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Phase 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_2_BODY",
+          "region": "cols 4-6, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Design and iterate.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_3_TITLE",
+          "region": "cols 7-9, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Phase 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_3_BODY",
+          "region": "cols 7-9, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Build and validate.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_4_TITLE",
+          "region": "cols 10-12, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Phase 4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_4_BODY",
+          "region": "cols 10-12, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Launch and scale.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "process_linner_horti",
+        "slots": {
+          "HEADING": {
+            "text": "How it works",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_1_TITLE": {
+            "text": "Phase 1",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_1_BODY": {
+            "text": "Research and define.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "STEP_2_TITLE": {
+            "text": "Phase 2",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_2_BODY": {
+            "text": "Design and iterate.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "STEP_3_TITLE": {
+            "text": "Phase 3",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_3_BODY": {
+            "text": "Build and validate.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "STEP_4_TITLE": {
+            "text": "Phase 4",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_4_BODY": {
+            "text": "Launch and scale.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Process Linner Numeric",
+    "contentType": "chart",
+    "variant": "process_linner_numeric_v1",
+    "schema": {
+      "layout_id": "process_linner_numeric_v1",
+      "content_type": "chart",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Process overview",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "STEP_1_NUMBER",
+          "region": "cols 2-4, rows 3-5",
+          "role": "stat",
+          "placeholder_text": "01",
+          "layer": 10,
+          "typography": {
+            "fontSize": 72,
+            "fontWeight": 900,
+            "colorRole": "accent",
+            "align": "center",
+            "lineHeight": 1
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "STEP_1_TITLE",
+          "region": "cols 2-4, rows 5-6",
+          "role": "heading",
+          "placeholder_text": "SHAPE TITLE",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_1_BODY",
+          "region": "cols 2-4, rows 6-8",
+          "role": "body",
+          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_1_ICON",
+          "region": "cols 2-4, rows 8-9",
+          "role": "decoration",
+          "layer": 8
+        },
+        {
+          "id": "STEP_2_NUMBER",
+          "region": "cols 5-7, rows 3-5",
+          "role": "stat",
+          "placeholder_text": "02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 72,
+            "fontWeight": 900,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "STEP_2_TITLE",
+          "region": "cols 5-7, rows 5-6",
+          "role": "heading",
+          "placeholder_text": "SHAPE TITLE",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_2_BODY",
+          "region": "cols 5-7, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_2_ICON",
+          "region": "cols 5-7, rows 8-9",
+          "role": "decoration",
+          "layer": 8
+        },
+        {
+          "id": "STEP_3_NUMBER",
+          "region": "cols 8-10, rows 3-5",
+          "role": "stat",
+          "placeholder_text": "03",
+          "layer": 10,
+          "typography": {
+            "fontSize": 72,
+            "fontWeight": 900,
+            "colorRole": "accent",
+            "align": "center",
+            "lineHeight": 1
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "STEP_3_TITLE",
+          "region": "cols 8-10, rows 5-6",
+          "role": "heading",
+          "placeholder_text": "SHAPE TITLE",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "STEP_3_BODY",
+          "region": "cols 8-10, rows 6-8",
+          "role": "body",
+          "placeholder_text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "STEP_3_ICON",
+          "region": "cols 8-10, rows 8-9",
+          "role": "decoration",
+          "layer": 8
+        }
+      ],
+      "preview": {
+        "mode": "process_linner_numeric",
+        "slots": {
+          "HEADING": {
+            "text": "Process overview",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_1_NUMBER": {
+            "text": "01",
+            "variant": "stat",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_1_TITLE": {
+            "text": "SHAPE TITLE",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_1_BODY": {
+            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "STEP_2_NUMBER": {
+            "text": "02",
+            "variant": "stat",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_2_TITLE": {
+            "text": "SHAPE TITLE",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_2_BODY": {
+            "text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "STEP_3_NUMBER": {
+            "text": "03",
+            "variant": "stat",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_3_TITLE": {
+            "text": "SHAPE TITLE",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "STEP_3_BODY": {
+            "text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -11094,7 +11525,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_horizontal",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Roadmap preview",
@@ -15400,7 +15831,7 @@
         },
         {
           "id": "milestone_1",
-          "region": "cols 2-3, rows 5-6",
+          "region": "cols 2-3, rows 4-5",
           "role": "body",
           "placeholder_text": "1. Milestone label",
           "layer": 10,
@@ -15415,7 +15846,7 @@
         },
         {
           "id": "milestone_2",
-          "region": "cols 5-6, rows 5-6",
+          "region": "cols 4-5, rows 4-5",
           "role": "body",
           "placeholder_text": "2. Milestone label",
           "layer": 10,
@@ -15430,7 +15861,7 @@
         },
         {
           "id": "milestone_3",
-          "region": "cols 8-9, rows 5-6",
+          "region": "cols 6-7, rows 4-5",
           "role": "body",
           "placeholder_text": "3. Milestone label",
           "layer": 10,
@@ -15445,7 +15876,7 @@
         },
         {
           "id": "milestone_4",
-          "region": "cols 10-11, rows 5-6",
+          "region": "cols 8-9, rows 4-5",
           "role": "body",
           "placeholder_text": "4. Milestone label",
           "layer": 10,
@@ -15460,7 +15891,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_horizontal",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Timeline",
@@ -15524,7 +15955,7 @@
         },
         {
           "id": "MILESTONE_1_CARD_BG",
-          "region": "cols 2-3, rows 4-8",
+          "region": "cols 2-3, rows 3-6",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15543,7 +15974,7 @@
         },
         {
           "id": "milestone_1_label",
-          "region": "cols 2-3, rows 5-6",
+          "region": "cols 2-3, rows 3-4",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15558,7 +15989,7 @@
         },
         {
           "id": "milestone_1_detail",
-          "region": "cols 2-3, rows 6-8",
+          "region": "cols 2-3, rows 4-6",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15573,7 +16004,7 @@
         },
         {
           "id": "MILESTONE_2_CARD_BG",
-          "region": "cols 5-6, rows 4-8",
+          "region": "cols 4-5, rows 3-6",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15592,7 +16023,7 @@
         },
         {
           "id": "milestone_2_label",
-          "region": "cols 5-6, rows 5-6",
+          "region": "cols 4-5, rows 3-4",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15607,7 +16038,7 @@
         },
         {
           "id": "milestone_2_detail",
-          "region": "cols 5-6, rows 6-8",
+          "region": "cols 4-5, rows 4-6",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15622,7 +16053,7 @@
         },
         {
           "id": "MILESTONE_3_CARD_BG",
-          "region": "cols 8-9, rows 4-8",
+          "region": "cols 6-7, rows 3-6",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15641,7 +16072,7 @@
         },
         {
           "id": "milestone_3_label",
-          "region": "cols 8-9, rows 5-6",
+          "region": "cols 6-7, rows 3-4",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15656,7 +16087,7 @@
         },
         {
           "id": "milestone_3_detail",
-          "region": "cols 8-9, rows 6-8",
+          "region": "cols 6-7, rows 4-6",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15671,7 +16102,7 @@
         },
         {
           "id": "MILESTONE_4_CARD_BG",
-          "region": "cols 10-11, rows 4-8",
+          "region": "cols 8-9, rows 3-6",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15690,7 +16121,7 @@
         },
         {
           "id": "milestone_4_label",
-          "region": "cols 10-11, rows 5-6",
+          "region": "cols 8-9, rows 3-4",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15705,7 +16136,7 @@
         },
         {
           "id": "milestone_4_detail",
-          "region": "cols 10-11, rows 6-8",
+          "region": "cols 8-9, rows 4-6",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15720,7 +16151,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_horizontal",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -15793,7 +16224,7 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-12, rows 1-2",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
           "placeholder_text": "Key milestones",
           "layer": 10,
@@ -15808,14 +16239,14 @@
         },
         {
           "id": "IMAGE_1",
-          "region": "cols 1-3, rows 3-5",
+          "region": "cols 2-3, rows 3-5",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "MILESTONE_1_CARD_BG",
-          "region": "cols 1-3, rows 5-8",
+          "region": "cols 2-3, rows 5-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15834,7 +16265,7 @@
         },
         {
           "id": "milestone_1_label",
-          "region": "cols 1-3, rows 5-6",
+          "region": "cols 2-3, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15849,7 +16280,7 @@
         },
         {
           "id": "milestone_1_detail",
-          "region": "cols 1-3, rows 6-8",
+          "region": "cols 2-3, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15864,14 +16295,14 @@
         },
         {
           "id": "IMAGE_2",
-          "region": "cols 4-6, rows 3-5",
+          "region": "cols 4-5, rows 3-5",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "MILESTONE_2_CARD_BG",
-          "region": "cols 4-6, rows 5-8",
+          "region": "cols 4-5, rows 5-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15890,7 +16321,7 @@
         },
         {
           "id": "milestone_2_label",
-          "region": "cols 4-6, rows 5-6",
+          "region": "cols 4-5, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15905,7 +16336,7 @@
         },
         {
           "id": "milestone_2_detail",
-          "region": "cols 4-6, rows 6-8",
+          "region": "cols 4-5, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15920,14 +16351,14 @@
         },
         {
           "id": "IMAGE_3",
-          "region": "cols 7-9, rows 3-5",
+          "region": "cols 6-7, rows 3-5",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "MILESTONE_3_CARD_BG",
-          "region": "cols 7-9, rows 5-8",
+          "region": "cols 6-7, rows 5-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15946,7 +16377,7 @@
         },
         {
           "id": "milestone_3_label",
-          "region": "cols 7-9, rows 5-6",
+          "region": "cols 6-7, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -15961,7 +16392,7 @@
         },
         {
           "id": "milestone_3_detail",
-          "region": "cols 7-9, rows 6-8",
+          "region": "cols 6-7, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -15976,14 +16407,14 @@
         },
         {
           "id": "IMAGE_4",
-          "region": "cols 10-12, rows 3-5",
+          "region": "cols 8-9, rows 3-5",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "MILESTONE_4_CARD_BG",
-          "region": "cols 10-12, rows 5-8",
+          "region": "cols 8-9, rows 5-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -16002,7 +16433,7 @@
         },
         {
           "id": "milestone_4_label",
-          "region": "cols 10-12, rows 5-6",
+          "region": "cols 8-9, rows 5-6",
           "role": "subheading",
           "placeholder_text": "2020",
           "layer": 10,
@@ -16017,7 +16448,7 @@
         },
         {
           "id": "milestone_4_detail",
-          "region": "cols 10-12, rows 6-8",
+          "region": "cols 8-9, rows 6-8",
           "role": "body",
           "placeholder_text": "Key event summary",
           "layer": 10,
@@ -16032,7 +16463,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_milestones_image",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -16278,7 +16709,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_vertical",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Project phases",
@@ -16378,7 +16809,7 @@
         },
         {
           "id": "milestone_1_label",
-          "region": "cols 2-3, rows 4-5",
+          "region": "cols 1-3, rows 3-4",
           "role": "subheading",
           "placeholder_text": "Q1",
           "layer": 10,
@@ -16392,7 +16823,7 @@
         },
         {
           "id": "milestone_1_detail",
-          "region": "cols 2-3, rows 5-8",
+          "region": "cols 1-3, rows 4-6",
           "role": "body",
           "placeholder_text": "Foundation release",
           "layer": 10,
@@ -16407,7 +16838,7 @@
         },
         {
           "id": "milestone_2_label",
-          "region": "cols 5-6, rows 4-5",
+          "region": "cols 4-6, rows 3-4",
           "role": "subheading",
           "placeholder_text": "Q2",
           "layer": 10,
@@ -16421,7 +16852,7 @@
         },
         {
           "id": "milestone_2_detail",
-          "region": "cols 5-6, rows 5-8",
+          "region": "cols 4-6, rows 4-6",
           "role": "body",
           "placeholder_text": "Growth features",
           "layer": 10,
@@ -16436,7 +16867,7 @@
         },
         {
           "id": "milestone_3_label",
-          "region": "cols 8-9, rows 4-5",
+          "region": "cols 7-9, rows 3-4",
           "role": "subheading",
           "placeholder_text": "Q3",
           "layer": 10,
@@ -16450,7 +16881,7 @@
         },
         {
           "id": "milestone_3_detail",
-          "region": "cols 8-9, rows 5-8",
+          "region": "cols 7-9, rows 4-6",
           "role": "body",
           "placeholder_text": "Enterprise push",
           "layer": 10,
@@ -16465,7 +16896,7 @@
         },
         {
           "id": "milestone_4_label",
-          "region": "cols 10-11, rows 4-5",
+          "region": "cols 10-12, rows 3-4",
           "role": "subheading",
           "placeholder_text": "Q4",
           "layer": 10,
@@ -16479,7 +16910,7 @@
         },
         {
           "id": "milestone_4_detail",
-          "region": "cols 10-11, rows 5-8",
+          "region": "cols 10-12, rows 4-6",
           "role": "body",
           "placeholder_text": "Scale and optimize",
           "layer": 10,
@@ -16494,7 +16925,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_roadmap",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "Product roadmap",
@@ -16582,7 +17013,7 @@
         },
         {
           "id": "step_1_title",
-          "region": "cols 2-3, rows 4-5",
+          "region": "cols 1-3, rows 3-4",
           "role": "heading",
           "placeholder_text": "1. Discover",
           "layer": 10,
@@ -16596,7 +17027,7 @@
         },
         {
           "id": "step_1_body",
-          "region": "cols 2-3, rows 5-8",
+          "region": "cols 1-3, rows 4-6",
           "role": "body",
           "placeholder_text": "Understand the problem",
           "layer": 10,
@@ -16611,7 +17042,7 @@
         },
         {
           "id": "step_2_title",
-          "region": "cols 5-6, rows 4-5",
+          "region": "cols 4-6, rows 3-4",
           "role": "heading",
           "placeholder_text": "2. Design",
           "layer": 10,
@@ -16625,7 +17056,7 @@
         },
         {
           "id": "step_2_body",
-          "region": "cols 5-6, rows 5-8",
+          "region": "cols 4-6, rows 4-6",
           "role": "body",
           "placeholder_text": "Shape the solution",
           "layer": 10,
@@ -16640,7 +17071,7 @@
         },
         {
           "id": "step_3_title",
-          "region": "cols 8-9, rows 4-5",
+          "region": "cols 7-9, rows 3-4",
           "role": "heading",
           "placeholder_text": "3. Build",
           "layer": 10,
@@ -16654,7 +17085,7 @@
         },
         {
           "id": "step_3_body",
-          "region": "cols 8-9, rows 5-8",
+          "region": "cols 7-9, rows 4-6",
           "role": "body",
           "placeholder_text": "Ship the MVP",
           "layer": 10,
@@ -16669,7 +17100,7 @@
         },
         {
           "id": "step_4_title",
-          "region": "cols 10-11, rows 4-5",
+          "region": "cols 10-12, rows 3-4",
           "role": "heading",
           "placeholder_text": "4. Launch",
           "layer": 10,
@@ -16683,7 +17114,7 @@
         },
         {
           "id": "step_4_body",
-          "region": "cols 10-11, rows 5-8",
+          "region": "cols 10-12, rows 4-6",
           "role": "body",
           "placeholder_text": "Go to market",
           "layer": 10,
@@ -16698,7 +17129,7 @@
         }
       ],
       "preview": {
-        "mode": "timeline_process_steps",
+        "mode": "process_flow",
         "slots": {
           "HEADING": {
             "text": "How it works",
@@ -16947,36 +17378,38 @@
             "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "center",
+            "align": "left",
             "lineHeight": 1.15
           },
           "max_lines": 2
         },
         {
           "id": "CARD_1_BG",
-          "region": "cols 2-3, rows 3-9",
+          "region": "cols 1-4, rows 2-6",
           "role": "decoration",
           "layer": 1,
+          "aiOnly": true,
           "shapeHint": {
+            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 12,
+            "borderRadius": 10,
             "pairsWithSlotId": "CARD_1_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 12
+            "borderRadius": 10
           }
         },
         {
           "id": "CARD_1_TITLE",
-          "region": "cols 2-3, rows 4-5",
+          "region": "cols 1-4, rows 2-3",
           "role": "heading",
           "placeholder_text": "Point one",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 20,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -16985,44 +17418,46 @@
         },
         {
           "id": "CARD_1_BODY",
-          "region": "cols 2-3, rows 5-9",
+          "region": "cols 1-4, rows 3-6",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 15,
+            "fontSize": 18,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 5
+          "max_lines": 3
         },
         {
           "id": "CARD_2_BG",
-          "region": "cols 5-6, rows 3-9",
+          "region": "cols 5-8, rows 2-6",
           "role": "decoration",
           "layer": 1,
+          "aiOnly": true,
           "shapeHint": {
+            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 12,
+            "borderRadius": 10,
             "pairsWithSlotId": "CARD_2_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 12
+            "borderRadius": 10
           }
         },
         {
           "id": "CARD_2_TITLE",
-          "region": "cols 5-6, rows 4-5",
+          "region": "cols 5-8, rows 2-3",
           "role": "heading",
           "placeholder_text": "Point two",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 20,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -17031,44 +17466,46 @@
         },
         {
           "id": "CARD_2_BODY",
-          "region": "cols 5-6, rows 5-9",
+          "region": "cols 5-8, rows 3-6",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 15,
+            "fontSize": 18,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 5
+          "max_lines": 3
         },
         {
           "id": "CARD_3_BG",
-          "region": "cols 8-9, rows 3-9",
+          "region": "cols 9-12, rows 2-6",
           "role": "decoration",
           "layer": 1,
+          "aiOnly": true,
           "shapeHint": {
+            "aiOnly": true,
             "kind": "cardBehind",
             "suggestedBehind": "card",
-            "borderRadius": 12,
+            "borderRadius": 10,
             "pairsWithSlotId": "CARD_3_TITLE"
           },
           "shape": {
             "type": "rect",
             "fillColorRole": "cardBg",
-            "borderRadius": 12
+            "borderRadius": 10
           }
         },
         {
           "id": "CARD_3_TITLE",
-          "region": "cols 8-9, rows 4-5",
+          "region": "cols 9-12, rows 2-3",
           "role": "heading",
           "placeholder_text": "Point three",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 20,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -17077,64 +17514,18 @@
         },
         {
           "id": "CARD_3_BODY",
-          "region": "cols 8-9, rows 5-9",
+          "region": "cols 9-12, rows 3-6",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-          "layer": 10,
-          "typography": {
-            "fontSize": 15,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 5
-        },
-        {
-          "id": "CARD_4_BG",
-          "region": "cols 10-11, rows 3-9",
-          "role": "decoration",
-          "layer": 1,
-          "shapeHint": {
-            "kind": "cardBehind",
-            "suggestedBehind": "card",
-            "borderRadius": 12,
-            "pairsWithSlotId": "CARD_4_TITLE"
-          },
-          "shape": {
-            "type": "rect",
-            "fillColorRole": "cardBg",
-            "borderRadius": 12
-          }
-        },
-        {
-          "id": "CARD_4_TITLE",
-          "region": "cols 10-11, rows 4-5",
-          "role": "heading",
-          "placeholder_text": "Point four",
           "layer": 10,
           "typography": {
             "fontSize": 18,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          }
-        },
-        {
-          "id": "CARD_4_BODY",
-          "region": "cols 10-11, rows 5-9",
-          "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-          "layer": 10,
-          "typography": {
-            "fontSize": 15,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 5
+          "max_lines": 3
         }
       ],
       "preview": {
@@ -17177,18 +17568,6 @@
             "uppercase": false
           },
           "CARD_3_BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          },
-          "CARD_4_TITLE": {
-            "text": "Point four",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "CARD_4_BODY": {
             "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
             "variant": "body",
             "bold": false,

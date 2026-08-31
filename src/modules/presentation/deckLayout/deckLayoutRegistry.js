@@ -23,13 +23,22 @@ function listDeckLayouts(options = {}) {
   return listSeedTemplates().map((template) => toDeckLayout(template, options));
 }
 
+const LAYOUT_ID_ALIASES = {
+  process_linear_v1: 'process_linner_horti_v1',
+};
+
+function normalizeLayoutId(layoutId) {
+  const id = String(layoutId || '').trim();
+  return LAYOUT_ID_ALIASES[id] || id;
+}
+
 /**
  * Lookup one layout by existing layout_id.
  * @param {string} layoutId
  * @param {{ includeElements?: boolean }} [options]
  */
 function getDeckLayout(layoutId, options = {}) {
-  const id = String(layoutId || '').trim();
+  const id = normalizeLayoutId(layoutId);
   const template = listSeedTemplates().find(
     (t) => t.schema?.layout_id === id || t.variant === id
   );
