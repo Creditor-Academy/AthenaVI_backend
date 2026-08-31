@@ -21,6 +21,7 @@
     "test:art-direction-engine": "node scripts/test-art-direction-engine.js",
     "test:palette-gallery-fixes": "node scripts/test-palette-gallery-fixes.js",
     "test:path-b-vs-layouts": "node scripts/test-path-b-vs-layouts.js",
+    "test:gallery-grid-policy": "node scripts/test-gallery-grid-policy.js",
     "eval:presentation-export": "node scripts/presentation-eval/export-fidelity.js",
     "seed:presentation-templates": "dotenv -e .env.development -- node scripts/seed-presentation-templates.js",
     "seed:presentation-deck-packs": "dotenv -e .env.development -- node scripts/seed-presentation-deck-packs.js",

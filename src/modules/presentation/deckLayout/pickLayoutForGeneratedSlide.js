@@ -64,6 +64,13 @@ function buildPresentationContext({ ctx, slide, outlineSlide, totalSlides }) {
   };
 }
 
+const {
+  galleryProfileOverrides,
+  isPureImageGridLayoutId,
+  isTextImageGridLayout,
+  looksLikeImageLedGallery,
+} = require('../galleryGridPolicy.util');
+
 function profileFromContent({ content, outlineSlide, ctx, slide, presentationContext }) {
   const wizard = ctx?.wizard || {};
   const preferVisuals = ctx?.preferVisuals !== false;
@@ -98,13 +105,34 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
   ];
   if (wantsImage && !contentTypes.includes('image')) contentTypes.push('image');
 
+  const layoutContentType =
+    outlineSlide?.suggestedContentType || content?.content_type || content?.contentType || '';
+  const gallerySignals = {
+    title: content?.title || outlineSlide?.title,
+    summary: content?.summary || content?.body || outlineSlide?.summary,
+    beats: outlineSlide?.beats || content?.beats,
+    bullets: content?.bullets,
+    columns: content?.columns,
+    visual: outlineSlide?.visual,
+    intent: outlineSlide?.intent || outlineSlide?.purpose || content?.intent,
+    contentType: layoutContentType,
+    imageStylePhrase: ctx?.imageStylePhrase || ctx?.themeTokens?.imageStyle || '',
+    visualIntent: outlineSlide?.visualIntent || outlineSlide?.visual_intent,
+  };
+  const galleryOverrides = galleryProfileOverrides(gallerySignals);
+  if (galleryOverrides?.imageCount) {
+    imageCount = galleryOverrides.imageCount;
+  }
+
   return toSlideContentProfile({
     ...(content && typeof content === 'object' ? content : {}),
     title: content?.title || outlineSlide?.title || '',
     subtitle: content?.subtitle || '',
     // For cover slides, keep bodyLength from summary but do not let it alone force text-only.
-    body: content?.body || (order === 1 ? '' : outlineSlide?.summary || content?.summary || ''),
-    summary: outlineSlide?.summary || content?.summary || '',
+    body: galleryOverrides
+      ? ''
+      : content?.body || (order === 1 ? '' : outlineSlide?.summary || content?.summary || ''),
+    summary: galleryOverrides ? '' : outlineSlide?.summary || content?.summary || '',
     purpose:
       outlineSlide?.intent ||
       outlineSlide?.purpose ||
@@ -202,6 +230,53 @@ async function pickLayoutForGeneratedSlide({
           usedFallback: false,
         },
       };
+    }
+  }
+
+  const forcedGalleryId = String(preferredLayoutId || '').trim();
+  if (forcedGalleryId && isPureImageGridLayoutId(forcedGalleryId)) {
+    const gallerySignals = {
+      title: content?.title || outlineSlide?.title,
+      summary: content?.summary || content?.body || outlineSlide?.summary,
+      beats: outlineSlide?.beats || content?.beats,
+      bullets: content?.bullets,
+      columns: content?.columns,
+      visual: outlineSlide?.visual,
+      intent: outlineSlide?.intent || outlineSlide?.purpose || content?.intent,
+      contentType:
+        outlineSlide?.suggestedContentType || content?.content_type || content?.contentType || '',
+      suggestedContentType: outlineSlide?.suggestedContentType,
+      arrangementHint: outlineSlide?.arrangementHint,
+      imageStylePhrase: ctx?.imageStylePhrase || ctx?.themeTokens?.imageStyle || '',
+      visualIntent: outlineSlide?.visualIntent || outlineSlide?.visual_intent,
+      wizardBrief: ctx?.wizardBrief || ctx?.sourceText || ctx?.outline?.sourcePrompt || '',
+    };
+    if (looksLikeImageLedGallery(gallerySignals)) {
+      list = list.filter((t) => !isTextImageGridLayout(templateLayoutId(t)));
+      const forcedTemplate = resolveTemplate(list, forcedGalleryId);
+      if (forcedTemplate) {
+        if (ctx && typeof ctx === 'object') {
+          if (!Array.isArray(ctx.layoutSelectionLog)) ctx.layoutSelectionLog = [];
+          ctx.layoutSelectionLog.push({
+            slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
+            phase,
+            source: 'gallery_policy',
+            selectedLayoutId: forcedGalleryId,
+            candidateCount: list.length,
+          });
+        }
+        return {
+          layoutId: forcedGalleryId,
+          template: forcedTemplate,
+          selection: {
+            selectedLayoutId: forcedGalleryId,
+            confidence: 100,
+            reason: 'Image-led gallery — pure bento layout',
+            source: 'gallery_policy',
+            usedFallback: false,
+          },
+        };
+      }
     }
   }
 

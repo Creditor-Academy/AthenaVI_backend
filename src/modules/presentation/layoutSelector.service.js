@@ -41,6 +41,12 @@ const LAYOUT_FAMILIES = {
     'grid_images_text_cards_v1',
     'intro_three_para_icons_v1',
   ],
+  text_image_grid: [
+    'grid_text_image_cards_v1',
+    'grid_three_images_text_v1',
+    'grid_images_text_cards_v1',
+    'four_images_text_v1',
+  ],
 };
 
 function layoutFamilyExcludeIds(layoutId) {

@@ -51,6 +51,17 @@ const {
   preferredProcessLayoutId,
   resolveDiagramVisualPolicy,
 } = require('./diagramPathPolicy.util');
+const {
+  looksLikeImageLedGallery,
+  preferredPureGalleryLayoutId,
+  galleryProfileOverrides,
+  galleryAdjacentExcludeIds,
+  galleryTextImageExcludeIds,
+  resolvePureGallerySlidePolicy,
+  isPureImageGridLayoutId,
+  isTextImageGridLayout,
+  beatCount,
+} = require('./galleryGridPolicy.util');
 const imageCache = require('./imageCache.service');
 const documentParse = require('./documentParse.service');
 const {
@@ -1933,6 +1944,36 @@ function isFullBleedLayoutId(layoutId) {
   return FULL_BLEED_LAYOUT_IDS.has(String(layoutId || '').trim());
 }
 
+function gallerySignalsFromSlide({ content, outlineSlide, layoutContentType, ctx } = {}) {
+  return {
+    title: content?.title || outlineSlide?.title,
+    summary: content?.summary || content?.body || outlineSlide?.summary,
+    beats: outlineSlide?.beats || content?.beats,
+    bullets: content?.bullets,
+    columns: content?.columns,
+    visual: outlineSlide?.visual,
+    intent: outlineSlide?.intent || outlineSlide?.purpose || content?.intent,
+    contentType: layoutContentType,
+    suggestedContentType: outlineSlide?.suggestedContentType,
+    arrangementHint: outlineSlide?.arrangementHint,
+    imageStylePhrase: ctx?.imageStylePhrase || ctx?.themeTokens?.imageStyle || '',
+    visualIntent: outlineSlide?.visualIntent || outlineSlide?.visual_intent,
+    wizardBrief: ctx?.wizardBrief || ctx?.sourceText || ctx?.outline?.sourcePrompt || '',
+  };
+}
+
+function mergeExcludeLayoutIds(...lists) {
+  const out = new Set();
+  for (const list of lists) {
+    if (!list) continue;
+    const arr = Array.isArray(list) ? list : [list];
+    arr.forEach((id) => {
+      if (id) out.add(String(id));
+    });
+  }
+  return out.size ? [...out] : null;
+}
+
 function resolvePreferredLayoutIdForSlide({
   ctx,
   slide,
@@ -1964,6 +2005,7 @@ function resolvePreferredLayoutIdForSlide({
     (Array.isArray(outlineSlides)
       ? outlineSlides.find((s) => Number(s.order) === order)
       : null) || {};
+
   const processSignals = {
     title: content?.title || outlineSlide?.title,
     summary: content?.summary || content?.body || outlineSlide?.summary,
@@ -1982,6 +2024,16 @@ function resolvePreferredLayoutIdForSlide({
       const steps = countProcessSteps(processSignals);
       return preferredProcessLayoutId(steps, usedLayoutIds);
     }
+  }
+
+  const gallerySignals = gallerySignalsFromSlide({
+    content,
+    outlineSlide,
+    layoutContentType,
+    ctx,
+  });
+  if (looksLikeImageLedGallery(gallerySignals)) {
+    return preferredPureGalleryLayoutId(beatCount(gallerySignals), usedLayoutIds);
   }
 
   return preferredLayoutForSlide(ctx, layoutContentType, usedLayoutIds, order);
@@ -3078,18 +3130,7 @@ async function planDeckLayouts(ctx, slides) {
     });
 
     ctx.contentTypeHistory = contentTypeHistory.slice();
-    const layoutContentType = applyContentDistribution(policy.contentType, ctx);
-    contentTypeHistory.push(layoutContentType);
-
-    let templates = await resolveLayoutTemplates(layoutContentType, {
-      layoutIdWhitelist: ctx.layoutIdWhitelist || null,
-    });
-    templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
-    if (fullBleedUsed) {
-      templates = templates.filter(
-        (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
-      );
-    }
+    let layoutContentType = applyContentDistribution(policy.contentType, ctx);
 
     const stubContent = {
       title: outlineSlide.title || slide.content?.title || '',
@@ -3103,14 +3144,65 @@ async function planDeckLayouts(ctx, slides) {
             .slice(0, 6)
         : [],
     };
+    const galleryPolicy = resolvePureGallerySlidePolicy({
+      layoutContentType,
+      content: stubContent,
+      outlineSlide,
+      ctx,
+      usedLayoutIds,
+    });
+    if (galleryPolicy) {
+      layoutContentType = galleryPolicy.layoutContentType;
+      if (galleryPolicy.profileOverrides) {
+        stubContent.body = galleryPolicy.profileOverrides.body;
+        stubContent.summary = galleryPolicy.profileOverrides.summary;
+        stubContent.bullets = galleryPolicy.profileOverrides.bullets;
+        stubContent.imageCount = galleryPolicy.profileOverrides.imageCount;
+      }
+    }
+    contentTypeHistory.push(layoutContentType);
+
+    let templates = await resolveLayoutTemplates(layoutContentType, {
+      layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+    });
+    templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
+    if (fullBleedUsed) {
+      templates = templates.filter(
+        (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
+      );
+    }
+    if (galleryPolicy?.excludeLayoutIds?.length) {
+      const banned = new Set(galleryPolicy.excludeLayoutIds.map(String));
+      templates = templates.filter(
+        (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
+      );
+    }
+
+    const galleryOverrides = galleryPolicy?.profileOverrides || null;
+    if (galleryOverrides) {
+      stubContent.body = galleryOverrides.body;
+      stubContent.summary = galleryOverrides.summary;
+      stubContent.bullets = galleryOverrides.bullets;
+      stubContent.imageCount = galleryOverrides.imageCount;
+    }
 
     ctx.outlineExplicitType = Boolean(outlineSlide.suggestedContentType);
     ctx.respectOutlineTypes = true;
+    const prevPlannedLayoutId = planned[Number(slide.order) - 1]?.layoutId || null;
     let excludeLayoutIds =
       Number(slide.order) === totalSlides && ctx.titleLayoutId
         ? closingLayoutExcludeIds(ctx.titleLayoutId)
         : null;
-    let preferredLayoutId = resolvePreferredLayoutIdForSlide({
+    const galleryExclude = mergeExcludeLayoutIds(
+      galleryPolicy?.excludeLayoutIds,
+      galleryAdjacentExcludeIds(prevPlannedLayoutId)
+    );
+    if (galleryExclude?.length) {
+      excludeLayoutIds = mergeExcludeLayoutIds(excludeLayoutIds, galleryExclude);
+    }
+    let preferredLayoutId =
+      galleryPolicy?.preferredLayoutId ||
+      resolvePreferredLayoutIdForSlide({
       ctx,
       slide,
       outlineSlides,
@@ -3134,6 +3226,8 @@ async function planDeckLayouts(ctx, slides) {
         purpose: outlineSlide.purpose || outlineSlide.intent || null,
         suggestedContentType: layoutContentType,
         slideNumber: Number(slide.order),
+        ...(galleryOverrides ? { body: '', summary: '', bullets: [] } : {}),
+        ...(galleryOverrides?.imageCount ? { imageCount: galleryOverrides.imageCount } : {}),
       });
       const deckLayouts = templates.map((t) => toDeckLayout(t));
       ranked = rankLayouts(profile, deckLayouts, {
@@ -3169,6 +3263,9 @@ async function planDeckLayouts(ctx, slides) {
       banned.add(String(prevPlannedId));
     }
     const topLayoutId =
+      (galleryPolicy?.preferredLayoutId && !banned.has(String(galleryPolicy.preferredLayoutId))
+        ? galleryPolicy.preferredLayoutId
+        : null) ||
       ranked.find((r) => r.layoutId && !banned.has(String(r.layoutId)))?.layoutId ||
       ranked[0]?.layoutId ||
       null;
@@ -3220,7 +3317,46 @@ async function resolvePreGenerationLayout({
     baseTemplateBias: ctx.baseTemplateBias || null,
     respectOutlineType: true,
   });
-  const layoutContentType = applyContentDistribution(policy.contentType, ctx);
+  let layoutContentType = applyContentDistribution(policy.contentType, ctx);
+
+  const outlineSlides = (ctx.outline?.slides || []).slice().sort((a, b) => a.order - b.order);
+  const previousLayoutId = ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null;
+  const stubContent = {
+    title: resolvedTitle || outlineSlide.title || '',
+    summary: resolvedSummary,
+    bullets: [],
+  };
+  const galleryPolicy = resolvePureGallerySlidePolicy({
+    layoutContentType,
+    content: stubContent,
+    outlineSlide,
+    ctx,
+    usedLayoutIds: ctx.usedLayoutIds || new Set(),
+  });
+  if (galleryPolicy) {
+    layoutContentType = galleryPolicy.layoutContentType;
+    if (galleryPolicy.profileOverrides) {
+      stubContent.body = galleryPolicy.profileOverrides.body;
+      stubContent.summary = galleryPolicy.profileOverrides.summary;
+      stubContent.bullets = galleryPolicy.profileOverrides.bullets;
+      stubContent.imageCount = galleryPolicy.profileOverrides.imageCount;
+    }
+  } else {
+    const galleryOverrides = galleryProfileOverrides(
+      gallerySignalsFromSlide({
+        content: stubContent,
+        outlineSlide,
+        layoutContentType,
+        ctx,
+      })
+    );
+    if (galleryOverrides) {
+      stubContent.body = galleryOverrides.body;
+      stubContent.summary = galleryOverrides.summary;
+      stubContent.bullets = galleryOverrides.bullets;
+      stubContent.imageCount = galleryOverrides.imageCount;
+    }
+  }
 
   let templates = await resolveLayoutTemplates(layoutContentType, {
     layoutIdWhitelist: ctx.layoutIdWhitelist || null,
@@ -3231,15 +3367,20 @@ async function resolvePreGenerationLayout({
       (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
     );
   }
+  if (galleryPolicy?.excludeLayoutIds?.length) {
+    const banned = new Set(galleryPolicy.excludeLayoutIds.map(String));
+    templates = templates.filter(
+      (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
+    );
+  }
 
-  const outlineSlides = (ctx.outline?.slides || []).slice().sort((a, b) => a.order - b.order);
-  const previousLayoutId = ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null;
-  const stubContent = {
-    title: resolvedTitle || outlineSlide.title || '',
-    summary: resolvedSummary,
-    bullets: [],
-  };
-  let preferredLayoutId = resolvePreferredLayoutIdForSlide({
+  let excludeLayoutIds = mergeExcludeLayoutIds(
+    galleryPolicy?.excludeLayoutIds,
+    galleryAdjacentExcludeIds(previousLayoutId)
+  );
+  let preferredLayoutId =
+    galleryPolicy?.preferredLayoutId ||
+    resolvePreferredLayoutIdForSlide({
     ctx,
     slide,
     outlineSlides,
@@ -3256,6 +3397,7 @@ async function resolvePreGenerationLayout({
     previousLayoutId,
     usedLayoutIds: ctx.usedLayoutIds || null,
     preferredLayoutId,
+    excludeLayoutIds,
     preferImageSlot: preferVisuals && Number(slide.order) === 1,
     ctx,
     slide,
@@ -3769,6 +3911,19 @@ async function processSlide(ctx, slide) {
           delete content.charts;
         }
       }
+
+      const galleryPolicy = resolvePureGallerySlidePolicy({
+        layoutContentType: contentType,
+        content,
+        outlineSlide,
+        ctx,
+        usedLayoutIds: ctx.usedLayoutIds || new Set(),
+      });
+      if (galleryPolicy) {
+        contentType = galleryPolicy.layoutContentType;
+        policy.galleryPreferredLayoutId = galleryPolicy.preferredLayoutId;
+        policy.galleryExcludeLayoutIds = galleryPolicy.excludeLayoutIds;
+      }
     }
 
     policy.layoutContentType = contentType;
@@ -3841,7 +3996,12 @@ async function processSlide(ctx, slide) {
         preSelectedLayoutId &&
         String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
           String(policy.layoutContentType);
-      const canReusePreselected = plannedMatches || plannedMatchesOutline || preselectedMatches;
+      const galleryBlocksReuse =
+        policy.galleryPreferredLayoutId &&
+        ((preSelectedLayoutId && isTextImageGridLayout(preSelectedLayoutId)) ||
+          (plannedEntry?.layoutId && isTextImageGridLayout(plannedEntry.layoutId)));
+      const canReusePreselected =
+        !galleryBlocksReuse && (plannedMatches || plannedMatchesOutline || preselectedMatches);
 
       if (canReusePreselected) {
         template = plannedEntry?.template || preSelectedTemplate;
@@ -3863,11 +4023,26 @@ async function processSlide(ctx, slide) {
             (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
           );
         }
-        const excludeLayoutIds =
+        if (policy.galleryExcludeLayoutIds?.length) {
+          const banned = new Set(policy.galleryExcludeLayoutIds.map(String));
+          templates = templates.filter(
+            (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
+          );
+        }
+        let excludeLayoutIds =
           Number(slide.order) === slideTotal && ctx.titleLayoutId
             ? closingLayoutExcludeIds(ctx.titleLayoutId)
             : null;
-        let preferredLayoutId = resolvePreferredLayoutIdForSlide({
+        const galleryExclude = mergeExcludeLayoutIds(
+          policy.galleryExcludeLayoutIds,
+          galleryAdjacentExcludeIds(ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null)
+        );
+        if (galleryExclude?.length) {
+          excludeLayoutIds = mergeExcludeLayoutIds(excludeLayoutIds, galleryExclude);
+        }
+        let preferredLayoutId =
+          policy.galleryPreferredLayoutId ||
+          resolvePreferredLayoutIdForSlide({
           ctx,
           slide,
           outlineSlides: neighbors,
