@@ -1,0 +1,5 @@
+$kind: http-request
+description: Storage tier presets (id, label, limitBytes).
+url: "{{baseUrl}}/api/superadmin/storage/tiers"
+method: GET
+order: 7400

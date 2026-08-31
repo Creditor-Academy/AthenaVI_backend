@@ -1,0 +1,5 @@
+$kind: http-request
+description: One published graphic. 404 if draft/archived or missing.
+url: "{{baseUrl}}/api/graphics/{{graphicId}}"
+method: GET
+order: 3000

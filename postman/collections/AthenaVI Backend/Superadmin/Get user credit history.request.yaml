@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/credits/history?page=1&limit=20"
+method: GET
+order: 2100

@@ -1,4 +1,7 @@
 $kind: collection
+description: |-
+  Personal pool (`/me`), TEAM allocate/deallocate (OWNER), workspace balance and
+  estimates. Workspace history is OWNER/ADMIN; my-history is any member.
 auth:
   - id: 13834f0c-5764-44e5-bbd0-13e5e1329d3b
     type: bearer

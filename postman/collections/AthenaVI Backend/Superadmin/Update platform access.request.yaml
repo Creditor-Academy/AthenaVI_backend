@@ -1,0 +1,13 @@
+$kind: http-request
+description: Grant or revoke the DB platform-superadmin flag. Cannot demote yourself or remove the last superadmin.
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/platform-access"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "isPlatformSuperadmin": true
+    }
+order: 1100

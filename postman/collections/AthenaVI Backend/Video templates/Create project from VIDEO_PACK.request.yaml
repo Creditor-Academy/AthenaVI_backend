@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/workspaces/{{workspaceId}}/projects"
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects"
 method: POST
 headers:
   Authorization: Bearer {{accessToken}}

@@ -29,7 +29,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [FONTS_API.md](FONTS_API.md) | `/api/fonts` | Shared Google Fonts catalog + CSS helper (Brand Kit, video editor, PPT) |
 | [IMAGE_GEN_API.md](IMAGE_GEN_API.md) | `/api/image-gen` | AI image studio: folder chats, generate, regen/tweak, download |
 | [CREDITS_API.md](CREDITS_API.md) | `/api/credits` | Balances, history, estimates, TEAM allocation |
-| [SUPERADMIN_API.md](SUPERADMIN_API.md) | `/api/superadmin` | Platform credit + storage admin (superadmin only) |
+| [SUPERADMIN_API.md](SUPERADMIN_API.md) | `/api/superadmin`, `/api/graphics` | Platform admin (credits, storage, templates, graphics) + published SVG catalog |
 | [HEYGEN_API.md](HEYGEN_API.md) | `/api/heygen` | User-scoped avatars, voices, previews |
 | [HEYGEN_PROJECT_VIDEOS_API.md](HEYGEN_PROJECT_VIDEOS_API.md) | `.../projects/:projectId/heygen` | Project avatar videos, stream/download |
 | [PROJECT_SPEECH_API.md](PROJECT_SPEECH_API.md) | `.../projects/:projectId/speech` | Project speech (TTS audio), stream/download |

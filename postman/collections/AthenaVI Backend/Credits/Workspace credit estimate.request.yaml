@@ -1,0 +1,5 @@
+$kind: http-request
+description: feature = heygen_video | speech_generation | remotion_export. Optional avatarType, resolution, script, durationInFrames, fps.
+url: "{{baseUrl}}/api/credits/{{workspaceId}}/estimate?feature=heygen_video&avatarType=studio_avatar&resolution=1080p"
+method: GET
+order: 1100

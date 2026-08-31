@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/workspaces/{{workspaceId}}/video-templates"
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/video-templates"
 method: GET
 headers:
   Authorization: Bearer {{accessToken}}

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/workspaces/{{workspaceId}}/credits"
+method: GET
+order: 3100

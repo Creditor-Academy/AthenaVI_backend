@@ -1,0 +1,9 @@
+$kind: http-request
+description: Pipes the completed MP4 through the API. Use fetch + blob for video src (native src cannot send Bearer). Optional Range header.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}/stream"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4500

@@ -17,4 +17,14 @@ body:
       value: "true"
     - key: name
       value: Pack preview
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const media = j.data && j.data.media;
+        const id = media && media.id;
+        if (id) pm.collectionVariables.set("templateMediaId", id);
+      } catch (e) {}
+    language: text/javascript
 order: 4020

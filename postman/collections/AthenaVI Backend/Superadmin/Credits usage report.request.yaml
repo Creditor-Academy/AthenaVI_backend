@@ -1,0 +1,5 @@
+$kind: http-request
+description: Usage aggregates. Optional from, to, topLimit (default 10, max 25).
+url: "{{baseUrl}}/api/superadmin/reports/credits/usage?topLimit=10"
+method: GET
+order: 4000

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/workspaces/{{workspaceId}}/credits/revoke"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 500,
+      "reason": "Correction"
+    }
+order: 3500

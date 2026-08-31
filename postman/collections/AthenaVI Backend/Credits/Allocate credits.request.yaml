@@ -1,0 +1,13 @@
+$kind: http-request
+description: TEAM OWNER only. Moves personal credits into the workspace pool.
+url: "{{baseUrl}}/api/credits/{{workspaceId}}/allocate"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 1000
+    }
+order: 1200

@@ -146,6 +146,9 @@
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
 | GET | `/api/fonts/catalog` | Bearer | Font catalog + pairings (`q`, `category`, `subset`, `featured`, `limit`) |
 | GET | `/api/fonts/css` | Bearer | Build Google Fonts CSS2 URL (`families`) |
+| GET | `/api/graphics` | Bearer | Published SVG catalog (`q`, `category`, `type`, `page`, `limit`) |
+| POST | `/api/graphics/search` | Bearer | Intent search over published graphics |
+| GET | `/api/graphics/:id` | Bearer | One published graphic |
 | GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog |
 | GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
@@ -165,9 +168,16 @@
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` | Bearer + workspace access | Download `png`\|`jpg`\|`jpeg`\|`pdf` |
-| GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
+| GET | `/api/credits/me` | Bearer | Personal credit balance |
+| GET | `/api/credits/me/history` | Bearer | Personal credit ledger |
+| GET | `/api/credits/me/estimate` | Bearer | Personal estimate (`voice_clone` \| `voice_design` \| `voice_preview` \| `avatar_create`) |
+| GET | `/api/credits/:id` | Bearer + member | Workspace credit balance |
+| GET | `/api/credits/:id/estimate` | Bearer + member | Workspace estimate (`heygen_video` \| `speech_generation` \| `remotion_export`) |
+| POST | `/api/credits/:id/allocate` | Bearer + OWNER | TEAM: personal → workspace pool |
+| POST | `/api/credits/:id/deallocate` | Bearer + OWNER | TEAM: workspace pool → personal |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
+| GET | `/api/credits/:id/usage-by-member` | Bearer + OWNER/ADMIN | TEAM usage by member |
 | GET | `/api/superadmin/users` | Bearer + platform superadmin | List users (credits + storage) |
 | PATCH | `/api/superadmin/users/:userId/platform-access` | Bearer + platform superadmin | Grant/revoke platform superadmin flag |
 | GET | `/api/superadmin/users/:userId/credits` | Bearer + platform superadmin | User personal balance |
@@ -200,6 +210,17 @@
 | GET | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast history (paginated) |
 | GET | `/api/superadmin/broadcasts/product-email/:broadcastId` | Bearer + platform superadmin | Single broadcast detail |
 | GET | `/api/superadmin/broadcasts/product-email/:broadcastId/recipients` | Bearer + platform superadmin | Per-recipient delivery log (`status` filter) |
+| GET | `/api/superadmin/graphics` | Bearer + platform superadmin | List graphics library |
+| POST | `/api/superadmin/graphics` | Bearer + platform superadmin | Upload SVG (starts as draft) |
+| GET | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Get graphic |
+| PATCH | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Update metadata |
+| POST | `/api/superadmin/graphics/:id/publish` | Bearer + platform superadmin | Publish |
+| POST | `/api/superadmin/graphics/:id/unpublish` | Bearer + platform superadmin | Back to draft |
+| POST | `/api/superadmin/graphics/:id/archive` | Bearer + platform superadmin | Archive |
+| DELETE | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Delete + S3 |
+| GET | `/api/superadmin/graphics/getillustrations/meta` | Bearer + platform superadmin | GetIllustrations categories/packs |
+| GET | `/api/superadmin/graphics/getillustrations/free` | Bearer + platform superadmin | Browse free GetIllustrations catalog |
+| POST | `/api/superadmin/graphics/getillustrations/icon-packs/:packId/save` | Bearer + platform superadmin | Import icon pack into library |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

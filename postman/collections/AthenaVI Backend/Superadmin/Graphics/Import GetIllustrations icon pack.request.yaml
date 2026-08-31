@@ -1,0 +1,13 @@
+$kind: http-request
+description: Import a GetIllustrations icon pack into the graphics library. publishAssets defaults to true.
+url: "{{baseUrl}}/api/superadmin/graphics/getillustrations/icon-packs/{{getIllustrationsPackId}}/save"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "publishAssets": true
+    }
+order: 6200

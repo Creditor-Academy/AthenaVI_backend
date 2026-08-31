@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/inbox/read-all"
+method: PATCH
+order: 6000

@@ -1,0 +1,15 @@
+$kind: http-request
+description: List TemplateMedia for a system template. Saves templateMediaId from the first item.
+url: "{{baseUrl}}/api/superadmin/templates/{{deckTemplateId}}/media"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const media = j.data && j.data.media;
+        const first = Array.isArray(media) ? media[0] : null;
+        if (first && first.id) pm.collectionVariables.set('templateMediaId', first.id);
+      } catch (e) {}
+    language: text/javascript
+order: 4010
