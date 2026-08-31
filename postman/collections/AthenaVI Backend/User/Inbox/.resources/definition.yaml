@@ -1,0 +1,9 @@
+$kind: collection
+description: User inbox notifications. List saves notificationId. Filters respect notification settings.
+auth:
+  - id: inbox-bearer-auth
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 4000

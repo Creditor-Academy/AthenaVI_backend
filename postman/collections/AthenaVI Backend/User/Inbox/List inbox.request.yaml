@@ -1,0 +1,14 @@
+$kind: http-request
+description: Optional unreadOnly, type, category, workspaceId, limit (1–100, default 50).
+url: "{{baseUrl}}/api/user/inbox?limit=50"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const n = j.data && j.data.notifications && j.data.notifications[0];
+        if (n && n.id) pm.collectionVariables.set('notificationId', n.id);
+      } catch (e) {}
+    language: text/javascript
+order: 1000

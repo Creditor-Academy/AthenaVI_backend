@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/inbox/{{notificationId}}/read"
+method: PATCH
+order: 4000

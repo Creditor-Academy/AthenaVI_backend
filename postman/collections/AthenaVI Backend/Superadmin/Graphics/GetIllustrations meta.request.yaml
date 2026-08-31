@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/graphics/getillustrations/meta"
+method: GET
+order: 6000

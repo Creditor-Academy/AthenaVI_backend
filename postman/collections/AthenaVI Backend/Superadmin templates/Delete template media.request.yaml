@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates/{{deckTemplateId}}/media/{{templateMediaId}}"
+method: DELETE
+order: 4030

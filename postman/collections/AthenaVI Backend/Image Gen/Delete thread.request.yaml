@@ -1,0 +1,6 @@
+$kind: http-request
+name: Delete thread
+description: Deletes the folder chat. Workspace assets created by the thread are kept.
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}"
+method: DELETE
+order: 3600

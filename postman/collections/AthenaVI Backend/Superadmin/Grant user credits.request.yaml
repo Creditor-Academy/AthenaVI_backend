@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/credits/grant"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 5000,
+      "reason": "Manual grant"
+    }
+order: 2200

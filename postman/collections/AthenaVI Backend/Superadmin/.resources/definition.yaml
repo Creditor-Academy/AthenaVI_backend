@@ -1,0 +1,13 @@
+$kind: collection
+description: |-
+  Platform superadmin only (`User.isPlatformSuperadmin` or PLATFORM_SUPERADMIN_EMAILS).
+  Users, credits, TEAM workspace pools, reports, HeyGen wallet, alerts, and Graphics.
+  Storage grant / early-access / product-email stay under **Storage**. Template CRUD
+  stays under **Superadmin templates**.
+auth:
+  - id: superadmin-bearer-auth
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 10500

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/graphics/{{graphicId}}/unpublish"
+method: POST
+order: 5100

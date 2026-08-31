@@ -1,0 +1,5 @@
+$kind: http-request
+description: kind = illustration | icon. Optional categoryId, packId, q, page, limit.
+url: "{{baseUrl}}/api/superadmin/graphics/getillustrations/free?kind=illustration&page=1&limit=20"
+method: GET
+order: 6100

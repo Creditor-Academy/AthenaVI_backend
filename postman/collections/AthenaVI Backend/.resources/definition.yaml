@@ -25,6 +25,14 @@ description: |-
 
   **Stock (Pexels)** under **Stock**: search then **Import stock into workspace** before using media in a project. Import returns a workspace `assetId` — use that in `project.data` elements (`content.assetId`), not Pexels CDN URLs. Requires server `PEXELS_API_KEY`.
 
+  **Inbox** under **User → Inbox**: notifications (`GET /api/user/inbox`). List saves `notificationId`.
+
+  **Credits** under **Credits**: personal pool (`/api/credits/me`), TEAM allocate/deallocate, workspace estimates.
+
+  **Graphics** under **Graphics** (published catalog) and **Superadmin → Graphics** (draft/publish + GetIllustrations import). Create/list saves `graphicId`.
+
+  **Superadmin** under **Superadmin**: users, platform-access, credit grant/revoke, TEAM workspace pools, usage reports, HeyGen wallet, alerts. Storage grant/early-access/broadcasts stay under **Storage**. Templates stay under **Superadmin templates**.
+
   **Storage** under **Storage**: user quota (`GET /api/user/storage`), upgrade requests, workspace footprint, and superadmin grant/revoke (`/api/superadmin/users/:userId/storage/*`). Byte fields are binary (1 GiB = `1073741824`). Grant with `tierId` (preset) or `additionalBytes` (increment any positive amount). See `docs/api/STORAGE_API.md` and `docs/api/SUPERADMIN_API.md`.
 variables:
   baseUrl: http://localhost:9000
@@ -51,6 +59,16 @@ variables:
   slideId: ""
   exportId: ""
   videoTemplateId: ""
+  videoPackTemplateId: ""
+  graphicId: ""
+  graphicSvgFile: ""
+  getIllustrationsPackId: replace-with-getillustrations-pack-id
+  notificationId: 00000000-0000-4000-8000-000000000014
+  templateMediaId: ""
+  templateMediaFile: ""
+  storageRequestId: 00000000-0000-4000-8000-000000000015
+  imageGenThreadId: ""
+  deckPackTemplateId: ""
   slideId2: ""
   elementId: ""
   elementId2: ""

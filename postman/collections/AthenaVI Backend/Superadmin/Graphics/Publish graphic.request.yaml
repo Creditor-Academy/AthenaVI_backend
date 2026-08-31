@@ -1,0 +1,5 @@
+$kind: http-request
+description: Published graphics are the only ones returned by GET /api/graphics.
+url: "{{baseUrl}}/api/superadmin/graphics/{{graphicId}}/publish"
+method: POST
+order: 5000

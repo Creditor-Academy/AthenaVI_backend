@@ -1,0 +1,13 @@
+$kind: http-request
+description: Patch loginAlerts. GET security is a separate request.
+url: "{{baseUrl}}/api/user/settings/security"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "loginAlerts": true
+    }
+order: 5500

@@ -1,0 +1,42 @@
+$kind: http-request
+description: Multipart SVG. Starts as draft. Set graphicSvgFile to a local .svg path, or pick the file in Postman.
+url: "{{baseUrl}}/api/superadmin/graphics"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{graphicSvgFile}}"
+    - key: name
+      value: Corner flourish
+    - key: description
+      value: Recolorable decorative ornament
+    - key: type
+      value: decorative
+    - key: category
+      value: ornaments
+    - key: tags
+      value: flourish,corner
+    - key: style
+      value: minimal
+    - key: moods
+      value: professional
+    - key: usage
+      value: corner
+    - key: colorMode
+      value: recolorable
+    - key: containsText
+      value: "false"
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.graphic && j.data.graphic.id;
+        if (id) pm.collectionVariables.set('graphicId', id);
+      } catch (e) {}
+    language: text/javascript
+order: 2000

@@ -1,0 +1,5 @@
+$kind: http-request
+description: Personal credit pool (User.credits).
+url: "{{baseUrl}}/api/credits/me"
+method: GET
+order: 400
