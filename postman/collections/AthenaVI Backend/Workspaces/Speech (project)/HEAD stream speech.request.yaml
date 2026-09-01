@@ -1,0 +1,9 @@
+$kind: http-request
+description: Metadata only before streaming the MP3.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech/{{speechId}}/stream"
+method: HEAD
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4900

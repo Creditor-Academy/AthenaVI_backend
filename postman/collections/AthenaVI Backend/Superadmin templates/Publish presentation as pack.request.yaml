@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/superadmin/presentations/{{presentationId}}/publish-as-pack"
+url: "{{baseUrl}}/api/superadmin/presentations/{{presentationId}}/publish-as-pack"
 method: POST
 headers:
   Authorization: Bearer {{accessToken}}

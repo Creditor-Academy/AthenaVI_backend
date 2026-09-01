@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/superadmin/projects/{{projectId}}/publish-as-video-pack"
+url: "{{baseUrl}}/api/superadmin/projects/{{projectId}}/publish-as-video-pack"
 method: POST
 headers:
   Authorization: Bearer {{accessToken}}
