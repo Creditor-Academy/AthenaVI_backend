@@ -110,8 +110,10 @@ const brandKitDataSchema = Joi.object({
 
 const listBrandKitsSchema = Joi.object({
   params: Joi.object({ workspaceId: workspaceIdParam }),
-  query: Joi.object({}).unknown(false),
-  body: Joi.object({}).unknown(false),
+  query: Joi.object({
+    includePersonal: Joi.boolean().optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(true).optional(),
 });
 
 const createBrandKitSchema = Joi.object({
@@ -130,7 +132,7 @@ const brandKitByIdSchema = Joi.object({
     brandKitId: brandKitIdParam,
   }),
   query: Joi.object({}).unknown(false),
-  body: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(true).optional(),
 });
 
 const updateBrandKitSchema = Joi.object({

@@ -96,6 +96,17 @@ async function listPresentations({ workspaceId, folderId }) {
           locale: true,
           partial: true,
           _count: { select: { slides: true } },
+          slides: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: {
+              id: true,
+              order: true,
+              imageRef: true,
+              content: true,
+              elements: true,
+            },
+          },
         },
       },
     },

@@ -89,6 +89,34 @@ const deleteProject = async (projectId) => {
   });
 };
 
+const findCoverSourcesByIds = async (ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+  return prisma.project.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      type: true,
+      data: true,
+      thumbnail: true,
+      deck: {
+        select: {
+          slides: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: {
+              id: true,
+              order: true,
+              imageRef: true,
+              content: true,
+              elements: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
 const findAssetsByIds = async (workspaceId, assetIds) => {
   if (!assetIds.length) {
     return [];
@@ -116,5 +144,6 @@ module.exports = {
   updateProject,
   deleteProject,
   findAssetsByIds,
+  findCoverSourcesByIds,
   transaction,
 };

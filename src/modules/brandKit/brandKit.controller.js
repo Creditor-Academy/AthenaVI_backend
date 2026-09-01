@@ -12,10 +12,10 @@ const brandKitCredit = require('./brandKitCredit.service');
 const crypto = require('crypto');
 
 const listBrandKits = asyncHandler(async (req, res) => {
-  const data = await brandKitService.listUsableBrandKits(
-    req.params.workspaceId,
-    req.user?.id
-  );
+  const includePersonal = req.query.includePersonal !== false;
+  const data = includePersonal
+    ? await brandKitService.listUsableBrandKits(req.params.workspaceId, req.user?.id)
+    : await brandKitService.listBrandKits(req.params.workspaceId);
   return successResponse(req, res, { brandKits: data }, 200, messages.BRAND_KITS_FETCHED);
 });
 
@@ -53,7 +53,8 @@ const updateBrandKit = asyncHandler(async (req, res) => {
 const setDefaultBrandKit = asyncHandler(async (req, res) => {
   const data = await brandKitService.setDefaultBrandKit(
     req.params.workspaceId,
-    req.params.brandKitId
+    req.params.brandKitId,
+    req.user?.id
   );
   return successResponse(req, res, { brandKit: data }, 200, messages.BRAND_KIT_DEFAULT_SET);
 });

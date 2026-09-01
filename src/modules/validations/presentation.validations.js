@@ -166,6 +166,19 @@ const presentationByIdSchema = Joi.object({
   }),
 });
 
+const updatePresentationThumbnailSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    thumbnailUrl: Joi.string().trim().max(4000).allow('', null).optional(),
+    slideId: Joi.string().trim().max(64).optional(),
+  })
+    .or('thumbnailUrl', 'slideId')
+    .required(),
+});
+
 const generateOutlineSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -1003,6 +1016,7 @@ module.exports = {
   createPresentationSchema,
   listPresentationsSchema,
   presentationByIdSchema,
+  updatePresentationThumbnailSchema,
   generateOutlineSchema,
   patchOutlineSchema,
   setThemeSchema,

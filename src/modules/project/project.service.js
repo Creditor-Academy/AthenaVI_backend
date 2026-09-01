@@ -10,6 +10,13 @@ const { rehydrateSpeechInProjectData } = require('./projectSpeechRehydrate');
 const { normalizeEditorProjectData } = require('./projectEditorNormalize');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
+  extractSlideCover,
+  extractVideoCover,
+  toCoverUrls,
+  persistCoverIfEmpty,
+} = require('../../shared/utils/coverThumbnail');
+const prisma = require('../../shared/config/prismaClient');
+const {
   DEFAULT_VIDEO_SETTINGS,
   CANVAS_PRESETS,
 } = require('../../shared/constants/videoEditor');
@@ -225,7 +232,7 @@ const createProject = async (workspaceId, userId, input) => {
     updatedBy: userId,
     type: 'VIDEO',
     data: normalizedState,
-    thumbnail,
+    thumbnail: thumbnail || (await resolveVideoCoverPersistUrl(normalizedState)),
     duration: duration ?? estimateProjectDuration(normalizedState),
     status: status ?? 'draft',
   });
@@ -285,8 +292,44 @@ const listProjects = async (workspaceId, folderId, type) => {
   }
 
   const projects = await projectDao.listProjects({ workspaceId, folderId, type });
-  return enrichProjects(projects, { includeData: false });
+  const withCovers = await attachProjectCoverThumbnails(projects);
+  return enrichProjects(withCovers, { includeData: false });
 };
+
+async function resolveVideoCoverPersistUrl(data) {
+  const cover = await toCoverUrls(extractVideoCover(data));
+  return cover.persistUrl || null;
+}
+
+async function attachProjectCoverThumbnails(projects) {
+  if (!Array.isArray(projects) || projects.length === 0) return projects;
+  const missingIds = projects.filter((p) => !p.thumbnail).map((p) => p.id);
+  const sources = missingIds.length ? await projectDao.findCoverSourcesByIds(missingIds) : [];
+  const byId = new Map(sources.map((row) => [row.id, row]));
+
+  return Promise.all(
+    projects.map(async (project) => {
+      if (project.thumbnail) {
+        const cover = await toCoverUrls({ url: project.thumbnail });
+        const thumbnailUrl = cover.displayUrl || project.thumbnail;
+        return { ...project, thumbnail: thumbnailUrl, thumbnailUrl };
+      }
+
+      const source = byId.get(project.id);
+      const extracted =
+        source?.type === 'PRESENTATION'
+          ? extractSlideCover(source?.deck?.slides?.[0])
+          : extractVideoCover(source?.data);
+
+      const cover = await toCoverUrls(extracted);
+      if (cover.persistUrl) {
+        persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+      }
+      const thumbnailUrl = cover.displayUrl || null;
+      return { ...project, thumbnail: thumbnailUrl, thumbnailUrl };
+    })
+  );
+}
 
 async function attachRehydratedProjectData(workspaceId, projectId, project) {
   if (!project?.data) {
@@ -384,10 +427,13 @@ const saveProjectData = async (workspaceId, projectId, userId, data) => {
 
   const finalState = normalizeEditorProjectData(mergedState);
 
+  const coverUrl = await resolveVideoCoverPersistUrl(finalState);
+
   await projectDao.updateProject(projectId, {
     data: finalState,
     duration: estimateProjectDuration(finalState),
     updatedBy: userId,
+    ...(coverUrl ? { thumbnail: coverUrl } : {}),
   });
   await projectStorageService.recalculateProjectStorage(projectId);
   const refreshed = await projectDao.findProjectById(workspaceId, projectId);

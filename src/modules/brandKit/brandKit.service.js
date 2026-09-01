@@ -505,12 +505,20 @@ async function listUsableBrandKits(workspaceId, userId) {
   }
 
   const seen = new Set(local.map((k) => String(k.id)));
-  const personalKits = (await listBrandKits(personal.id)).filter((kit) => {
-    const id = String(kit.id);
-    if (seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
+  const personalKits = (await listBrandKits(personal.id))
+    .filter((kit) => {
+      const id = String(kit.id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .map((kit) => ({
+      ...kit,
+      // Default is workspace-scoped. A personal-workspace default must not
+      // appear as the default of the team workspace it is listed in.
+      isDefault: false,
+      originWorkspaceId: kit.workspaceId,
+    }));
 
   return [...local, ...personalKits].sort((a, b) => {
     if (Boolean(b.isDefault) !== Boolean(a.isDefault)) return b.isDefault ? 1 : -1;
@@ -595,10 +603,16 @@ async function updateBrandKit({ workspaceId, brandKitId, name, data, isDefault }
   return attachPresignedMedia(kit);
 }
 
-async function setDefaultBrandKit(workspaceId, brandKitId) {
-  const kit = await brandKitDao.setDefault(workspaceId, brandKitId);
+async function setDefaultBrandKit(workspaceId, brandKitId, userId) {
+  let kit = await brandKitDao.findInWorkspace(workspaceId, brandKitId);
+  if (!kit && userId) {
+    kit = await ensureKitInWorkspace({ workspaceId, brandKitId, userId });
+  }
   if (!kit) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
-  return attachPresignedMedia(kit);
+
+  const updated = await brandKitDao.setDefault(workspaceId, kit.id);
+  if (!updated) throw new AppError(messages.BRAND_KIT_NOT_FOUND, 404);
+  return attachPresignedMedia(updated);
 }
 
 async function deleteBrandKit(workspaceId, brandKitId) {
