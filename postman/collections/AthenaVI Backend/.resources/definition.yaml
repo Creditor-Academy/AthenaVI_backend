@@ -80,3 +80,8 @@ variables:
   generationId: ""
   presentationShareToken: ""
   viewerSessionId: 11111111-2222-4333-8444-555555555555
+  heygenVoiceUploadUrl: ""
+  heygenAvatarUploadUrl: ""
+  heygenVoiceUploadFile: ""
+  heygenAvatarUploadFile: ""
+  sceneId: "00000000-0000-4000-8000-000000000016"

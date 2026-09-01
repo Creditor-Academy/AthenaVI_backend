@@ -1,0 +1,21 @@
+$kind: http-request
+description: Multipart field file (JPEG/PNG/WebP/MP4/WebM, max 900 MB). Stages to S3 and returns public url (or asset_id for large files) for POST /api/heygen/avatars.
+url: "{{baseUrl}}/api/heygen/avatars/upload"
+method: POST
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{heygenAvatarUploadFile}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const d = j.data || {};
+        if (d.url) pm.collectionVariables.set("heygenAvatarUploadUrl", d.url);
+        if (d.asset_id) pm.collectionVariables.set("heygenAvatarAssetId", d.asset_id);
+      } catch (e) {}
+    language: text/javascript
+order: 6500

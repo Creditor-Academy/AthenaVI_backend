@@ -1,5 +1,5 @@
 $kind: http-request
-url: "{{baseUrl}}/superadmin/projects/{{projectId}}/scenes/{{sceneId}}/publish-as-template"
+url: "{{baseUrl}}/api/superadmin/projects/{{projectId}}/scenes/{{sceneId}}/publish-as-template"
 method: POST
 headers:
   Authorization: Bearer {{accessToken}}

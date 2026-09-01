@@ -1,0 +1,21 @@
+$kind: http-request
+description: Multipart field file (mp3/wav/webm/mp4, max 100 MB). Stages to S3; use returned url in POST /api/heygen/voices/clone as audio.type url.
+url: "{{baseUrl}}/api/heygen/voices/upload"
+method: POST
+body:
+  type: formdata
+  formdata:
+    - key: file
+      type: file
+      src: "{{heygenVoiceUploadFile}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const d = j.data || {};
+        if (d.url) pm.collectionVariables.set("heygenVoiceUploadUrl", d.url);
+        if (d.asset_id) pm.collectionVariables.set("heygenVoiceAssetId", d.asset_id);
+      } catch (e) {}
+    language: text/javascript
+order: 15500
