@@ -150,6 +150,7 @@ function normalizeCanvasDoc(doc) {
 function enrichSlideForClient(slide) {
   if (!slide || typeof slide !== 'object') return slide;
   const content = slide.content && typeof slide.content === 'object' ? slide.content : {};
+  const elements = slide.elements && typeof slide.elements === 'object' ? slide.elements : {};
   const title = content.title != null ? content.title : slide.title || null;
   const description = Array.isArray(content.bullets)
     ? content.bullets
@@ -160,6 +161,9 @@ function enrichSlideForClient(slide) {
     ...slide,
     title: title != null ? title : undefined,
     description,
+    transition: slide.transition || elements.transition || 'none',
+    contributorStatus: slide.contributorStatus || elements.contributorStatus || 'none',
+    speakerNotes: slide.speakerNotes || elements.speakerNotes || content.speakerNotes || '',
   };
 }
 

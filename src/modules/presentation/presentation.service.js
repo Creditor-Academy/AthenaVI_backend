@@ -22,6 +22,20 @@ const { enrichProjects } = require('../project/project.format');
 const projectDao = require('../project/project.dao');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 
+function firstNonEmptyText(...values) {
+  for (const value of values) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractGenerationPrompt(deck) {
+  const selections = deck?.generationMetrics?.generationFlow?.selections || {};
+  const outline = deck?.outline && typeof deck.outline === 'object' ? deck.outline : {};
+  return firstNonEmptyText(selections.prompt, outline.sourcePrompt, outline.prompt);
+}
+
 function withFlatPresentationFields({ project, deck, slides }) {
   const proj = project || {};
   const d = deck || {};
@@ -37,6 +51,7 @@ function withFlatPresentationFields({ project, deck, slides }) {
     aspectRatio: d.aspectRatio,
     locale: d.locale,
     folderId: proj.folderId,
+    generationPrompt: extractGenerationPrompt(d),
   };
 }
 
@@ -538,6 +553,7 @@ async function addSlide({
   presentationId,
   userId,
   afterSlideId,
+  beforeSlideId,
   templateId,
   layoutId,
   content,
@@ -555,6 +571,7 @@ async function addSlide({
     workspaceId,
     presentationId,
     afterSlideId,
+    beforeSlideId,
     templateId,
     layoutId,
     content: slideContent,

@@ -118,6 +118,7 @@ const canvasDocSchema = Joi.object({
   elements: Joi.array().items(canvasElementSchema).max(MAX_ELEMENTS_PER_SLIDE).required(),
   transition: Joi.string().trim().max(64).allow('', null).optional(),
   contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
+  speakerNotes: Joi.string().allow('', null).optional(),
   ...canvasBackgroundFields,
 }).unknown(true);
 
@@ -346,6 +347,9 @@ const patchSlideSchema = Joi.object({
     backgroundGradientKind: Joi.string().valid('linear', 'radial').allow('', null).optional(),
     backgroundGradientStops: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
     backgroundFill: Joi.any().optional(),
+    transition: Joi.string().trim().max(64).allow('', null).optional(),
+    contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
+    speakerNotes: Joi.string().allow('', null).max(20000).optional(),
   })
     .min(1)
     .required(),
@@ -360,6 +364,7 @@ const addSlideSchema = Joi.object({
   }),
   body: Joi.object({
     afterSlideId: Joi.string().trim().optional(),
+    beforeSlideId: Joi.string().trim().optional(),
     templateId: templateIdField.optional(),
     layoutId: Joi.string().trim().max(128).optional(),
     title: Joi.string().trim().max(500).allow('', null).optional(),

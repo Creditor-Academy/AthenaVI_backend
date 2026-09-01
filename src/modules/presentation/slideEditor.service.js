@@ -63,6 +63,7 @@ async function addSlide({
   workspaceId,
   presentationId,
   afterSlideId,
+  beforeSlideId,
   templateId,
   layoutId,
   content,
@@ -76,7 +77,11 @@ async function addSlide({
   }
 
   let insertOrder = slides.length + 1;
-  if (afterSlideId) {
+  if (beforeSlideId) {
+    const before = slides.find((s) => s.id === beforeSlideId);
+    if (!before) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+    insertOrder = before.order;
+  } else if (afterSlideId) {
     const after = slides.find((s) => s.id === afterSlideId);
     if (!after) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
     insertOrder = after.order + 1;

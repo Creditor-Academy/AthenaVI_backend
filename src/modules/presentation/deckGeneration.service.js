@@ -5534,7 +5534,13 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
       bgPatch[key] = patch[key] == null ? undefined : patch[key];
     }
   }
-  if (hasBgPatch) {
+
+  const hasCanvasMeta =
+    patch.transition !== undefined ||
+    patch.contributorStatus !== undefined ||
+    patch.speakerNotes !== undefined;
+
+  if (hasBgPatch || hasCanvasMeta) {
     const { normalizeCanvasDoc } = require('./elementContent.normalize');
     const base = data.elements || slide.elements || {};
     const nextDoc = { ...base, ...bgPatch };
@@ -5543,6 +5549,9 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
         delete nextDoc[key];
       }
     }
+    if (patch.transition !== undefined) nextDoc.transition = patch.transition;
+    if (patch.contributorStatus !== undefined) nextDoc.contributorStatus = patch.contributorStatus;
+    if (patch.speakerNotes !== undefined) nextDoc.speakerNotes = patch.speakerNotes;
     data.elements = normalizeCanvasDoc(nextDoc);
   }
 
