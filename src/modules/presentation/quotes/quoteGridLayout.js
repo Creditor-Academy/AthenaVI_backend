@@ -22,18 +22,21 @@ function quoteGridCardGeom(i, frame) {
   const { insetX, gap, cardTop, cardH, cardW } = frame;
   const x = insetX + i * (cardW + gap);
   const padX = 36;
-  const padY = 32;
+  const padTop = 32;
+  const padBottom = 72;
   const markW = 48;
   const markH = 36;
-  const avatar = 56;
+  const avatar = 72;
   const nameH = 28;
-  const roleH = 22;
-  const attrY = cardTop + cardH - padY - avatar;
-  const quoteY = cardTop + padY + markH + 16;
-  const quoteH = Math.max(120, attrY - quoteY - 24);
+  const roleH = 36;
+  const attrY = cardTop + cardH - padBottom - avatar;
+  const quoteY = cardTop + padTop + markH + 16;
+  const quoteH = Math.max(100, attrY - quoteY - 24);
   const textW = Math.round(cardW - padX * 2);
-  const nameX = Math.round(x + padX + avatar + 14);
-  const nameW = Math.max(80, textW - avatar - 14);
+  const nameX = Math.round(x + padX + avatar + 16);
+  const nameW = Math.max(80, textW - avatar - 16);
+  const textBlockH = nameH + 4 + roleH;
+  const nameY = Math.round(attrY + Math.max(0, (avatar - textBlockH) / 2));
   return {
     card: {
       x: Math.round(x),
@@ -43,7 +46,7 @@ function quoteGridCardGeom(i, frame) {
     },
     mark: {
       x: Math.round(x + padX),
-      y: Math.round(cardTop + padY),
+      y: Math.round(cardTop + padTop),
       width: markW,
       height: markH,
     },
@@ -61,13 +64,13 @@ function quoteGridCardGeom(i, frame) {
     },
     name: {
       x: nameX,
-      y: Math.round(attrY + 4),
+      y: nameY,
       width: nameW,
       height: nameH,
     },
     role: {
       x: nameX,
-      y: Math.round(attrY + 4 + nameH),
+      y: nameY + nameH + 4,
       width: nameW,
       height: roleH,
     },
@@ -83,18 +86,22 @@ function quotePortraitGeom(canvasW, canvasH) {
   const y = insetY;
   const padX = 72;
   const padY = 56;
-  const padBottom = 80;
+  const padBottom = 48;
   const markW = 56;
   const markH = 42;
-  const avatar = 72;
-  const nameH = 32;
-  const roleH = 26;
-  const attrY = y + cardH - padBottom - avatar;
+  const avatar = 80;
+  const nameH = 48;
+  const roleH = 36;
   const quoteY = y + padY + markH + 28;
-  const quoteH = Math.max(180, attrY - quoteY - 40);
   const quoteW = Math.round(Math.min(cardW - padX * 2, cardW * 0.72));
   const nameX = Math.round(x + padX + avatar + 18);
   const nameW = Math.round(cardW - padX * 2 - avatar - 18);
+  const textBlockH = nameH + 6 + roleH;
+  const rowH = Math.max(avatar, textBlockH);
+  const attrY = y + cardH - padBottom - rowH;
+  const quoteH = Math.max(180, attrY - quoteY - 40);
+  const avatarY = Math.round(attrY + (rowH - avatar) / 2);
+  const nameY = Math.round(attrY + (rowH - textBlockH) / 2);
   return {
     card: { x, y, width: Math.round(cardW), height: Math.round(cardH) },
     mark: { x: Math.round(x + padX), y: Math.round(y + padY), width: markW, height: markH },
@@ -106,12 +113,12 @@ function quotePortraitGeom(canvasW, canvasH) {
     },
     avatar: {
       x: Math.round(x + padX),
-      y: Math.round(attrY),
+      y: avatarY,
       width: avatar,
       height: avatar,
     },
-    name: { x: nameX, y: Math.round(attrY + 6), width: nameW, height: nameH },
-    role: { x: nameX, y: Math.round(attrY + 6 + nameH), width: nameW, height: roleH },
+    name: { x: nameX, y: nameY, width: nameW, height: nameH },
+    role: { x: nameX, y: nameY + nameH + 6, width: nameW, height: roleH },
   };
 }
 
@@ -124,18 +131,22 @@ function quoteStatementLeftGeom(canvasW, canvasH) {
   const y = insetY;
   const padX = 72;
   const padY = 56;
-  const padBottom = 80;
+  const padBottom = 48;
   const markW = 52;
   const markH = 40;
-  const avatar = 64;
-  const nameH = 30;
-  const roleH = 24;
-  const attrY = y + cardH - padBottom - avatar;
+  const avatar = 72;
+  const nameH = 48;
+  const roleH = 36;
   const quoteY = y + padY + markH + 28;
-  const quoteH = Math.max(180, attrY - quoteY - 40);
   const quoteW = Math.round(cardW * 0.48);
   const nameX = Math.round(x + padX + avatar + 16);
   const nameW = Math.max(80, quoteW - avatar - 16);
+  const textBlockH = nameH + 6 + roleH;
+  const rowH = Math.max(avatar, textBlockH);
+  const attrY = y + cardH - padBottom - rowH;
+  const quoteH = Math.max(180, attrY - quoteY - 40);
+  const avatarY = Math.round(attrY + (rowH - avatar) / 2);
+  const nameY = Math.round(attrY + (rowH - textBlockH) / 2);
   return {
     card: { x, y, width: Math.round(cardW), height: Math.round(cardH) },
     mark: { x: Math.round(x + padX), y: Math.round(y + padY), width: markW, height: markH },
@@ -147,12 +158,12 @@ function quoteStatementLeftGeom(canvasW, canvasH) {
     },
     avatar: {
       x: Math.round(x + padX),
-      y: Math.round(attrY),
+      y: avatarY,
       width: avatar,
       height: avatar,
     },
-    name: { x: nameX, y: Math.round(attrY + 4), width: nameW, height: nameH },
-    role: { x: nameX, y: Math.round(attrY + 4 + nameH), width: nameW, height: roleH },
+    name: { x: nameX, y: nameY, width: nameW, height: nameH },
+    role: { x: nameX, y: nameY + nameH + 6, width: nameW, height: roleH },
   };
 }
 
@@ -163,17 +174,22 @@ function quoteTestimonialGeom(canvasW, canvasH) {
   const y = Math.round((canvasH - cardH) / 2);
   const padX = 64;
   const padY = 48;
+  const padBottom = 40;
   const markW = 52;
   const markH = 40;
-  const avatar = 64;
-  const nameH = 30;
-  const roleH = 24;
-  const attrY = y + cardH - padY - avatar;
+  const avatar = 72;
+  const nameH = 48;
+  const roleH = 36;
   const quoteY = y + padY + markH + 24;
-  const quoteH = Math.max(140, attrY - quoteY - 32);
   const quoteW = Math.round(Math.min(cardW - padX * 2, cardW * 0.78));
   const nameX = Math.round(x + padX + avatar + 16);
   const nameW = Math.round(cardW - padX * 2 - avatar - 16);
+  const textBlockH = nameH + 6 + roleH;
+  const rowH = Math.max(avatar, textBlockH);
+  const attrY = y + cardH - padBottom - rowH;
+  const quoteH = Math.max(140, attrY - quoteY - 32);
+  const avatarY = Math.round(attrY + (rowH - avatar) / 2);
+  const nameY = Math.round(attrY + (rowH - textBlockH) / 2);
   return {
     card: { x, y, width: Math.round(cardW), height: Math.round(cardH) },
     mark: { x: Math.round(x + padX), y: Math.round(y + padY), width: markW, height: markH },
@@ -185,12 +201,65 @@ function quoteTestimonialGeom(canvasW, canvasH) {
     },
     avatar: {
       x: Math.round(x + padX),
-      y: Math.round(attrY),
+      y: avatarY,
       width: avatar,
       height: avatar,
     },
-    name: { x: nameX, y: Math.round(attrY + 4), width: nameW, height: nameH },
-    role: { x: nameX, y: Math.round(attrY + 4 + nameH), width: nameW, height: roleH },
+    name: { x: nameX, y: nameY, width: nameW, height: nameH },
+    role: { x: nameX, y: nameY + nameH + 6, width: nameW, height: roleH },
+  };
+}
+
+function quoteAttributionSplitGeom(canvasW, canvasH) {
+  const insetX = 72;
+  const insetY = 64;
+  const cardW = canvasW - insetX * 2;
+  const cardH = canvasH - insetY * 2;
+  const x = insetX;
+  const y = insetY;
+  const imageW = Math.round(cardW * 0.4);
+  const leftW = cardW - imageW;
+  const padX = 64;
+  const padY = 52;
+  const padBottom = 40;
+  const markW = 52;
+  const markH = 40;
+  const avatar = 72;
+  const nameH = 48;
+  const roleH = 36;
+  const textBlockH = nameH + 6 + roleH;
+  const rowH = Math.max(avatar, textBlockH);
+  const attrY = y + cardH - padBottom - rowH;
+  const quoteY = y + padY + markH + 24;
+  const quoteH = Math.max(160, attrY - quoteY - 28);
+  const quoteW = Math.round(leftW - padX * 2);
+  const nameX = Math.round(x + padX + avatar + 16);
+  const nameW = Math.max(80, quoteW - avatar - 16);
+  const avatarY = Math.round(attrY + (rowH - avatar) / 2);
+  const nameY = Math.round(attrY + (rowH - textBlockH) / 2);
+  return {
+    card: { x, y, width: Math.round(cardW), height: Math.round(cardH) },
+    image: {
+      x: Math.round(x + leftW),
+      y: Math.round(y),
+      width: Math.round(imageW),
+      height: Math.round(cardH),
+    },
+    mark: { x: Math.round(x + padX), y: Math.round(y + padY), width: markW, height: markH },
+    quote: {
+      x: Math.round(x + padX),
+      y: Math.round(quoteY),
+      width: quoteW,
+      height: Math.round(quoteH),
+    },
+    avatar: {
+      x: Math.round(x + padX),
+      y: avatarY,
+      width: avatar,
+      height: avatar,
+    },
+    name: { x: nameX, y: nameY, width: nameW, height: nameH },
+    role: { x: nameX, y: nameY + nameH + 6, width: nameW, height: roleH },
   };
 }
 
@@ -204,4 +273,5 @@ module.exports = {
   quotePortraitGeom,
   quoteTestimonialGeom,
   quoteStatementLeftGeom,
+  quoteAttributionSplitGeom,
 };

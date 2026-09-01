@@ -17901,11 +17901,11 @@
         },
         {
           "id": "PORTRAIT_IMAGE",
-          "region": "cols 2-3, rows 8-10",
+          "region": "cols 8-12, rows 1-10",
           "role": "image",
           "layer": 13,
           "fit": "cover",
-          "borderRadius": 999
+          "borderRadius": 0
         }
       ],
       "preview": {

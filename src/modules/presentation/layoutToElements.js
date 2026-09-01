@@ -57,6 +57,7 @@ const {
   quotePortraitGeom,
   quoteTestimonialGeom,
   quoteStatementLeftGeom,
+  quoteAttributionSplitGeom,
 } = require('./quotes/quoteGridLayout');
 const {
   compileLayoutGeometry,
@@ -4958,8 +4959,11 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
   const fromSlots = isQuoteSingleCardFromSlots(layoutSchema);
   const left =
     isStatementLeftLayout(layoutSchema?.layout_id) ||
-    isQuoteAttributionLayout(layoutSchema?.layout_id) ||
-    (fromSlots && !compact && !large && !isQuotePortraitLayout(layoutSchema?.layout_id));
+    (fromSlots &&
+      !compact &&
+      !large &&
+      !isQuotePortraitLayout(layoutSchema?.layout_id) &&
+      !isQuoteAttributionLayout(layoutSchema?.layout_id));
   const g = compact
     ? quoteTestimonialGeom(canvasW, canvasH)
     : left
@@ -4979,7 +4983,10 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
   );
   const hasName = elements.some((el) => /^NAME(_\d+)?$/i.test(String(el.slotId || '')));
   if (hasName) {
-    elements = elements.filter((el) => String(el.slotId || '').toUpperCase() !== 'ATTRIBUTION');
+    elements = elements.filter((el) => {
+      const sid = String(el.slotId || '').toUpperCase();
+      return !/^(ATTRIBUTION|ATTR|AUTHOR|AUTHOR_NAME)$/i.test(sid);
+    });
   }
   elements = elements.map((el) => {
     const sid = String(el.slotId || '').toUpperCase();
@@ -5006,13 +5013,15 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
           lineHeight: 1.4,
           color: textColor,
           wrap: 'wrap',
+          clipToSlot: false,
+          fontStyle: 'italic',
         },
       };
     }
     if (sid === 'NAME' || sid === 'AUTHOR_NAME' || sid === 'ATTRIBUTION') {
       return {
         ...el,
-        layer: 11,
+        layer: 12,
         placement: { ...g.name, rotation: 0, opacity: 1 },
         content: {
           ...base,
@@ -5020,36 +5029,45 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
           verticalAlign: 'center',
           fontSize: 18,
           fontWeight: 700,
-          lineHeight: 1.2,
+          lineHeight: 1.35,
           color: textColor,
-          wrap: 'wrap',
+          wrap: 'nowrap',
+          clipToSlot: false,
+          verticalAlign: 'flex-start',
         },
       };
     }
     if (sid === 'ROLE' || sid === 'AUTHOR_TITLE') {
       return {
         ...el,
-        layer: 11,
+        layer: 12,
         placement: { ...g.role, rotation: 0, opacity: 1 },
         content: {
           ...base,
           align: 'left',
-          verticalAlign: 'flex-start',
+          verticalAlign: 'center',
           fontSize: 15,
           fontWeight: 400,
           lineHeight: 1.3,
           color: muted,
           wrap: 'wrap',
+          clipToSlot: false,
         },
       };
     }
     if (/^(PORTRAIT_IMAGE|AVATAR|AVATAR_\d+)$/i.test(sid)) {
-      const url = el.content?.url || el.content?.src;
       return {
         ...el,
         layer: 13,
-        placement: { ...g.avatar, rotation: 0, opacity: url ? 1 : 0.02 },
-        content: { ...(el.content || {}), fit: 'cover', borderRadius: 999, shadow: undefined, boxShadow: undefined },
+        placement: { ...g.avatar, rotation: 0, opacity: 1 },
+        content: {
+          ...(el.content || {}),
+          fit: 'cover',
+          borderRadius: 999,
+          placeholderFill: '#C5CDD8',
+          shadow: undefined,
+          boxShadow: undefined,
+        },
       };
     }
     return el;
@@ -5095,7 +5113,12 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
       type: 'shape',
       layer: 11,
       placement: { ...g.avatar, rotation: 0, opacity: 1 },
-      content: { shape: 'ellipse', fill: paletteColor(palette, 'surface', '#D5DCE6') },
+      content: {
+        shape: 'ellipse',
+        fill: '#C5CDD8',
+        stroke: '#9AA3B2',
+        strokeWidth: 2,
+      },
       role: 'decoration',
       slotId: 'QUOTE_AVATAR_BG',
     },
@@ -5104,9 +5127,9 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
     deco.push({
       id: newElementId('img'),
       type: 'image',
-      layer: 12,
+      layer: 13,
       placement: { ...g.avatar, rotation: 0, opacity: 1 },
-      content: { fit: 'cover', borderRadius: 999, placeholderFill: '#D5DCE6' },
+      content: { fit: 'cover', borderRadius: 999, placeholderFill: '#C5CDD8' },
       role: 'image',
       slotId: 'PORTRAIT_IMAGE',
     });
@@ -5114,7 +5137,205 @@ function layoutQuotePortrait(doc, layoutSchema, themeTokens, canvas = {}) {
   return { ...doc, elements: [...deco, ...elements] };
 }
 
-const QUOTE_GRID_DECO = /^(QUOTE_CARD_|QUOTE_MARK_)/i;
+function layoutQuoteAttributionSplit(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const muted = paletteColor(palette, 'muted', '#6B7280');
+  const cardFill = paletteColor(palette, 'cardBg', '#FFFFFF');
+  const markFill = paletteColor(palette, 'primary', QUOTE_MARK_COLOR);
+  const g = quoteAttributionSplitGeom(canvasW, canvasH);
+  const decoIds = /^(QUOTE_CARD|QUOTE_MARK|QUOTE_AVATAR_BG)$/i;
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => decoIds.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter(
+    (el) =>
+      !decoIds.test(String(el.slotId || '')) &&
+      !/^(HEADING|BODY|EYEBROW)$/i.test(String(el.slotId || ''))
+  );
+  const hasName = elements.some((el) => /^NAME(_\d+)?$/i.test(String(el.slotId || '')));
+  if (hasName) {
+    elements = elements.filter((el) => !/^(ATTRIBUTION|ATTR|AUTHOR|AUTHOR_NAME)$/i.test(String(el.slotId || '')));
+  }
+  elements = elements.filter((el) => {
+    if (el.type !== 'image' && el.type !== 'icon') return true;
+    const sid = String(el.slotId || '').toUpperCase();
+    return sid === 'PORTRAIT_IMAGE' || sid === 'AVATAR';
+  });
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '').toUpperCase();
+    const base = {
+      ...(el.content || {}),
+      letterSpacing: '0',
+      padding: 0,
+      paddingX: 0,
+      stroke: undefined,
+      strokeWidth: 0,
+      fontStyle: 'normal',
+    };
+    if (sid === 'QUOTE' || sid === 'STATEMENT') {
+      return {
+        ...el,
+        layer: 10,
+        placement: { ...g.quote, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 30,
+          fontWeight: 700,
+          lineHeight: 1.4,
+          color: textColor,
+          wrap: 'wrap',
+          clipToSlot: false,
+          fontStyle: 'italic',
+        },
+      };
+    }
+    if (sid === 'NAME' || sid === 'AUTHOR_NAME' || sid === 'ATTRIBUTION') {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...g.name, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 18,
+          fontWeight: 700,
+          lineHeight: 1.35,
+          color: textColor,
+          wrap: 'nowrap',
+          clipToSlot: false,
+        },
+      };
+    }
+    if (sid === 'ROLE' || sid === 'AUTHOR_TITLE') {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...g.role, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'left',
+          verticalAlign: 'flex-start',
+          fontSize: 15,
+          fontWeight: 400,
+          lineHeight: 1.3,
+          color: muted,
+          wrap: 'wrap',
+          clipToSlot: false,
+        },
+      };
+    }
+    if (sid === 'AVATAR') {
+      return {
+        ...el,
+        layer: 14,
+        placement: { ...g.avatar, rotation: 0, opacity: 1 },
+        content: {
+          ...(el.content || {}),
+          fit: 'cover',
+          borderRadius: 999,
+          placeholderFill: '#C5CDD8',
+        },
+      };
+    }
+    if (sid === 'PORTRAIT_IMAGE') {
+      return {
+        ...el,
+        layer: 13,
+        placement: { ...g.image, rotation: 0, opacity: 1 },
+        content: {
+          ...(el.content || {}),
+          fit: 'cover',
+          borderRadius: '0 22px 22px 0',
+        },
+      };
+    }
+    return el;
+  });
+  const hasHero = elements.some((el) => String(el.slotId || '').toUpperCase() === 'PORTRAIT_IMAGE');
+  const hasAvatar = elements.some((el) => String(el.slotId || '').toUpperCase() === 'AVATAR');
+  const prevC = prevBySlot.get('QUOTE_CARD');
+  const prevM = prevBySlot.get('QUOTE_MARK');
+  const deco = [
+    {
+      id: prevC?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 1,
+      placement: { ...g.card, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'rect',
+        fill: prevC?.content?.fill || cardFill,
+        borderRadius: 22,
+        stroke: QUOTE_CARD_BORDER,
+        strokeWidth: 1.5,
+        layoutSurface: true,
+      },
+      role: 'decoration',
+      slotId: 'QUOTE_CARD',
+    },
+    {
+      id: prevM?.id || newElementId('shp'),
+      type: 'graphic',
+      layer: 8,
+      placement: { ...g.mark, rotation: 0, opacity: 1 },
+      content: {
+        svg: quoteMarkInlineSvg(),
+        colorMode: 'recolorable',
+        fill: prevM?.content?.fill || markFill,
+        alt: 'Quote',
+      },
+      role: 'decoration',
+      slotId: 'QUOTE_MARK',
+    },
+    {
+      id: (prevBySlot.get('QUOTE_AVATAR_BG') || {}).id || newElementId('shp'),
+      type: 'shape',
+      layer: 11,
+      placement: { ...g.avatar, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'ellipse',
+        fill: '#C5CDD8',
+        stroke: '#9AA3B2',
+        strokeWidth: 2,
+      },
+      role: 'decoration',
+      slotId: 'QUOTE_AVATAR_BG',
+    },
+  ];
+  if (!hasHero) {
+    deco.push({
+      id: newElementId('img'),
+      type: 'image',
+      layer: 13,
+      placement: { ...g.image, rotation: 0, opacity: 1 },
+      content: { fit: 'cover', borderRadius: '0 22px 22px 0' },
+      role: 'image',
+      slotId: 'PORTRAIT_IMAGE',
+    });
+  }
+  if (!hasAvatar) {
+    deco.push({
+      id: newElementId('img'),
+      type: 'image',
+      layer: 14,
+      placement: { ...g.avatar, rotation: 0, opacity: 1 },
+      content: { fit: 'cover', borderRadius: 999, placeholderFill: '#C5CDD8' },
+      role: 'image',
+      slotId: 'AVATAR',
+    });
+  }
+  return { ...doc, elements: [...deco, ...elements] };
+}
+
+const QUOTE_GRID_DECO = /^(QUOTE_CARD_|QUOTE_MARK_|QUOTE_AVATAR_BG_)/i;
 
 function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
   if (!doc) return doc;
@@ -5132,6 +5353,10 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
       .map((el) => [String(el.slotId || '').toUpperCase(), el])
   );
   let elements = (doc.elements || []).filter((el) => !QUOTE_GRID_DECO.test(String(el.slotId || '')));
+  const hasName = elements.some((el) => /^NAME_[1-3]$/i.test(String(el.slotId || '')));
+  if (hasName) {
+    elements = elements.filter((el) => !/^ATTR_[1-3]$/i.test(String(el.slotId || '')));
+  }
   const geoms = [0, 1, 2].map((i) => quoteGridCardGeom(i, frame));
 
   elements = elements.map((el) => {
@@ -5184,6 +5409,8 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
           lineHeight: 1.45,
           color: textColor,
           wrap: 'wrap',
+          clipToSlot: false,
+          fontStyle: 'italic',
         },
       };
     }
@@ -5203,6 +5430,7 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
           lineHeight: 1.2,
           color: textColor,
           wrap: 'wrap',
+          clipToSlot: false,
         },
       };
     }
@@ -5216,12 +5444,13 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
         content: {
           ...base,
           align: 'left',
-          verticalAlign: 'flex-start',
+          verticalAlign: 'center',
           fontSize: 13,
           fontWeight: 400,
           lineHeight: 1.3,
           color: muted,
           wrap: 'wrap',
+          clipToSlot: false,
         },
       };
     }
@@ -5230,9 +5459,14 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
       const i = Number(avM[1]) - 1;
       return {
         ...el,
-        layer: 12,
+        layer: 13,
         placement: { ...geoms[i].avatar, rotation: 0, opacity: 1 },
-        content: { ...(el.content || {}), fit: 'cover', borderRadius: 999 },
+        content: {
+          ...(el.content || {}),
+          fit: 'cover',
+          borderRadius: 999,
+          placeholderFill: '#C5CDD8',
+        },
       };
     }
     return el;
@@ -5278,14 +5512,30 @@ function layoutQuoteGrid(doc, layoutSchema, themeTokens, canvas = {}) {
       role: 'decoration',
       slotId: markId,
     });
+    const avBgId = `QUOTE_AVATAR_BG_${i + 1}`;
+    const prevA = prevBySlot.get(avBgId);
+    deco.push({
+      id: prevA?.id || newElementId('shp'),
+      type: 'shape',
+      layer: 11,
+      placement: { ...g.avatar, rotation: 0, opacity: 1 },
+      content: {
+        shape: 'ellipse',
+        fill: prevA?.content?.fill || '#C5CDD8',
+        stroke: '#9AA3B2',
+        strokeWidth: 2,
+      },
+      role: 'decoration',
+      slotId: avBgId,
+    });
     const avId = `AVATAR_${i + 1}`;
     if (!seenAvatar.has(avId)) {
       deco.push({
         id: newElementId('img'),
         type: 'image',
-        layer: 12,
+        layer: 13,
         placement: { ...g.avatar, rotation: 0, opacity: 1 },
-        content: { fit: 'cover', borderRadius: 999, placeholderFill: '#E5E7EB' },
+        content: { fit: 'cover', borderRadius: 999, placeholderFill: '#C5CDD8' },
         role: 'image',
         slotId: avId,
       });
@@ -5840,12 +6090,13 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDiagramVenn(next, layoutSchema, themeTokens, canvas);
   } else if (isQuoteGridLayout(layoutSchema?.layout_id)) {
     next = layoutQuoteGrid(next, layoutSchema, themeTokens, canvas);
+  } else if (isQuoteAttributionLayout(layoutSchema?.layout_id)) {
+    next = layoutQuoteAttributionSplit(next, layoutSchema, themeTokens, canvas);
   } else if (
     isQuotePortraitLayout(layoutSchema?.layout_id) ||
     isQuoteTestimonialLayout(layoutSchema?.layout_id) ||
     isStatementLargeLayout(layoutSchema?.layout_id) ||
     isStatementLeftLayout(layoutSchema?.layout_id) ||
-    isQuoteAttributionLayout(layoutSchema?.layout_id) ||
     isQuoteSingleCardFromSlots(layoutSchema)
   ) {
     next = layoutQuotePortrait(next, layoutSchema, themeTokens, canvas);
