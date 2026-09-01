@@ -19,6 +19,7 @@ function baseProjectFields(project) {
     createdBy: project.createdBy,
     updatedBy: project.updatedBy ?? null,
     thumbnail: project.thumbnail,
+    thumbnailUrl: project.thumbnailUrl || project.thumbnail,
     duration: project.duration,
     status: project.status,
     storageBytes: toJsonNumber(project.storageBytes),

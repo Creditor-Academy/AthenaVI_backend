@@ -118,6 +118,7 @@ const canvasDocSchema = Joi.object({
   elements: Joi.array().items(canvasElementSchema).max(MAX_ELEMENTS_PER_SLIDE).required(),
   transition: Joi.string().trim().max(64).allow('', null).optional(),
   contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
+  speakerNotes: Joi.string().allow('', null).optional(),
   ...canvasBackgroundFields,
 }).unknown(true);
 
@@ -163,6 +164,19 @@ const presentationByIdSchema = Joi.object({
     workspaceId: workspaceIdParam,
     presentationId: presentationIdParam,
   }),
+});
+
+const updatePresentationThumbnailSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    thumbnailUrl: Joi.string().trim().max(4000).allow('', null).optional(),
+    slideId: Joi.string().trim().max(64).optional(),
+  })
+    .or('thumbnailUrl', 'slideId')
+    .required(),
 });
 
 const generateOutlineSchema = Joi.object({
@@ -346,6 +360,9 @@ const patchSlideSchema = Joi.object({
     backgroundGradientKind: Joi.string().valid('linear', 'radial').allow('', null).optional(),
     backgroundGradientStops: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
     backgroundFill: Joi.any().optional(),
+    transition: Joi.string().trim().max(64).allow('', null).optional(),
+    contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
+    speakerNotes: Joi.string().allow('', null).max(20000).optional(),
   })
     .min(1)
     .required(),
@@ -360,6 +377,7 @@ const addSlideSchema = Joi.object({
   }),
   body: Joi.object({
     afterSlideId: Joi.string().trim().optional(),
+    beforeSlideId: Joi.string().trim().optional(),
     templateId: templateIdField.optional(),
     layoutId: Joi.string().trim().max(128).optional(),
     title: Joi.string().trim().max(500).allow('', null).optional(),
@@ -998,6 +1016,7 @@ module.exports = {
   createPresentationSchema,
   listPresentationsSchema,
   presentationByIdSchema,
+  updatePresentationThumbnailSchema,
   generateOutlineSchema,
   patchOutlineSchema,
   setThemeSchema,

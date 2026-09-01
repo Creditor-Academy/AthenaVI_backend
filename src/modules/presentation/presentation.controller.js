@@ -61,6 +61,15 @@ const getPresentation = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_FETCHED);
 });
 
+const updateThumbnail = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await presentationService.updateThumbnail(workspaceId, presentationId, {
+    thumbnailUrl: req.body.thumbnailUrl,
+    slideId: req.body.slideId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_THUMBNAIL_UPDATED);
+});
+
 const getSlide = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId, slideId } = req.params;
   const data = await presentationService.getSlide({ workspaceId, presentationId, slideId });
@@ -406,6 +415,7 @@ module.exports = {
   createPresentation,
   listPresentations,
   getPresentation,
+  updateThumbnail,
   getSlide,
   generateOutline,
   updateOutline,

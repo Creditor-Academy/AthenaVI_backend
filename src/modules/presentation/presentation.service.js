@@ -21,6 +21,25 @@ const { enrichSlidesForClient } = require('./elementContent.normalize');
 const { enrichProjects } = require('../project/project.format');
 const projectDao = require('../project/project.dao');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
+const {
+  extractSlideCover,
+  toCoverUrls,
+  persistCoverIfEmpty,
+} = require('../../shared/utils/coverThumbnail');
+
+function firstNonEmptyText(...values) {
+  for (const value of values) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractGenerationPrompt(deck) {
+  const selections = deck?.generationMetrics?.generationFlow?.selections || {};
+  const outline = deck?.outline && typeof deck.outline === 'object' ? deck.outline : {};
+  return firstNonEmptyText(selections.prompt, outline.sourcePrompt, outline.prompt);
+}
 
 function withFlatPresentationFields({ project, deck, slides }) {
   const proj = project || {};
@@ -37,6 +56,7 @@ function withFlatPresentationFields({ project, deck, slides }) {
     aspectRatio: d.aspectRatio,
     locale: d.locale,
     folderId: proj.folderId,
+    generationPrompt: extractGenerationPrompt(d),
   };
 }
 
@@ -56,19 +76,35 @@ async function listPresentations({ workspaceId, folderId }) {
   const rows = await presentationDao.listPresentations({ workspaceId, folderId });
   const enriched = await enrichProjects(rows, { includeData: false });
 
-  return enriched.map((project, index) => {
-    const deck = rows[index]?.deck || null;
-    return {
-      ...project,
-      title: project.name,
-      deckId: deck?.id || null,
-      deckStatus: deck?.status || null,
-      aspectRatio: deck?.aspectRatio || null,
-      locale: deck?.locale || null,
-      partial: deck?.partial ?? false,
-      slideCount: deck?._count?.slides ?? 0,
-    };
-  });
+  return Promise.all(
+    enriched.map(async (project, index) => {
+      const deck = rows[index]?.deck || null;
+      const firstSlide = Array.isArray(deck?.slides) ? deck.slides[0] : null;
+      const storedThumb = project.thumbnail || null;
+      const extracted = extractSlideCover(firstSlide);
+      const cover = await toCoverUrls({
+        url: storedThumb || extracted.url,
+        s3Key: extracted.s3Key,
+      });
+      if (!storedThumb && cover.persistUrl) {
+        persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+      }
+      const thumbnailUrl = cover.displayUrl || storedThumb || null;
+      return {
+        ...project,
+        title: project.name,
+        thumbnail: thumbnailUrl,
+        thumbnailUrl,
+        firstSlideId: firstSlide?.id || null,
+        deckId: deck?.id || null,
+        deckStatus: deck?.status || null,
+        aspectRatio: deck?.aspectRatio || null,
+        locale: deck?.locale || null,
+        partial: deck?.partial ?? false,
+        slideCount: deck?._count?.slides ?? 0,
+      };
+    })
+  );
 }
 
 const SLIDE_EDITOR_PASSTHROUGH = new Set([
@@ -486,6 +522,15 @@ async function getPresentation(workspaceId, presentationId) {
   };
   const slides = enrichSlidesForClient(await attachPresignedMediaToSlides(deck.slides || []));
 
+  const firstSlide = slides[0] || null;
+  if (firstSlide && !proj?.thumbnail) {
+    const extracted = extractSlideCover(firstSlide);
+    const cover = await toCoverUrls(extracted);
+    if (cover.persistUrl) {
+      persistCoverIfEmpty(prisma, presentationId, cover.persistUrl);
+    }
+  }
+
   return withFlatPresentationFields({
     project: proj,
     deck: deckPayload,
@@ -538,6 +583,7 @@ async function addSlide({
   presentationId,
   userId,
   afterSlideId,
+  beforeSlideId,
   templateId,
   layoutId,
   content,
@@ -555,6 +601,7 @@ async function addSlide({
     workspaceId,
     presentationId,
     afterSlideId,
+    beforeSlideId,
     templateId,
     layoutId,
     content: slideContent,
@@ -589,10 +636,50 @@ async function addSlide({
   };
 }
 
+async function updateThumbnail(workspaceId, presentationId, { thumbnailUrl, slideId } = {}) {
+  const project = await prisma.project.findFirst({
+    where: { id: presentationId, workspaceId, type: 'PRESENTATION' },
+    select: { id: true },
+  });
+  if (!project) throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
+
+  let persistUrl = thumbnailUrl || null;
+  if (!persistUrl && slideId) {
+    const { deck } = await deckGeneration.loadPresentationDeck(presentationId, {
+      requireWorkspaceId: workspaceId,
+    });
+    const slide = (deck.slides || []).find((s) => String(s.id) === String(slideId)) || deck.slides?.[0];
+    const cover = await toCoverUrls(extractSlideCover(slide));
+    persistUrl = cover.persistUrl || cover.displayUrl;
+  } else if (persistUrl) {
+    const cover = await toCoverUrls({ url: persistUrl });
+    persistUrl = cover.persistUrl || persistUrl;
+  }
+
+  if (!persistUrl) {
+    throw new AppError('A thumbnail URL or slideId is required', 400);
+  }
+
+  const updated = await prisma.project.update({
+    where: { id: presentationId },
+    data: { thumbnail: persistUrl },
+    select: { id: true, thumbnail: true, updatedAt: true },
+  });
+
+  const cover = await toCoverUrls({ url: updated.thumbnail });
+  return {
+    id: updated.id,
+    thumbnail: cover.displayUrl || updated.thumbnail,
+    thumbnailUrl: cover.displayUrl || updated.thumbnail,
+    updatedAt: updated.updatedAt,
+  };
+}
+
 module.exports = {
   createPresentation,
   listPresentations,
   getPresentation,
+  updateThumbnail,
   getSlide,
   creditEstimate,
   listPresentationDeckPacks,

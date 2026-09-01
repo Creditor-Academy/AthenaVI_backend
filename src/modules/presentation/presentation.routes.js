@@ -50,6 +50,12 @@ router.get(
   presentationController.getPresentation
 );
 
+router.put(
+  '/:presentationId/thumbnail',
+  validate(presentationValidations.updatePresentationThumbnailSchema),
+  presentationController.updateThumbnail
+);
+
 router.use('/:presentationId/share', presentationShareRoutes);
 
 router.get(

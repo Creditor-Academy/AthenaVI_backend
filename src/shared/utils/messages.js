@@ -287,6 +287,7 @@ module.exports = {
   PRESENTATION_CREATED: 'Presentation created successfully',
   PRESENTATIONS_FETCHED: 'Presentations fetched successfully',
   PRESENTATION_FETCHED: 'Presentation fetched successfully',
+  PRESENTATION_THUMBNAIL_UPDATED: 'Presentation thumbnail updated',
   PRESENTATION_NOT_FOUND: 'Presentation not found',
   PRESENTATION_OUTLINE_GENERATED: 'Outline generated successfully',
   PRESENTATION_OUTLINE_UPDATED: 'Outline updated successfully',
