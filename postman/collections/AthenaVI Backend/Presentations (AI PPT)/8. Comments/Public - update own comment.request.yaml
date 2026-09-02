@@ -1,0 +1,14 @@
+$kind: http-request
+description: A guest proves authorship with the same viewerSessionId used to post (403 otherwise).
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments/{{presentationCommentId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Slide 3 revenue figure looks off to me.",
+      "viewerSessionId": "{{viewerSessionId}}"
+    }
+order: 12000

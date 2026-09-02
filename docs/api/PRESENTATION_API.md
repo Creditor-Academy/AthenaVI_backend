@@ -564,9 +564,18 @@ Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
 
 ## View-only share links
 
-Canva-style preview links. The **token in the URL is the permission** (capability URL): no login and no workspace membership are required, and viewers can never edit. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
+Canva-style preview links. The **token in the URL is the permission** (capability URL): no login and no workspace membership are required, and viewers can never edit slides. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
 
 Public resolve looks up a **SHA-256 hash** of the token. The raw token is also stored so **workspace members can reopen the share modal and copy the same URL any time**. Only owner share APIs return `token` / `url`; public `/api/p` never echoes them.
+
+**`access`** controls whether viewers may comment (never edit):
+
+| `access` | Viewer can |
+|---|---|
+| `VIEW` | page through the deck |
+| `COMMENT` | page through the deck **and post comments** |
+
+New links are minted with **`COMMENT`**. Links created before comments shipped remain `VIEW` until the owner PATCHes `access`, so no existing URL silently becomes writable. Comment contracts: [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
 
 ### Enable share link
 
@@ -576,7 +585,7 @@ Public resolve looks up a **SHA-256 hash** of the token. The raw token is also s
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
 | **Auth** | Bearer + member |
 
-Idempotent. Mints a token on **first** create; on an existing link it re-enables (and clears a lapsed `expiresAt`) without minting.
+Idempotent. Mints a token on **first** create with `access: "COMMENT"`; on an existing link it re-enables (and clears a lapsed `expiresAt`) without minting and **without changing `access`**.
 
 **Response `data` (first create):**
 
@@ -586,7 +595,7 @@ Idempotent. Mints a token on **first** create; on an existing link it re-enables
     "exists": true,
     "enabled": true,
     "expired": false,
-    "access": "VIEW",
+    "access": "COMMENT",
     "token": "8Kd…",
     "url": "https://app.example.com/p/8Kd…",
     "expiresAt": null,
@@ -625,10 +634,11 @@ Legacy rows created before token persistence may omit `token` / `url` — call *
 **Body** (at least one key):
 
 ```json
-{ "enabled": false, "expiresAt": "2026-09-01T00:00:00.000Z" }
+{ "enabled": false, "expiresAt": "2026-09-01T00:00:00.000Z", "access": "COMMENT" }
 ```
 
 - `expiresAt`: ISO date, or `null` to clear.
+- `access`: `"VIEW"` | `"COMMENT"` — the "Allow comments" toggle. Switching to `VIEW` immediately 403s public comment writes; existing comments are kept and stay visible in the editor. Allowed while the deck is `GENERATING` (it changes no slides).
 - Disabling keeps the same token (so a previously shared URL works again after re-enable) and immediately flushes the viewer room. `share.url` remains copyable while disabled; public `/api/p` still 404s until re-enabled.
 - Re-enabling while the deck is `GENERATING` → **409**.
 - Response includes `share.token` + `share.url` like GET.
@@ -640,7 +650,7 @@ Legacy rows created before token persistence may omit `token` / `url` — call *
 | **Method** | `POST` |
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` |
 
-Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` (top-level and inside `share`). Allowed even while the deck is `GENERATING`, so a leaked link can always be killed.
+Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` (top-level and inside `share`). Allowed even while the deck is `GENERATING`, so a leaked link can always be killed. `access` and existing comments are preserved.
 
 **404** if no link exists yet.
 
@@ -685,7 +695,7 @@ Send back the `ETag` as `If-None-Match` to get a **304**.
 
 - **Only `READY` slides are included.** During a regeneration the call still returns **200** with `status: "GENERATING"` and whatever slides survive, so the UI can show "Updating…" instead of an error.
 - Image URLs are freshly presigned per request, including per-element images on multi-image slides.
-- Editor-only data is stripped: outline, generation metrics, credits, prompt bundle version, folder, workspace, owner, jobs, comments, and internal S3 keys.
+- Editor-only data is stripped: outline, generation metrics, credits, prompt bundle version, folder, workspace, owner, jobs, and internal S3 keys. Comments are **not** inlined here — they have their own uncached endpoint so this payload stays ETag-stable.
 
 ### Get viewer session
 
@@ -700,7 +710,9 @@ Personalized companion to the cacheable deck payload.
 ```json
 {
   "self": { "displayName": "Priya Shah", "isAnonymous": false, "userId": "<uuid>" },
-  "permission": "view",
+  "permission": "comment",
+  "canComment": true,
+  "canResolveComments": true,
   "canOpenInEditor": true,
   "workspaceId": "<uuid>",
   "presentationId": "<uuid>"
@@ -708,6 +720,8 @@ Personalized companion to the cacheable deck payload.
 ```
 
 `canOpenInEditor` is true only when the caller is a member of the owning workspace; `workspaceId` / `presentationId` appear only in that case, so the UI can offer "Open in editor".
+
+`permission` is `"comment"` when the link allows comments, otherwise `"view"` — neither permits editing slides. Gate the comment composer on **`canComment`**, and the resolve control on **`canResolveComments`** (members only). See [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
 
 Display names are always computed server-side from `User.name`. A logged-in user with a blank name is shown as `Anonymous viewer`. Email is never exposed.
 
@@ -736,14 +750,15 @@ Display names are always computed server-side from `User.name`. A logged-in user
   "viewers": [
     { "key": "user:…", "displayName": "Priya Shah", "isAnonymous": false, "slideIndex": 3, "lastSeen": "2026-08-20T09:00:03.000Z" }
   ],
-  "contentUpdatedAt": "2026-08-20T08:59:12.000Z"
+  "contentUpdatedAt": "2026-08-20T08:59:12.000Z",
+  "commentsUpdatedAt": "2026-08-20T09:00:01.000Z"
 }
 ```
 
 - Heartbeat about every **15s**; a viewer is dropped after **45s** of silence.
 - Logged-in viewers collapse across tabs (keyed by user); guests are keyed by `viewerSessionId`.
 - `viewerCount` is the full room size. `viewers` is capped at the **50 most recently active** — a display cap only, nobody is turned away, so render "+N more" from `viewerCount - viewers.length`.
-- Refetch the deck only when `contentUpdatedAt` changes.
+- Refetch the deck only when `contentUpdatedAt` changes, and the comment list only when `commentsUpdatedAt` changes (`null` until the first comment).
 
 ### List / leave presence
 
@@ -760,6 +775,8 @@ Display names are always computed server-side from `User.name`. A logged-in user
 |---|---|
 | `GET /api/p/:token` | 60/min per IP, 300/min per link |
 | Presence + session | 120/min per IP |
+| Comment reads | 120/min per IP |
+| Comment writes | 20/min per IP, 60/min per link |
 
 Configurable — see [ENVIRONMENT.md](ENVIRONMENT.md).
 
@@ -770,8 +787,9 @@ Configurable — see [ENVIRONMENT.md](ENVIRONMENT.md).
 - Presentation routes are nested under workspaces (same pattern as projects/folders).
 - Credits are **presentation-specific feature keys** but use the **workspace** credit ledger (`SCOPE.WORKSPACE`).
 - Offline structural checks: `npm run eval:presentation` (see `scripts/presentation-eval/`).
-- Share links are **view-only** and free (no credit charge). Presence is polled over HTTP; there is no WebSocket/SSE channel.
-- Deferred (not this API surface): password-protected links, frozen publish snapshots, comments on the preview, brand kits, server version history, studio isolation.
+- Share links never allow editing and are free (no credit charge). Presence and comments are polled over HTTP; there is no WebSocket/SSE channel.
+- Share-link visitors may comment when `access: COMMENT` — see [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
+- Deferred (not this API surface): password-protected links, frozen publish snapshots, brand kits, server version history, studio isolation.
 
 ---
 

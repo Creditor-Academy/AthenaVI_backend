@@ -26,6 +26,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Settings & account security | [docs/api/USER_SETTINGS_API.md](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [docs/api/WORKSPACE_API.md](docs/api/WORKSPACE_API.md) |
 | AI presentations (PPT) | [docs/api/PRESENTATION_API.md](docs/api/PRESENTATION_API.md) |
+| Presentation comments | [docs/api/PRESENTATION_COMMENTS_API.md](docs/api/PRESENTATION_COMMENTS_API.md) |
 | Assets | [docs/api/ASSETS_API.md](docs/api/ASSETS_API.md) |
 | Credits | [docs/api/CREDITS_API.md](docs/api/CREDITS_API.md) |
 | Platform superadmin | [docs/api/SUPERADMIN_API.md](docs/api/SUPERADMIN_API.md) |

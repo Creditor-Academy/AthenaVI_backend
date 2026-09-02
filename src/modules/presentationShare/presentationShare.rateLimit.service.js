@@ -23,6 +23,22 @@ const PRESENCE_IP_MAX =
     ? Number(process.env.PPT_SHARE_PRESENCE_RATE_LIMIT_IP)
     : 120;
 
+const COMMENT_READ_IP_MAX =
+  Number(process.env.PPT_SHARE_COMMENT_READ_RATE_LIMIT_IP) > 0
+    ? Number(process.env.PPT_SHARE_COMMENT_READ_RATE_LIMIT_IP)
+    : 120;
+
+/** Writes are far cheaper to abuse than reads, so they get their own tighter buckets. */
+const COMMENT_WRITE_IP_MAX =
+  Number(process.env.PPT_SHARE_COMMENT_WRITE_RATE_LIMIT_IP) > 0
+    ? Number(process.env.PPT_SHARE_COMMENT_WRITE_RATE_LIMIT_IP)
+    : 20;
+
+const COMMENT_WRITE_TOKEN_MAX =
+  Number(process.env.PPT_SHARE_COMMENT_WRITE_RATE_LIMIT_TOKEN) > 0
+    ? Number(process.env.PPT_SHARE_COMMENT_WRITE_RATE_LIMIT_TOKEN)
+    : 60;
+
 const ipHash = (ip) =>
   crypto.createHash('sha256').update(String(ip || 'unknown')).digest('hex').slice(0, 32);
 
@@ -76,11 +92,29 @@ async function assertPresenceAllowed({ ip }) {
   return assertAllowed([{ key: `ppt:share:presence:ip:${ipHash(ip)}`, max: PRESENCE_IP_MAX }]);
 }
 
+async function assertCommentReadAllowed({ ip }) {
+  return assertAllowed([
+    { key: `ppt:share:comment:read:ip:${ipHash(ip)}`, max: COMMENT_READ_IP_MAX },
+  ]);
+}
+
+async function assertCommentWriteAllowed({ ip, tokenHash }) {
+  return assertAllowed([
+    { key: `ppt:share:comment:write:ip:${ipHash(ip)}`, max: COMMENT_WRITE_IP_MAX },
+    { key: `ppt:share:comment:write:token:${tokenHash}`, max: COMMENT_WRITE_TOKEN_MAX },
+  ]);
+}
+
 module.exports = {
   WINDOW_SEC,
   VIEW_IP_MAX,
   VIEW_TOKEN_MAX,
   PRESENCE_IP_MAX,
+  COMMENT_READ_IP_MAX,
+  COMMENT_WRITE_IP_MAX,
+  COMMENT_WRITE_TOKEN_MAX,
   assertViewAllowed,
   assertPresenceAllowed,
+  assertCommentReadAllowed,
+  assertCommentWriteAllowed,
 };

@@ -21,9 +21,10 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [USER_INBOX_API.md](USER_INBOX_API.md) | `/api/user/inbox` | Notifications, unread count |
 | [USER_SETTINGS_API.md](USER_SETTINGS_API.md) | `/api/user/settings` | Appearance, notifications, security, account deletion |
 | [WORKSPACE_API.md](WORKSPACE_API.md) | `/api/workspaces` | Workspaces, members, invitations, folders, projects, Remotion renders |
-| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations`, `/api/p` | AI PPT: create, outline, theme, generate, packs, brand apply, slides, export, view-only share links + presence |
+| [PRESENTATION_API.md](PRESENTATION_API.md) | `.../presentations`, `/api/p` | AI PPT: create, outline, theme, generate, packs, brand apply, slides, export, share links + presence |
 | [BRAND_KIT_API.md](BRAND_KIT_API.md) | `.../brand-kits` | Workspace Brand Kits (colors, fonts, logos, photos, voice) |
 | [PROJECT_COMMENTS_API.md](PROJECT_COMMENTS_API.md) | `.../projects/:projectId/comments` | Project comments and @mentions |
+| [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md) | `.../presentations/:id/comments`, `/api/p/:token/comments` | PPT slide comments: replies, resolve, share-link guests |
 | [ASSETS_API.md](ASSETS_API.md) | `/api/assets` | Workspace file uploads |
 | [STOCK_API.md](STOCK_API.md) | `/api/stock` | Stock library search (Pexels, Unsplash, Pixabay) and import |
 | [FONTS_API.md](FONTS_API.md) | `/api/fonts` | Shared Google Fonts catalog + CSS helper (Brand Kit, video editor, PPT) |

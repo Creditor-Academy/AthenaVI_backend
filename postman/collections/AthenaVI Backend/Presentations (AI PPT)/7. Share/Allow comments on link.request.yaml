@@ -1,0 +1,14 @@
+$kind: http-request
+description: "access COMMENT lets share-link visitors post comments (never edit slides); VIEW blocks new comments and keeps existing ones. New links are minted COMMENT; links created before comments shipped read VIEW. Allowed while the deck is GENERATING."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "access": "COMMENT"
+    }
+order: 2500

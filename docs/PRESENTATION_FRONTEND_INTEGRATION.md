@@ -328,9 +328,9 @@ Docs: [`WORKSPACE_API.md`](api/WORKSPACE_API.md) · [`PROJECT_EDITOR_INTEGRATION
 
 ---
 
-## Share & present mode (view-only link + live viewers)
+## Share & present mode (share link + live viewers + comments)
 
-Canva-style preview sharing. The owner turns on a link; anyone with it can page through the deck but cannot edit. Viewers see each other's names, and guests appear as `Anonymous viewer`.
+Canva-style preview sharing. The owner turns on a link; anyone with it can page through the deck and — when comments are allowed — leave feedback. Nobody on the link can edit slides. Viewers see each other's names, and guests appear as `Anonymous viewer`.
 
 ### Owner: the share modal
 
@@ -339,6 +339,7 @@ Canva-style preview sharing. The owner turns on a link; anyone with it can page 
 | Open modal | `GET .../presentations/:id/share` |
 | Turn sharing on | `PUT .../presentations/:id/share` |
 | Turn off / set expiry | `PATCH .../presentations/:id/share` `{ enabled, expiresAt }` |
+| Allow / block comments | `PATCH .../presentations/:id/share` `{ access: "COMMENT" \| "VIEW" }` |
 | Reset link | `POST .../presentations/:id/share/rotate` |
 
 Every owner response that has a link includes a copyable **`share.url`** (and `share.token`). Open the modal any time, show that URL in a read-only field with Copy, and let the user paste it as often as they need. No “you won’t see this again” warning, and no localStorage of the token.
@@ -347,20 +348,41 @@ Every owner response that has a link includes a copyable **`share.url`** (and `s
 - Turning sharing **off** and back **on** keeps the same link working, so use disable (not rotate) for a temporary pause. `share.url` is still shown while disabled; guests get 404 until you re-enable.
 - `PUT` returns **409** while the deck is generating — disable the toggle until `status` leaves `GENERATING`.
 - If an older link has no `share.url` (pre-persistence rows), call **rotate** once to mint a recoverable URL.
+- **"Allow comments"** switch reflects `share.access`. New links come back `COMMENT`; links made before comments shipped read `VIEW`, so render the switch from the response rather than assuming on. Switching to `VIEW` hides the composer for visitors and keeps every existing comment (still visible in the editor). Unlike enable, this call works while the deck is generating.
 ### Viewer: the `/p/:token` page
 
 Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the user happens to be logged in; omit it otherwise. Never redirect a guest to login.
 
 1. `GET /api/p/:token` → deck. Cache the response `ETag` and send it as `If-None-Match` on refetch (**304** = nothing changed).
-2. `GET /api/p/:token/session` → `self.displayName`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members, so you can offer an "Open in editor" button.
+2. `GET /api/p/:token/session` → `self.displayName`, `canComment` / `canResolveComments`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members, so you can offer an "Open in editor" button.
 3. `PUT /api/p/:token/presence` every **10–15s** with `{ viewerSessionId, slideIndex }` → live viewer list.
 4. `DELETE /api/p/:token/presence?viewerSessionId=…` on unload (best-effort; the server drops silent viewers after 45s anyway).
+5. If `canComment`, `GET /api/p/:token/comments?slideId=…` for the current slide and render the composer.
 
-**`viewerSessionId`**: generate a UUID once, persist in `localStorage`, reuse across reloads. It identifies guests; logged-in users are keyed by account so multiple tabs collapse into one avatar.
+**`viewerSessionId`**: generate a UUID once, persist in `localStorage`, reuse across reloads. It identifies guests for presence **and proves comment authorship**, so the same value must survive reloads or a guest loses the ability to edit their own comments. Logged-in users are keyed by account so multiple tabs collapse into one avatar.
 
 **Rendering the room:** `viewerCount` is the true total; `viewers` holds at most the 50 most recently active. Render avatars from `viewers` and "+N more" from `viewerCount - viewers.length`. Each viewer carries `slideIndex`, so you can show who is on which slide. Do not display a name you computed yourself — `displayName` is always server-side, and any `displayName` you send is ignored.
 
-**Live updates:** every presence response includes `contentUpdatedAt`. Refetch the deck **only** when it differs from the value you rendered. Do not poll `GET /api/p/:token` on a timer; it is the expensive call.
+**Live updates:** every presence response includes `contentUpdatedAt` and `commentsUpdatedAt`. Refetch the deck **only** when `contentUpdatedAt` differs from the value you rendered, and the comment list only when `commentsUpdatedAt` differs. Do not poll `GET /api/p/:token` on a timer; it is the expensive call.
+
+### Viewer comments
+
+Only when session `canComment` is true (link `access: COMMENT`). Full contract: [`PRESENTATION_COMMENTS_API.md`](api/PRESENTATION_COMMENTS_API.md).
+
+| Action | Call |
+|---|---|
+| Load slide thread | `GET /api/p/:token/comments?slideId=…` |
+| Post thread | `POST /api/p/:token/comments` `{ body, slideId, viewerSessionId, displayName }` |
+| Reply | `POST /api/p/:token/comments` `{ body, parentId, viewerSessionId, displayName }` |
+| Edit own | `PATCH /api/p/:token/comments/:commentId` `{ body, viewerSessionId }` |
+| Delete own | `DELETE /api/p/:token/comments/:commentId?viewerSessionId=…` |
+
+- **Guests need a name.** Prompt once for `displayName` (1–80 chars), keep it in `localStorage` next to `viewerSessionId`, and send both on every write. Without a name the server returns **400**.
+- For a logged-in visitor, skip `displayName` — the account name always wins and anything you send is ignored.
+- Guests and logged-in non-members cannot `@mention` (the field is dropped) and get **403** on resolve. Gate those controls on `canResolveComments`.
+- Only comments on finished slides come back here, so a thread can be invisible on the link while still present in the editor.
+- A view-only link answers `GET /comments` with an empty list rather than an error — hide the panel on `canComment: false` instead of treating it as a failure.
+- After a successful write, refetch the slide's thread; the next presence tick will also show the new `commentsUpdatedAt`.
 
 **During a regeneration:** the deck call still returns 200, but `status` is `GENERATING` and `slides` holds only finished slides. Show an "Updating…" state instead of an error, and let the presence poll tell you when new slides land.
 
@@ -368,7 +390,7 @@ Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the 
 
 - Send `Referrer-Policy: no-referrer` on the `/p/:token` document. Slide images are presigned S3 URLs, and without this the token can leak into access logs through the `Referer` header.
 - Keep the token out of analytics events, error reports, and page titles.
-- Treat the page as read-only: no editor API calls, no autosave, no comment posting.
+- Treat slide content as read-only: no editor API calls and no autosave. Comments are the only write this page may make, and only through `/api/p/:token/comments`.
 - Unknown, disabled, and expired links all return **404** with the same message. Show one "This link isn't available" screen — don't try to distinguish them.
 - **429** means the link is being hammered; back off using `Retry-After` rather than retrying immediately.
 
@@ -400,6 +422,10 @@ Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the 
 - [ ] Export menu: PPTX, PDF, PNG, JPEG; poll + download  
 - [ ] Credit estimate before AI generate / export; handle 402  
 - [ ] Folder list: badge/filter by `project.type`  
+- [ ] Comments sidebar filtered by selected slide; replies + resolve; `@` picker from `mentionable-users`  
+- [ ] Editor shows orphaned threads (`orphaned=true`) so feedback survives a full regenerate  
+- [ ] Share modal: "Allow comments" bound to `share.access`  
+- [ ] `/p/:token` page: composer gated on `canComment`, guest name prompt, refetch on `commentsUpdatedAt`  
 - [ ] Admin: separate screens for `DECK_LAYOUT` vs `VIDEO_SCENE` template forms  
 
 ---
@@ -441,11 +467,25 @@ GET    .../share
 PATCH  .../share
 POST   .../share/rotate
 
+GET    .../comments
+POST   .../comments
+PATCH  .../comments/:commentId
+DELETE .../comments/:commentId
+POST   .../comments/:commentId/resolve
+POST   .../comments/:commentId/unresolve
+GET    .../comments/mentionable-users
+
 GET    /api/p/:token
 GET    /api/p/:token/session
 PUT    /api/p/:token/presence
 GET    /api/p/:token/presence
 DELETE /api/p/:token/presence
+GET    /api/p/:token/comments
+POST   /api/p/:token/comments
+PATCH  /api/p/:token/comments/:commentId
+DELETE /api/p/:token/comments/:commentId
+POST   /api/p/:token/comments/:commentId/resolve
+POST   /api/p/:token/comments/:commentId/unresolve
 ```
 
 Postman collection `postman/collections/AthenaVI Backend/` (v3 YAML):

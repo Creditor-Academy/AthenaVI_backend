@@ -113,7 +113,7 @@ src/modules/<feature>/
 
 ### Route registration
 
-- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** view-only presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401).
+- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401; read-only apart from comments on `access: COMMENT` links).
 - **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/brand-kits`, `/:workspaceId/presentation-deck-packs`, `/:workspaceId/video-templates` (`VIDEO_SCENE` + `VIDEO_PACK`), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
@@ -169,6 +169,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 | Identity | `User`, `Account`, `Session`, `RefreshToken`, `PasswordResetToken` |
 | Workspaces | `Workspace`, `WorkspaceMember`, `Invitation` |
 | Editor | `Folder`, `Project` (large JSON `data`), `Asset` |
+| Presentations | `Deck`, `Slide`, `PresentationShareLink`, `PresentationComment` (slide threads; `slideId` is **SET NULL**, never cascade) |
 | HeyGen | `HeygenResponse`, `HeygenAvatar`, `HeygenVoice` |
 | Renders | `ProjectRender`, `SceneRenderCache` |
 | Billing | `CreditTransaction`, `User.credits`, `Workspace.credits` (TEAM pool), `/api/superadmin`, `/api/credits` — rates in `src/shared/config/creditPricing.js` aligned with HeyGen PAYG/Enterprise tables |
@@ -225,6 +226,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
 | Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
+| Presentation comments (slide threads + share-link guests) | [`docs/api/PRESENTATION_COMMENTS_API.md`](docs/api/PRESENTATION_COMMENTS_API.md) |
 | **AI PPT generation (how it works)** | [`docs/AI_PPT_GENERATION_COMPLETE.md`](docs/AI_PPT_GENERATION_COMPLETE.md) |
 | **Image Gen (how it works + Infographics plan)** | [`docs/IMAGE_GEN_COMPLETE.md`](docs/IMAGE_GEN_COMPLETE.md) |
 | **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |

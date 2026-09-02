@@ -1,0 +1,7 @@
+$kind: http-request
+description: Mention autocomplete over workspace members. Optional ?q= matches name or email (max 20 results).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments/mentionable-users"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 7000

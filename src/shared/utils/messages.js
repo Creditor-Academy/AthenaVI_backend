@@ -372,6 +372,13 @@ module.exports = {
   PRESENTATION_SHARE_PRESENCE_FETCHED: 'Viewers fetched',
   PRESENTATION_SHARE_PRESENCE_LEFT: 'Left presentation preview',
   PRESENTATION_SHARE_RATE_LIMITED: 'Too many requests for this share link. Try again later.',
+  PRESENTATION_COMMENT_GUEST_NAME_REQUIRED: 'A display name is required to comment as a guest',
+  PRESENTATION_COMMENT_RESOLVE_FORBIDDEN:
+    'Only workspace members can resolve or reopen a comment thread',
+  PRESENTATION_COMMENT_PARENT_INVALID: 'Cannot reply to this comment',
+  PRESENTATION_COMMENT_DISABLED: 'Comments are disabled for this link',
+  PRESENTATION_COMMENT_LIMIT: 'This slide or thread has reached its comment limit',
+  PRESENTATION_COMMENT_ORPHANED: 'This comment thread is no longer attached to a slide',
 
   BRAND_KIT_CREATED: 'Brand kit created',
   BRAND_KIT_UPDATED: 'Brand kit updated',

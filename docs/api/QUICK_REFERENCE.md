@@ -104,15 +104,29 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
-| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable view-only share link (`share.url` always returned) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/comments` | Bearer + member | List slide comment threads (`slideId`, `resolved`, `orphaned`) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments` | Bearer + member | Create thread (`slideId`) or reply (`parentId`) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId` | Bearer + member | Update own comment |
+| DELETE | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId` | Bearer + member | Delete comment (author or OWNER/ADMIN) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/resolve` | Bearer + member | Resolve thread (root only) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/unresolve` | Bearer + member | Reopen thread |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/mentionable-users` | Bearer + member | Mention autocomplete |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable share link (new links `access: COMMENT`; `share.url` always returned) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Share link + copyable `share.url` |
-| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable or set `expiresAt` (includes `share.url`) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable, set `expiresAt`, set `access` (`VIEW\|COMMENT`) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` | Bearer + member | Rotate token; invalidates shared URLs |
 | GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
-| GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer display name + `canOpenInEditor` |
-| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → live viewer list |
+| GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer name, `canComment`, `canOpenInEditor` |
+| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → viewers + `commentsUpdatedAt` |
 | GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list |
 | DELETE | `/api/p/:token/presence` | Public (optional Bearer) | Leave preview (`viewerSessionId` query) |
+| GET | `/api/p/:token/comments` | Public (optional Bearer) | Comments on READY slides (empty when `access: VIEW`) |
+| POST | `/api/p/:token/comments` | Public (optional Bearer) | Guest/visitor comment or reply (needs `access: COMMENT`) |
+| PATCH | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Edit own comment (guests send `viewerSessionId`) |
+| DELETE | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Delete own comment |
+| POST | `/api/p/:token/comments/:commentId/resolve` | Public (members only) | Resolve thread; 403 for guests |
+| POST | `/api/p/:token/comments/:commentId/unresolve` | Public (members only) | Reopen thread; 403 for guests |
+| GET | `/api/p/:token/comments/mentionable-users` | Public (members only) | Mention autocomplete; 404 for guests |
 | GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE / VIDEO_PACK (`?type=`) |
 | GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one video template |
 | POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId` scene or pack) |

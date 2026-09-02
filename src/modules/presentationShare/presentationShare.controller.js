@@ -32,7 +32,7 @@ const getShare = asyncHandler(async (req, res) => {
 
 const updateShare = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
-  const { enabled, expiresAt } = req.body;
+  const { enabled, expiresAt, access } = req.body;
   const data = await shareService.updateShare({
     workspaceId,
     presentationId,
@@ -40,6 +40,7 @@ const updateShare = asyncHandler(async (req, res) => {
     ip: req.ip,
     enabled,
     expiresAt,
+    access,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_UPDATED);
 });

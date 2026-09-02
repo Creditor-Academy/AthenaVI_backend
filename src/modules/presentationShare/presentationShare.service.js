@@ -7,11 +7,21 @@ const { enrichSlidesForClient } = require('../presentation/elementContent.normal
 const workspaceDao = require('../workspace/workspace.dao');
 const shareDao = require('./presentationShare.dao');
 const presence = require('./presentationShare.presence');
+const { getCommentsUpdatedAt } = require('../presentationComment/presentationComment.activity');
 const { presignSlidesForPublic, buildContentVersion } = require('./presentationShare.presign');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 
 const TOKEN_BYTES = 32;
 const TOKEN_PREFIX_LENGTH = 8;
+
+const ACCESS_VIEW = 'VIEW';
+const ACCESS_COMMENT = 'COMMENT';
+
+/**
+ * New links allow comments. Links minted before the comment feature keep `VIEW` until the
+ * owner opts in, so nobody's existing view-only URL silently becomes writable.
+ */
+const DEFAULT_ACCESS = ACCESS_COMMENT;
 
 const META_TTL_SEC =
   Number(process.env.PPT_SHARE_META_CACHE_TTL_SEC) > 0
@@ -172,6 +182,7 @@ async function enableShare({ workspaceId, presentationId, userId, ip }) {
         token,
         tokenHash,
         tokenPrefix,
+        access: DEFAULT_ACCESS,
         createdBy: userId || null,
       });
     } catch (err) {
@@ -221,7 +232,15 @@ async function getShare({ workspaceId, presentationId }) {
   return { share: toOwnerShare(share) };
 }
 
-async function updateShare({ workspaceId, presentationId, userId, ip, enabled, expiresAt }) {
+async function updateShare({
+  workspaceId,
+  presentationId,
+  userId,
+  ip,
+  enabled,
+  expiresAt,
+  access,
+}) {
   const { deck } = await loadOwnerContext(workspaceId, presentationId);
   const existing = await shareDao.findShareInternalByProjectId(presentationId);
   if (!existing) {
@@ -229,34 +248,40 @@ async function updateShare({ workspaceId, presentationId, userId, ip, enabled, e
   }
 
   const data = {};
-  let action = null;
+  const actions = [];
 
   if (enabled === true && !existing.enabled) {
     assertNotGenerating(deck);
     data.enabled = true;
     data.revokedAt = null;
-    action = 'ENABLED';
+    actions.push('ENABLED');
   }
 
   if (enabled === false && existing.enabled) {
     data.enabled = false;
     data.revokedAt = new Date();
-    action = 'DISABLED';
+    actions.push('DISABLED');
   }
 
   if (expiresAt !== undefined) {
     data.expiresAt = expiresAt === null ? null : new Date(expiresAt);
   }
 
+  // Toggling comments is not a re-enable, so it stays allowed while the deck regenerates.
+  if (access !== undefined && access !== existing.access) {
+    data.access = access;
+    actions.push('ACCESS_CHANGED');
+  }
+
   const updated = Object.keys(data).length > 0
     ? await shareDao.updateShareById(existing.id, data)
     : existing;
 
-  if (action) {
+  for (const auditAction of actions) {
     await shareDao.createAudit({
       shareId: existing.id,
       actorUserId: userId || null,
-      action,
+      action: auditAction,
       ip: ip || null,
     });
   }
@@ -480,13 +505,19 @@ async function getPublicSession({ token, user }) {
     canOpenInEditor = Boolean(membership);
   }
 
+  const canComment = share.access === ACCESS_COMMENT;
+
   return {
     self: {
       displayName: identity.displayName,
       isAnonymous: identity.isAnonymous,
       ...(identity.userId ? { userId: identity.userId } : {}),
     },
-    permission: 'view',
+    // `comment` still means "cannot edit"; the deck payload keeps `view` so its ETag stays
+    // identical for every viewer.
+    permission: canComment ? 'comment' : 'view',
+    canComment,
+    canResolveComments: canComment && canOpenInEditor,
     canOpenInEditor,
     ...(canOpenInEditor
       ? { workspaceId: share.workspaceId, presentationId: share.projectId }
@@ -494,11 +525,35 @@ async function getPublicSession({ token, user }) {
   };
 }
 
+/**
+ * Token + capability resolution for the public comment routes. Lives here so the comment
+ * module never has to know how a share link is stored, and so the share service keeps its
+ * single 404-for-everything policy on unknown, disabled, and expired links.
+ *
+ * @returns {Promise<{ share: object, canComment: boolean, canOpenInEditor: boolean, role: string|null }>}
+ */
+async function resolveShareForComments({ token, user }) {
+  const { share } = await resolveShare(token);
+
+  let membership = null;
+  if (user?.id) {
+    membership = await workspaceDao.findWorkspaceMember(share.workspaceId, user.id);
+  }
+
+  return {
+    share,
+    canComment: share.access === ACCESS_COMMENT,
+    canOpenInEditor: Boolean(membership),
+    role: membership?.role || null,
+  };
+}
+
 async function buildPresencePayload({ share, user, identity }) {
   const resolved = identity || (await loadViewerIdentity(user));
-  const [{ viewerCount, viewers }, contentUpdatedAt] = await Promise.all([
+  const [{ viewerCount, viewers }, contentUpdatedAt, commentsUpdatedAt] = await Promise.all([
     presence.listViewers(share.id),
     getContentUpdatedAt(share.projectId),
+    getCommentsUpdatedAt(share.projectId),
   ]);
 
   return {
@@ -506,6 +561,8 @@ async function buildPresencePayload({ share, user, identity }) {
     viewerCount,
     viewers,
     contentUpdatedAt,
+    // Lets the viewer refetch comments off this same heartbeat instead of polling the list.
+    commentsUpdatedAt,
   };
 }
 
@@ -532,8 +589,11 @@ async function leavePresence({ token, user, viewerSessionId }) {
 }
 
 module.exports = {
+  ACCESS_VIEW,
+  ACCESS_COMMENT,
   hashToken,
   buildShareUrl,
+  resolveShareForComments,
   enableShare,
   getShare,
   updateShare,
