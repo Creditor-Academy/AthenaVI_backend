@@ -1,0 +1,7 @@
+$kind: http-request
+description: "Roots newest first with replies nested oldest first. Optional query: slideId, limit (1-100), cursor, resolved=true|false, orphaned=true (threads whose slide was deleted or regenerated away)."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments?slideId={{slideId}}"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 1000

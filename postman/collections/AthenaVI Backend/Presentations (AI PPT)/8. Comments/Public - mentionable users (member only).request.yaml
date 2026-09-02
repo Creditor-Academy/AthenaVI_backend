@@ -1,0 +1,7 @@
+$kind: http-request
+description: Members only. Returns 404 for guests and non-members so a share link cannot enumerate the workspace roster.
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments/mentionable-users"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 15000

@@ -729,6 +729,95 @@ async function notifyProjectComment({
   }
 }
 
+/**
+ * Comment fan-out for a PRESENTATION project. Separate from notifyProjectComment because a
+ * comment can come from a share-link guest (no user id) and because the deep link points at
+ * the presentation editor rather than the video project route.
+ *
+ * @param {object} params
+ * @param {object} params.comment        the created/updated PresentationComment row
+ * @param {object} params.project        presentation project (needs `createdBy`, `name`)
+ * @param {string} params.authorName     display name, already resolved for guests
+ * @param {string|null} params.authorUserId  null when a guest posted
+ * @param {string[]} params.newMentionIds    member ids to notify about a mention
+ * @param {string|null} params.parentAuthorId  root author, so replies reach the person replied to
+ */
+async function notifyPresentationComment({
+  comment,
+  project,
+  workspace,
+  authorName,
+  authorUserId,
+  newMentionIds,
+  parentAuthorId,
+  isCreate,
+}) {
+  const presentationName = project.name || 'your presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const notified = new Set([authorUserId].filter(Boolean));
+  const base = process.env.FRONTEND_URL || '';
+
+  const baseMetadata = {
+    workspaceId: comment.workspaceId,
+    projectId: comment.projectId,
+    presentationId: comment.projectId,
+    slideId: comment.slideId || null,
+    commentId: comment.id,
+    projectName: presentationName,
+    workspaceName,
+    authorId: authorUserId,
+    authorName,
+    // Set explicitly: the generic builder resolves projectId to the video editor route.
+    actionUrl: `${base}/workspaces/${comment.workspaceId}/presentations/${comment.projectId}`,
+  };
+
+  const preview =
+    comment.body.length > 120 ? `${comment.body.slice(0, 117)}...` : comment.body;
+
+  const mentionIds = (newMentionIds || []).filter((id) => !notified.has(id));
+  if (mentionIds.length) {
+    await notifyMany(mentionIds, {
+      type: 'PRESENTATION_COMMENT_MENTION',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `${authorName} mentioned you in ${presentationName}`,
+      message: preview,
+      metadata: { ...baseMetadata, audience: 'mention' },
+    });
+    mentionIds.forEach((id) => notified.add(id));
+  }
+
+  if (!isCreate) {
+    return;
+  }
+
+  // A reply should reach the person being replied to, not only the deck owner.
+  if (parentAuthorId && !notified.has(parentAuthorId)) {
+    await notifyUser({
+      userId: parentAuthorId,
+      type: 'PRESENTATION_COMMENT_ADDED',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `New reply on ${presentationName}`,
+      message: `${authorName} replied to your comment in ${workspaceName}.`,
+      metadata: { ...baseMetadata, audience: 'thread_author' },
+    });
+    notified.add(parentAuthorId);
+  }
+
+  if (project.createdBy && !notified.has(project.createdBy)) {
+    await notifyUser({
+      userId: project.createdBy,
+      type: 'PRESENTATION_COMMENT_ADDED',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `New comment on ${presentationName}`,
+      message: `${authorName} commented on your presentation in ${workspaceName}.`,
+      metadata: { ...baseMetadata, audience: 'project_owner' },
+    });
+  }
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -851,6 +940,7 @@ module.exports = {
   notifyStorageUpgradeRejected,
   notifyCreditsWorkspaceRevoke,
   notifyProjectComment,
+  notifyPresentationComment,
   listInbox,
   getUnreadCount,
   getNotification,

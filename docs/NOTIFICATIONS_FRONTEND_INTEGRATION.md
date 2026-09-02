@@ -116,7 +116,7 @@ async function saveNotificationToggle(
 | UI toggle | API field | Runtime effect |
 |-----------|-----------|----------------|
 | Push Notifications | `pushNotifications` | Master switch for all in-app inbox notifications |
-| Comments and Mentions | `commentsAndMentions` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION` (requires push on) |
+| Comments and Mentions | `commentsAndMentions` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION`, `PRESENTATION_COMMENT_ADDED`, `PRESENTATION_COMMENT_MENTION` (requires push on) |
 | Weekly Digest Email | `weeklyDigestEmail` | Weekly summary email (server job; opt-in only) |
 | Product Emails | `productEmails` | Superadmin product broadcast emails (opt-in only) |
 
@@ -149,7 +149,7 @@ GET /api/user/inbox?unreadOnly=true
 - `PATCH /api/user/inbox/read-all`
 - `DELETE /api/user/inbox/:notificationId`
 
-Open deep links from `metadata.actionUrl` (project comments link to the editor project URL).
+Open deep links from `metadata.actionUrl` (project comments link to the editor project URL; presentation comments link to the presentation editor and carry `slideId` + `commentId` in `metadata` so you can scroll to the thread).
 
 ---
 
@@ -175,6 +175,10 @@ Base: `/api/workspaces/:workspaceId/projects/:projectId/comments`
 
 - Project creator gets `PROJECT_COMMENT_ADDED` (category `collaboration`)
 - Mentioned users get `PROJECT_COMMENT_MENTION`
+
+### Presentations (separate surface)
+
+AI PPT decks have their own slide-threaded comments at `/api/workspaces/:workspaceId/presentations/:presentationId/comments`, plus a guest-facing surface on the share link. They emit `PRESENTATION_COMMENT_ADDED` / `PRESENTATION_COMMENT_MENTION` under the same `commentsAndMentions` toggle. A reply also notifies the thread's original author, and a comment left by a share-link guest notifies the deck owner with the guest's display name. Contracts: [`PRESENTATION_COMMENTS_API.md`](api/PRESENTATION_COMMENTS_API.md).
 
 ---
 

@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Needs share access COMMENT (403 otherwise). Guests must send viewerSessionId + displayName; reuse the same viewerSessionId as the presence heartbeat so you can edit/delete your own comment later. Add Authorization to post under your account instead (displayName is then ignored). Guest mentions are dropped."
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Slide 3 numbers look off to me.",
+      "slideId": "{{slideId}}",
+      "viewerSessionId": "{{viewerSessionId}}",
+      "displayName": "Riya (client)"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j.data && j.data.comment && j.data.comment.id;
+        if (id) pm.collectionVariables.set("presentationCommentId", id);
+      }
+    language: text/javascript
+order: 10000

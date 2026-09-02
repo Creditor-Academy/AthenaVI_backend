@@ -1,0 +1,5 @@
+$kind: http-request
+description: No auth needed. Returns only comments on current READY slides. A view-only link (access VIEW) returns an empty list, not an error. Unknown/disabled/expired token gives 404.
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments?slideId={{slideId}}"
+method: GET
+order: 9000

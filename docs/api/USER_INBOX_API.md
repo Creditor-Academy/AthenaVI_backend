@@ -16,7 +16,7 @@ Workspace invitations are delivered by **email** and, when the invitee already h
 | `credits` | `CREDITS_PLATFORM_GRANT`, `CREDITS_WORKSPACE_REVOKE`, `CREDITS_LOW_PERSONAL`, `CREDITS_ALLOCATED`, … |
 | `storage` | `STORAGE_THRESHOLD_WARNING`, `STORAGE_UPGRADE_REJECTED`, `STORAGE_UPLOAD_BLOCKED`, … |
 | `workspace` | `WORKSPACE_INVITATION`, `WORKSPACE_MEMBER_JOINED`, … |
-| `collaboration` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION` |
+| `collaboration` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION`, `PRESENTATION_COMMENT_ADDED`, `PRESENTATION_COMMENT_MENTION` |
 | `platform` | `PLATFORM_HEYGEN_WALLET_LOW`, `PLATFORM_STORAGE_UPGRADE_REQUEST` (superadmin only) |
 
 **TEAM workspace video exports:** when a member exports a final video, the **exporter**, all **OWNER**s, and all **ADMIN**s receive a notification (deduplicated per user).

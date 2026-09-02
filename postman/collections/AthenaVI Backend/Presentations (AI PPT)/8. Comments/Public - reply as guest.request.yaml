@@ -1,0 +1,16 @@
+$kind: http-request
+description: Reply to a root thread on a READY slide. Same guest identity rules as posting.
+url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Same question on the next slide.",
+      "parentId": "{{presentationCommentId}}",
+      "viewerSessionId": "{{viewerSessionId}}",
+      "displayName": "Riya (client)"
+    }
+order: 11000
