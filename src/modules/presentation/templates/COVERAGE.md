@@ -2,7 +2,7 @@
 
 Maps each `content_type` to seed `layout_id` values from `seed-layouts.json`.
 
-**Catalog status:** 129 layouts seeded via `npm run seed:presentation-templates`.
+**Catalog status:** 192 layouts seeded via `npm run seed:presentation-templates`.
 
 Source of truth for catalog modules: [`deckLayoutCatalogs.js`](../../../AthenaVI/src/utils/deckLayoutCatalogs.js) (merged into [`deckLayoutRegistry.js`](../../../AthenaVI/src/utils/deckLayoutRegistry.js) and `scripts/export-seed-layouts.mjs`).
 
@@ -38,18 +38,18 @@ Source of truth: [`layoutCategories.js`](../layoutCategories.js).
 | `team` | 12 | team_four_v1, team_featured_lead_v1, … |
 | `device_frames` | 8 | device_phone_vertical_split_v1, … |
 | `stat` | 7 | metric_single_v1, metric_three_v1, … |
-| `timeline` | 5 | timeline_horizontal_v1, timeline_roadmap_v1, … |
+| `timeline` | 18 | timeline_horizontal_v1, timeline_roadmap_v1, timeline_horizontal_cards_v1, … |
 | `pricing` | 13 | pricing_three_plans_v1, pricing_comparison_cards_v1, … |
 | `comparison` | 4 | comparison_side_by_side_v1, comparison_table_v1, … |
 | `title` | 6 | title_centered_v1, title_minimal_v1, … |
 | `bullet_list` | 8 | intro_four_para_v1, bullet_list_cards_v1, … |
-| `agenda` | 6 | agenda_three_columns_v1, agenda_numbered_v1, … |
+| `agenda` | 19 | agenda_three_columns_v1, agenda_numbered_v1, … |
 | `quote` | 5 | statement_large_v1, quote_portrait_v1, … |
 | `section_divider` | 4 | section_divider_centered_v1, section_divider_band_v1, … |
 | `closing` | 4 | centered_text_cta_v1, closing_thank_you_v1, … |
 | `diagram` | 7 | diagram_swot_v1, diagram_funnel_v1, … |
 
-**Totals:** 129 layouts.
+**Totals:** 192 layouts.
 
 ## Seed workflow
 

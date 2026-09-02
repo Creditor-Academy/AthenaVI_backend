@@ -1096,7 +1096,7 @@
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "statement_left",
         "slots": {
           "STATEMENT": {
             "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
@@ -1189,7 +1189,7 @@
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "statement_large",
         "slots": {
           "STATEMENT": {
             "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",
@@ -18607,37 +18607,37 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 1-5, rows 3-5",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 28,
+            "fontSize": 42,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.15
+            "lineHeight": 1.12
           },
           "max_lines": 2
         },
         {
           "id": "BODY",
-          "region": "cols 1-6, rows 4-9",
+          "region": "cols 1-5, rows 5-8",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 18,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4
         },
         {
           "id": "PHONE_LANDSCAPE_FRAME",
-          "region": "cols 7-12, rows 4-8",
+          "region": "cols 6-12, rows 3-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -18650,7 +18650,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 7-12, rows 4-8",
+          "region": "cols 6-12, rows 3-8",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -18694,37 +18694,39 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 2-6, rows 3-5",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
+            "fontSize": 36,
+            "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.15
+            "lineHeight": 1.15,
+            "letterSpacing": -0.02
           },
-          "max_lines": 2
+          "max_lines": 2,
+          "clipToSlot": false
         },
         {
           "id": "BODY",
-          "region": "cols 1-6, rows 4-9",
+          "region": "cols 2-6, rows 6-8",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 16,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4
         },
         {
           "id": "PHONE_FRAME",
-          "region": "cols 9-12, rows 2-9",
+          "region": "cols 8-12, rows 2-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -18737,7 +18739,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 9-12, rows 2-9",
+          "region": "cols 8-12, rows 2-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -18780,8 +18782,24 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-3",
+          "role": "heading",
+          "placeholder_text": "Highlights that matter",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1,
+          "clipToSlot": false
+        },
+        {
           "id": "PHONE_FRAME",
-          "region": "cols 5-8, rows 3-9",
+          "region": "cols 5-8, rows 4-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -18794,7 +18812,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 5-8, rows 3-9",
+          "region": "cols 5-8, rows 4-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -18803,92 +18821,266 @@
           "shadow": "0 2px 10px rgba(15, 23, 42, 0.06)"
         },
         {
-          "id": "CALLOUT_L_HEADING",
+          "id": "FEATURE_L1_HEADING",
           "region": "cols 1-4, rows 3-4",
           "role": "heading",
-          "placeholder_text": "A highlight feature",
+          "placeholder_text": "Title 01",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 800,
+            "fontSize": 22,
+            "fontWeight": 700,
             "colorRole": "text",
-            "align": "left",
+            "align": "right",
             "lineHeight": 1.15
           },
-          "max_lines": 2
+          "max_lines": 1
         },
         {
-          "id": "CALLOUT_L_BODY",
-          "region": "cols 1-4, rows 4-6",
+          "id": "FEATURE_L1_BODY",
+          "region": "cols 1-4, rows 4-5",
           "role": "body",
-          "placeholder_text": "Say something about it here.",
+          "placeholder_text": "Description 01",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 16,
             "fontWeight": 400,
             "colorRole": "muted",
-            "align": "left",
+            "align": "right",
             "lineHeight": 1.45
           },
-          "max_lines": 2
+          "max_lines": 3
         },
         {
-          "id": "CALLOUT_R_HEADING",
-          "region": "cols 9-12, rows 6-7",
+          "id": "FEATURE_L2_HEADING",
+          "region": "cols 1-4, rows 5-6",
           "role": "heading",
-          "placeholder_text": "Another highlight",
+          "placeholder_text": "Title 02",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 800,
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "right",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "FEATURE_L2_BODY",
+          "region": "cols 1-4, rows 6-7",
+          "role": "body",
+          "placeholder_text": "Description 02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "right",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "FEATURE_L3_HEADING",
+          "region": "cols 1-4, rows 8-9",
+          "role": "heading",
+          "placeholder_text": "Title 03",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "right",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "FEATURE_L3_BODY",
+          "region": "cols 1-4, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Description 03",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "right",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "FEATURE_R1_HEADING",
+          "region": "cols 9-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Title 04",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
             "lineHeight": 1.15
           },
-          "max_lines": 2
+          "max_lines": 1
         },
         {
-          "id": "CALLOUT_R_BODY",
-          "region": "cols 9-12, rows 7-9",
+          "id": "FEATURE_R1_BODY",
+          "region": "cols 9-12, rows 4-5",
           "role": "body",
-          "placeholder_text": "Say something about it here.",
+          "placeholder_text": "Description 04",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 16,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 2
+          "max_lines": 3
+        },
+        {
+          "id": "FEATURE_R2_HEADING",
+          "region": "cols 9-12, rows 5-6",
+          "role": "heading",
+          "placeholder_text": "Title 05",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "FEATURE_R2_BODY",
+          "region": "cols 9-12, rows 6-7",
+          "role": "body",
+          "placeholder_text": "Description 05",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "FEATURE_R3_HEADING",
+          "region": "cols 9-12, rows 8-9",
+          "role": "heading",
+          "placeholder_text": "Title 06",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "FEATURE_R3_BODY",
+          "region": "cols 9-12, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Description 06",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
         }
       ],
       "preview": {
         "mode": "device_phone_highlights",
         "slots": {
-          "DEVICE_IMAGE": {
-            "variant": "image"
-          },
-          "CALLOUT_L_HEADING": {
-            "text": "A highlight feature",
+          "HEADING": {
+            "text": "Highlights that matter",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "CALLOUT_L_BODY": {
-            "text": "Say something about it here.",
+          "DEVICE_IMAGE": {
+            "variant": "image"
+          },
+          "FEATURE_L1_HEADING": {
+            "text": "Title 01",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "FEATURE_L1_BODY": {
+            "text": "Description 01",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
-          "CALLOUT_R_HEADING": {
-            "text": "Another highlight",
+          "FEATURE_L2_HEADING": {
+            "text": "Title 02",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "CALLOUT_R_BODY": {
-            "text": "Say something about it here.",
+          "FEATURE_L2_BODY": {
+            "text": "Description 02",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "FEATURE_L3_HEADING": {
+            "text": "Title 03",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "FEATURE_L3_BODY": {
+            "text": "Description 03",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "FEATURE_R1_HEADING": {
+            "text": "Title 04",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "FEATURE_R1_BODY": {
+            "text": "Description 04",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "FEATURE_R2_HEADING": {
+            "text": "Title 05",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "FEATURE_R2_BODY": {
+            "text": "Description 05",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "FEATURE_R3_HEADING": {
+            "text": "Title 06",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "FEATURE_R3_BODY": {
+            "text": "Description 06",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -18915,14 +19107,14 @@
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 32,
+            "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
-            "lineHeight": 1.25
+            "lineHeight": 1.2
           },
           "max_lines": 1,
-          "clipToSlot": true
+          "clipToSlot": false
         },
         {
           "id": "HEADING_L",
@@ -19153,10 +19345,10 @@
           "layer": 10,
           "typography": {
             "fontSize": 18,
-            "fontWeight": 500,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.3
+            "lineHeight": 1.4
           },
           "max_lines": 1,
           "clipToSlot": false
@@ -19296,10 +19488,10 @@
             "bold": false,
             "uppercase": false
           },
-          "LAPTOP_IMAGE": {
+          "TABLET_IMAGE": {
             "variant": "image"
           },
-          "TABLET_IMAGE": {
+          "LAPTOP_IMAGE": {
             "variant": "image"
           },
           "PHONE_IMAGE": {
@@ -19892,6 +20084,7 @@
       ],
       "preview": {
         "mode": "timeline_horizontal",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "Timeline",
@@ -20152,6 +20345,7 @@
       ],
       "preview": {
         "mode": "timeline_horizontal",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -20464,6 +20658,7 @@
       ],
       "preview": {
         "mode": "timeline_milestones_image",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "Key milestones",
@@ -20710,6 +20905,7 @@
       ],
       "preview": {
         "mode": "timeline_vertical",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "Project phases",
@@ -20926,6 +21122,7 @@
       ],
       "preview": {
         "mode": "timeline_roadmap",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "Product roadmap",
@@ -21130,6 +21327,7 @@
       ],
       "preview": {
         "mode": "timeline_process_steps",
+        "timelineVariant": "default",
         "slots": {
           "HEADING": {
             "text": "How it works",
@@ -21658,6 +21856,2790 @@
     }
   },
   {
+    "name": "Timeline Horizontal Nodes",
+    "contentType": "timeline",
+    "variant": "timeline_horizontal_nodes_v1",
+    "schema": {
+      "layout_id": "timeline_horizontal_nodes_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Timeline",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1",
+          "region": "cols 2-3, rows 4-5",
+          "role": "body",
+          "placeholder_text": "1. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_2",
+          "region": "cols 4-5, rows 4-5",
+          "role": "body",
+          "placeholder_text": "2. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_3",
+          "region": "cols 6-7, rows 4-5",
+          "role": "body",
+          "placeholder_text": "3. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4",
+          "region": "cols 8-9, rows 4-5",
+          "role": "body",
+          "placeholder_text": "4. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "timeline_horizontal",
+        "timelineVariant": "nodes",
+        "slots": {
+          "HEADING": {
+            "text": "Timeline",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1": {
+            "text": "1. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2": {
+            "text": "2. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3": {
+            "text": "3. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4": {
+            "text": "4. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Horizontal Cards",
+    "contentType": "timeline",
+    "variant": "timeline_horizontal_cards_v1",
+    "schema": {
+      "layout_id": "timeline_horizontal_cards_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Timeline",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1",
+          "region": "cols 2-3, rows 4-5",
+          "role": "body",
+          "placeholder_text": "1. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_2",
+          "region": "cols 4-5, rows 4-5",
+          "role": "body",
+          "placeholder_text": "2. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_3",
+          "region": "cols 6-7, rows 4-5",
+          "role": "body",
+          "placeholder_text": "3. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4",
+          "region": "cols 8-9, rows 4-5",
+          "role": "body",
+          "placeholder_text": "4. Milestone label",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        }
+      ],
+      "preview": {
+        "mode": "timeline_horizontal",
+        "timelineVariant": "cards",
+        "slots": {
+          "HEADING": {
+            "text": "Timeline",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1": {
+            "text": "1. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2": {
+            "text": "2. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3": {
+            "text": "3. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4": {
+            "text": "4. Milestone label",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Milestones Image Right",
+    "contentType": "timeline",
+    "variant": "timeline_milestones_image_right_v1",
+    "schema": {
+      "layout_id": "timeline_milestones_image_right_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key milestones",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "IMAGE_1",
+          "region": "cols 2-3, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_1_CARD_BG",
+          "region": "cols 2-3, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_1_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-3, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-3, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_2",
+          "region": "cols 4-5, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_2_CARD_BG",
+          "region": "cols 4-5, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_2_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-5, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-5, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_3",
+          "region": "cols 6-7, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_3_CARD_BG",
+          "region": "cols 6-7, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_3_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 6-7, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 6-7, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_4",
+          "region": "cols 8-9, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_4_CARD_BG",
+          "region": "cols 8-9, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_4_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 8-9, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 8-9, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_milestones_image",
+        "timelineVariant": "image_right",
+        "slots": {
+          "HEADING": {
+            "text": "Key milestones",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "IMAGE_1": {
+            "variant": "image"
+          },
+          "milestone_1_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_2": {
+            "variant": "image"
+          },
+          "milestone_2_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_3": {
+            "variant": "image"
+          },
+          "milestone_3_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_4": {
+            "variant": "image"
+          },
+          "milestone_4_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Milestones Image Top",
+    "contentType": "timeline",
+    "variant": "timeline_milestones_image_top_v1",
+    "schema": {
+      "layout_id": "timeline_milestones_image_top_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key milestones",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "IMAGE_1",
+          "region": "cols 2-3, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_1_CARD_BG",
+          "region": "cols 2-3, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_1_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-3, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-3, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_2",
+          "region": "cols 4-5, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_2_CARD_BG",
+          "region": "cols 4-5, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_2_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-5, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-5, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_3",
+          "region": "cols 6-7, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_3_CARD_BG",
+          "region": "cols 6-7, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_3_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 6-7, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 6-7, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_4",
+          "region": "cols 8-9, rows 3-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
+          "id": "MILESTONE_4_CARD_BG",
+          "region": "cols 8-9, rows 5-8",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_4_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 8-9, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 8-9, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_milestones_image",
+        "timelineVariant": "image_top",
+        "slots": {
+          "HEADING": {
+            "text": "Key milestones",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "IMAGE_1": {
+            "variant": "image"
+          },
+          "milestone_1_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_2": {
+            "variant": "image"
+          },
+          "milestone_2_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_3": {
+            "variant": "image"
+          },
+          "milestone_3_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_4": {
+            "variant": "image"
+          },
+          "milestone_4_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Milestones Cards",
+    "contentType": "timeline",
+    "variant": "timeline_milestones_cards_v1",
+    "schema": {
+      "layout_id": "timeline_milestones_cards_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key milestones",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "MILESTONE_1_CARD_BG",
+          "region": "cols 2-3, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_1_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_2_CARD_BG",
+          "region": "cols 4-5, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_2_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-5, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-5, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_3_CARD_BG",
+          "region": "cols 6-7, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_3_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 6-7, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 6-7, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_4_CARD_BG",
+          "region": "cols 8-9, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_4_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 8-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 8-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_horizontal",
+        "timelineVariant": "cards",
+        "slots": {
+          "HEADING": {
+            "text": "Key milestones",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Milestones Path",
+    "contentType": "timeline",
+    "variant": "timeline_milestones_path_v1",
+    "schema": {
+      "layout_id": "timeline_milestones_path_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Key milestones",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "MILESTONE_1_CARD_BG",
+          "region": "cols 2-3, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_1_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_2_CARD_BG",
+          "region": "cols 4-5, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_2_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-5, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-5, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_3_CARD_BG",
+          "region": "cols 6-7, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_3_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 6-7, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 6-7, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "MILESTONE_4_CARD_BG",
+          "region": "cols 8-9, rows 3-6",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "cardBehind",
+            "suggestedBehind": "card",
+            "borderRadius": 10,
+            "pairsWithSlotId": "milestone_4_label"
+          },
+          "shape": {
+            "type": "rect",
+            "fillColorRole": "cardBg",
+            "borderRadius": 10
+          }
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 8-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "2020",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 8-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Key event summary",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_horizontal",
+        "timelineVariant": "path",
+        "slots": {
+          "HEADING": {
+            "text": "Key milestones",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2020",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Key event summary",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Roadmap Horizontal",
+    "contentType": "timeline",
+    "variant": "timeline_roadmap_horizontal_v1",
+    "schema": {
+      "layout_id": "timeline_roadmap_horizontal_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Product roadmap",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 1-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Foundation release",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-6, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Growth features",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 7-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Enterprise push",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 10-12, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Scale and optimize",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_roadmap",
+        "timelineVariant": "horizontal",
+        "slots": {
+          "HEADING": {
+            "text": "Product roadmap",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Foundation release",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Q2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Growth features",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Enterprise push",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "Q4",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Scale and optimize",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Roadmap Lanes",
+    "contentType": "timeline",
+    "variant": "timeline_roadmap_lanes_v1",
+    "schema": {
+      "layout_id": "timeline_roadmap_lanes_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Product roadmap",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 1-3, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Foundation release",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 4-6, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Growth features",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 7-9, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Enterprise push",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 10-12, rows 3-4",
+          "role": "subheading",
+          "placeholder_text": "Q4",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Scale and optimize",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_roadmap",
+        "timelineVariant": "lanes",
+        "slots": {
+          "HEADING": {
+            "text": "Product roadmap",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Foundation release",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Q2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Growth features",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Enterprise push",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "Q4",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Scale and optimize",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Process Horizontal",
+    "contentType": "timeline",
+    "variant": "timeline_process_horizontal_v1",
+    "schema": {
+      "layout_id": "timeline_process_horizontal_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "How it works",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "step_1_title",
+          "region": "cols 1-3, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "1. Discover",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_1_body",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Understand the problem",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_2_title",
+          "region": "cols 4-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "2. Design",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_2_body",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Shape the solution",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_3_title",
+          "region": "cols 7-9, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "3. Build",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_3_body",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Ship the MVP",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_4_title",
+          "region": "cols 10-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "4. Launch",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_4_body",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Go to market",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_process_steps",
+        "timelineVariant": "horizontal",
+        "slots": {
+          "HEADING": {
+            "text": "How it works",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_title": {
+            "text": "1. Discover",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_body": {
+            "text": "Understand the problem",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_2_title": {
+            "text": "2. Design",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_2_body": {
+            "text": "Shape the solution",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_3_title": {
+            "text": "3. Build",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_3_body": {
+            "text": "Ship the MVP",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_4_title": {
+            "text": "4. Launch",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_4_body": {
+            "text": "Go to market",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Process Vertical",
+    "contentType": "timeline",
+    "variant": "timeline_process_vertical_v1",
+    "schema": {
+      "layout_id": "timeline_process_vertical_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "How it works",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "step_1_title",
+          "region": "cols 1-3, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "1. Discover",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_1_body",
+          "region": "cols 1-3, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Understand the problem",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_2_title",
+          "region": "cols 4-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "2. Design",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_2_body",
+          "region": "cols 4-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Shape the solution",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_3_title",
+          "region": "cols 7-9, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "3. Build",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_3_body",
+          "region": "cols 7-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Ship the MVP",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "step_4_title",
+          "region": "cols 10-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "4. Launch",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "step_4_body",
+          "region": "cols 10-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Go to market",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_process_steps",
+        "timelineVariant": "vertical",
+        "slots": {
+          "HEADING": {
+            "text": "How it works",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_title": {
+            "text": "1. Discover",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_1_body": {
+            "text": "Understand the problem",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_2_title": {
+            "text": "2. Design",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_2_body": {
+            "text": "Shape the solution",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_3_title": {
+            "text": "3. Build",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_3_body": {
+            "text": "Ship the MVP",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "step_4_title": {
+            "text": "4. Launch",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "step_4_body": {
+            "text": "Go to market",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Vertical Nodes",
+    "contentType": "timeline",
+    "variant": "timeline_vertical_nodes_v1",
+    "schema": {
+      "layout_id": "timeline_vertical_nodes_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Project phases",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-4, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "Phase 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-4, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Discovery and planning",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 2-4, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "Phase 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 2-4, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Build and iterate",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 2-4, rows 8-9",
+          "role": "subheading",
+          "placeholder_text": "Phase 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 2-4, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Launch and scale",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 6-8, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "2024 Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 6-8, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_5_label",
+          "region": "cols 6-8, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2024 Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_5_detail",
+          "region": "cols 6-8, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_vertical",
+        "timelineVariant": "nodes",
+        "slots": {
+          "HEADING": {
+            "text": "Project phases",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Phase 1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Discovery and planning",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Phase 2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Build and iterate",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Phase 3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Launch and scale",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2024 Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_label": {
+            "text": "2024 Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Timeline Vertical Cards",
+    "contentType": "timeline",
+    "variant": "timeline_vertical_cards_v1",
+    "schema": {
+      "layout_id": "timeline_vertical_cards_v1",
+      "content_type": "timeline",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 2-11, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Project phases",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_1_label",
+          "region": "cols 2-4, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "Phase 1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "milestone_1_detail",
+          "region": "cols 2-4, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Discovery and planning",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_2_label",
+          "region": "cols 2-4, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "Phase 2",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_2_detail",
+          "region": "cols 2-4, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Build and iterate",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_3_label",
+          "region": "cols 2-4, rows 8-9",
+          "role": "subheading",
+          "placeholder_text": "Phase 3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          }
+        },
+        {
+          "id": "milestone_3_detail",
+          "region": "cols 2-4, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Launch and scale",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "milestone_4_label",
+          "region": "cols 6-8, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "2024 Q1",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_4_detail",
+          "region": "cols 6-8, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "milestone_5_label",
+          "region": "cols 6-8, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "2024 Q3",
+          "layer": 10,
+          "typography": {
+            "fontSize": 13,
+            "fontWeight": 700,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          }
+        },
+        {
+          "id": "milestone_5_detail",
+          "region": "cols 6-8, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Milestone detail",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        }
+      ],
+      "preview": {
+        "mode": "timeline_vertical",
+        "timelineVariant": "cards",
+        "slots": {
+          "HEADING": {
+            "text": "Project phases",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "milestone_1_label": {
+            "text": "Phase 1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_1_detail": {
+            "text": "Discovery and planning",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_label": {
+            "text": "Phase 2",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_2_detail": {
+            "text": "Build and iterate",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_label": {
+            "text": "Phase 3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_3_detail": {
+            "text": "Launch and scale",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_label": {
+            "text": "2024 Q1",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_4_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_label": {
+            "text": "2024 Q3",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "milestone_5_detail": {
+            "text": "Milestone detail",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "Quote Portrait",
     "contentType": "quote",
     "variant": "quote_portrait_v1",
@@ -21723,7 +24705,7 @@
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "quote_portrait",
         "slots": {
           "QUOTE": {
             "text": "Customer quote goes here — keep it under 25 words.",
@@ -21816,7 +24798,7 @@
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "quote_testimonial",
         "slots": {
           "QUOTE": {
             "text": "Testimonial quote in a card-friendly length.",
@@ -21917,7 +24899,7 @@
         }
       ],
       "preview": {
-        "mode": "quote_attribution",
+        "mode": "quote_attribution_split",
         "slots": {
           "QUOTE": {
             "text": "A very nice quote from a very nice client. Ask your client to share some thoughts about this project.",

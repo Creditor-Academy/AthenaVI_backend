@@ -106,6 +106,7 @@ const {
   timelineSpineSegmentInlineSvg,
   timelineChevronInlineSvg,
   processPhaseCircleInlineSvg,
+  resolveTimelineMeta,
 } = require('./timelineProcessSvg');
 
 function parseRegion(region) {
@@ -8177,8 +8178,10 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   const accent = paletteColor(palette, 'accent', paletteColor(palette, 'primary', '#6366F1'));
   const muted = paletteColor(palette, 'muted', '#94A3B8');
   const textColor = paletteColor(palette, 'text', '#0F172A');
+  const cardFill = paletteColor(palette, 'cardBg', '#F1F5F9');
   const canvasW = canvas.width || doc.canvas?.width || 1920;
   const canvasH = canvas.height || doc.canvas?.height || 1080;
+  const { family, variant } = resolveTimelineMeta(layoutSchema);
 
   const imageEls = elements.filter(
     (el) => el.type === 'image' && /^IMAGE_\d+$/i.test(String(el.slotId || ''))
@@ -8186,7 +8189,11 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   const labelEls = findProcessAnchorElements(elements);
   if (labelEls.length < 2) return doc;
 
-  const isVertical = /timeline_vertical/.test(layoutId);
+  const isVertical = /timeline_vertical/.test(layoutId)
+    || (family === 'process' && variant === 'vertical');
+  const useChevrons = !['path', 'lanes', 'image_right', 'image_top'].includes(variant);
+  const useCardChrome = variant === 'cards'
+    || (family === 'milestones' && variant === 'default');
   const NODE = 48;
   const NUM_H = 22;
 
@@ -8202,9 +8209,12 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   });
 
   let axisY;
-  if (/timeline_milestones_image/.test(layoutId) && imageEls.length) {
+  if ((/timeline_milestones_image/.test(layoutId) || family === 'milestones_image') && imageEls.length) {
     axisY =
       Math.max(...imageEls.map((el) => (el.placement?.y ?? 0) + (el.placement?.height ?? 0))) + 28;
+  } else if (variant === 'image_top') {
+    axisY = Math.min(...centers.map((c) => c.labelTop)) - NODE - NUM_H - 12;
+    axisY = Math.max(120, axisY);
   } else if (isVertical) {
     axisY = null;
   } else {
@@ -8215,6 +8225,36 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
 
   // Avoid duplicate nodes if STEP_*_CIRCLE already present
   const hasStepCircles = elements.some((el) => /^STEP_\d+_CIRCLE$/i.test(String(el.slotId || '')));
+
+  if (family === 'roadmap' && variant === 'lanes') {
+    const laneCount = 3;
+    const laneH = Math.round((canvasH * 0.42) / laneCount);
+    const laneY0 = Math.round(canvasH * 0.22);
+    for (let lane = 0; lane < laneCount; lane += 1) {
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'shape',
+        layer: 0,
+        placement: {
+          x: 64,
+          y: laneY0 + lane * (laneH + 8),
+          width: canvasW - 128,
+          height: laneH,
+          rotation: 0,
+          opacity: 1,
+        },
+        content: {
+          shape: 'rect',
+          fill: { type: 'solid', color: cardFill, colorRole: 'cardBg' },
+          borderRadius: 12,
+          layoutSurface: true,
+        },
+        role: 'decoration',
+        slotId: `TIMELINE_LANE_${lane + 1}`,
+      });
+    }
+    return { ...doc, elements };
+  }
 
   if (isVertical) {
     const spineX = Math.min(...centers.map((c) => c.x)) - 36;
@@ -8244,6 +8284,29 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
 
     centers.forEach((c) => {
       const cy = c.labelTop + 10;
+      if (useCardChrome || (family === 'vertical' && variant === 'cards')) {
+        elements.unshift({
+          id: newElementId('shp'),
+          type: 'shape',
+          layer: 1,
+          placement: {
+            x: Math.round(spineX + 20),
+            y: Math.round(cy - 28),
+            width: Math.round(canvasW * 0.28),
+            height: 56,
+            rotation: 0,
+            opacity: 1,
+          },
+          content: {
+            shape: 'rect',
+            fill: { type: 'solid', color: cardFill, colorRole: 'cardBg' },
+            borderRadius: 10,
+            layoutSurface: true,
+          },
+          role: 'decoration',
+          slotId: `TIMELINE_CARD_${c.index}`,
+        });
+      }
       elements.unshift({
         id: newElementId('shp'),
         type: 'graphic',
@@ -8291,6 +8354,30 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   // Horizontal flowchart: thin segments + chevrons between nodes
   if (!hasStepCircles) {
     centers.forEach((c) => {
+      if (useCardChrome) {
+        const cardW = Math.round((canvasW - 128) / Math.max(centers.length, 1) * 0.82);
+        elements.unshift({
+          id: newElementId('shp'),
+          type: 'shape',
+          layer: 1,
+          placement: {
+            x: Math.round(c.x - cardW / 2),
+            y: Math.round(axisY + NODE / 2 + 8),
+            width: cardW,
+            height: 88,
+            rotation: 0,
+            opacity: 1,
+          },
+          content: {
+            shape: 'rect',
+            fill: { type: 'solid', color: cardFill, colorRole: 'cardBg' },
+            borderRadius: 10,
+            layoutSurface: true,
+          },
+          role: 'decoration',
+          slotId: `TIMELINE_CARD_${c.index}`,
+        });
+      }
       elements.unshift({
         id: newElementId('shp'),
         type: 'graphic',
@@ -8353,22 +8440,26 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
         })()
       : axisY;
 
-    elements.unshift({
-      id: newElementId('shp'),
-      type: 'graphic',
-      layer: 1,
-      placement: {
-        x: Math.round(x1),
-        y: Math.round(lineY - 1.5),
-        width: Math.round(segW),
-        height: 3,
-        rotation: 0,
-        opacity: 0.95,
-      },
-      content: timelineGraphicContent(timelineSpineSegmentInlineSvg(), { type: 'solid', color: muted, colorRole: 'muted' }, 'Timeline segment'),
-      role: 'decoration',
-      slotId: `TIMELINE_SEG_${i + 1}`,
-    });
+    if (variant !== 'path') {
+      elements.unshift({
+        id: newElementId('shp'),
+        type: 'graphic',
+        layer: 1,
+        placement: {
+          x: Math.round(x1),
+          y: Math.round(lineY - 1.5),
+          width: Math.round(segW),
+          height: 3,
+          rotation: 0,
+          opacity: 0.95,
+        },
+        content: timelineGraphicContent(timelineSpineSegmentInlineSvg(), { type: 'solid', color: muted, colorRole: 'muted' }, 'Timeline segment'),
+        role: 'decoration',
+        slotId: `TIMELINE_SEG_${i + 1}`,
+      });
+    }
+
+    if (!useChevrons) continue;
 
     const midX = (a.x + b.x) / 2;
     const chevronSize = 18;

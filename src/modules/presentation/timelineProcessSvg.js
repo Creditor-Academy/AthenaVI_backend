@@ -190,6 +190,50 @@ function milestonesImageTimelineInlineSvg(count = 3, { accent = '#6366f1', image
   return svgWrap(viewW, viewH, parts.join(''))
 }
 
+const TIMELINE_LAYOUT_META = {
+  timeline_horizontal_v1: { family: 'horizontal', variant: 'default' },
+  timeline_horizontal_nodes_v1: { family: 'horizontal', variant: 'nodes' },
+  timeline_horizontal_cards_v1: { family: 'horizontal', variant: 'cards' },
+  timeline_milestones_v1: { family: 'milestones', variant: 'default' },
+  timeline_milestones_cards_v1: { family: 'milestones', variant: 'cards' },
+  timeline_milestones_path_v1: { family: 'milestones', variant: 'path' },
+  timeline_milestones_image_v1: { family: 'milestones_image', variant: 'default' },
+  timeline_milestones_image_right_v1: { family: 'milestones_image', variant: 'image_right' },
+  timeline_milestones_image_top_v1: { family: 'milestones_image', variant: 'image_top' },
+  timeline_roadmap_v1: { family: 'roadmap', variant: 'default' },
+  timeline_roadmap_horizontal_v1: { family: 'roadmap', variant: 'horizontal' },
+  timeline_roadmap_lanes_v1: { family: 'roadmap', variant: 'lanes' },
+  timeline_process_steps_v1: { family: 'process', variant: 'default' },
+  timeline_process_horizontal_v1: { family: 'process', variant: 'horizontal' },
+  timeline_process_vertical_v1: { family: 'process', variant: 'vertical' },
+  timeline_vertical_v1: { family: 'vertical', variant: 'default' },
+  timeline_vertical_nodes_v1: { family: 'vertical', variant: 'nodes' },
+  timeline_vertical_cards_v1: { family: 'vertical', variant: 'cards' },
+}
+
+function resolveTimelineVariant(layoutId, preview = {}) {
+  const id = String(layoutId || '').toLowerCase()
+  if (TIMELINE_LAYOUT_META[id]) return TIMELINE_LAYOUT_META[id].variant
+  return preview?.timelineVariant || 'default'
+}
+
+function resolveTimelineMeta(schema = {}) {
+  const layoutId = schema?.layout_id || schema?.layoutId || schema?.id || ''
+  const id = String(layoutId).toLowerCase()
+  const fromMeta = TIMELINE_LAYOUT_META[id]
+  if (fromMeta) return fromMeta
+  const variant = schema?.preview?.timelineVariant || 'default'
+  const mode = schema?.preview?.mode || ''
+  const familyByMode = {
+    timeline_horizontal: 'horizontal',
+    timeline_milestones_image: 'milestones_image',
+    timeline_roadmap: 'roadmap',
+    timeline_process_steps: 'process',
+    timeline_vertical: 'vertical',
+  }
+  return { family: familyByMode[mode] || 'horizontal', variant }
+}
+
 /** Canvas frame for horizontal timeline chrome graphic. */
 function horizontalTimelineFrame(canvasW, canvasH, stepCount = 4) {
   const n = Math.max(2, stepCount)
@@ -223,4 +267,4 @@ function processNumericBadgeInlineSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72"><circle cx="36" cy="36" r="32" fill="currentColor"/></svg>`
 }
 
-module.exports = { TIMELINE_GEOM, PROCESS_LINNER_GEOM, PROCESS_NUMERIC_GEOM, ROADMAP_GEOM, horizontalTimelineInlineSvg, verticalTimelineInlineSvg, processLinnerHortiInlineSvg, processLinnerNumericInlineSvg, roadmapTimelineInlineSvg, milestonesImageTimelineInlineSvg, horizontalTimelineFrame, timelineSpineSegmentInlineSvg, timelineNodeInlineSvg, timelineChevronInlineSvg, processPhaseCircleInlineSvg, processNumericBadgeInlineSvg };
+module.exports = { TIMELINE_GEOM, PROCESS_LINNER_GEOM, PROCESS_NUMERIC_GEOM, ROADMAP_GEOM, TIMELINE_LAYOUT_META, resolveTimelineVariant, resolveTimelineMeta, horizontalTimelineInlineSvg, verticalTimelineInlineSvg, processLinnerHortiInlineSvg, processLinnerNumericInlineSvg, roadmapTimelineInlineSvg, milestonesImageTimelineInlineSvg, horizontalTimelineFrame, timelineSpineSegmentInlineSvg, timelineNodeInlineSvg, timelineChevronInlineSvg, processPhaseCircleInlineSvg, processNumericBadgeInlineSvg };
