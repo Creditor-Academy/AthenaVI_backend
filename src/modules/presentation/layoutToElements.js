@@ -54,6 +54,9 @@ const {
   vennThreeCircleFrame,
   vennStackedFrame,
 } = require('./diagrams/diagramVennSvg');
+const { isDevicePhoneHighlightsLayout, layoutDevicePhoneHighlights } = require('./diagrams/devicePhoneHighlightsLayout');
+const { isDevicePhoneTripleLayout, layoutDevicePhoneTriple } = require('./diagrams/devicePhoneTripleLayout');
+const { isDeviceMultiClusterLayout, layoutDeviceMultiCluster } = require('./diagrams/deviceMultiClusterLayout');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -354,9 +357,21 @@ function regionToPlacement(region, canvas = {}, slot = null, allSlots = null) {
 
 function findDeviceFrameSlot(slots, imageSlotId) {
   const target = String(imageSlotId || '');
-  return (slots || []).find(
-    (slot) => slot?.shapeHint?.pairsWithSlotId && String(slot.shapeHint.pairsWithSlotId) === target
-  ) || null;
+  if (!target) return null;
+  return (
+    (slots || []).find((slot) => {
+      const pairs = slot?.shapeHint?.pairsWithSlotId;
+      if (!pairs || String(pairs) !== target) return false;
+      const id = String(slot?.id || '');
+      const kind = String(slot?.shapeHint?.kind || '');
+      return (
+        /FRAME$/i.test(id) ||
+        /Frame$/i.test(kind) ||
+        kind === 'deviceFrame' ||
+        /^(phone|tablet|laptop|watch)/i.test(kind)
+      );
+    }) || null
+  );
 }
 
 function deviceFrameKindFromSlot(slot = {}) {
@@ -367,6 +382,49 @@ function deviceFrameKindFromSlot(slot = {}) {
   if (/LANDSCAPE/.test(id) || hintKind === 'phoneLandscapeFrame') return 'phone_landscape';
   if (/WATCH/.test(id) || hintKind === 'watchFrame') return 'watch';
   return 'phone';
+}
+
+function fitDeviceFramePlacement(placement, kind) {
+  const p = placement || {};
+  const x = p.x ?? 0;
+  const y = p.y ?? 0;
+  const w = Math.max(1, p.width ?? 400);
+  const h = Math.max(1, p.height ?? 300);
+  if (kind === 'phone') {
+    const aspect = 9 / 19.5;
+    const mx = w * 0.01;
+    const my = h * 0.01;
+    const innerW = Math.max(1, w - mx * 2);
+    const innerH = Math.max(1, h - my * 2);
+    let rw = innerW;
+    let rh = rw / aspect;
+    if (rh > innerH) {
+      rh = innerH;
+      rw = rh * aspect;
+    }
+    return {
+      ...p,
+      x: Math.round(x + (w - rw) / 2),
+      y: Math.round(y + (h - rh) / 2),
+      width: Math.round(rw),
+      height: Math.round(rh),
+    };
+  }
+  if (kind !== 'phone_landscape') return { ...p, x, y, width: w, height: h };
+  const aspect = 19.5 / 9;
+  let rw = w;
+  let rh = rw / aspect;
+  if (rh > h) {
+    rh = h;
+    rw = rh * aspect;
+  }
+  return {
+    ...p,
+    x: Math.round(x + (w - rw) / 2),
+    y: Math.round(y + (h - rh) / 2),
+    width: Math.round(rw),
+    height: Math.round(rh),
+  };
 }
 
 function insetScreenRect(placement, kind) {
@@ -385,45 +443,83 @@ function insetScreenRect(placement, kind) {
       height: Math.max(40, Math.round(h - padTop - padBottom)),
     };
   }
-  const padX = w * 0.21;
-  const padY = h * 0.05;
+  if (kind === 'tablet') {
+    const padX = w * 0.12;
+    const padY = h * 0.08;
+    return {
+      x: Math.round(x + padX),
+      y: Math.round(y + padY),
+      width: Math.max(40, Math.round(w - padX * 2)),
+      height: Math.max(40, Math.round(h - padY * 2)),
+    };
+  }
+  if (kind === 'phone_landscape') {
+    const bezel = Math.max(10, Math.round(Math.min(w, h) * 0.032));
+    return {
+      x: Math.round(x + bezel),
+      y: Math.round(y + bezel),
+      width: Math.max(40, Math.round(w - bezel * 2)),
+      height: Math.max(40, Math.round(h - bezel * 2)),
+    };
+  }
+  if (kind === 'watch') {
+    const caseW = w * 0.76;
+    const caseH = h * 0.54;
+    return {
+      x: Math.round(x + (w - caseW) / 2),
+      y: Math.round(y + (h - caseH) / 2),
+      width: Math.max(24, Math.round(caseW)),
+      height: Math.max(24, Math.round(caseH)),
+    };
+  }
+  const bezel = Math.max(8, Math.round(Math.min(w, h) * 0.022));
   return {
-    x: Math.round(x + padX),
-    y: Math.round(y + padY),
-    width: Math.max(40, Math.round(w - padX * 2)),
-    height: Math.max(40, Math.round(h - padY * 2)),
+    x: Math.round(x + bezel),
+    y: Math.round(y + bezel),
+    width: Math.max(40, Math.round(w - bezel * 2)),
+    height: Math.max(40, Math.round(h - bezel * 2)),
   };
 }
 
 function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl, imageMeta = {}) {
   const kind = deviceFrameKindFromSlot(frameSlot);
-  const screen = insetScreenRect(framePlacement, kind);
-  const radius = kind === 'phone' ? 18 : 10;
+  const isPhone = kind === 'phone' || kind === 'phone_landscape';
+  const fitted = fitDeviceFramePlacement(framePlacement, kind);
+  const screen = insetScreenRect(fitted, kind);
+  const radius = kind === 'phone' ? 28 : kind === 'phone_landscape' ? 34 : 10;
+  const nest = isPhone ? 0 : 2;
+  const phoneShadow = '0 22px 54px rgba(15,23,42,0.22), 0 4px 12px rgba(15,23,42,0.12)';
+  const portraitShadow = 'inset 0 0 0 1px rgba(226,232,240,0.28), 0 28px 64px rgba(15,23,42,0.18), 0 8px 18px rgba(15,23,42,0.08)';
   const elements = [];
   elements.push({
     id: newElementId('frm'),
     slotId: frameSlot.id,
     type: 'shape',
     layer: 8,
-    placement: framePlacement,
+    placement: fitted,
     content: {
       shape: 'rect',
-      fill: { type: 'solid', color: '#f8fafc' },
+      fill: { type: 'solid', color: isPhone ? '#1e293b' : '#f8fafc' },
       stroke: '#0f172a',
-      strokeWidth: 4,
+      strokeWidth: isPhone ? 0 : 4,
       borderRadius: radius,
-      shadow: '0 8px 24px rgba(15,23,42,0.18)',
-      boxShadow: '0 8px 24px rgba(15,23,42,0.18)',
+      shadow: kind === 'phone' ? portraitShadow : isPhone ? phoneShadow : '0 8px 24px rgba(15,23,42,0.18)',
+      boxShadow: kind === 'phone' ? portraitShadow : isPhone ? phoneShadow : '0 8px 24px rgba(15,23,42,0.18)',
       deviceFrame: kind,
+      layoutSurface: true,
     },
     role: 'device_frame',
   });
   const imageInset = {
-    x: screen.x + 3,
-    y: screen.y + 3,
-    width: Math.max(20, screen.width - 6),
-    height: Math.max(20, screen.height - 6),
+    x: screen.x + nest,
+    y: screen.y + (kind === 'laptop' ? Math.max(8, Math.round(screen.height * 0.07)) : nest),
+    width: Math.max(20, screen.width - nest * 2),
+    height: Math.max(
+      20,
+      screen.height - (kind === 'laptop' ? Math.max(8, Math.round(screen.height * 0.07)) + nest : nest * 2)
+    ),
   };
+  const { shadow: _shadow, boxShadow: _boxShadow, ...screenMeta } = imageMeta || {};
   elements.push({
     id: newElementId('img'),
     slotId: imageSlot.id,
@@ -431,10 +527,12 @@ function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl
     layer: 10,
     placement: imageInset,
     content: {
+      ...screenMeta,
       url: imageUrl || null,
       fit: 'cover',
-      borderRadius: kind === 'phone' ? 14 : 6,
-      ...imageMeta,
+      borderRadius: kind === 'phone' ? 28 : kind === 'phone_landscape' ? 22 : 6,
+      shadow: undefined,
+      boxShadow: undefined,
     },
     role: 'image',
   });
@@ -8329,6 +8427,12 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDiagramSwot(next, layoutSchema, themeTokens, canvas);
   } else if (isDiagramVennLayout(layoutSchema?.layout_id)) {
     next = layoutDiagramVenn(next, layoutSchema, themeTokens, canvas);
+  } else if (isDevicePhoneHighlightsLayout(layoutSchema?.layout_id)) {
+    next = layoutDevicePhoneHighlights(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isDevicePhoneTripleLayout(layoutSchema?.layout_id)) {
+    next = layoutDevicePhoneTriple(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isDeviceMultiClusterLayout(layoutSchema?.layout_id)) {
+    next = layoutDeviceMultiCluster(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isQuoteGridLayout(layoutSchema?.layout_id)) {
     next = layoutQuoteGrid(next, layoutSchema, themeTokens, canvas);
   } else if (isQuoteAttributionLayout(layoutSchema?.layout_id)) {

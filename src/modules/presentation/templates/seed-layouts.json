@@ -15068,9 +15068,25 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-5, rows 2-3",
+          "region": "cols 2-11, rows 2-3",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
+          "layer": 10,
+          "typography": {
+            "fontSize": 32,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.25
+          },
+          "max_lines": 1,
+          "clipToSlot": true
+        },
+        {
+          "id": "HEADING_L",
+          "region": "cols 1-3, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Title 01",
           "layer": 10,
           "typography": {
             "fontSize": 28,
@@ -15079,16 +15095,48 @@
             "align": "left",
             "lineHeight": 1.15
           },
-          "max_lines": 2
+          "max_lines": 1,
+          "clipToSlot": false
         },
         {
-          "id": "BODY",
-          "region": "cols 1-5, rows 4-9",
+          "id": "BODY_L",
+          "region": "cols 1-3, rows 5-8",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Description 01",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "HEADING_R",
+          "region": "cols 10-12, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Title 02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 28,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 1,
+          "clipToSlot": false
+        },
+        {
+          "id": "BODY_R",
+          "region": "cols 10-12, rows 5-8",
+          "role": "body",
+          "placeholder_text": "Description 02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
@@ -15098,7 +15146,7 @@
         },
         {
           "id": "PHONE_FRAME_1",
-          "region": "cols 8-10, rows 2-5",
+          "region": "cols 4-6, rows 4-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15111,7 +15159,7 @@
         },
         {
           "id": "DEVICE_IMAGE_1",
-          "region": "cols 8-10, rows 2-5",
+          "region": "cols 4-6, rows 4-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15121,7 +15169,7 @@
         },
         {
           "id": "PHONE_FRAME_2",
-          "region": "cols 9-11, rows 4-7",
+          "region": "cols 5-8, rows 2-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15134,7 +15182,7 @@
         },
         {
           "id": "DEVICE_IMAGE_2",
-          "region": "cols 9-11, rows 4-7",
+          "region": "cols 5-8, rows 2-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15144,7 +15192,7 @@
         },
         {
           "id": "PHONE_FRAME_3",
-          "region": "cols 10-12, rows 6-9",
+          "region": "cols 7-9, rows 4-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15157,7 +15205,7 @@
         },
         {
           "id": "DEVICE_IMAGE_3",
-          "region": "cols 10-12, rows 6-9",
+          "region": "cols 7-9, rows 4-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15175,8 +15223,26 @@
             "bold": true,
             "uppercase": false
           },
-          "BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "HEADING_L": {
+            "text": "Title 01",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY_L": {
+            "text": "Description 01",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "HEADING_R": {
+            "text": "Title 02",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "BODY_R": {
+            "text": "Description 02",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -15206,31 +15272,71 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
-          "id": "LAPTOP_FRAME",
-          "region": "cols 2-5, rows 4-8",
-          "role": "decoration",
-          "layer": 1,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "laptopFrame",
-            "suggestedBehind": "deviceFrame",
-            "pairsWithSlotId": "LAPTOP_IMAGE"
-          }
+          "id": "HEADING",
+          "region": "cols 1-5, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Multi-device",
+          "layer": 10,
+          "typography": {
+            "fontSize": 42,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.1
+          },
+          "max_lines": 1,
+          "clipToSlot": false
         },
         {
-          "id": "LAPTOP_IMAGE",
-          "region": "cols 2-5, rows 4-8",
-          "role": "image",
-          "layer": 2,
-          "fit": "cover",
-          "imageStyle": "inset",
-          "borderRadius": 8,
-          "shadow": "0 2px 10px rgba(15, 23, 42, 0.06)"
+          "id": "HEADING_2",
+          "region": "cols 1-5, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "experience",
+          "layer": 10,
+          "typography": {
+            "fontSize": 42,
+            "fontWeight": 800,
+            "colorRole": "primary",
+            "align": "left",
+            "lineHeight": 1.1
+          },
+          "max_lines": 1,
+          "clipToSlot": false
+        },
+        {
+          "id": "SUBHEADING",
+          "region": "cols 1-5, rows 5-6",
+          "role": "subheading",
+          "placeholder_text": "Title 01",
+          "layer": 10,
+          "typography": {
+            "fontSize": 18,
+            "fontWeight": 500,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1,
+          "clipToSlot": false
+        },
+        {
+          "id": "BODY",
+          "region": "cols 1-5, rows 6-9",
+          "role": "body",
+          "placeholder_text": "Description 01",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 4
         },
         {
           "id": "TABLET_FRAME",
-          "region": "cols 4-7, rows 2-7",
+          "region": "cols 8-11, rows 2-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15243,7 +15349,30 @@
         },
         {
           "id": "TABLET_IMAGE",
-          "region": "cols 4-7, rows 2-7",
+          "region": "cols 8-11, rows 2-9",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover",
+          "imageStyle": "inset",
+          "borderRadius": 8,
+          "shadow": "0 2px 10px rgba(15, 23, 42, 0.06)"
+        },
+        {
+          "id": "LAPTOP_FRAME",
+          "region": "cols 6-10, rows 5-9",
+          "role": "decoration",
+          "layer": 1,
+          "aiOnly": true,
+          "shapeHint": {
+            "aiOnly": true,
+            "kind": "laptopFrame",
+            "suggestedBehind": "deviceFrame",
+            "pairsWithSlotId": "LAPTOP_IMAGE"
+          }
+        },
+        {
+          "id": "LAPTOP_IMAGE",
+          "region": "cols 6-10, rows 5-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15253,7 +15382,7 @@
         },
         {
           "id": "PHONE_FRAME",
-          "region": "cols 6-8, rows 5-9",
+          "region": "cols 10-12, rows 3-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15266,7 +15395,7 @@
         },
         {
           "id": "PHONE_IMAGE",
-          "region": "cols 6-8, rows 5-9",
+          "region": "cols 10-12, rows 3-8",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15276,7 +15405,7 @@
         },
         {
           "id": "WATCH_FRAME",
-          "region": "cols 8-9, rows 6-8",
+          "region": "cols 11-12, rows 6-8",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15289,7 +15418,7 @@
         },
         {
           "id": "WATCH_IMAGE",
-          "region": "cols 8-9, rows 6-8",
+          "region": "cols 11-12, rows 6-8",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15301,6 +15430,30 @@
       "preview": {
         "mode": "device_multi_cluster",
         "slots": {
+          "HEADING": {
+            "text": "Multi-device",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "HEADING_2": {
+            "text": "experience",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBHEADING": {
+            "text": "Title 01",
+            "variant": "subheading",
+            "bold": false,
+            "uppercase": false
+          },
+          "BODY": {
+            "text": "Description 01",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
           "LAPTOP_IMAGE": {
             "variant": "image"
           },
