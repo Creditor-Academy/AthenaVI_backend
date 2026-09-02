@@ -1,5 +1,5 @@
 $kind: http-request
 description: Best-effort leave on unload. Silent viewers are dropped after the presence TTL anyway.
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/presence?viewerSessionId={{viewerSessionId}}"
+url: "{{baseUrl}}/api/p/{{presentationViewerToken}}/presence?viewerSessionId={{viewerSessionId}}"
 method: DELETE
 order: 9000

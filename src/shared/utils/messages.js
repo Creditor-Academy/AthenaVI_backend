@@ -376,7 +376,7 @@ module.exports = {
   PRESENTATION_COMMENT_RESOLVE_FORBIDDEN:
     'Only workspace members can resolve or reopen a comment thread',
   PRESENTATION_COMMENT_PARENT_INVALID: 'Cannot reply to this comment',
-  PRESENTATION_COMMENT_DISABLED: 'Comments are disabled for this link',
+  PRESENTATION_COMMENT_DISABLED: 'Comments require a reviewer link',
   PRESENTATION_COMMENT_LIMIT: 'This slide or thread has reached its comment limit',
   PRESENTATION_COMMENT_ORPHANED: 'This comment thread is no longer attached to a slide',
 

@@ -27,7 +27,7 @@ description: |-
 
   **Inbox** under **User → Inbox**: notifications (`GET /api/user/inbox`). List saves `notificationId`.
 
-  **Presentation comments** under **Presentations (AI PPT) → 8. Comments**: editor requests need Bearer + membership; the **Public** requests use only `presentationShareToken` and need the link's `access` set to `COMMENT` (see **7. Share → Allow comments on link**). Guests send `viewerSessionId` + `displayName`; resolve and mention autocomplete are members-only. Create saves `presentationCommentId`.
+  **Presentation comments** under **Presentations (AI PPT) → 8. Comments**: editor requests need Bearer + membership; the **Public** requests use `presentationReviewerToken` (run **7. Share → Enable reviewer link** first). Guests send `viewerSessionId` + `displayName`; resolve and mention autocomplete are members-only. Create saves `presentationCommentId`. Public deck/presence requests use `presentationViewerToken` or `presentationReviewerToken` interchangeably.
 
   **Credits** under **Credits**: personal pool (`/api/credits/me`), TEAM allocate/deallocate, workspace estimates.
 
@@ -80,7 +80,8 @@ variables:
   guidelinePresentationId: ""
   imageGenContextId: ""
   generationId: ""
-  presentationShareToken: ""
+  presentationViewerToken: ""
+  presentationReviewerToken: ""
   viewerSessionId: 11111111-2222-4333-8444-555555555555
   presentationCommentId: ""
   heygenVoiceUploadUrl: ""

@@ -9,28 +9,46 @@ const presentationShareController = require('./presentationShare.controller');
  */
 const router = express.Router({ mergeParams: true });
 
-router.put(
-  '/',
-  validate(presentationShareValidations.shareByPresentationSchema),
-  presentationShareController.enableShare
-);
-
 router.get(
   '/',
   validate(presentationShareValidations.shareByPresentationSchema),
   presentationShareController.getShare
 );
 
+router.put(
+  '/viewer',
+  validate(presentationShareValidations.shareByPresentationSchema),
+  presentationShareController.enableShareViewer
+);
+
+router.put(
+  '/reviewer',
+  validate(presentationShareValidations.shareByPresentationSchema),
+  presentationShareController.enableShareReviewer
+);
+
 router.patch(
-  '/',
+  '/viewer',
   validate(presentationShareValidations.patchShareSchema),
-  presentationShareController.updateShare
+  presentationShareController.patchShareViewer
+);
+
+router.patch(
+  '/reviewer',
+  validate(presentationShareValidations.patchShareSchema),
+  presentationShareController.patchShareReviewer
 );
 
 router.post(
-  '/rotate',
+  '/viewer/rotate',
   validate(presentationShareValidations.shareByPresentationSchema),
-  presentationShareController.rotateShare
+  presentationShareController.rotateShareViewer
+);
+
+router.post(
+  '/reviewer/rotate',
+  validate(presentationShareValidations.shareByPresentationSchema),
+  presentationShareController.rotateShareReviewer
 );
 
 module.exports = router;

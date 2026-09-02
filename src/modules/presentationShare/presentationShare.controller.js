@@ -13,13 +13,26 @@ const VIEW_CACHE_MAX_AGE_SEC =
    Owner (Bearer + workspace member)
 ========================= */
 
-const enableShare = asyncHandler(async (req, res) => {
+const enableShareViewer = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
-  const data = await shareService.enableShare({
+  const data = await shareService.enableShareForRole({
     workspaceId,
     presentationId,
     userId: req.user.id,
     ip: req.ip,
+    role: shareService.ROLE_VIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ENABLED);
+});
+
+const enableShareReviewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.enableShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ENABLED);
 });
@@ -30,28 +43,54 @@ const getShare = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_FETCHED);
 });
 
-const updateShare = asyncHandler(async (req, res) => {
+const patchShareViewer = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
-  const { enabled, expiresAt, access } = req.body;
-  const data = await shareService.updateShare({
+  const { enabled } = req.body;
+  const data = await shareService.updateShareForRole({
     workspaceId,
     presentationId,
     userId: req.user.id,
     ip: req.ip,
+    role: shareService.ROLE_VIEWER,
     enabled,
-    expiresAt,
-    access,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_UPDATED);
 });
 
-const rotateShare = asyncHandler(async (req, res) => {
+const patchShareReviewer = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
-  const data = await shareService.rotateShare({
+  const { enabled } = req.body;
+  const data = await shareService.updateShareForRole({
     workspaceId,
     presentationId,
     userId: req.user.id,
     ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
+    enabled,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_UPDATED);
+});
+
+const rotateShareViewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.rotateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_VIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ROTATED);
+});
+
+const rotateShareReviewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.rotateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ROTATED);
 });
@@ -123,10 +162,13 @@ const leavePresence = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  enableShare,
+  enableShareViewer,
+  enableShareReviewer,
   getShare,
-  updateShare,
-  rotateShare,
+  patchShareViewer,
+  patchShareReviewer,
+  rotateShareViewer,
+  rotateShareReviewer,
   getPublicPresentation,
   getPublicSession,
   heartbeatPresence,

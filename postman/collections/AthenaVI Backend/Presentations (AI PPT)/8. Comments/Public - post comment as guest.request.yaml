@@ -1,6 +1,6 @@
 $kind: http-request
 description: "Needs share access COMMENT (403 otherwise). Guests must send viewerSessionId + displayName; reuse the same viewerSessionId as the presence heartbeat so you can edit/delete your own comment later. Add Authorization to post under your account instead (displayName is then ignored). Guest mentions are dropped."
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments"
+url: "{{baseUrl}}/api/p/{{presentationReviewerToken}}/comments"
 method: POST
 headers:
   Content-Type: application/json

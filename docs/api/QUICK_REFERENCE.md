@@ -111,17 +111,20 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/resolve` | Bearer + member | Resolve thread (root only) |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/unresolve` | Bearer + member | Reopen thread |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/mentionable-users` | Bearer + member | Mention autocomplete |
-| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable share link (new links `access: COMMENT`; `share.url` always returned) |
-| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Share link + copyable `share.url` |
-| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Enable/disable, set `expiresAt`, set `access` (`VIEW\|COMMENT`) |
-| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` | Bearer + member | Rotate token; invalidates shared URLs |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Both share links (`viewer`, `reviewer`) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` | Bearer + member | Enable viewer link (lazy mint) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer` | Bearer + member | Enable reviewer link (lazy mint) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` | Bearer + member | Enable/disable viewer link |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer` | Bearer + member | Enable/disable reviewer link |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer/rotate` | Bearer + member | Rotate viewer token |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer/rotate` | Bearer + member | Rotate reviewer token |
 | GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
 | GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer name, `canComment`, `canOpenInEditor` |
 | PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → viewers + `commentsUpdatedAt` |
 | GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list |
 | DELETE | `/api/p/:token/presence` | Public (optional Bearer) | Leave preview (`viewerSessionId` query) |
 | GET | `/api/p/:token/comments` | Public (optional Bearer) | Comments on READY slides (empty when `access: VIEW`) |
-| POST | `/api/p/:token/comments` | Public (optional Bearer) | Guest/visitor comment or reply (needs `access: COMMENT`) |
+| POST | `/api/p/:token/comments` | Public (optional Bearer) | Guest/visitor comment or reply (reviewer link only) |
 | PATCH | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Edit own comment (guests send `viewerSessionId`) |
 | DELETE | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Delete own comment |
 | POST | `/api/p/:token/comments/:commentId/resolve` | Public (members only) | Resolve thread; 403 for guests |

@@ -113,7 +113,7 @@ src/modules/<feature>/
 
 ### Route registration
 
-- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401; read-only apart from comments on `access: COMMENT` links).
+- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401; read-only apart from comments on **reviewer** links).
 - **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/brand-kits`, `/:workspaceId/presentation-deck-packs`, `/:workspaceId/video-templates` (`VIDEO_SCENE` + `VIDEO_PACK`), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---

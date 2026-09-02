@@ -1,5 +1,5 @@
 $kind: http-request
-description: Returns share.url + share.token so the FE can copy the same link any time.
+description: Returns data.viewer + data.reviewer with copyable url/token per link type.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share"
 method: GET
 headers:
@@ -9,8 +9,11 @@ scripts:
     code: |-
       if (pm.response.code === 200) {
         const j = pm.response.json();
-        const token = j && j.data && j.data.share && j.data.share.token;
-        if (token) pm.collectionVariables.set("presentationShareToken", token);
+        const data = j && j.data;
+        const viewerToken = data && data.viewer && data.viewer.token;
+        const reviewerToken = data && data.reviewer && data.reviewer.token;
+        if (viewerToken) pm.collectionVariables.set("presentationViewerToken", viewerToken);
+        if (reviewerToken) pm.collectionVariables.set("presentationReviewerToken", reviewerToken);
       }
     language: text/javascript
 order: 2000
