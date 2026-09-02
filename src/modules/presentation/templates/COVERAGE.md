@@ -39,7 +39,7 @@ Source of truth: [`layoutCategories.js`](../layoutCategories.js).
 | `device_frames` | 8 | device_phone_vertical_split_v1, … |
 | `stat` | 7 | metric_single_v1, metric_three_v1, … |
 | `timeline` | 5 | timeline_horizontal_v1, timeline_roadmap_v1, … |
-| `pricing` | 5 | pricing_three_plans_v1, … |
+| `pricing` | 13 | pricing_three_plans_v1, pricing_comparison_cards_v1, … |
 | `comparison` | 4 | comparison_side_by_side_v1, comparison_table_v1, … |
 | `title` | 6 | title_centered_v1, title_minimal_v1, … |
 | `bullet_list` | 8 | intro_four_para_v1, bullet_list_cards_v1, … |

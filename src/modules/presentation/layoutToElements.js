@@ -15,6 +15,28 @@ const { resolveTextColor } = require('./artDirection/resolveTextColor');
 const { inferTypographyRole } = require('./artDirection/typographyRoles');
 const { repairElementsDoc } = require('./artDirection/validateDesign');
 const { PROCESS_STEP_COLORS, processRibbonInlineSvg, processRibbonLabelBox, processIconInlineSvg, processFlowArrowInlineSvg } = require('./diagrams/diagramProcessStepsSvg');
+const {
+  agendaGraphicFrame,
+  agendaChromeSpecs,
+  agendaOverlayPlacements,
+  resolveAgendaMeta,
+  specToGraphicContent,
+  isAgendaThreeColumnColouredLayout,
+} = require('./diagrams/agendaInfographicSvg');
+const {
+  isAgendaMinimalLayout,
+  isAgendaNumberedLayout,
+  isAgendaHeroLayout,
+  isAgendaThreeColumnLayout,
+  isAgendaTimelineLayout,
+  isAgendaTwoColumnLayout,
+} = require('./diagrams/agendaSharedSvg');
+const {
+  agendaThreeColumnGraphicFrame,
+  colouredColumnTextContent,
+  specToThreeColumnContent,
+  isAgendaThreeColumnTextSlot,
+} = require('./diagrams/agendaThreeColumn');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
 const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
@@ -3829,7 +3851,7 @@ function isProcessFlowLayout(layoutId) {
     /process_linear/.test(id) ||
     /diagram_process/.test(id) ||
     /process_steps/.test(id) ||
-    /agenda_timeline/.test(id)
+    /agenda_timeline|agenda_vertical_roadmap|agenda_curved_timeline/.test(id)
   );
 }
 
@@ -8400,6 +8422,229 @@ function docHasFullBleedBackground(doc, layoutSchema) {
   });
 }
 
+function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc;
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const palette = themeTokens?.palette || {};
+  const textColor = paletteColor(palette, 'text', '#1F2937');
+  const accent = paletteColor(palette, 'accent', paletteColor(palette, 'primary', '#6366F1'));
+  const soft = paletteColor(palette, 'cardBg', 'color-mix(in srgb, #6366f1 12%, #ffffff)');
+
+  const { family, variant } = resolveAgendaMeta(layoutSchema);
+  const layoutId = layoutSchema?.layout_id || layoutSchema?.id || layoutSchema?.layoutId || '';
+  const isColouredThreeCol = isAgendaThreeColumnColouredLayout(layoutId, family, variant);
+  const itemCount = layoutSchema?.preview?.agendaItems?.length
+    || layoutSchema?.preview?.milestones?.length
+    || (doc.elements || []).filter((el) => /^ITEM_\d+$/i.test(String(el.slotId || ''))).length
+    || 4;
+
+  const frame = isColouredThreeCol
+    ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
+    : agendaGraphicFrame(canvasW, canvasH);
+  const { graphicX, graphicY, graphicW, graphicH, headingY, headingH } = frame;
+  const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
+  const columnTextColor = isColouredThreeCol ? '#FFFFFF' : textColor;
+
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE)/i;
+  const prevBySlot = new Map(
+    (doc.elements || [])
+      .filter((el) => CHROME_RE.test(String(el.slotId || '')))
+      .map((el) => [String(el.slotId || '').toUpperCase(), el])
+  );
+  let elements = (doc.elements || []).filter((el) => !CHROME_RE.test(String(el.slotId || '')));
+  if (isColouredThreeCol) {
+    elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId));
+  }
+
+  const textBase = (el) => ({
+    ...(el.content || {}),
+    letterSpacing: '0',
+    padding: 0,
+    paddingX: 0,
+    stroke: undefined,
+    strokeWidth: 0,
+  });
+
+  elements = elements.map((el) => {
+    const sid = String(el.slotId || '');
+    const base = textBase(el);
+    if (sid.toUpperCase() === 'HEADING') {
+      const h = isColouredThreeCol
+        ? { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH }
+        : (overlay.heading || { x: 72, y: headingY, width: canvasW - 144, height: headingH });
+      return {
+        ...el,
+        placement: { ...h, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: isColouredThreeCol ? 'center' : 'left',
+          verticalAlign: 'center',
+          fontSize: isColouredThreeCol ? 40 : 36,
+          fontWeight: 800,
+          color: textColor,
+        },
+      };
+    }
+    const itemM = sid.match(/^ITEM_(\d+)$/i);
+    if (itemM && overlay.items?.length) {
+      const i = Number(itemM[1]) - 1;
+      const box = overlay.items[i];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: {
+            ...base,
+            align: 'left',
+            verticalAlign: 'center',
+            fontSize: 18,
+            fontWeight: 600,
+            color: textColor,
+          },
+        };
+      }
+    }
+    const bodyM = sid.toUpperCase() === 'BODY';
+    if (bodyM && overlay.items?.length) {
+      const box = overlay.items[0];
+      return {
+        ...el,
+        layer: 12,
+        placement: {
+          x: box.x,
+          y: box.y,
+          width: overlay.items[overlay.items.length - 1]
+            ? overlay.items[overlay.items.length - 1].x + overlay.items[overlay.items.length - 1].width - box.x
+            : box.width,
+          height: Math.max(box.height, (overlay.items.length) * 56),
+          rotation: 0,
+          opacity: 1,
+        },
+        content: { ...base, align: 'left', verticalAlign: 'flex-start', fontSize: 18, color: textColor },
+      };
+    }
+    const colHeadM = sid.match(/^AGENDA_COL_(\d+)_HEADING$/i);
+    if (colHeadM && overlay.columns?.length) {
+      const i = Number(colHeadM[1]) - 1;
+      const col = overlay.columns[i];
+      if (col?.heading) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...col.heading, rotation: 0, opacity: 1 },
+          content: isColouredThreeCol
+            ? colouredColumnTextContent(el.content, {
+              fontSize: 24,
+              fontWeight: 800,
+              align: 'center',
+              verticalAlign: 'center',
+            })
+            : {
+              ...base,
+              align: 'center',
+              fontSize: 20,
+              fontWeight: 800,
+              color: columnTextColor,
+            },
+        };
+      }
+    }
+    const colItemM = sid.match(/^AGENDA_COL_(\d+)_ITEM_(\d+)$/i);
+    if (colItemM && overlay.columns?.length) {
+      const ci = Number(colItemM[1]) - 1;
+      const ii = Number(colItemM[2]) - 1;
+      const col = overlay.columns[ci];
+      const box = col?.items?.[ii] || col?.items?.[0];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: isColouredThreeCol
+            ? colouredColumnTextContent(el.content, {
+              fontSize: 15,
+              fontWeight: 400,
+              fontStyle: 'italic',
+              align: 'center',
+              verticalAlign: 'flex-start',
+            })
+            : {
+              ...base,
+              align: 'center',
+              fontSize: 15,
+              color: columnTextColor,
+            },
+        };
+      }
+    }
+    const msM = sid.match(/^milestone_(\d+)_label$/i);
+    if (msM && overlay.milestones?.length) {
+      const i = Number(msM[1]) - 1;
+      const box = overlay.milestones[i];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: { ...base, align: 'center', fontSize: 14, fontWeight: 700, color: textColor },
+        };
+      }
+    }
+    return el;
+  });
+
+  const specs = agendaChromeSpecs(family, variant, itemCount);
+  const sx = graphicW / 1000;
+  const sy = graphicH / 560;
+  const chrome = specs.map((spec) => {
+    const slotId = spec.slotId;
+    const prev = prevBySlot.get(slotId.toUpperCase());
+    const placement = {
+      x: Math.round(graphicX + spec.x * sx),
+      y: Math.round(graphicY + spec.y * sy),
+      width: Math.max(4, Math.round(spec.w * sx)),
+      height: Math.max(4, Math.round(spec.h * sy)),
+      rotation: 0,
+      opacity: 1,
+    };
+    if (spec.kind === 'shape') {
+      return {
+        id: prev?.id || newElementId('shp-agenda'),
+        type: 'shape',
+        layer: spec.layer || 3,
+        placement,
+        content: {
+          shape: 'rect',
+          borderRadius: spec.borderRadius ? Math.round(spec.borderRadius * Math.min(sx, sy)) : 12,
+          fill: spec.fill || prev?.content?.fill || soft,
+        },
+        role: 'decoration',
+        slotId,
+      };
+    }
+    const graphic = isColouredThreeCol
+      ? specToThreeColumnContent(spec)
+      : specToGraphicContent(spec, accent, soft);
+    return {
+      id: prev?.id || newElementId('shp-agenda'),
+      type: 'graphic',
+      layer: spec.layer || 4,
+      placement,
+      content: timelineGraphicContent(
+        graphic.svg,
+        { type: 'solid', color: accent, colorRole: 'accent' },
+        slotId
+      ),
+      role: 'decoration',
+      slotId,
+    };
+  });
+
+  return { ...doc, elements: [...chrome, ...elements] };
+}
+
 function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}, slideDesignPlan = null) {
   if (!doc) return doc;
   const canvas = {
@@ -8442,6 +8687,19 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDeviceTabletSplit(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isDeviceTabletCenteredLayout(layoutSchema?.layout_id)) {
     next = layoutDeviceTabletCentered(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isAgendaMinimalLayout(layoutSchema?.layout_id)) {
+    next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
+  } else if (isAgendaNumberedLayout(layoutSchema?.layout_id)) {
+    next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
+  } else if (
+    isAgendaHeroLayout(layoutSchema?.layout_id) ||
+    isAgendaThreeColumnLayout(layoutSchema?.layout_id)
+  ) {
+    next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
+  } else if (isAgendaTimelineLayout(layoutSchema?.layout_id)) {
+    next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
+  } else if (isAgendaTwoColumnLayout(layoutSchema?.layout_id)) {
+    next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
   } else if (isQuoteGridLayout(layoutSchema?.layout_id)) {
     next = layoutQuoteGrid(next, layoutSchema, themeTokens, canvas);
   } else if (isQuoteAttributionLayout(layoutSchema?.layout_id)) {
