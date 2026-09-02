@@ -229,6 +229,7 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
     );
     const content = el.content || {};
     const rotate = Number(el.placement?.rotation) || 0;
+    if (el.type === 'group') continue;
 
     if (el.type === 'text' || el.type === 'textbox') {
       const textColorResolved = resolveColor(
@@ -708,6 +709,9 @@ function buildSlideHtmlPage(slide, palette) {
           `overflow:${isText ? 'visible' : 'hidden'}`,
         ].join(';');
 
+        if (el.type === 'group') {
+          return '';
+        }
         if (isText) {
           const fallback = c.color || (c.colorRole && palette[c.colorRole]) || text;
           const ls =

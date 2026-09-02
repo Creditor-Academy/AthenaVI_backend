@@ -256,6 +256,51 @@ const patchElement = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENT_UPDATED);
 });
 
+const patchElementsBatch = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.patchElementsBatch({
+    workspaceId,
+    presentationId,
+    slideId,
+    patches: req.body.patches,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENTS_BATCH_UPDATED);
+});
+
+const groupElements = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.groupElements({
+    workspaceId,
+    presentationId,
+    slideId,
+    elementIds: req.body.elementIds,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENTS_GROUPED);
+});
+
+const ungroupElements = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.ungroupElements({
+    workspaceId,
+    presentationId,
+    slideId,
+    elementId: req.body.elementId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENTS_UNGROUPED);
+});
+
+const alignElements = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.alignElements({
+    workspaceId,
+    presentationId,
+    slideId,
+    elementIds: req.body.elementIds,
+    alignment: req.body.alignment,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_ELEMENTS_ALIGNED);
+});
+
 const deleteElement = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId, slideId, elementId } = req.params;
   const data = await presentationService.deleteElement({
@@ -431,6 +476,10 @@ module.exports = {
   putCanvas,
   addElement,
   patchElement,
+  patchElementsBatch,
+  groupElements,
+  ungroupElements,
+  alignElements,
   deleteElement,
   reorderElements,
   regenerateSlide,

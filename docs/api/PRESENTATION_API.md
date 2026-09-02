@@ -172,7 +172,7 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 - slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
 - Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` (or `src` alias) for canvas render.
-- Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed`. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
+- Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed` | `graphic` | `group`. Groups store `childIds` and children store `groupId`. Optional `locked` is persisted. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
 - Image/icon `content.flipHorizontal` / `content.flipVertical` (optional) and `placement.rotation` (degrees, images **and** text) are persisted on canvas write and honored on PPTX/PDF/PNG/JPEG export. Live editor rotation snaps every 90°.
 
 Also: `GET .../slides/:slideId` returns a single presigned slide.
@@ -469,6 +469,10 @@ Structural mutations return **409** while deck `status === GENERATING`.
 | `PUT` | `.../slides/:slideId/canvas` — full `{ version, canvas, elements }` replace |
 | `POST` | `.../slides/:slideId/elements` — flat `{ type, placement, content, presetId? }` **or** `{ presetId }` / `{ element }` |
 | `PATCH` | `.../slides/:slideId/elements/:elementId` |
+| `PATCH` | `.../slides/:slideId/elements/batch` — `{ "patches": [{ "id", "placement?", "locked?", "content?" }] }` (one write, no lost-update races) |
+| `POST` | `.../slides/:slideId/elements/group` — `{ "elementIds": ["…"] }` (≥2 unlocked, not already grouped) |
+| `POST` | `.../slides/:slideId/elements/ungroup` — `{ "elementId": "group_…" }` |
+| `POST` | `.../slides/:slideId/elements/align` — `{ "elementIds": ["…"], "alignment": "left\|center\|right\|top\|middle\|bottom" }` |
 | `DELETE` | `.../slides/:slideId/elements/:elementId` |
 | `PATCH` | `.../slides/:slideId/elements/reorder` — `{ "elementIds": [] }` |
 

@@ -12,7 +12,18 @@ const PPTX_WIDTH_IN = 13.333;
 const PPTX_HEIGHT_IN = 7.5;
 
 /** PPT canvas element types (FE contract) */
-const ELEMENT_TYPES = ['text', 'textbox', 'image', 'shape', 'icon', 'chart', 'table', 'embed', 'graphic'];
+const ELEMENT_TYPES = [
+  'text',
+  'textbox',
+  'image',
+  'shape',
+  'icon',
+  'chart',
+  'table',
+  'embed',
+  'graphic',
+  'group',
+];
 
 /** PPT supports 16:9 and 4:3 only (native pixel canvases). */
 const PPT_ASPECT_RATIOS = ['16:9', '4:3'];

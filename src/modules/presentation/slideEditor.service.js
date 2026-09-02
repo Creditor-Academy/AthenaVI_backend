@@ -16,6 +16,14 @@ const {
   normalizeCanvasDoc,
   enrichSlideForClient,
 } = require('./elementContent.normalize');
+const {
+  canPptGroup,
+  canPptUngroup,
+  createPptGroup,
+  ungroupPptElement,
+  alignPptElements,
+  collectDeleteIds,
+} = require('./elementSelection.ops');
 
 function assertNotGenerating(deck) {
   if (deck.status === 'GENERATING') {
@@ -324,6 +332,14 @@ async function addElement(args) {
   return { slide: enrichSlideForClient(updated), element: next };
 }
 
+function persistElementsDoc(slideId, doc) {
+  return presentationDao.updateSlide(slideId, {
+    elements: doc,
+    manuallyEdited: true,
+    status: 'READY',
+  });
+}
+
 async function patchElement({ workspaceId, presentationId, slideId, elementId, patch }) {
   const { deck } = await loadDeckContext(workspaceId, presentationId);
   assertNotGenerating(deck);
@@ -343,15 +359,98 @@ async function patchElement({ workspaceId, presentationId, slideId, elementId, p
     type: patch.type || current.type,
     placement: patch.placement ? { ...current.placement, ...patch.placement } : current.placement,
     content: patch.content ? { ...current.content, ...patch.content } : current.content,
+    locked: patch.locked != null ? Boolean(patch.locked) : current.locked,
   };
+  if (patch.childIds) merged.childIds = patch.childIds;
+  if (Object.prototype.hasOwnProperty.call(patch, 'groupId')) merged.groupId = patch.groupId;
   doc.elements[idx] = normalizeElement(merged);
 
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await persistElementsDoc(slideId, doc);
   return { slide: enrichSlideForClient(updated), element: doc.elements[idx] };
+}
+
+async function patchElementsBatch({ workspaceId, presentationId, slideId, patches }) {
+  const { deck } = await loadDeckContext(workspaceId, presentationId);
+  assertNotGenerating(deck);
+
+  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+
+  const doc = getElementsDoc(slide);
+  const byId = new Map(doc.elements.map((el) => [el.id, el]));
+  let applied = 0;
+  for (const patch of patches || []) {
+    const current = byId.get(patch.id);
+    if (!current) continue;
+    const merged = {
+      ...current,
+      ...patch,
+      id: current.id,
+      type: patch.type || current.type,
+      placement: patch.placement ? { ...current.placement, ...patch.placement } : current.placement,
+      content: patch.content ? { ...current.content, ...patch.content } : current.content,
+      locked: patch.locked != null ? Boolean(patch.locked) : current.locked,
+    };
+    if (patch.childIds) merged.childIds = patch.childIds;
+    if (Object.prototype.hasOwnProperty.call(patch, 'groupId')) merged.groupId = patch.groupId;
+    byId.set(patch.id, normalizeElement(merged));
+    applied += 1;
+  }
+  if (!applied) throw new AppError('Element not found', 404);
+
+  doc.elements = doc.elements.map((el) => byId.get(el.id) || el);
+  const updated = await persistElementsDoc(slideId, doc);
+  return { slide: enrichSlideForClient(updated) };
+}
+
+async function groupElements({ workspaceId, presentationId, slideId, elementIds }) {
+  const { deck } = await loadDeckContext(workspaceId, presentationId);
+  assertNotGenerating(deck);
+
+  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+
+  const doc = getElementsDoc(slide);
+  if (!canPptGroup(doc.elements, elementIds)) {
+    throw new AppError('Select at least two unlocked elements to group', 400);
+  }
+  if (doc.elements.length + 1 > MAX_ELEMENTS_PER_SLIDE) {
+    throw new AppError(`A slide may have at most ${MAX_ELEMENTS_PER_SLIDE} elements`, 400);
+  }
+  doc.elements = createPptGroup(doc.elements, elementIds).map(normalizeElement);
+  const updated = await persistElementsDoc(slideId, doc);
+  const group = doc.elements.find((el) => el.type === 'group' && (el.childIds || []).every((id) => elementIds.includes(id)));
+  return { slide: enrichSlideForClient(updated), group };
+}
+
+async function ungroupElements({ workspaceId, presentationId, slideId, elementId }) {
+  const { deck } = await loadDeckContext(workspaceId, presentationId);
+  assertNotGenerating(deck);
+
+  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+
+  const doc = getElementsDoc(slide);
+  if (!canPptUngroup(doc.elements, [elementId])) {
+    throw new AppError('Select a group to ungroup', 400);
+  }
+  doc.elements = ungroupPptElement(doc.elements, elementId).map(normalizeElement);
+  const updated = await persistElementsDoc(slideId, doc);
+  return { slide: enrichSlideForClient(updated) };
+}
+
+async function alignElements({ workspaceId, presentationId, slideId, elementIds, alignment }) {
+  const { deck } = await loadDeckContext(workspaceId, presentationId);
+  assertNotGenerating(deck);
+
+  const slide = (deck.slides || []).find((s) => s.id === slideId);
+  if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+
+  const doc = getElementsDoc(slide);
+  const canvas = doc.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+  doc.elements = alignPptElements(doc.elements, elementIds, alignment, canvas).map(normalizeElement);
+  const updated = await persistElementsDoc(slideId, doc);
+  return { slide: enrichSlideForClient(updated) };
 }
 
 async function deleteElement({ workspaceId, presentationId, slideId, elementId }) {
@@ -362,7 +461,16 @@ async function deleteElement({ workspaceId, presentationId, slideId, elementId }
   if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
 
   const doc = getElementsDoc(slide);
-  const next = doc.elements.filter((e) => e.id !== elementId);
+  const removeIds = collectDeleteIds(doc.elements, elementId);
+  const next = doc.elements
+    .filter((e) => !removeIds.has(e.id))
+    .map((el) => {
+      if (!Array.isArray(el.childIds)) return el;
+      const childIds = el.childIds.filter((cid) => !removeIds.has(cid));
+      if (childIds.length === el.childIds.length) return el;
+      return { ...el, childIds };
+    })
+    .filter((el) => !(el.type === 'group' && (el.childIds || []).length < 2));
   if (next.length === doc.elements.length) throw new AppError('Element not found', 404);
   doc.elements = next;
 
@@ -462,6 +570,10 @@ module.exports = {
   putCanvas,
   addElement,
   patchElement,
+  patchElementsBatch,
+  groupElements,
+  ungroupElements,
+  alignElements,
   deleteElement,
   reorderElements,
   listElementCatalog,
