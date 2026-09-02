@@ -8,9 +8,8 @@ const shareSelect = {
   projectId: true,
   workspaceId: true,
   tokenPrefix: true,
-  access: true,
+  role: true,
   enabled: true,
-  expiresAt: true,
   createdBy: true,
   revokedAt: true,
   rotateCount: true,
@@ -24,14 +23,22 @@ const ownerShareSelect = {
   token: true,
 };
 
-const findShareByProjectId = (projectId) => {
-  return prisma.presentationShareLink.findUnique({
+const listSharesByProjectId = (projectId) => {
+  return prisma.presentationShareLink.findMany({
     where: { projectId },
+    select: ownerShareSelect,
+    orderBy: { role: 'asc' },
+  });
+};
+
+const findShareByProjectAndRole = (projectId, role) => {
+  return prisma.presentationShareLink.findUnique({
+    where: { projectId_role: { projectId, role } },
     select: ownerShareSelect,
   });
 };
 
-/** Resolve a capability token. Returns the row regardless of enabled/expiry; callers gate. */
+/** Resolve a capability token. Returns the row regardless of enabled; callers gate. */
 const findShareByTokenHash = (tokenHash) => {
   return prisma.presentationShareLink.findUnique({
     where: { tokenHash },
@@ -57,10 +64,17 @@ const findPresentationForShare = (projectId) => {
 };
 
 /** Server-only lookup that exposes tokenHash so callers can invalidate the Redis meta cache. */
-const findShareInternalByProjectId = (projectId) => {
+const findShareInternalByProjectAndRole = (projectId, role) => {
   return prisma.presentationShareLink.findUnique({
-    where: { projectId },
+    where: { projectId_role: { projectId, role } },
     select: { ...ownerShareSelect, tokenHash: true },
+  });
+};
+
+const listSharesInternalByProjectId = (projectId) => {
+  return prisma.presentationShareLink.findMany({
+    where: { projectId },
+    select: { id: true, tokenHash: true, role: true },
   });
 };
 
@@ -147,8 +161,10 @@ module.exports = {
   shareSelect,
   ownerShareSelect,
   findPresentationForShare,
-  findShareByProjectId,
-  findShareInternalByProjectId,
+  listSharesByProjectId,
+  findShareByProjectAndRole,
+  findShareInternalByProjectAndRole,
+  listSharesInternalByProjectId,
   findShareByTokenHash,
   getContentVersion,
   findViewerName,

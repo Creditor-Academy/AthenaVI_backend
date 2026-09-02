@@ -150,15 +150,15 @@ Optional `q` (name or email, case-insensitive, max 20 results). Available to all
 
 Unauthenticated. Send `Authorization: Bearer <token>` **if** the visitor happens to be logged in; an invalid one is treated as a guest and never 401s. All responses are `Cache-Control: no-store` and carry `Referrer-Policy: no-referrer`.
 
-**Comments must be enabled on the link.** `PUT .../share` mints new links with `access: "COMMENT"`; links created before this feature stay `"VIEW"` until the owner PATCHes `access`. See [PRESENTATION_API.md](PRESENTATION_API.md#view-only-share-links).
+**Comments require a reviewer link.** Enable the reviewer URL with `PUT .../share/reviewer`. The viewer URL never exposes comments (empty list on read, 403 on write). See [PRESENTATION_API.md](PRESENTATION_API.md#share-links-viewer--reviewer).
 
 | Link state | `GET /comments` | Writes |
 |---|---|---|
-| Unknown / disabled / expired | **404** | **404** |
-| Live, `access: VIEW` | **200** with `comments: []` | **403** `Comments are disabled for this link` |
-| Live, `access: COMMENT` | **200** | allowed |
+| Unknown / disabled | **404** | **404** |
+| Live **viewer** link | **200** with `comments: []` | **403** `Comments require a reviewer link` |
+| Live **reviewer** link | **200** | allowed |
 
-Read `canComment` from **`GET /api/p/:token/session`** to decide whether to render the composer.
+Read `canComment` and `linkRole` from **`GET /api/p/:token/session`** to decide whether to render the composer.
 
 **Only comments on current `READY` slides are returned.** Orphaned threads and threads on slides still generating are invisible here, and any attempt to read or write one 404s (a share link must not reveal hidden slides).
 
@@ -217,7 +217,7 @@ Configurable — see [ENVIRONMENT.md](ENVIRONMENT.md).
 | Code | When |
 |---|---|
 | `400` | Validation, both/neither `slideId` and `parentId`, reply to a reply or resolved root, thread limits, guest without a display name |
-| `403` | Not the author; guest resolving; comments disabled on the link |
+| `403` | Not the author; guest resolving; viewer link (comments require reviewer link) |
 | `404` | Unknown presentation, slide, comment, or share link; hidden-slide comment on the public surface |
 | `429` | Rate limited |
 

@@ -1,6 +1,6 @@
 $kind: http-request
 description: Server-computed display name plus canOpenInEditor for workspace members. Drop the Authorization header to test the guest path.
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/session"
+url: "{{baseUrl}}/api/p/{{presentationViewerToken}}/session"
 method: GET
 headers:
   Authorization: Bearer {{accessToken}}

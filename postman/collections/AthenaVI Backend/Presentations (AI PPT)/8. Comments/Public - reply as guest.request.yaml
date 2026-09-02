@@ -1,6 +1,6 @@
 $kind: http-request
 description: Reply to a root thread on a READY slide. Same guest identity rules as posting.
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments"
+url: "{{baseUrl}}/api/p/{{presentationReviewerToken}}/comments"
 method: POST
 headers:
   Content-Type: application/json

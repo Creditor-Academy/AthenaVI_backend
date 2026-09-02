@@ -14,14 +14,8 @@ const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss
 const TOKEN_BYTES = 32;
 const TOKEN_PREFIX_LENGTH = 8;
 
-const ACCESS_VIEW = 'VIEW';
-const ACCESS_COMMENT = 'COMMENT';
-
-/**
- * New links allow comments. Links minted before the comment feature keep `VIEW` until the
- * owner opts in, so nobody's existing view-only URL silently becomes writable.
- */
-const DEFAULT_ACCESS = ACCESS_COMMENT;
+const ROLE_VIEWER = 'VIEWER';
+const ROLE_REVIEWER = 'REVIEWER';
 
 const META_TTL_SEC =
   Number(process.env.PPT_SHARE_META_CACHE_TTL_SEC) > 0
@@ -59,24 +53,19 @@ function frontendBase() {
 
 const buildShareUrl = (token) => `${frontendBase()}/p/${token}`;
 
-const isExpired = (share) =>
-  Boolean(share?.expiresAt) && new Date(share.expiresAt).getTime() <= Date.now();
-
 function shareNotFound() {
   return new AppError(messages.PRESENTATION_SHARE_NOT_FOUND, 404);
 }
 
-function toOwnerShare(share) {
+function toOwnerLink(share) {
   if (!share) {
-    return { enabled: false, exists: false };
+    return { exists: false };
   }
 
   const out = {
     exists: true,
     enabled: share.enabled,
-    expired: isExpired(share),
-    access: share.access,
-    expiresAt: share.expiresAt,
+    role: share.role,
     rotateCount: share.rotateCount,
     createdBy: share.createdBy,
     createdAt: share.createdAt,
@@ -90,6 +79,10 @@ function toOwnerShare(share) {
   }
 
   return out;
+}
+
+function linkRoleFromShare(share) {
+  return share.role === ROLE_REVIEWER ? 'reviewer' : 'viewer';
 }
 
 async function invalidateMeta(tokenHash) {
@@ -166,9 +159,9 @@ function assertNotGenerating(deck) {
    Owner APIs
 ========================= */
 
-async function enableShare({ workspaceId, presentationId, userId, ip }) {
+async function enableShareForRole({ workspaceId, presentationId, userId, ip, role }) {
   const { deck } = await loadOwnerContext(workspaceId, presentationId);
-  const existing = await shareDao.findShareInternalByProjectId(presentationId);
+  const existing = await shareDao.findShareInternalByProjectAndRole(presentationId, role);
 
   if (!existing) {
     assertNotGenerating(deck);
@@ -182,14 +175,14 @@ async function enableShare({ workspaceId, presentationId, userId, ip }) {
         token,
         tokenHash,
         tokenPrefix,
-        access: DEFAULT_ACCESS,
+        role,
         createdBy: userId || null,
       });
     } catch (err) {
-      // Concurrent first-enable: projectId is unique, so the loser reports the winner's link.
+      // Concurrent first-enable: (projectId, role) is unique, so the loser reports the winner.
       if (err?.code === 'P2002') {
-        const winner = await shareDao.findShareByProjectId(presentationId);
-        if (winner) return { share: toOwnerShare(winner) };
+        const winner = await shareDao.findShareByProjectAndRole(presentationId, role);
+        if (winner) return { link: toOwnerLink(winner) };
       }
       throw err;
     }
@@ -201,19 +194,17 @@ async function enableShare({ workspaceId, presentationId, userId, ip }) {
       ip: ip || null,
     });
 
-    return { share: toOwnerShare(created), token, url: buildShareUrl(token) };
+    return { link: toOwnerLink(created), token, url: buildShareUrl(token) };
   }
 
-  const expired = isExpired(existing);
-  if (existing.enabled && !expired) {
-    return { share: toOwnerShare(existing) };
+  if (existing.enabled) {
+    return { link: toOwnerLink(existing) };
   }
 
   assertNotGenerating(deck);
   const updated = await shareDao.updateShareById(existing.id, {
     enabled: true,
     revokedAt: null,
-    ...(expired ? { expiresAt: null } : {}),
   });
   await shareDao.createAudit({
     shareId: existing.id,
@@ -223,26 +214,23 @@ async function enableShare({ workspaceId, presentationId, userId, ip }) {
   });
   await invalidateMeta(existing.tokenHash);
 
-  return { share: toOwnerShare(updated) };
+  return { link: toOwnerLink(updated) };
 }
 
 async function getShare({ workspaceId, presentationId }) {
   await loadOwnerContext(workspaceId, presentationId);
-  const share = await shareDao.findShareByProjectId(presentationId);
-  return { share: toOwnerShare(share) };
+  const shares = await shareDao.listSharesByProjectId(presentationId);
+  const byRole = Object.fromEntries(shares.map((row) => [row.role, row]));
+
+  return {
+    viewer: toOwnerLink(byRole[ROLE_VIEWER] || null),
+    reviewer: toOwnerLink(byRole[ROLE_REVIEWER] || null),
+  };
 }
 
-async function updateShare({
-  workspaceId,
-  presentationId,
-  userId,
-  ip,
-  enabled,
-  expiresAt,
-  access,
-}) {
+async function updateShareForRole({ workspaceId, presentationId, userId, ip, role, enabled }) {
   const { deck } = await loadOwnerContext(workspaceId, presentationId);
-  const existing = await shareDao.findShareInternalByProjectId(presentationId);
+  const existing = await shareDao.findShareInternalByProjectAndRole(presentationId, role);
   if (!existing) {
     throw shareNotFound();
   }
@@ -263,19 +251,8 @@ async function updateShare({
     actions.push('DISABLED');
   }
 
-  if (expiresAt !== undefined) {
-    data.expiresAt = expiresAt === null ? null : new Date(expiresAt);
-  }
-
-  // Toggling comments is not a re-enable, so it stays allowed while the deck regenerates.
-  if (access !== undefined && access !== existing.access) {
-    data.access = access;
-    actions.push('ACCESS_CHANGED');
-  }
-
-  const updated = Object.keys(data).length > 0
-    ? await shareDao.updateShareById(existing.id, data)
-    : existing;
+  const updated =
+    Object.keys(data).length > 0 ? await shareDao.updateShareById(existing.id, data) : existing;
 
   for (const auditAction of actions) {
     await shareDao.createAudit({
@@ -287,16 +264,13 @@ async function updateShare({
   }
 
   await invalidateMeta(existing.tokenHash);
-  if (data.enabled === false) {
-    await presence.clearRoom(existing.id);
-  }
 
-  return { share: toOwnerShare(updated) };
+  return { link: toOwnerLink(updated) };
 }
 
-async function rotateShare({ workspaceId, presentationId, userId, ip }) {
+async function rotateShareForRole({ workspaceId, presentationId, userId, ip, role }) {
   await loadOwnerContext(workspaceId, presentationId);
-  const existing = await shareDao.findShareInternalByProjectId(presentationId);
+  const existing = await shareDao.findShareInternalByProjectAndRole(presentationId, role);
   if (!existing) {
     throw shareNotFound();
   }
@@ -328,18 +302,18 @@ async function rotateShare({ workspaceId, presentationId, userId, ip }) {
   const token = minted.token;
 
   await invalidateMeta(existing.tokenHash);
-  await presence.clearRoom(existing.id);
 
-  return { share: toOwnerShare(rotated), token, url: buildShareUrl(token) };
+  return { link: toOwnerLink(rotated), token, url: buildShareUrl(token) };
 }
 
-/** Called before a presentation row is deleted so no Redis room outlives the link. */
+/** Called before a presentation row is deleted so no Redis room outlives the links. */
 async function invalidateForProject(projectId) {
   try {
-    const existing = await shareDao.findShareInternalByProjectId(projectId);
-    if (!existing) return;
-    await invalidateMeta(existing.tokenHash);
-    await presence.clearRoom(existing.id);
+    const shares = await shareDao.listSharesInternalByProjectId(projectId);
+    for (const share of shares) {
+      await invalidateMeta(share.tokenHash);
+    }
+    await presence.clearRoom(projectId);
     await redisClient.del(contentVersionKey(projectId));
   } catch {
     // never block a delete on cache cleanup
@@ -351,8 +325,8 @@ async function invalidateForProject(projectId) {
 ========================= */
 
 /**
- * Resolve a raw token to a usable share. Disabled, expired, and unknown tokens all raise the
- * same 404 so the endpoint cannot be used to enumerate presentations.
+ * Resolve a raw token to a usable share. Disabled and unknown tokens all raise the same 404
+ * so the endpoint cannot be used to enumerate presentations.
  */
 async function resolveShare(token) {
   const tokenHash = hashToken(token);
@@ -388,7 +362,7 @@ async function resolveShare(token) {
     }
   }
 
-  if (!share || !share.enabled || isExpired(share)) {
+  if (!share || !share.enabled) {
     throw shareNotFound();
   }
 
@@ -505,7 +479,8 @@ async function getPublicSession({ token, user }) {
     canOpenInEditor = Boolean(membership);
   }
 
-  const canComment = share.access === ACCESS_COMMENT;
+  const canComment = share.role === ROLE_REVIEWER;
+  const linkRole = linkRoleFromShare(share);
 
   return {
     self: {
@@ -513,9 +488,9 @@ async function getPublicSession({ token, user }) {
       isAnonymous: identity.isAnonymous,
       ...(identity.userId ? { userId: identity.userId } : {}),
     },
-    // `comment` still means "cannot edit"; the deck payload keeps `view` so its ETag stays
-    // identical for every viewer.
-    permission: canComment ? 'comment' : 'view',
+    linkRole,
+    // Deck payload keeps `view` so its ETag stays identical for every viewer.
+    permission: canComment ? 'review' : 'view',
     canComment,
     canResolveComments: canComment && canOpenInEditor,
     canOpenInEditor,
@@ -528,7 +503,7 @@ async function getPublicSession({ token, user }) {
 /**
  * Token + capability resolution for the public comment routes. Lives here so the comment
  * module never has to know how a share link is stored, and so the share service keeps its
- * single 404-for-everything policy on unknown, disabled, and expired links.
+ * single 404-for-everything policy on unknown and disabled links.
  *
  * @returns {Promise<{ share: object, canComment: boolean, canOpenInEditor: boolean, role: string|null }>}
  */
@@ -542,7 +517,7 @@ async function resolveShareForComments({ token, user }) {
 
   return {
     share,
-    canComment: share.access === ACCESS_COMMENT,
+    canComment: share.role === ROLE_REVIEWER,
     canOpenInEditor: Boolean(membership),
     role: membership?.role || null,
   };
@@ -551,7 +526,7 @@ async function resolveShareForComments({ token, user }) {
 async function buildPresencePayload({ share, user, identity }) {
   const resolved = identity || (await loadViewerIdentity(user));
   const [{ viewerCount, viewers }, contentUpdatedAt, commentsUpdatedAt] = await Promise.all([
-    presence.listViewers(share.id),
+    presence.listViewers(share.projectId),
     getContentUpdatedAt(share.projectId),
     getCommentsUpdatedAt(share.projectId),
   ]);
@@ -571,7 +546,12 @@ async function heartbeatPresence({ token, user, viewerSessionId, slideIndex }) {
   const identity = await loadViewerIdentity(user);
   const viewerKey = presence.buildViewerKey({ user, viewerSessionId });
 
-  await presence.heartbeat({ shareId: share.id, viewerKey, identity, slideIndex });
+  await presence.heartbeat({
+    projectId: share.projectId,
+    viewerKey,
+    identity,
+    slideIndex,
+  });
 
   return buildPresencePayload({ share, user, identity });
 }
@@ -584,20 +564,20 @@ async function listPresence({ token, user }) {
 async function leavePresence({ token, user, viewerSessionId }) {
   const { share } = await resolveShare(token);
   const viewerKey = presence.buildViewerKey({ user, viewerSessionId });
-  await presence.leave({ shareId: share.id, viewerKey });
+  await presence.leave({ projectId: share.projectId, viewerKey });
   return { left: true };
 }
 
 module.exports = {
-  ACCESS_VIEW,
-  ACCESS_COMMENT,
+  ROLE_VIEWER,
+  ROLE_REVIEWER,
   hashToken,
   buildShareUrl,
   resolveShareForComments,
-  enableShare,
+  enableShareForRole,
   getShare,
-  updateShare,
-  rotateShare,
+  updateShareForRole,
+  rotateShareForRole,
   invalidateForProject,
   getPublicPresentation,
   getPublicSession,

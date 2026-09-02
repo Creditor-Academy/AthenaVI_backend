@@ -1,5 +1,5 @@
 $kind: http-request
 description: No auth needed. Add Authorization to appear by name instead of Anonymous viewer. Send the returned ETag as If-None-Match to get a 304.
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}"
+url: "{{baseUrl}}/api/p/{{presentationViewerToken}}"
 method: GET
 order: 5000

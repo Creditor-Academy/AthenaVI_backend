@@ -1,6 +1,6 @@
 $kind: http-request
 description: Requires Authorization for a user who is a member of the owning workspace. Guests and logged-in non-members get 403.
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments/{{presentationCommentId}}/resolve"
+url: "{{baseUrl}}/api/p/{{presentationReviewerToken}}/comments/{{presentationCommentId}}/resolve"
 method: POST
 headers:
   Authorization: Bearer {{accessToken}}

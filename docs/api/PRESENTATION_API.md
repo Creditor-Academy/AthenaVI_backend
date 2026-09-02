@@ -562,43 +562,74 @@ Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
 
 ---
 
-## View-only share links
+## Share links (viewer + reviewer)
 
-Canva-style preview links. The **token in the URL is the permission** (capability URL): no login and no workspace membership are required, and viewers can never edit slides. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
+Canva-style preview links. Each presentation may have up to **two independent capability URLs**:
+
+| Link | Public capability |
+|---|---|
+| **Viewer** | Page through the deck + unified presence — **no comments** |
+| **Reviewer** | Same as viewer **+ read/post/edit own comments** (guest or logged-in outsider) |
+
+Neither link can edit slides — only the workspace editor can mutate the deck. Owner management lives under the presentation; viewers use the unauthenticated **`/api/p`** surface documented below.
 
 Public resolve looks up a **SHA-256 hash** of the token. The raw token is also stored so **workspace members can reopen the share modal and copy the same URL any time**. Only owner share APIs return `token` / `url`; public `/api/p` never echoes them.
 
-**`access`** controls whether viewers may comment (never edit):
+Each link type is **enabled independently** (viewer only, reviewer only, both, or neither). No row/token exists until the owner first enables that type. There is **no expiry** — a link works until disabled or rotated.
 
-| `access` | Viewer can |
+Comment contracts: [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
+
+### Get share links
+
+| | |
 |---|---|
-| `VIEW` | page through the deck |
-| `COMMENT` | page through the deck **and post comments** |
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+| **Auth** | Bearer + member |
 
-New links are minted with **`COMMENT`**. Links created before comments shipped remain `VIEW` until the owner PATCHes `access`, so no existing URL silently becomes writable. Comment contracts: [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
+**Response `data`:**
 
-### Enable share link
+```json
+{
+  "viewer": {
+    "exists": true,
+    "enabled": true,
+    "role": "VIEWER",
+    "token": "8Kd…",
+    "url": "https://app.example.com/p/8Kd…",
+    "rotateCount": 0,
+    "createdBy": "<uuid>",
+    "createdAt": "2026-08-20T09:00:00.000Z",
+    "updatedAt": "2026-08-20T09:00:00.000Z"
+  },
+  "reviewer": {
+    "exists": false
+  }
+}
+```
+
+When a link type was never minted: `{ "exists": false }`. Legacy rows created before token persistence may omit `token` / `url` — call **rotate** once for that role to mint a recoverable link.
+
+### Enable share link (per role)
 
 | | |
 |---|---|
 | **Method** | `PUT` |
-| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` or `…/share/reviewer` |
 | **Auth** | Bearer + member |
 
-Idempotent. Mints a token on **first** create with `access: "COMMENT"`; on an existing link it re-enables (and clears a lapsed `expiresAt`) without minting and **without changing `access`**.
+Idempotent. Mints a token on **first** enable for that role; on an existing link it re-enables without minting.
 
 **Response `data` (first create):**
 
 ```json
 {
-  "share": {
+  "link": {
     "exists": true,
     "enabled": true,
-    "expired": false,
-    "access": "COMMENT",
+    "role": "REVIEWER",
     "token": "8Kd…",
     "url": "https://app.example.com/p/8Kd…",
-    "expiresAt": null,
     "rotateCount": 0,
     "createdBy": "<uuid>",
     "createdAt": "2026-08-20T09:00:00.000Z",
@@ -609,50 +640,39 @@ Idempotent. Mints a token on **first** create with `access: "COMMENT"`; on an ex
 }
 ```
 
-Top-level `token` / `url` are also present on first create (and on rotate) for convenience. On an already-enabled link they appear only inside `share`.
+Top-level `token` / `url` are also present on first create (and on rotate) for convenience. On an already-enabled link they appear only inside `link`.
 
 **409** if the deck is `GENERATING` (`PRESENTATION_ALREADY_GENERATING`).
 
-### Get share link
-
-| | |
-|---|---|
-| **Method** | `GET` |
-| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
-
-Returns the same `share` object including a copyable `url` (and `token`). When no link was ever created: `data.share` is `{ "enabled": false, "exists": false }`.
-
-Legacy rows created before token persistence may omit `token` / `url` — call **rotate** once to mint a recoverable link.
-
-### Update share link
+### Update share link (per role)
 
 | | |
 |---|---|
 | **Method** | `PATCH` |
-| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` or `…/share/reviewer` |
+| **Auth** | Bearer + member |
 
-**Body** (at least one key):
+**Body:**
 
 ```json
-{ "enabled": false, "expiresAt": "2026-09-01T00:00:00.000Z", "access": "COMMENT" }
+{ "enabled": false }
 ```
 
-- `expiresAt`: ISO date, or `null` to clear.
-- `access`: `"VIEW"` | `"COMMENT"` — the "Allow comments" toggle. Switching to `VIEW` immediately 403s public comment writes; existing comments are kept and stay visible in the editor. Allowed while the deck is `GENERATING` (it changes no slides).
-- Disabling keeps the same token (so a previously shared URL works again after re-enable) and immediately flushes the viewer room. `share.url` remains copyable while disabled; public `/api/p` still 404s until re-enabled.
+- Disabling keeps the same token (so a previously shared URL works again after re-enable). `link.url` remains copyable while disabled; public `/api/p` still 404s until re-enabled. **Presence is not cleared** when one link is disabled — viewer and reviewer URLs share one room per presentation.
 - Re-enabling while the deck is `GENERATING` → **409**.
-- Response includes `share.token` + `share.url` like GET.
+- **404** if that link type was never minted.
 
-### Rotate share link
+### Rotate share link (per role)
 
 | | |
 |---|---|
 | **Method** | `POST` |
-| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/rotate` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer/rotate` or `…/share/reviewer/rotate` |
+| **Auth** | Bearer + member |
 
-Mints a new token and **invalidates every URL already shared**. Returns `token` + `url` (top-level and inside `share`). Allowed even while the deck is `GENERATING`, so a leaked link can always be killed. `access` and existing comments are preserved.
+Mints a new token for that role and **invalidates every URL already shared for that link**. Returns `token` + `url` (top-level and inside `link`). Sets `enabled: true`. Allowed even while the deck is `GENERATING`, so a leaked link can always be killed. Rotating one link does not affect the other link's URL or the unified presence room.
 
-**404** if no link exists yet.
+**404** if that link type was never minted.
 
 ---
 
@@ -660,7 +680,7 @@ Mints a new token and **invalidates every URL already shared**. Returns `token` 
 
 Unauthenticated. `Authorization: Bearer <access_token>` is **optional** — send it when present so the viewer appears by name instead of `Anonymous viewer`. An invalid or expired Bearer token never causes a 401 here; it is simply treated as a guest.
 
-Unknown, disabled, and expired tokens all return an identical **404** (`Share link not found`) so the endpoint cannot be used to discover presentations.
+Unknown and disabled tokens all return an identical **404** (`Share link not found`) so the endpoint cannot be used to discover presentations.
 
 All responses carry `Referrer-Policy: no-referrer`. The hosting `/p/:token` page must do the same, or the token can leak through the `Referer` header on presigned image loads.
 
@@ -710,7 +730,8 @@ Personalized companion to the cacheable deck payload.
 ```json
 {
   "self": { "displayName": "Priya Shah", "isAnonymous": false, "userId": "<uuid>" },
-  "permission": "comment",
+  "linkRole": "reviewer",
+  "permission": "review",
   "canComment": true,
   "canResolveComments": true,
   "canOpenInEditor": true,
@@ -721,7 +742,7 @@ Personalized companion to the cacheable deck payload.
 
 `canOpenInEditor` is true only when the caller is a member of the owning workspace; `workspaceId` / `presentationId` appear only in that case, so the UI can offer "Open in editor".
 
-`permission` is `"comment"` when the link allows comments, otherwise `"view"` — neither permits editing slides. Gate the comment composer on **`canComment`**, and the resolve control on **`canResolveComments`** (members only). See [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
+`linkRole` is `"viewer"` or `"reviewer"` depending on which token was used. `permission` is `"review"` on reviewer links and `"view"` on viewer links — neither permits editing slides. Gate the comment composer on **`canComment`**, and the resolve control on **`canResolveComments`** (members only). A workspace member on a **viewer** link still gets `canOpenInEditor: true` but `canComment: false`. See [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
 
 Display names are always computed server-side from `User.name`. A logged-in user with a blank name is shown as `Anonymous viewer`. Email is never exposed.
 
@@ -787,8 +808,8 @@ Configurable — see [ENVIRONMENT.md](ENVIRONMENT.md).
 - Presentation routes are nested under workspaces (same pattern as projects/folders).
 - Credits are **presentation-specific feature keys** but use the **workspace** credit ledger (`SCOPE.WORKSPACE`).
 - Offline structural checks: `npm run eval:presentation` (see `scripts/presentation-eval/`).
-- Share links never allow editing and are free (no credit charge). Presence and comments are polled over HTTP; there is no WebSocket/SSE channel.
-- Share-link visitors may comment when `access: COMMENT` — see [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
+- Share links never allow editing and are free (no credit charge). Presence and comments are polled over HTTP; there is no WebSocket/SSE channel. Viewer and reviewer URLs share one presence room per presentation.
+- Share-link visitors may comment only on **reviewer** links — see [PRESENTATION_COMMENTS_API.md](PRESENTATION_COMMENTS_API.md).
 - Deferred (not this API surface): password-protected links, frozen publish snapshots, brand kits, server version history, studio isolation.
 
 ---

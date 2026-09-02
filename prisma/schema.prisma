@@ -83,9 +83,9 @@ enum ProjectType {
   PRESENTATION
 }
 
-enum PresentationShareAccess {
-  VIEW
-  COMMENT
+enum PresentationShareRole {
+  VIEWER
+  REVIEWER
 }
 
 enum TemplateType {
@@ -470,7 +470,7 @@ model Project {
   comments           ProjectComment[]
   presentationComments PresentationComment[]
   deck               Deck?
-  shareLink          PresentationShareLink?
+  shareLinks         PresentationShareLink[]
 
   @@index([updatedBy])
   @@index([type])
@@ -1117,27 +1117,27 @@ model PresentationImageCache {
 }
 
 model PresentationShareLink {
-  id          String                  @id @default(uuid())
-  projectId   String                  @unique @map("project_id")
-  workspaceId String                  @map("workspace_id")
-  tokenHash   String                  @unique @map("token_hash")
+  id          String                @id @default(uuid())
+  projectId   String                @map("project_id")
+  workspaceId String                @map("workspace_id")
+  tokenHash   String                @unique @map("token_hash")
   /// Raw capability token for owner redisplay (GET/PATCH). Public resolve still uses tokenHash only.
-  token       String?                 @map("token")
-  tokenPrefix String                  @map("token_prefix")
-  access      PresentationShareAccess @default(VIEW)
-  enabled     Boolean                 @default(true)
-  expiresAt   DateTime?               @map("expires_at")
-  createdBy   String?                 @map("created_by")
-  revokedAt   DateTime?               @map("revoked_at")
-  rotateCount Int                     @default(0) @map("rotate_count")
-  createdAt   DateTime                @default(now()) @map("created_at")
-  updatedAt   DateTime                @updatedAt @map("updated_at")
+  token       String?               @map("token")
+  tokenPrefix String                @map("token_prefix")
+  role        PresentationShareRole
+  enabled     Boolean               @default(true)
+  createdBy   String?               @map("created_by")
+  revokedAt   DateTime?             @map("revoked_at")
+  rotateCount Int                   @default(0) @map("rotate_count")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
 
   project       Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdByUser User?                    @relation("PresentationShareCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   audits        PresentationShareAudit[]
 
+  @@unique([projectId, role])
   @@index([workspaceId])
   @@index([createdBy])
   @@map("presentation_share_links")

@@ -33,13 +33,8 @@ const patchShareSchema = Joi.object({
     presentationId: presentationIdParam,
   }),
   body: Joi.object({
-    enabled: Joi.boolean().optional(),
-    expiresAt: Joi.date().iso().allow(null).optional(),
-    /** `COMMENT` = view + post comments. Viewers can never edit the deck either way. */
-    access: Joi.string().valid('VIEW', 'COMMENT').optional(),
-  })
-    .min(1)
-    .required(),
+    enabled: Joi.boolean().required(),
+  }).required(),
 });
 
 const publicShareTokenSchema = Joi.object({

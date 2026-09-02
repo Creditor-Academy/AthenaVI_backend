@@ -1,5 +1,5 @@
 $kind: http-request
 description: Guests pass viewerSessionId as a query param here (no body on DELETE).
-url: "{{baseUrl}}/api/p/{{presentationShareToken}}/comments/{{presentationCommentId}}?viewerSessionId={{viewerSessionId}}"
+url: "{{baseUrl}}/api/p/{{presentationReviewerToken}}/comments/{{presentationCommentId}}?viewerSessionId={{viewerSessionId}}"
 method: DELETE
 order: 13000

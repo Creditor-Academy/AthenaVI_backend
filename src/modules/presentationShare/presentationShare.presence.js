@@ -13,8 +13,8 @@ const VIEWER_DISPLAY_LIMIT =
     ? Number(process.env.PPT_SHARE_PRESENCE_DISPLAY_LIMIT)
     : 50;
 
-const onlineKey = (shareId) => `ppt:share:${shareId}:online`;
-const viewerKeyOf = (shareId, viewerKey) => `ppt:share:${shareId}:v:${viewerKey}`;
+const onlineKey = (projectId) => `ppt:share:${projectId}:online`;
+const viewerKeyOf = (projectId, viewerKey) => `ppt:share:${projectId}:v:${viewerKey}`;
 
 /**
  * Server-computed label. A client-supplied name is never trusted, and email is never exposed
@@ -35,23 +35,23 @@ function buildViewerKey({ user, viewerSessionId }) {
   return `anon:${viewerSessionId}`;
 }
 
-async function pruneStale(shareId) {
+async function pruneStale(projectId) {
   const cutoff = Date.now() - VIEWER_TTL_SEC * 1000;
   try {
-    await redisClient.zRemRangeByScore(onlineKey(shareId), 0, cutoff);
+    await redisClient.zRemRangeByScore(onlineKey(projectId), 0, cutoff);
   } catch {
     // presence is best-effort; never fail the request over it
   }
 }
 
 /**
- * @param {string} shareId
+ * @param {string} projectId
  * @returns {Promise<{ viewerCount: number, viewers: object[] }>}
  */
-async function listViewers(shareId) {
-  await pruneStale(shareId);
+async function listViewers(projectId) {
+  await pruneStale(projectId);
 
-  const key = onlineKey(shareId);
+  const key = onlineKey(projectId);
   let entries = [];
   let viewerCount = 0;
 
@@ -71,7 +71,7 @@ async function listViewers(shareId) {
   // node-redis pipelines commands issued in the same tick, so this is one round trip.
   const payloads = await Promise.all(
     recent.map((entry) =>
-      redisClient.get(viewerKeyOf(shareId, entry.value)).catch(() => null)
+      redisClient.get(viewerKeyOf(projectId, entry.value)).catch(() => null)
     )
   );
 
@@ -97,9 +97,9 @@ async function listViewers(shareId) {
 
 /**
  * Record a heartbeat. Per-viewer payload keys self-expire, so no SCAN is ever needed.
- * @param {{ shareId: string, viewerKey: string, identity: object, slideIndex?: number }} params
+ * @param {{ projectId: string, viewerKey: string, identity: object, slideIndex?: number }} params
  */
-async function heartbeat({ shareId, viewerKey, identity, slideIndex = 0 }) {
+async function heartbeat({ projectId, viewerKey, identity, slideIndex = 0 }) {
   const now = Date.now();
   const payload = JSON.stringify({
     displayName: identity.displayName,
@@ -110,34 +110,34 @@ async function heartbeat({ shareId, viewerKey, identity, slideIndex = 0 }) {
 
   try {
     await Promise.all([
-      redisClient.zAdd(onlineKey(shareId), { score: now, value: viewerKey }),
-      redisClient.set(viewerKeyOf(shareId, viewerKey), payload, { EX: VIEWER_TTL_SEC }),
+      redisClient.zAdd(onlineKey(projectId), { score: now, value: viewerKey }),
+      redisClient.set(viewerKeyOf(projectId, viewerKey), payload, { EX: VIEWER_TTL_SEC }),
     ]);
     // Safety net so an abandoned share cannot keep a zset alive forever.
-    await redisClient.expire(onlineKey(shareId), VIEWER_TTL_SEC * 10);
+    await redisClient.expire(onlineKey(projectId), VIEWER_TTL_SEC * 10);
   } catch {
     // best-effort
   }
 }
 
-async function leave({ shareId, viewerKey }) {
+async function leave({ projectId, viewerKey }) {
   try {
     await Promise.all([
-      redisClient.zRem(onlineKey(shareId), viewerKey),
-      redisClient.del(viewerKeyOf(shareId, viewerKey)),
+      redisClient.zRem(onlineKey(projectId), viewerKey),
+      redisClient.del(viewerKeyOf(projectId, viewerKey)),
     ]);
   } catch {
     // best-effort; TTL covers missed calls
   }
 }
 
-/** Drop the whole room (disable, rotate, presentation delete). Reads members instead of SCAN. */
-async function clearRoom(shareId) {
-  if (!shareId) return;
-  const key = onlineKey(shareId);
+/** Drop the whole room (presentation delete). Reads members instead of SCAN. */
+async function clearRoom(projectId) {
+  if (!projectId) return;
+  const key = onlineKey(projectId);
   try {
     const entries = await redisClient.zRangeWithScores(key, 0, -1);
-    const keys = entries.map((entry) => viewerKeyOf(shareId, entry.value));
+    const keys = entries.map((entry) => viewerKeyOf(projectId, entry.value));
     if (keys.length > 0) {
       await redisClient.del(keys);
     }

@@ -328,36 +328,39 @@ Docs: [`WORKSPACE_API.md`](api/WORKSPACE_API.md) · [`PROJECT_EDITOR_INTEGRATION
 
 ---
 
-## Share & present mode (share link + live viewers + comments)
+## Share & present mode (viewer + reviewer links + live viewers + comments)
 
-Canva-style preview sharing. The owner turns on a link; anyone with it can page through the deck and — when comments are allowed — leave feedback. Nobody on the link can edit slides. Viewers see each other's names, and guests appear as `Anonymous viewer`.
+Canva-style preview sharing. The owner enables **viewer** and/or **reviewer** links independently. Anyone with a link can page through the deck; only the **reviewer** link allows public comments. Nobody on a link can edit slides. Viewers on either URL appear in the **same live viewer list**. Guests appear as `Anonymous viewer`.
 
 ### Owner: the share modal
 
+Two cards — **Viewer** and **Reviewer** — each with Enable toggle, Copy URL, and Regenerate. No expiry UI.
+
 | Action | Call |
 |---|---|
-| Open modal | `GET .../presentations/:id/share` |
-| Turn sharing on | `PUT .../presentations/:id/share` |
-| Turn off / set expiry | `PATCH .../presentations/:id/share` `{ enabled, expiresAt }` |
-| Allow / block comments | `PATCH .../presentations/:id/share` `{ access: "COMMENT" \| "VIEW" }` |
-| Reset link | `POST .../presentations/:id/share/rotate` |
+| Open modal | `GET .../presentations/:id/share` → `{ viewer, reviewer }` |
+| Enable viewer link | `PUT .../presentations/:id/share/viewer` |
+| Enable reviewer link | `PUT .../presentations/:id/share/reviewer` |
+| Disable / re-enable | `PATCH .../share/viewer` or `.../share/reviewer` `{ enabled }` |
+| Reset link | `POST .../share/viewer/rotate` or `.../share/reviewer/rotate` |
 
-Every owner response that has a link includes a copyable **`share.url`** (and `share.token`). Open the modal any time, show that URL in a read-only field with Copy, and let the user paste it as often as they need. No “you won’t see this again” warning, and no localStorage of the token.
+Each card reads from `data.viewer` or `data.reviewer`. When `exists: false`, show Enable (calls `PUT`). When `exists: true`, show `link.url` + `link.token` in a copyable field.
 
-- Rotate = **"Reset link"**. Say plainly that everyone who already has the old link loses access.
-- Turning sharing **off** and back **on** keeps the same link working, so use disable (not rotate) for a temporary pause. `share.url` is still shown while disabled; guests get 404 until you re-enable.
-- `PUT` returns **409** while the deck is generating — disable the toggle until `status` leaves `GENERATING`.
-- If an older link has no `share.url` (pre-persistence rows), call **rotate** once to mint a recoverable URL.
-- **"Allow comments"** switch reflects `share.access`. New links come back `COMMENT`; links made before comments shipped read `VIEW`, so render the switch from the response rather than assuming on. Switching to `VIEW` hides the composer for visitors and keeps every existing comment (still visible in the editor). Unlike enable, this call works while the deck is generating.
+- Rotate = **"Reset link"** for that card only. Say plainly that everyone who already has the old URL for that link type loses access.
+- Turning a link **off** and back **on** keeps the same URL working — use disable (not rotate) for a temporary pause. `link.url` is still shown while disabled; guests get 404 until you re-enable.
+- `PUT` / re-enable via `PATCH { enabled: true }` returns **409** while the deck is generating.
+- If an older link has no `link.url` (pre-persistence rows), call **rotate** once for that role to mint a recoverable URL.
+- You can enable viewer only, reviewer only, or both. Do not auto-enable the other type when one is turned on.
+
 ### Viewer: the `/p/:token` page
 
 Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the user happens to be logged in; omit it otherwise. Never redirect a guest to login.
 
 1. `GET /api/p/:token` → deck. Cache the response `ETag` and send it as `If-None-Match` on refetch (**304** = nothing changed).
-2. `GET /api/p/:token/session` → `self.displayName`, `canComment` / `canResolveComments`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members, so you can offer an "Open in editor" button.
-3. `PUT /api/p/:token/presence` every **10–15s** with `{ viewerSessionId, slideIndex }` → live viewer list.
+2. `GET /api/p/:token/session` → `linkRole`, `self.displayName`, `canComment` / `canResolveComments`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members.
+3. `PUT /api/p/:token/presence` every **10–15s** with `{ viewerSessionId, slideIndex }` → live viewer list (unified across viewer and reviewer URLs).
 4. `DELETE /api/p/:token/presence?viewerSessionId=…` on unload (best-effort; the server drops silent viewers after 45s anyway).
-5. If `canComment`, `GET /api/p/:token/comments?slideId=…` for the current slide and render the composer.
+5. If `canComment` (reviewer link only), `GET /api/p/:token/comments?slideId=…` for the current slide and render the composer.
 
 **`viewerSessionId`**: generate a UUID once, persist in `localStorage`, reuse across reloads. It identifies guests for presence **and proves comment authorship**, so the same value must survive reloads or a guest loses the ability to edit their own comments. Logged-in users are keyed by account so multiple tabs collapse into one avatar.
 
@@ -367,7 +370,7 @@ Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the 
 
 ### Viewer comments
 
-Only when session `canComment` is true (link `access: COMMENT`). Full contract: [`PRESENTATION_COMMENTS_API.md`](api/PRESENTATION_COMMENTS_API.md).
+Only when session `canComment` is true (`linkRole === "reviewer"`). Full contract: [`PRESENTATION_COMMENTS_API.md`](api/PRESENTATION_COMMENTS_API.md).
 
 | Action | Call |
 |---|---|
@@ -381,7 +384,7 @@ Only when session `canComment` is true (link `access: COMMENT`). Full contract: 
 - For a logged-in visitor, skip `displayName` — the account name always wins and anything you send is ignored.
 - Guests and logged-in non-members cannot `@mention` (the field is dropped) and get **403** on resolve. Gate those controls on `canResolveComments`.
 - Only comments on finished slides come back here, so a thread can be invisible on the link while still present in the editor.
-- A view-only link answers `GET /comments` with an empty list rather than an error — hide the panel on `canComment: false` instead of treating it as a failure.
+- A viewer link answers `GET /comments` with an empty list rather than an error — hide the panel entirely when `canComment: false` (including members on a viewer URL).
 - After a successful write, refetch the slide's thread; the next presence tick will also show the new `commentsUpdatedAt`.
 
 **During a regeneration:** the deck call still returns 200, but `status` is `GENERATING` and `slides` holds only finished slides. Show an "Updating…" state instead of an error, and let the presence poll tell you when new slides land.
@@ -391,7 +394,7 @@ Only when session `canComment` is true (link `access: COMMENT`). Full contract: 
 - Send `Referrer-Policy: no-referrer` on the `/p/:token` document. Slide images are presigned S3 URLs, and without this the token can leak into access logs through the `Referer` header.
 - Keep the token out of analytics events, error reports, and page titles.
 - Treat slide content as read-only: no editor API calls and no autosave. Comments are the only write this page may make, and only through `/api/p/:token/comments`.
-- Unknown, disabled, and expired links all return **404** with the same message. Show one "This link isn't available" screen — don't try to distinguish them.
+- Unknown and disabled links return **404** with the same message. Show one "This link isn't available" screen — don't try to distinguish them.
 - **429** means the link is being hammered; back off using `Retry-After` rather than retrying immediately.
 
 ---
@@ -424,8 +427,8 @@ Only when session `canComment` is true (link `access: COMMENT`). Full contract: 
 - [ ] Folder list: badge/filter by `project.type`  
 - [ ] Comments sidebar filtered by selected slide; replies + resolve; `@` picker from `mentionable-users`  
 - [ ] Editor shows orphaned threads (`orphaned=true`) so feedback survives a full regenerate  
-- [ ] Share modal: "Allow comments" bound to `share.access`  
-- [ ] `/p/:token` page: composer gated on `canComment`, guest name prompt, refetch on `commentsUpdatedAt`  
+- [ ] Share modal: two cards (Viewer | Reviewer) bound to `data.viewer` / `data.reviewer`
+- [ ] `/p/:token` page: composer gated on `canComment` / `linkRole`, guest name prompt, refetch on `commentsUpdatedAt`
 - [ ] Admin: separate screens for `DECK_LAYOUT` vs `VIDEO_SCENE` template forms  
 
 ---
@@ -462,10 +465,13 @@ POST   .../slides/:slideId/regenerate
 POST   .../export
 GET    .../export/:exportId
 
-PUT    .../share
 GET    .../share
-PATCH  .../share
-POST   .../share/rotate
+PUT    .../share/viewer
+PUT    .../share/reviewer
+PATCH  .../share/viewer
+PATCH  .../share/reviewer
+POST   .../share/viewer/rotate
+POST   .../share/reviewer/rotate
 
 GET    .../comments
 POST   .../comments

@@ -9,7 +9,7 @@ const presentationCommentController = require('../presentationComment/presentati
 /**
  * Public capability-link routes (`/api/p`). Mounted outside `/api/workspaces` because the token
  * itself is the permission: no workspace membership and no login are required. Nothing here can
- * mutate a deck — comments are the only writes, and only on links with `access: COMMENT`.
+ * mutate a deck — comments are the only writes, and only on reviewer links.
  */
 const router = express.Router();
 
