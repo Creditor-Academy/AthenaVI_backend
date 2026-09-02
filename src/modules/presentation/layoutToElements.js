@@ -57,6 +57,9 @@ const {
 const { isDevicePhoneHighlightsLayout, layoutDevicePhoneHighlights } = require('./diagrams/devicePhoneHighlightsLayout');
 const { isDevicePhoneTripleLayout, layoutDevicePhoneTriple } = require('./diagrams/devicePhoneTripleLayout');
 const { isDeviceMultiClusterLayout, layoutDeviceMultiCluster } = require('./diagrams/deviceMultiClusterLayout');
+const { isDeviceLaptopSplitLayout, layoutDeviceLaptopSplit } = require('./diagrams/deviceLaptopSplitLayout');
+const { isDeviceTabletSplitLayout, layoutDeviceTabletSplit } = require('./diagrams/deviceTabletSplitLayout');
+const { isDeviceTabletCenteredLayout, layoutDeviceTabletCentered } = require('./diagrams/deviceTabletCenteredLayout');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -8433,6 +8436,12 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDevicePhoneTriple(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isDeviceMultiClusterLayout(layoutSchema?.layout_id)) {
     next = layoutDeviceMultiCluster(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isDeviceLaptopSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutDeviceLaptopSplit(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isDeviceTabletSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutDeviceTabletSplit(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isDeviceTabletCenteredLayout(layoutSchema?.layout_id)) {
+    next = layoutDeviceTabletCentered(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isQuoteGridLayout(layoutSchema?.layout_id)) {
     next = layoutQuoteGrid(next, layoutSchema, themeTokens, canvas);
   } else if (isQuoteAttributionLayout(layoutSchema?.layout_id)) {

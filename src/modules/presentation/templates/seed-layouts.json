@@ -15483,22 +15483,23 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 3-10, rows 1-2",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 32,
+            "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
-            "lineHeight": 1.15
+            "lineHeight": 1.2
           },
-          "max_lines": 2
+          "max_lines": 1,
+          "clipToSlot": false
         },
         {
           "id": "TABLET_FRAME",
-          "region": "cols 4-9, rows 4-10",
+          "region": "cols 3-10, rows 3-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15511,7 +15512,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 4-9, rows 4-10",
+          "region": "cols 3-10, rows 3-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15549,37 +15550,39 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 1-5, rows 3-5",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 28,
+            "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.15
+            "lineHeight": 1.2
           },
-          "max_lines": 2
+          "max_lines": 2,
+          "clipToSlot": false
         },
         {
           "id": "BODY",
-          "region": "cols 1-6, rows 4-9",
+          "region": "cols 1-5, rows 5-8",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 18,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4,
+          "clipToSlot": false
         },
         {
           "id": "TABLET_FRAME",
-          "region": "cols 8-12, rows 2-9",
+          "region": "cols 7-11, rows 2-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15592,7 +15595,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 8-12, rows 2-9",
+          "region": "cols 7-11, rows 2-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -15636,37 +15639,39 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 1-5, rows 3-5",
           "role": "heading",
           "placeholder_text": "Describe this mockup",
           "layer": 10,
           "typography": {
-            "fontSize": 28,
+            "fontSize": 36,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.15
+            "lineHeight": 1.2
           },
-          "max_lines": 2
+          "max_lines": 2,
+          "clipToSlot": false
         },
         {
           "id": "BODY",
-          "region": "cols 1-6, rows 4-9",
+          "region": "cols 1-5, rows 5-9",
           "role": "body",
           "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
           "layer": 10,
           "typography": {
-            "fontSize": 14,
+            "fontSize": 18,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4,
+          "clipToSlot": false
         },
         {
           "id": "LAPTOP_FRAME",
-          "region": "cols 7-12, rows 3-9",
+          "region": "cols 7-11, rows 2-9",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -15679,7 +15684,7 @@
         },
         {
           "id": "DEVICE_IMAGE",
-          "region": "cols 7-12, rows 3-9",
+          "region": "cols 7-11, rows 2-9",
           "role": "image",
           "layer": 2,
           "fit": "cover",
