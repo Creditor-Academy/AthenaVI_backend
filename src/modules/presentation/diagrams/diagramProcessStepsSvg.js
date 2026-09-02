@@ -44,9 +44,14 @@ function processIconInlineSvg(index = 0) {
   );
 }
 
+function processFlowArrowInlineSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24" width="100%" height="100%" preserveAspectRatio="none"><path fill="currentColor" d="M0 9h42V3l22 9-22 9v-6H0z"/></svg>`;
+}
+
 module.exports = {
   PROCESS_STEP_COLORS,
   processRibbonInlineSvg,
   processRibbonLabelBox,
   processIconInlineSvg,
+  processFlowArrowInlineSvg,
 };

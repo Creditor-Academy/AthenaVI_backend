@@ -112,6 +112,79 @@ function vennSetGeom(i, frame) {
   };
 }
 
+function vennModeFromSchema(schema) {
+  const id = String(schema?.layout_id || schema?.layoutId || '').toLowerCase();
+  const variant = String(schema?.preview?.diagramVariant || '').toLowerCase();
+  if (variant === 'three_circle' || (id.includes('venn') && id.includes('three'))) return 'three_circle';
+  if (variant === 'stacked' || (id.includes('venn') && id.includes('stacked'))) return 'stacked';
+  return 'classic';
+}
+
+function vennThreeCircleFrame(canvasW, canvasH) {
+  const headingY = 52;
+  const headingH = 80;
+  const bottomText = 140;
+  const availH = canvasH - headingY - headingH - 24 - bottomText;
+  const r = Math.round(Math.min(220, canvasW * 0.14, availH / 3.05));
+  const d = Math.round(r * 1.1);
+  const triH = Math.round((d * Math.sqrt(3)) / 2);
+  const clusterW = d + 2 * r;
+  const clusterH = triH + 2 * r;
+  const graphicX = Math.round((canvasW - clusterW) / 2);
+  const graphicY = headingY + headingH + Math.max(12, Math.round((availH - clusterH) / 2));
+  const c = [
+    { cx: graphicX + r, cy: graphicY + r },
+    { cx: graphicX + r + d, cy: graphicY + r },
+    { cx: graphicX + r + d / 2, cy: graphicY + r + triH },
+  ];
+  const midX = (c[0].cx + c[1].cx + c[2].cx) / 3;
+  const midY = (c[0].cy + c[1].cy + c[2].cy) / 3;
+  const leftW = Math.max(160, graphicX - 56);
+  const rightX = c[1].cx + r + 24;
+  const rightW = Math.max(160, canvasW - rightX - 48);
+  const setCTitleY = Math.round(c[2].cy + r + 10);
+  const setCBodyY = setCTitleY + 46;
+  const setCBodyH = Math.max(48, canvasH - setCBodyY - 28);
+  const labels = [
+    { title: { x: 40, y: Math.round(c[0].cy - 48), width: leftW, height: 48 }, body: { x: 40, y: Math.round(c[0].cy + 4), width: leftW, height: 88 } },
+    { title: { x: Math.round(rightX), y: Math.round(c[1].cy - 52), width: rightW, height: 48 }, body: { x: Math.round(rightX), y: Math.round(c[1].cy + 4), width: rightW, height: 88 } },
+    { title: { x: Math.round(c[2].cx - 190), y: setCTitleY, width: 380, height: 44 }, body: { x: Math.round(c[2].cx - 210), y: setCBodyY, width: 420, height: setCBodyH } },
+  ];
+  const circles = c.map(({ cx, cy }) => ({
+    x: Math.round(cx - r),
+    y: Math.round(cy - r),
+    width: r * 2,
+    height: r * 2,
+  }));
+  const center = { x: Math.round(midX - 100), y: Math.round(midY - 28), width: 200, height: 56 };
+  return { headingY, headingH, circles, labels, center, canvasW };
+}
+
+function vennStackedFrame(canvasW, canvasH) {
+  const headingY = 56;
+  const headingH = 88;
+  const r = Math.round(Math.min(170, canvasH * 0.145));
+  const step = Math.round(r * 1.12);
+  const stackH = 2 * r + 2 * step;
+  const cx = 96 + r;
+  const top = headingY + headingH + Math.max(16, Math.round((canvasH - headingY - headingH - stackH - 48) / 2));
+  const cys = [0, 1, 2].map((i) => top + r + i * step);
+  const textX = cx + r + 40;
+  const textW = canvasW - textX - 56;
+  const circles = cys.map((cy) => ({
+    x: Math.round(cx - r),
+    y: Math.round(cy - r),
+    width: r * 2,
+    height: r * 2,
+  }));
+  const labels = cys.map((cy) => ({
+    title: { x: textX, y: Math.round(cy - 44), width: textW, height: 44 },
+    body: { x: textX, y: Math.round(cy + 6), width: textW, height: Math.max(48, step - 52) },
+  }));
+  const center = { x: textX, y: headingY + headingH + 4, width: textW, height: 36 };
+  return { headingY, headingH, circles, labels, center, canvasW };
+}
+
 module.exports = {
   VENN_N,
   VENN_COLORS,
@@ -120,4 +193,7 @@ module.exports = {
   vennIconInlineSvg,
   vennFrame,
   vennSetGeom,
+  vennModeFromSchema,
+  vennThreeCircleFrame,
+  vennStackedFrame,
 };

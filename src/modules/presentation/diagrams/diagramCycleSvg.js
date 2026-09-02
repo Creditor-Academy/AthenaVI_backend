@@ -126,6 +126,191 @@ function buildCycleDiagramSvg(colors = CYCLE_SEGMENT_COLORS, { labels = true } =
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">${parts.join('')}</svg>`;
 }
 
+const CYCLE_RING_N = 5;
+const CYCLE_RING_COLORS = ['#38BDF8', '#FB923C', '#C026D3', '#A3E635', '#0F766E'];
+const CYCLE_RING_GEOM = {
+  view: 1000,
+  cx: 500,
+  cy: 500,
+  rOut: 372,
+  rIn: 222,
+  hubR: 198,
+  gap: 0.048,
+  tip: 0.22,
+};
+
+function cycleRingMidAngle(index) {
+  return -Math.PI / 2 + (Number(index) || 0) * ((Math.PI * 2) / CYCLE_RING_N);
+}
+
+function cycleRingSegPath(index) {
+  const sweep = (Math.PI * 2) / CYCLE_RING_N;
+  const { cx, cy, rOut, rIn, gap, tip } = CYCLE_RING_GEOM;
+  const rMid = (rOut + rIn) / 2;
+  const t0 = cycleRingMidAngle(index) - sweep / 2 + gap / 2;
+  const t1 = t0 + sweep - gap;
+  const [ox0, oy0] = polar(cx, cy, rOut, t0);
+  const [ox1, oy1] = polar(cx, cy, rOut, t1);
+  const [tx, ty] = polar(cx, cy, rMid, t1 + tip);
+  const [ix1, iy1] = polar(cx, cy, rIn, t1);
+  const [ix0, iy0] = polar(cx, cy, rIn, t0);
+  const [nx, ny] = polar(cx, cy, rMid, t0 + tip);
+  return `M ${ox0.toFixed(1)} ${oy0.toFixed(1)} A ${rOut} ${rOut} 0 0 1 ${ox1.toFixed(1)} ${oy1.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)} L ${ix1.toFixed(1)} ${iy1.toFixed(1)} A ${rIn} ${rIn} 0 0 0 ${ix0.toFixed(1)} ${iy0.toFixed(1)} L ${nx.toFixed(1)} ${ny.toFixed(1)} Z`;
+}
+
+function cycleRingSegView(index) {
+  const sweep = (Math.PI * 2) / CYCLE_RING_N;
+  const { cx, cy, rOut, rIn, gap, tip } = CYCLE_RING_GEOM;
+  const rMid = (rOut + rIn) / 2;
+  const t0 = cycleRingMidAngle(index) - sweep / 2 + gap / 2;
+  const t1 = t0 + sweep - gap;
+  const pts = [];
+  const steps = 16;
+  for (let s = 0; s <= steps; s += 1) {
+    const t = t0 + ((t1 - t0) * s) / steps;
+    pts.push(polar(cx, cy, rOut, t));
+    pts.push(polar(cx, cy, rIn, t));
+  }
+  pts.push(polar(cx, cy, rMid, t1 + tip));
+  pts.push(polar(cx, cy, rMid, t0 + tip));
+  const pad = 14;
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const minX = Math.min(...xs) - pad;
+  const minY = Math.min(...ys) - pad;
+  return {
+    x: minX,
+    y: minY,
+    w: Math.max(...xs) - minX + pad,
+    h: Math.max(...ys) - minY + pad,
+  };
+}
+
+function cycleRingSegPlacement(cycleX, cycleY, cycleSize, index) {
+  const v = cycleRingSegView(index);
+  const s = cycleSize / CYCLE_RING_GEOM.view;
+  return {
+    x: Math.round(cycleX + v.x * s),
+    y: Math.round(cycleY + v.y * s),
+    width: Math.round(v.w * s),
+    height: Math.round(v.h * s),
+    rotation: 0,
+    opacity: 1,
+  };
+}
+
+function cycleRingSegSvg(index) {
+  const v = cycleRingSegView(index);
+  const d = cycleRingSegPath(index);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${v.x.toFixed(1)} ${v.y.toFixed(1)} ${v.w.toFixed(1)} ${v.h.toFixed(1)}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" pointer-events="none"><path d="${d}" fill="currentColor" pointer-events="visiblePainted"/></svg>`;
+}
+
+function cycleRingDiamondSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="M32 8L56 32 32 56 8 32Z"/></svg>`;
+}
+
+function cycleRingCalloutSvg(localPts, localBar, w, h) {
+  const p0 = localPts[0] || { x: 12, y: h - 12 };
+  const line = (localPts || [])
+    .map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
+  const bar = localBar
+    ? `<path d="M ${localBar.x1.toFixed(1)} ${localBar.y1.toFixed(1)} L ${localBar.x2.toFixed(1)} ${localBar.y2.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>`
+    : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Math.max(1, w)} ${Math.max(1, h)}" width="100%" height="100%" preserveAspectRatio="xMinYMin meet" fill="none"><path d="${line}" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${bar}<circle cx="${p0.x.toFixed(1)}" cy="${p0.y.toFixed(1)}" r="7" fill="#ffffff" stroke="currentColor" stroke-width="3.5"/></svg>`;
+}
+
+function cycleRingCallouts(cx, cy, rOut) {
+  const n = CYCLE_RING_N;
+  const stem = Math.max(118, Math.round(rOut * 0.64));
+  const barW = 300;
+  const textH = 48;
+  const textW = 220;
+  const arm = Math.max(260, Math.round(rOut * 1.35));
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = cycleRingMidAngle(i);
+    const ax = cx + rOut * Math.cos(a);
+    const ay = cy + rOut * Math.sin(a);
+    const ox = Math.cos(a);
+    const oy = Math.sin(a);
+    const extra = i === 3 ? 48 : i === 4 ? 28 : 0;
+    const useStem = stem + extra;
+    const useArm = arm + (i === 3 ? 36 : 0);
+    const mx = ax + ox * useStem;
+    const my = ay + oy * useStem;
+    let pts;
+    let bar = null;
+    let text;
+    if (i === 0) {
+      pts = [
+        { x: ax, y: ay },
+        { x: ax, y: ay - useStem },
+      ];
+      bar = { x1: ax - barW / 2, y1: ay - useStem, x2: ax + barW / 2, y2: ay - useStem };
+      text = {
+        x: Math.round(ax - textW / 2),
+        y: Math.round(ay - useStem - textH - 6),
+        width: textW,
+        height: textH,
+        align: 'center',
+      };
+    } else if (ox >= 0) {
+      const hx = mx + useArm;
+      pts = [
+        { x: ax, y: ay },
+        { x: mx, y: my },
+        { x: hx, y: my },
+      ];
+      text = {
+        x: Math.round(mx + 8),
+        y: Math.round(my - textH - 4),
+        width: textW,
+        height: textH,
+        align: 'left',
+      };
+    } else {
+      const hx = mx - useArm;
+      pts = [
+        { x: ax, y: ay },
+        { x: mx, y: my },
+        { x: hx, y: my },
+      ];
+      text = {
+        x: Math.round(hx),
+        y: Math.round(my - textH - 4),
+        width: textW,
+        height: textH,
+        align: 'left',
+      };
+    }
+    const extras = bar ? [{ x: bar.x1, y: bar.y1 }, { x: bar.x2, y: bar.y2 }] : [];
+    const all = [...pts, ...extras];
+    const pad = 18;
+    const minX = Math.min(...all.map((p) => p.x));
+    const minY = Math.min(...all.map((p) => p.y));
+    const maxX = Math.max(...all.map((p) => p.x));
+    const maxY = Math.max(...all.map((p) => p.y));
+    const box = {
+      x: Math.round(minX - pad),
+      y: Math.round(minY - pad),
+      width: Math.round(maxX - minX + pad * 2),
+      height: Math.round(maxY - minY + pad * 2),
+      rotation: 0,
+      opacity: 1,
+    };
+    out.push({
+      box,
+      text,
+      localPts: pts.map((p) => ({ x: p.x - box.x, y: p.y - box.y })),
+      localBar: bar
+        ? { x1: bar.x1 - box.x, y1: bar.y1 - box.y, x2: bar.x2 - box.x, y2: bar.y2 - box.y }
+        : null,
+    });
+  }
+  return out;
+}
+
 function cycleDiagramDataUri(colors) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildCycleDiagramSvg(colors))}`;
 }
@@ -279,4 +464,12 @@ module.exports = {
   cycleNodeTopArcSvg,
   cycleNodeBotArcSvg,
   cycleNodeIconSvg,
+  CYCLE_RING_N,
+  CYCLE_RING_COLORS,
+  CYCLE_RING_GEOM,
+  cycleRingSegSvg,
+  cycleRingSegPlacement,
+  cycleRingDiamondSvg,
+  cycleRingCalloutSvg,
+  cycleRingCallouts,
 };

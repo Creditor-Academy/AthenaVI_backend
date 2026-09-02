@@ -202,13 +202,74 @@ function matrixDiagramInlineSvg(colors = MATRIX_QUAD_COLORS) {
   });
 }
 
+const MATRIX_GRID_COLORS = ['#1e3a5f', '#2563eb', '#0f766e', '#475569'];
+const MATRIX_Q_TINTS = ['#E8EEF7', '#FFF1E6', '#E7F6F2', '#F1F5F9'];
+const MATRIX_Q_TITLE = ['#1e3a5f', '#c2410c', '#0f766e', '#334155'];
+const MATRIX_Q_AXIS = '#1e293b';
+
+function matrixGridPreviewSvg() {
+  const colors = MATRIX_GRID_COLORS;
+  const g = 18;
+  const x = 20;
+  const y = 20;
+  const w = 1360;
+  const h = 940;
+  const cw = (w - g) / 2;
+  const ch = (h - g) / 2;
+  const cells = [0, 1, 2, 3].map((i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    return `<rect x="${x + col * (cw + g)}" y="${y + row * (ch + g)}" width="${cw}" height="${ch}" rx="28" fill="${colors[i]}"/>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 980" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${cells.join('')}</svg>`;
+}
+
+function matrixQuadrantCrossInlineSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="100%" height="100%" preserveAspectRatio="none">
+<line x1="500" y1="48" x2="500" y2="952" stroke="currentColor" stroke-width="7" stroke-linecap="round" pointer-events="none"/>
+<line x1="48" y1="500" x2="952" y2="500" stroke="currentColor" stroke-width="7" stroke-linecap="round" pointer-events="none"/>
+<polygon points="500,18 526,56 474,56" fill="currentColor" pointer-events="none"/>
+<polygon points="982,500 944,526 944,474" fill="currentColor" pointer-events="none"/>
+</svg>`;
+}
+
+function matrixQuadrantPreviewSvg() {
+  const tints = MATRIX_Q_TINTS;
+  const x = 80;
+  const y = 40;
+  const w = 1240;
+  const h = 860;
+  const cw = w / 2;
+  const ch = h / 2;
+  const cells = [0, 1, 2, 3].map((i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    return `<rect x="${x + col * cw}" y="${y + row * ch}" width="${cw}" height="${ch}" fill="${tints[i]}"/>`;
+  });
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 980" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${cells.join('')}
+<line x1="${cx}" y1="${y + 16}" x2="${cx}" y2="${y + h - 16}" stroke="${MATRIX_Q_AXIS}" stroke-width="8" stroke-linecap="round"/>
+<line x1="${x + 16}" y1="${cy}" x2="${x + w - 16}" y2="${cy}" stroke="${MATRIX_Q_AXIS}" stroke-width="8" stroke-linecap="round"/>
+<polygon points="${cx},${y} ${cx + 18},${y + 32} ${cx - 18},${y + 32}" fill="${MATRIX_Q_AXIS}"/>
+<polygon points="${x + w},${cy} ${x + w - 32},${cy + 18} ${x + w - 32},${cy - 18}" fill="${MATRIX_Q_AXIS}"/>
+</svg>`;
+}
+
 module.exports = {
   MATRIX_GEOM,
   MATRIX_QUAD_COLORS,
   MATRIX_ARROW_COLOR,
+  MATRIX_GRID_COLORS,
+  MATRIX_Q_TINTS,
+  MATRIX_Q_TITLE,
+  MATRIX_Q_AXIS,
   matrixOverlayPlacements,
   matrixDiagramInlineSvg,
   matrixQuadPlacement,
   matrixArrowPlacement,
   matrixArrowInlineSvg,
+  matrixGridPreviewSvg,
+  matrixQuadrantCrossInlineSvg,
+  matrixQuadrantPreviewSvg,
 };
