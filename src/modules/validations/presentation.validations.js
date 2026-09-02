@@ -69,6 +69,9 @@ const canvasElementSchema = Joi.object({
   placement: placementSchema.required(),
   content: Joi.object().unknown(true).optional(),
   role: Joi.string().trim().allow('', null).optional(),
+  locked: Joi.boolean().optional(),
+  groupId: Joi.string().trim().allow('', null).optional(),
+  childIds: Joi.array().items(Joi.string().trim()).optional(),
 }).unknown(true);
 
 const canvasFillSchema = Joi.alternatives()
@@ -455,6 +458,9 @@ const addElementSchema = Joi.object({
     content: Joi.object().unknown(true).optional(),
     role: Joi.string().optional(),
     layer: Joi.number().integer().optional(),
+    locked: Joi.boolean().optional(),
+    groupId: Joi.string().trim().allow('', null).optional(),
+    childIds: Joi.array().items(Joi.string().trim()).optional(),
     element: Joi.object({
       type: Joi.string()
         .valid(...ELEMENT_TYPES)
@@ -486,6 +492,9 @@ const patchElementSchema = Joi.object({
     content: Joi.object().unknown(true).optional(),
     role: Joi.string().optional(),
     layer: Joi.number().integer().optional(),
+    locked: Joi.boolean().optional(),
+    groupId: Joi.string().trim().allow('', null).optional(),
+    childIds: Joi.array().items(Joi.string().trim()).optional(),
   })
     .min(1)
     .unknown(true)
@@ -499,6 +508,69 @@ const elementByIdSchema = Joi.object({
     slideId: slideIdParam,
     elementId: elementIdParam,
   }),
+});
+
+const patchElementsBatchSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    patches: Joi.array()
+      .items(
+        Joi.object({
+          id: Joi.string().trim().required(),
+          placement: placementSchema.optional(),
+          content: Joi.object().unknown(true).optional(),
+          locked: Joi.boolean().optional(),
+          groupId: Joi.string().trim().allow('', null).optional(),
+          childIds: Joi.array().items(Joi.string().trim()).optional(),
+          layer: Joi.number().integer().optional(),
+        })
+          .min(2)
+          .unknown(true)
+      )
+      .min(1)
+      .max(MAX_ELEMENTS_PER_SLIDE)
+      .required(),
+  }).required(),
+});
+
+const groupElementsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    elementIds: Joi.array().items(Joi.string().trim().required()).min(2).required(),
+  }).required(),
+});
+
+const ungroupElementsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    elementId: Joi.string().trim().required(),
+  }).required(),
+});
+
+const alignElementsSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    elementIds: Joi.array().items(Joi.string().trim().required()).min(1).required(),
+    alignment: Joi.string()
+      .valid('left', 'center', 'right', 'top', 'middle', 'bottom')
+      .required(),
+  }).required(),
 });
 
 const reorderElementsSchema = Joi.object({
@@ -1029,6 +1101,10 @@ module.exports = {
   putCanvasSchema,
   addElementSchema,
   patchElementSchema,
+  patchElementsBatchSchema,
+  groupElementsSchema,
+  ungroupElementsSchema,
+  alignElementsSchema,
   elementByIdSchema,
   reorderElementsSchema,
   regenerateSlideSchema,

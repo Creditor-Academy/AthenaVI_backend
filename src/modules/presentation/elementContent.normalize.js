@@ -127,10 +127,15 @@ function normalizeElementContent(type, content) {
 function normalizeElement(el) {
   if (!el || typeof el !== 'object') return el;
   const type = el.type;
-  return {
+  const next = {
     ...el,
     content: normalizeElementContent(type, el.content),
   };
+  if (el.locked != null) next.locked = Boolean(el.locked);
+  if (type === 'group') {
+    next.childIds = Array.isArray(el.childIds) ? el.childIds.filter(Boolean) : [];
+  }
+  return next;
 }
 
 function normalizeCanvasDoc(doc) {

@@ -156,6 +156,30 @@ router.patch(
   presentationController.reorderElements
 );
 
+router.patch(
+  '/:presentationId/slides/:slideId/elements/batch',
+  validate(presentationValidations.patchElementsBatchSchema),
+  presentationController.patchElementsBatch
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/elements/group',
+  validate(presentationValidations.groupElementsSchema),
+  presentationController.groupElements
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/elements/ungroup',
+  validate(presentationValidations.ungroupElementsSchema),
+  presentationController.ungroupElements
+);
+
+router.post(
+  '/:presentationId/slides/:slideId/elements/align',
+  validate(presentationValidations.alignElementsSchema),
+  presentationController.alignElements
+);
+
 router.post(
   '/:presentationId/slides/:slideId/elements',
   validate(presentationValidations.addElementSchema),
