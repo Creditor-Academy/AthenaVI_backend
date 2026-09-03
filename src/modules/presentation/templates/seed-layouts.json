@@ -23638,12 +23638,12 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-3, rows 4-6",
           "role": "heading",
-          "placeholder_text": "Organization",
+          "placeholder_text": "Team Structure",
           "layer": 10,
           "typography": {
-            "fontSize": 36,
+            "fontSize": 32,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -23652,66 +23652,165 @@
           "max_lines": 2
         },
         {
+          "id": "MEMBER_1_IMAGE",
+          "region": "cols 4-5, rows 4-6",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
+        },
+        {
           "id": "MEMBER_1_NAME",
-          "region": "cols 5-8, rows 2-3",
+          "region": "cols 4-5, rows 7-7",
           "role": "heading",
-          "placeholder_text": "CEO",
+          "placeholder_text": "Jonas",
           "layer": 10,
           "typography": {
-            "fontSize": 22,
+            "fontSize": 16,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_1_ROLE",
+          "region": "cols 4-5, rows 8-8",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_2_IMAGE",
+          "region": "cols 6-7, rows 2-4",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_2_NAME",
-          "region": "cols 2-4, rows 4-5",
+          "region": "cols 6-7, rows 4-4",
           "role": "heading",
-          "placeholder_text": "Engineering",
+          "placeholder_text": "Maria",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 16,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_2_ROLE",
+          "region": "cols 6-7, rows 5-5",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_3_IMAGE",
+          "region": "cols 8-9, rows 2-4",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_3_NAME",
-          "region": "cols 5-7, rows 4-5",
+          "region": "cols 8-9, rows 4-4",
           "role": "heading",
-          "placeholder_text": "Product",
+          "placeholder_text": "Harry",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 16,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_3_ROLE",
+          "region": "cols 8-9, rows 5-5",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_4_IMAGE",
+          "region": "cols 6-7, rows 5-7",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_4_NAME",
-          "region": "cols 8-10, rows 4-5",
+          "region": "cols 6-7, rows 7-7",
           "role": "heading",
-          "placeholder_text": "Design",
+          "placeholder_text": "Warner",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 16,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_4_ROLE",
+          "region": "cols 6-7, rows 8-8",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_5_IMAGE",
+          "region": "cols 8-9, rows 5-7",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_5_NAME",
-          "region": "cols 2-4, rows 6-7",
+          "region": "cols 8-9, rows 7-7",
           "role": "heading",
-          "placeholder_text": "Sales",
+          "placeholder_text": "Zenda",
           "layer": 10,
           "typography": {
             "fontSize": 16,
@@ -23719,13 +23818,36 @@
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_5_ROLE",
+          "region": "cols 8-9, rows 8-8",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_6_IMAGE",
+          "region": "cols 6-7, rows 8-10",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_6_NAME",
-          "region": "cols 5-7, rows 6-7",
+          "region": "cols 6-7, rows 10-10",
           "role": "heading",
-          "placeholder_text": "Marketing",
+          "placeholder_text": "Tony",
           "layer": 10,
           "typography": {
             "fontSize": 16,
@@ -23733,13 +23855,36 @@
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_6_ROLE",
+          "region": "cols 6-7, rows 10-10",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_7_IMAGE",
+          "region": "cols 8-9, rows 8-10",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover"
         },
         {
           "id": "MEMBER_7_NAME",
-          "region": "cols 8-10, rows 6-7",
+          "region": "cols 8-9, rows 10-10",
           "role": "heading",
-          "placeholder_text": "Ops",
+          "placeholder_text": "Peter",
           "layer": 10,
           "typography": {
             "fontSize": 16,
@@ -23747,58 +23892,137 @@
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
-          }
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "MEMBER_7_ROLE",
+          "region": "cols 8-9, rows 10-10",
+          "role": "caption",
+          "placeholder_text": "Designation",
+          "layer": 10,
+          "typography": {
+            "fontSize": 12,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
         }
       ],
       "preview": {
         "mode": "team_org_simple",
         "slots": {
           "HEADING": {
-            "text": "Organization",
+            "text": "Team Structure",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_1_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_1_NAME": {
-            "text": "CEO",
+            "text": "Jonas",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_1_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_2_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_2_NAME": {
-            "text": "Engineering",
+            "text": "Maria",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_2_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_3_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_3_NAME": {
-            "text": "Product",
+            "text": "Harry",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_3_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_4_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_4_NAME": {
-            "text": "Design",
+            "text": "Warner",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_4_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_5_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_5_NAME": {
-            "text": "Sales",
+            "text": "Zenda",
             "variant": "title",
             "bold": true,
             "uppercase": false
+          },
+          "MEMBER_5_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_6_IMAGE": {
+            "variant": "image"
           },
           "MEMBER_6_NAME": {
-            "text": "Marketing",
+            "text": "Tony",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
+          "MEMBER_6_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
+            "uppercase": false
+          },
+          "MEMBER_7_IMAGE": {
+            "variant": "image"
+          },
           "MEMBER_7_NAME": {
-            "text": "Ops",
+            "text": "Peter",
             "variant": "title",
             "bold": true,
+            "uppercase": false
+          },
+          "MEMBER_7_ROLE": {
+            "text": "Designation",
+            "variant": "caption",
+            "bold": false,
             "uppercase": false
           }
         }

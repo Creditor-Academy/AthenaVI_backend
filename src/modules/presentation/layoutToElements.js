@@ -84,7 +84,13 @@ const { isDeviceTabletSplitLayout, layoutDeviceTabletSplit } = require('./diagra
 const { isDeviceTabletCenteredLayout, layoutDeviceTabletCentered } = require('./diagrams/deviceTabletCenteredLayout');
 const { isTeamThreeHorizontalLayout, layoutTeamThreeHorizontal } = require('./diagrams/teamThreeHorizontalLayout');
 const { isTeamThreeVerticalLayout, layoutTeamThreeVertical } = require('./diagrams/teamThreeVerticalLayout');
+const { isTeamThreeFullCardsLayout, layoutTeamThreeFullCards } = require('./diagrams/teamThreeFullCardsLayout');
 const { isTeamFourLayout, layoutTeamFour } = require('./diagrams/teamFourLayout');
+const { isTeamFiveLayout, layoutTeamFive } = require('./diagrams/teamFiveLayout');
+const { isTeamSixLayout, layoutTeamSix } = require('./diagrams/teamSixLayout');
+const { isTeamByDepartmentLayout, layoutTeamByDepartment } = require('./diagrams/teamByDepartmentLayout');
+const { isTeamFeaturedLeadLayout, layoutTeamFeaturedLead } = require('./diagrams/teamFeaturedLeadLayout');
+const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamOrgSimpleLayout');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -8794,8 +8800,20 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTeamThreeHorizontal(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamThreeVerticalLayout(layoutSchema?.layout_id)) {
     next = layoutTeamThreeVertical(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamThreeFullCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamThreeFullCards(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamFourLayout(layoutSchema?.layout_id)) {
     next = layoutTeamFour(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamFiveLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamFive(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamSixLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamSix(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamByDepartmentLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamByDepartment(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamFeaturedLeadLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamFeaturedLead(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamOrgSimpleLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamOrgSimple(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaMinimalLayout(layoutSchema?.layout_id)) {
     next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaNumberedLayout(layoutSchema?.layout_id)) {
