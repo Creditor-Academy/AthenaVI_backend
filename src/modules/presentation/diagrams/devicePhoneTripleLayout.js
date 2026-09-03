@@ -7,6 +7,12 @@ const LEGACY_SPLIT = /^BODY$/i;
 const TRIPLE_DECO = /^(TRIPLE_BAND)$/i;
 const MAIN_HEADING = /^HEADING$/i;
 
+const {
+  paintDeviceFrameElement,
+  ON_LIGHT_SURFACE_TEXT,
+  ON_LIGHT_SURFACE_MUTED,
+} = require('./deviceChrome.util');
+
 function isDevicePhoneTripleLayout(layoutId) {
   return /device_phone_triple/i.test(String(layoutId || ''));
 }
@@ -120,14 +126,19 @@ function textStyle(isHeading, textColor, muted) {
   };
 }
 
-function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, newElementId) {
+function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, newElementId, themeTokens = null) {
   if (!Array.isArray(elements)) return elements;
   const canvasW = canvas.width || 1920;
   const canvasH = canvas.height || 1080;
-  const textColor = (palette && palette.text) || '#1F2937';
-  const muted = (palette && palette.muted) || '#6B7280';
+  // Main title sits on dark deck bg → theme text. Side copy sits on light TRIPLE_BAND → always dark ink.
+  const titleColor = (palette && palette.text) || '#1F2937';
+  const bandText = ON_LIGHT_SURFACE_TEXT;
+  const bandMuted = ON_LIGHT_SURFACE_MUTED;
   const id = (prefix) => (typeof newElementId === 'function' ? newElementId(prefix) : `${prefix}_${Math.random().toString(36).slice(2, 9)}`);
   const g = tripleGeom(canvasW, canvasH);
+
+  const priorHeading = elements.find((el) => MAIN_HEADING.test(String(el.slotId || '')));
+  const headingText = String(priorHeading?.content?.text || '').trim() || 'Describe this mockup';
 
   const stripped = elements.filter((el) => {
     const sid = String(el.slotId || '');
@@ -141,7 +152,12 @@ function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, ne
     if (phoneN || role === 'device_frame') {
       const n = phoneN ? Number(phoneN[1]) : /_3$/.test(sid) ? 3 : /_2$/.test(sid) ? 2 : /_1$/.test(sid) ? 1 : 0;
       const phone = g.phones.find((p) => p.n === n);
-      if (phone) return placePhone(el, phone);
+      if (phone) {
+        const placed = placePhone(el, phone);
+        return role === 'device_frame' || /FRAME/.test(sid)
+          ? paintDeviceFrameElement(placed, themeTokens)
+          : placed;
+      }
     }
     const copyM = sid.match(/^((?:HEADING|BODY))_([LR])$/);
     if (copyM) {
@@ -161,7 +177,11 @@ function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, ne
           rotation: 0,
           opacity: 1,
         },
-        content: { ...(el.content || {}), ...textStyle(isHeading, textColor, muted) },
+        content: {
+          ...(el.content || {}),
+          ...textStyle(isHeading, bandText, bandMuted),
+          colorRole: isHeading ? 'text' : 'muted',
+        },
       };
     }
     return el;
@@ -177,13 +197,13 @@ function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, ne
     layer: 20,
     placement: { x: g.padX, y: g.titleY, width: canvasW - g.padX * 2, height: g.titleH, rotation: 0, opacity: 1 },
     content: {
-      text: 'Describe this mockup',
+      text: headingText,
       align: 'center',
       verticalAlign: 'flex-start',
       fontSize: 32,
       fontWeight: 800,
       lineHeight: 1.4,
-      color: textColor,
+      color: titleColor,
       letterSpacing: '0',
       padding: 12,
       paddingX: 12,
@@ -202,7 +222,7 @@ function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, ne
         slotId: headId,
         layer: 14,
         placement: { x: Math.round(x), y: Math.round(g.textY), width: Math.round(g.textW), height: g.headH, rotation: 0, opacity: 1 },
-        content: { text: copy.heading, ...textStyle(true, textColor, muted) },
+        content: { text: copy.heading, ...textStyle(true, bandText, bandMuted), colorRole: 'text' },
       });
     }
     if (!have.has(bodyId)) {
@@ -213,7 +233,7 @@ function layoutDevicePhoneTripleElements(elements, palette = {}, canvas = {}, ne
         slotId: bodyId,
         layer: 14,
         placement: { x: Math.round(x), y: Math.round(g.textY + g.headH + 10), width: Math.round(g.textW), height: g.bodyH, rotation: 0, opacity: 1 },
-        content: { text: copy.body, ...textStyle(false, textColor, muted) },
+        content: { text: copy.body, ...textStyle(false, bandText, bandMuted), colorRole: 'muted' },
       });
     }
   }
@@ -235,7 +255,10 @@ function layoutDevicePhoneTriple(doc, layoutSchema, themeTokens, canvas = {}, ne
   if (!doc) return doc;
   const palette = themeTokens?.palette || {};
   const size = { width: canvas.width || doc.canvas?.width || 1920, height: canvas.height || doc.canvas?.height || 1080 };
-  return { ...doc, elements: layoutDevicePhoneTripleElements(doc.elements || [], palette, size, newElementId) };
+  return {
+    ...doc,
+    elements: layoutDevicePhoneTripleElements(doc.elements || [], palette, size, newElementId, themeTokens),
+  };
 }
 
 module.exports = {

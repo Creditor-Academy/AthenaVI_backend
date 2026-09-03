@@ -123,17 +123,21 @@ function headingLines(raw) {
   const m = t.match(/^(multi[-\s]?device)\s+(experience.*)$/i);
   if (m) return { line1: 'Multi-device', line2: m[2] || 'experience' };
   if (/^experience$/i.test(t)) return { line1: 'Multi-device', line2: 'experience' };
-  return { line1: t, line2: 'experience' };
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length >= 4) {
+    const mid = Math.ceil(words.length / 2);
+    return { line1: words.slice(0, mid).join(' '), line2: words.slice(mid).join(' ') };
+  }
+  return { line1: t, line2: '' };
 }
 
 function headingContent(line1, line2, textColor, accent) {
-  const text = `${line1}\n${line2}`;
+  const text = line2 ? `${line1}\n${line2}` : line1;
+  const runs = [{ text: line1, color: textColor, fontWeight: 800 }];
+  if (line2) runs.push({ text: `\n${line2}`, color: accent, fontWeight: 800 });
   return {
     text,
-    runs: [
-      { text: line1, color: textColor, fontWeight: 800 },
-      { text: `\n${line2}`, color: accent, fontWeight: 800 },
-    ],
+    runs,
     align: 'left',
     verticalAlign: 'flex-start',
     fontSize: 34,

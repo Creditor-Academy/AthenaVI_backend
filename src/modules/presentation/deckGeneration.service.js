@@ -197,6 +197,26 @@ function appendImageNegatives(prompt, { isDevice = false, hasChart = false } = {
   return next;
 }
 
+const {
+  isDeviceScreenSlotId,
+  deviceUiScreenshotDirective,
+  deviceScreenUiKind,
+} = require('./diagrams/deviceChrome.util');
+
+function withDeviceUiDirective(prompt, slotId, layoutId = '') {
+  const base = String(prompt || '').trim();
+  if (!isDeviceScreenSlotId(slotId)) return base;
+  const directive = deviceUiScreenshotDirective(slotId, layoutId);
+  const lower = base.toLowerCase();
+  const kind = deviceScreenUiKind(slotId, layoutId);
+  const already =
+    (kind === 'website' && /website|web[- ]?app|browser|desktop ui/.test(lower)) ||
+    (kind === 'mobile_app' && /mobile app|phone app|app ui|ios|android/.test(lower)) ||
+    (kind === 'watch_app' && /watch|wearable/.test(lower));
+  if (already && /no (phone|laptop|tablet|device|bezel|hardware)/.test(lower)) return base;
+  return `${base}. ${directive}`;
+}
+
 function columnEntryAt(content = {}, index) {
   const list = content.columns || content.cards || content.features || content.items || [];
   const col = Array.isArray(list) ? list[index] : null;
@@ -313,7 +333,19 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
     const col = columnEntryAt(content, idx);
     const label = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
     const base = shortVisualPhrase(label || String(content.title || '').trim(), 8);
-    if (base) return `${base} — app UI screenshot`;
+    const layoutId = String(layoutSchema?.layout_id || '');
+    const kind = deviceScreenUiKind(id, layoutId);
+    const uiLabel = kind === 'website' ? 'website UI screenshot' : 'mobile app UI screenshot';
+    if (base) return `${base} — ${uiLabel}`;
+  }
+
+  if (/^(PHONE_IMAGE|WATCH_IMAGE)$/i.test(id)) {
+    const base = shortVisualPhrase(String(content.title || '').trim(), 8);
+    if (base) return `${base} — mobile app UI screenshot`;
+  }
+  if (/^(TABLET_IMAGE|LAPTOP_IMAGE)$/i.test(id)) {
+    const base = shortVisualPhrase(String(content.title || '').trim(), 8);
+    if (base) return `${base} — website UI screenshot`;
   }
 
   if (/^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id)) {
@@ -339,7 +371,8 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
 
 function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
   const id = String(slotId || '');
-  const isDevice = /^DEVICE_IMAGE_/i.test(id);
+  const isDevice = isDeviceScreenSlotId(id);
+  const layoutId = String(layoutSchema?.layout_id || '').trim();
   const imagePrompts =
     content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
   const llmPrompt = resolveImagePromptAlias(id, imagePrompts);
@@ -375,27 +408,40 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
   const slotIndex = Math.max(0, imageSlots.findIndex((s) => String(s.id) === id));
-  const layoutId = String(layoutSchema?.layout_id || '').trim();
   const hasChart = layoutHasChartSlot(layoutSchema);
   const isHero = /^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id);
+  const uiKind = deviceScreenUiKind(id, layoutId);
 
   const assembled = [
-    isHero
-      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
-      : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
+    isDevice
+      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: ${
+          uiKind === 'website'
+            ? 'flat website UI screenshot'
+            : uiKind === 'watch_app'
+              ? 'flat watch app UI screenshot'
+              : 'flat mobile app UI screenshot'
+        }`
+      : isHero
+        ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
+        : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
     /four_images|grid_.*images|three_cards_image|grid_images_text/i.test(layoutId)
       ? 'Gallery slot — ONE distinct visual metaphor of this card’s topic (not the card’s wording)'
       : null,
     hasChart && !isHero
       ? 'Slide already has a rendered chart — photograph a related real-world subject, not a chart graphic'
       : null,
-    `Single photograph, ONE subject only, no collage: ${subject}`,
+    isDevice
+      ? `UI screen content: ${subject}`
+      : `Single photograph, ONE subject only, no collage: ${subject}`,
     `(variation ${slotIndex + 1})`,
   ]
     .filter(Boolean)
     .join('. ');
 
-  return appendImageNegatives(assembled, { isDevice, hasChart });
+  return appendImageNegatives(withDeviceUiDirective(assembled, id, layoutId), {
+    isDevice,
+    hasChart,
+  });
 }
 
 function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
@@ -544,9 +590,10 @@ function normalizeMultiColumnContent(content, layoutSchema) {
         prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
       }
       prompt = appendImageNegatives(prompt, {
-        isDevice: /^DEVICE_IMAGE_/i.test(slotId),
+        isDevice: isDeviceScreenSlotId(slotId),
         hasChart: layoutHasChartSlot(layoutSchema),
       });
+      prompt = withDeviceUiDirective(prompt, slotId, String(layoutSchema?.layout_id || ''));
       usedPrompts.add(prompt.toLowerCase());
       imagePrompts[slotId] = prompt;
     });
@@ -692,9 +739,10 @@ function normalizeGalleryImageContent(content, layoutSchema) {
     }
     if (prompt) {
       prompt = appendImageNegatives(prompt, {
-        isDevice: /^DEVICE_IMAGE_/i.test(slotId),
+        isDevice: isDeviceScreenSlotId(slotId),
         hasChart: layoutHasChartSlot(layoutSchema),
       });
+      prompt = withDeviceUiDirective(prompt, slotId, String(layoutSchema?.layout_id || ''));
       usedPrompts.add(prompt.toLowerCase());
       imagePrompts[slotId] = prompt;
     }
@@ -829,17 +877,119 @@ function schemaTitleForDiagramSlot(slots, index, kind) {
   return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
 }
 
+function diagramCellsSourceForKind(content, kind) {
+  if (!content || typeof content !== 'object') return null;
+  if (kind === 'quadrant') {
+    return content.quadrants || content.diagram?.cells || content.cells || content.steps || content.funnel;
+  }
+  if (kind === 'funnel') {
+    return content.funnel || content.diagram?.cells || content.cells || content.quadrants || content.steps;
+  }
+  return content.steps || content.diagram?.cells || content.cells || content.quadrants || content.funnel;
+}
+
+function countDeviceFeatureSlotsFromSchema(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const featureHeads = slots.filter((s) => /^FEATURE_[LR]\d+_HEADING$/i.test(String(s.id || ''))).length;
+  const sideHeads = slots.filter((s) => /^HEADING_[LR]$/i.test(String(s.id || ''))).length;
+  return Math.max(featureHeads, sideHeads, 0);
+}
+
+/**
+ * Ensure device layouts get columns[] / multi-line title aligned to FEATURE_* / HEADING_L slots.
+ */
+function normalizeDeviceContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
+  if (!/device_|grid_device/.test(layoutId) && String(layoutSchema.content_type || '').toLowerCase() !== 'device_frames') {
+    return content;
+  }
+
+  let next = { ...content };
+  const needed = countDeviceFeatureSlotsFromSchema(layoutSchema);
+  const existingCols = Array.isArray(next.columns)
+    ? next.columns
+    : Array.isArray(next.features)
+      ? next.features
+      : Array.isArray(next.cards)
+        ? next.cards
+        : [];
+
+  if (needed > 0) {
+    const bullets = Array.isArray(next.bullets) ? next.bullets : [];
+    const items = Array.isArray(next.items) ? next.items : [];
+    const cols = [];
+    for (let i = 0; i < needed; i += 1) {
+      const col = existingCols[i];
+      if (col && typeof col === 'object') {
+        cols.push({
+          title: String(col.title ?? col.heading ?? col.label ?? '').trim(),
+          body: String(col.body ?? col.text ?? '').trim(),
+        });
+        continue;
+      }
+      if (typeof col === 'string' && col.trim()) {
+        cols.push({ title: col.trim().split(/\s+/).slice(0, 4).join(' '), body: col.trim() });
+        continue;
+      }
+      const bullet = bullets[i];
+      if (bullet) {
+        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
+        cols.push({
+          title: text.split(/\s+/).slice(0, 4).join(' ') || `Aspect ${i + 1}`,
+          body: text,
+        });
+        continue;
+      }
+      const item = items[i];
+      if (item) {
+        if (typeof item === 'string') {
+          cols.push({ title: item.split(/\s+/).slice(0, 4).join(' '), body: item.trim() });
+        } else {
+          cols.push({
+            title: String(item.title ?? item.heading ?? item.label ?? `Aspect ${i + 1}`).trim(),
+            body: String(item.body ?? item.text ?? item.detail ?? '').trim(),
+          });
+        }
+        continue;
+      }
+      cols.push({ title: '', body: '' });
+    }
+    if (cols.some((c) => c.title || c.body)) {
+      next = { ...next, columns: cols };
+    }
+  }
+
+  // Multi-cluster: merge two-line title so finalize can strip HEADING_2 safely.
+  if (/device_multi_cluster/i.test(layoutId)) {
+    const title = String(next.title || '').trim();
+    const parts = title.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length < 2) {
+      const runs = Array.isArray(next.titleRuns)
+        ? next.titleRuns.map((r) => String(r?.text || '').trim()).filter(Boolean)
+        : [];
+      if (runs.length >= 2) {
+        next = { ...next, title: `${runs[0]}\n${runs.slice(1).join(' ')}` };
+      }
+    }
+  }
+
+  return next;
+}
+
 function normalizeDiagramContent(content, layoutSchema) {
   if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
   const slots = layoutSchema.slots;
   if (!layoutNeedsDiagramCellsFromSchema(layoutSchema)) return content;
 
-  const existing =
-    content.diagram?.cells ||
-    content.cells ||
-    content.quadrants ||
-    content.steps ||
-    content.funnel;
+  const kind = slots.some((s) => /^q\d+_body$/i.test(String(s.id || '')))
+    ? 'quadrant'
+    : slots.some((s) => /^funnel_\d+_body$/i.test(String(s.id || '')))
+      ? 'funnel'
+      : 'step';
+
+  const existing = diagramCellsSourceForKind(content, kind);
+  const explicitType = String(content.diagram?.type || '').trim();
   const hasValidCells =
     Array.isArray(existing) &&
     existing.some((cell) => {
@@ -850,17 +1000,16 @@ function normalizeDiagramContent(content, layoutSchema) {
     const cells = [...existing];
     return {
       ...content,
-      diagram: { ...(content.diagram || {}), type: content.diagram?.type || 'diagram', cells },
+      diagram: {
+        ...(content.diagram || {}),
+        type: explicitType || content.diagram?.type || kind,
+        cells,
+      },
       cells,
     };
   }
 
   const needed = Math.max(2, countDiagramCellSlotsFromSchema(layoutSchema) || 4);
-  const kind = slots.some((s) => /^q\d+_body$/i.test(String(s.id || '')))
-    ? 'quadrant'
-    : slots.some((s) => /^funnel_\d+_body$/i.test(String(s.id || '')))
-      ? 'funnel'
-      : 'step';
 
   const sourceCols = content.columns || content.cards || content.features || [];
   const sourceBullets = Array.isArray(content.bullets) ? content.bullets : [];
@@ -923,7 +1072,7 @@ function normalizeDiagramContent(content, layoutSchema) {
 
   return {
     ...content,
-    diagram: { ...(content.diagram || {}), type: content.diagram?.type || kind, cells },
+    diagram: { ...(content.diagram || {}), type: explicitType || kind, cells },
     cells,
   };
 }
@@ -1136,6 +1285,7 @@ async function repairSlideContentFromQa({
       nextContent = normalizeChartContent(nextContent, template.schema);
       nextContent = normalizeTimelineContent(nextContent, template.schema);
       nextContent = normalizeDiagramContent(nextContent, template.schema);
+      nextContent = normalizeDeviceContent(nextContent, template.schema);
       qa = validateSlide({ content: nextContent, layoutSchema: template.schema });
       nextContent = qa.content;
     } catch (repairErr) {
@@ -1152,12 +1302,12 @@ async function repairSlideContentFromQa({
 }
 
 async function generateSlotImage({ ctx, slide, slotId, prompt, layoutSchema }) {
-  const isDeviceSlot = /device_/i.test(String(slotId));
+  const isDeviceSlot = isDeviceScreenSlotId(slotId);
   const hasChart = layoutHasChartSlot(layoutSchema);
+  const layoutId = String(layoutSchema?.layout_id || '');
+  const directed = withDeviceUiDirective(prompt, slotId, layoutId);
   const fullPrompt = appendImageNegatives(
-    isDeviceSlot
-      ? `${prompt}. Flat UI screenshot only — no phone, laptop, tablet, or device bezel in the image.`
-      : prompt,
+    isDeviceSlot ? directed : prompt,
     { isDevice: isDeviceSlot, hasChart }
   );
   const slotDef = (layoutSchema?.slots || []).find((s) => String(s.id) === String(slotId));
@@ -1357,6 +1507,18 @@ function contentNeedsFreshGeneration(content, layoutSchema = null) {
       return body && !isCatalogPlaceholderText(body);
     });
     if (validCells.length < minCells) return true;
+  }
+
+  if (slots.some((s) => /^member_\d+_(name|role)$/i.test(String(s.id || '')))) {
+    const members = content.members || content.team || content.people || [];
+    const minMembers =
+      slots.filter((s) => /^member_\d+_name$/i.test(String(s.id || ''))).length || 2;
+    const validMembers = members.filter((m) => {
+      if (typeof m === 'string') return m.trim() && !isCatalogPlaceholderText(m);
+      const name = String(m?.name ?? '').trim();
+      return name && !isCatalogPlaceholderText(name);
+    });
+    if (validMembers.length < Math.min(minMembers, 2)) return true;
   }
 
   if (slots.some((s) => /^bullet_\d+$/i.test(String(s.id || '')) || /^body_\d+$/i.test(String(s.id || '')))) {
@@ -1974,6 +2136,48 @@ function mergeExcludeLayoutIds(...lists) {
   return out.size ? [...out] : null;
 }
 
+function coerceDiagramTypeHint(diagramType, visual) {
+  const typed = String(diagramType || '').trim();
+  if (typed) return typed;
+  const v = String(visual || '').toLowerCase().trim();
+  if (!v) return '';
+  // Short visual cues only (e.g. "swot", "funnel diagram") — long sentences fall through to heuristics.
+  if (v.length > 48) return '';
+  return v;
+}
+
+function preferredLayoutIdFromDiagramType(typeHint, usedLayoutIds = null, processSignals = {}) {
+  const raw = String(typeHint || '').toLowerCase().trim();
+  if (!raw) return null;
+  const used =
+    usedLayoutIds && typeof usedLayoutIds.has === 'function' ? usedLayoutIds : new Set();
+  const pick = (prefs) => {
+    const list = Array.isArray(prefs) ? prefs : [prefs];
+    const unused = list.filter((id) => !used.has(String(id)));
+    return (unused.length ? unused : list)[0] || null;
+  };
+
+  if (/\bswot\b/.test(raw)) {
+    return pick(['diagram_swot_v1', 'diagram_swot_grid_v1', 'diagram_swot_cards_v1']);
+  }
+  if (/\bmatrix\b/.test(raw)) {
+    return pick(['diagram_matrix_v1', 'diagram_matrix_grid_v1', 'diagram_matrix_quadrant_v1']);
+  }
+  if (/\bfunnel\b/.test(raw)) {
+    return pick(['diagram_funnel_v1', 'diagram_funnel_horizontal_v1']);
+  }
+  if (/\bcycle\b/.test(raw)) {
+    return pick(['diagram_cycle_v1', 'diagram_cycle_horizontal_v1', 'diagram_cycle_ring_v1']);
+  }
+  if (/\b(process|steps?|pyramid|venn)\b/.test(raw)) {
+    if (/\bpyramid\b/.test(raw)) return pick(['diagram_pyramid_v1']);
+    if (/\bvenn\b/.test(raw)) return pick(['diagram_venn_v1']);
+    const steps = countProcessSteps(processSignals);
+    return preferredProcessLayoutId(steps, usedLayoutIds);
+  }
+  return null;
+}
+
 function resolvePreferredLayoutIdForSlide({
   ctx,
   slide,
@@ -2005,6 +2209,19 @@ function resolvePreferredLayoutIdForSlide({
     (Array.isArray(outlineSlides)
       ? outlineSlides.find((s) => Number(s.order) === order)
       : null) || {};
+
+  const diagramTypeHint = coerceDiagramTypeHint(
+    content?.diagram?.type || outlineSlide?.diagram?.type,
+    outlineSlide?.visual
+  );
+  const fromDiagramType = preferredLayoutIdFromDiagramType(diagramTypeHint, usedLayoutIds, {
+    title: content?.title || outlineSlide?.title,
+    summary: content?.summary || content?.body || outlineSlide?.summary,
+    beats: outlineSlide?.beats || content?.beats,
+    bullets: content?.bullets,
+    columns: content?.columns,
+  });
+  if (fromDiagramType) return fromDiagramType;
 
   const processSignals = {
     title: content?.title || outlineSlide?.title,
@@ -3492,6 +3709,30 @@ function generationHintsFromLayout(layoutSchema) {
     hints.parallelStructure =
       'Fill diagram.cells[] with one { title, body } per quadrant/step/tier. Replace all template placeholder text with original topic-specific copy.';
   }
+  if (ct === 'device_frames' || /device_|grid_device/i.test(layoutId)) {
+    const textSlots = slots
+      .filter((s) => {
+        const id = String(s.id || '');
+        return (
+          /^FEATURE_[LR]\d+_(HEADING|BODY)$/i.test(id) ||
+          /^HEADING(_[LR]|_2)?$/i.test(id) ||
+          /^BODY(_[LR])?$/i.test(id) ||
+          /^SUBHEADING$/i.test(id)
+        );
+      })
+      .map((s) => s.id);
+    const deviceImageSlots = slots
+      .filter((s) => /^(DEVICE_IMAGE|TABLET_IMAGE|LAPTOP_IMAGE|PHONE_IMAGE|WATCH_IMAGE)/i.test(String(s.id || '')))
+      .map((s) => s.id);
+    hints.deviceFrameStyle =
+      'Device mockup layout: fill columns[] with { title, body } for feature/side callouts. Phone/watch imagePrompts = mobile app UI screenshots; tablet/laptop imagePrompts = website/web-app UI screenshots. No hardware bezels; no photographic scenes.';
+    if (textSlots.length) {
+      hints.parallelStructure = `Fill copy for slots: ${textSlots.join(', ')}. Use columns[] in L1,L2,L3,R1,R2,R3 order for FEATURE_* layouts; columns[0]/[1] for HEADING_L/R + BODY_L/R.`;
+    }
+    if (deviceImageSlots.length) {
+      hints.imagePromptStyle = `Fill imagePrompts for ${deviceImageSlots.join(', ')}: unique flat UI screenshots (≤12 words), no device chrome in the image.`;
+    }
+  }
   if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
     hints.ctaFormat =
       'Topic-specific CTA — never use generic "Book a demo" unless the deck is explicitly sales/demo.';
@@ -3722,6 +3963,7 @@ async function processSlide(ctx, slide) {
           content = normalizeGalleryImageContent(content, contentLayoutSchema);
           content = normalizeTimelineContent(content, contentLayoutSchema);
           content = normalizeDiagramContent(content, contentLayoutSchema);
+          content = normalizeDeviceContent(content, contentLayoutSchema);
         }
         await trackCharge(
           ctx.deckId,
@@ -4116,6 +4358,7 @@ async function processSlide(ctx, slide) {
       content = normalizeChartContent(content, template.schema);
       content = normalizeTimelineContent(content, template.schema);
       content = normalizeDiagramContent(content, template.schema);
+      content = normalizeDeviceContent(content, template.schema);
     }
 
     let qa = validateSlide({
@@ -4306,6 +4549,7 @@ async function processSlide(ctx, slide) {
       content = normalizeChartContent(content, layoutSchema);
       content = normalizeTimelineContent(content, layoutSchema);
       content = normalizeDiagramContent(content, layoutSchema);
+      content = normalizeDeviceContent(content, layoutSchema);
       try {
         content = await enrichContentSlotImageUrls({
           ctx,

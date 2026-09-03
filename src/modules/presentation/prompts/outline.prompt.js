@@ -1,7 +1,25 @@
 const DENSITY_CAPS = {
-  concise: { maxBullets: 3, maxWordsBody: 40, maxTitleLines: 1 },
-  balanced: { maxBullets: 5, maxWordsBody: 60, maxTitleLines: 2 },
-  detailed: { maxBullets: 7, maxWordsBody: 100, maxTitleLines: 2 },
+  concise: {
+    maxBullets: 3,
+    maxWordsBody: 40,
+    maxTitleLines: 1,
+    minTitleWords: 2,
+    maxTitleWords: 6,
+  },
+  balanced: {
+    maxBullets: 5,
+    maxWordsBody: 60,
+    maxTitleLines: 2,
+    minTitleWords: 4,
+    maxTitleWords: 10,
+  },
+  detailed: {
+    maxBullets: 7,
+    maxWordsBody: 100,
+    maxTitleLines: 2,
+    minTitleWords: 5,
+    maxTitleWords: 12,
+  },
 };
 
 function buildSystem() {
@@ -71,6 +89,11 @@ function buildUser(vars = {}) {
     `Locale: ${locale}`,
     `Slide count: return EXACTLY ${slideCount} slides`,
     `Density: ${density} — concise/minimal = one text block, never two_para/three_para/four_para; detailed/extensive may use multi-para only when the slide has that many distinct points`,
+    density === 'detailed'
+      ? 'Title length (detailed): each slide title MUST be 5–12 words (full headline). Never 1–2 word stubs like "Market Reality".'
+      : density === 'concise'
+        ? 'Title length (concise): each slide title 2–6 words, one line.'
+        : 'Title length (balanced): each slide title 4–10 words; avoid 1–2 word stubs except brand cover names.',
     imageType ? `Image type: ${imageType}` : null,
     imageStyle ? `Image style: ${imageStyle}` : null,
     imageStyleFilter && imageStyleFilter !== 'Suggested' ? `Image filter: ${imageStyleFilter}` : null,
@@ -101,7 +124,7 @@ function buildUser(vars = {}) {
     '- Strong narrative: title → optional agenda → one idea per body slide → closing',
     '- Slide 1 MUST be contentType title. Headline = brand or deck name from source. Subtitle = tagline. layoutId MUST be a title layout with heading:yes. Never large_image_v1.',
     '- Honor slide count, but prefer one story beat per slide (concept, vision, mission, audience…) rather than stuffing two arguments into one two-column slide.',
-    '- title: headline that will appear on the slide (≤ 8 words)',
+    '- title: headline that will appear on the slide (honor density title-word guidance above; never default to 2-word stubs for detailed)',
     '- subtitle: tagline / kicker (1 line)',
     '- summary: 1–3 sentences of argument (this is the body, not a 25-word topic blurb)',
     '- beats[]: short labeled points (Wake Slowly / Brew Better / personas / menu items) that map to bullets or columns',
@@ -190,6 +213,11 @@ function buildPackEnrichUser(vars = {}) {
     purpose ? `Purpose: ${purpose}` : null,
     `Locale: ${locale}`,
     `Density: ${density}`,
+    density === 'detailed'
+      ? 'Title length (detailed): 5–12 words per slide headline; no 1–2 word stubs.'
+      : density === 'concise'
+        ? 'Title length (concise): 2–6 words per slide headline.'
+        : 'Title length (balanced): 4–10 words per slide headline.',
     narrativeLines.length ? narrativeLines.join('\n') : null,
     '',
     'User source / prompt:',

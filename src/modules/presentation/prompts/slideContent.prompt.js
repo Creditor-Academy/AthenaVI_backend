@@ -1,11 +1,42 @@
 const DENSITY_CAPS = {
-  concise: { maxBullets: 3, maxWordsBody: 40, maxTitleLines: 1 },
-  balanced: { maxBullets: 5, maxWordsBody: 60, maxTitleLines: 2 },
-  detailed: { maxBullets: 7, maxWordsBody: 100, maxTitleLines: 2 },
+  concise: {
+    maxBullets: 3,
+    maxWordsBody: 40,
+    maxTitleLines: 1,
+    minTitleWords: 2,
+    maxTitleWords: 6,
+  },
+  balanced: {
+    maxBullets: 5,
+    maxWordsBody: 60,
+    maxTitleLines: 2,
+    minTitleWords: 4,
+    maxTitleWords: 10,
+  },
+  detailed: {
+    maxBullets: 7,
+    maxWordsBody: 100,
+    maxTitleLines: 2,
+    minTitleWords: 5,
+    maxTitleWords: 12,
+  },
 };
 
 function resolveCaps(density = 'balanced') {
   return DENSITY_CAPS[density] || DENSITY_CAPS.balanced;
+}
+
+function titleLengthGuidance(caps, density = 'balanced') {
+  const min = caps.minTitleWords || 3;
+  const max = caps.maxTitleWords || 8;
+  const lines = caps.maxTitleLines || 1;
+  if (density === 'detailed') {
+    return `Slide title: ${min}–${max} words across up to ${lines} lines. Prefer a full headline (e.g. "Real-time plans that move with you"), never a 1–2 word stub like "Market Reality" when density is detailed.`;
+  }
+  if (density === 'concise') {
+    return `Slide title: ${min}–${max} words, ${lines} line max — punchy but not a single vague word.`;
+  }
+  return `Slide title: ${min}–${max} words across up to ${lines} lines. Avoid 1–2 word stubs unless the brand name alone is the cover title.`;
 }
 
 function buildSystem() {
@@ -113,7 +144,31 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (/diagram_|swot|matrix|funnel|process_step/.test(id)) {
     lines.push(
-      'Diagram layout: REQUIRED diagram.cells[] (or quadrants[]) with one { title, body } entry per quadrant/step/funnel tier. Each body must be 1-3 original lines about the slide topic. Replace ALL template placeholder wording — never echo "Two to three lines explaining this section."'
+      'Diagram layout: REQUIRED diagram.type matching this layout family (swot|matrix|funnel|cycle|process) and diagram.cells[] (or quadrants[]) with one { title, body } entry per quadrant/step/funnel tier. Each body must be 1-3 original lines about the slide topic. Replace ALL template placeholder wording — never echo "Two to three lines explaining this section."'
+    );
+  }
+
+  if (/device_phone_highlights/.test(id)) {
+    lines.push(
+      'Phone highlights layout: REQUIRED columns[0..5] as { title, body } mapped in order FEATURE_L1, L2, L3, R1, R2, R3 (title→HEADING, body→BODY). Six distinct short titles (≤4 words). Fill imagePrompts.DEVICE_IMAGE as a flat MOBILE APP UI screenshot (lists/maps/cards) — no phone bezel, no photo scene.'
+    );
+  }
+
+  if (/device_phone_triple/.test(id)) {
+    lines.push(
+      'Phone triple layout: REQUIRED title (main HEADING), columns[0] → HEADING_L + BODY_L, columns[1] → HEADING_R + BODY_R. Fill imagePrompts for DEVICE_IMAGE_1..3 with three distinct flat MOBILE APP UI screenshots (no hardware, no photo scenes).'
+    );
+  }
+
+  if (/device_multi_cluster/.test(id)) {
+    lines.push(
+      'Multi-device cluster: REQUIRED title with two lines separated by \\n (line1 + accent line2 for HEADING), subtitle → SUBHEADING, body → BODY. imagePrompts: PHONE_IMAGE + WATCH_IMAGE = mobile app UI; TABLET_IMAGE + LAPTOP_IMAGE = website/web-app UI. Flat screenshots only — no bezels.'
+    );
+  }
+
+  if (/device_(laptop|tablet)_/.test(id)) {
+    lines.push(
+      'Device split/centered layout: REQUIRED title + body. Fill imagePrompts for LAPTOP_IMAGE / TABLET_IMAGE as a flat WEBSITE or web-app UI screenshot (browser page layout) — no hardware bezel, no photographic scene. DEVICE_IMAGE on phone layouts stays mobile app UI.'
     );
   }
 
@@ -182,7 +237,8 @@ function buildUser(vars = {}) {
     `Theme tone: ${vars.themeTone || 'professional'}`,
     `Density: ${density}`,
     `Locale: ${vars.locale || 'en'}`,
-    `Max bullets: ${caps.maxBullets} | Max words body: ${hints?.maxBodyWords || caps.maxWordsBody} | Max title lines: ${caps.maxTitleLines}`,
+    `Max bullets: ${caps.maxBullets} | Max words body: ${hints?.maxBodyWords || caps.maxWordsBody} | Max title lines: ${caps.maxTitleLines} | Title words: ${caps.minTitleWords}–${caps.maxTitleWords}`,
+    titleLengthGuidance(caps, density),
     `Slide order: ${vars.slideOrder || 1}/${vars.slideTotal || 1}`,
     `Title (required seed — use as the slide headline / brand name): ${vars.title || ''}`,
     vars.subtitle ? `Subtitle / tagline (required seed): ${vars.subtitle}` : '',
@@ -314,4 +370,5 @@ module.exports = {
   buildUser,
   DENSITY_CAPS,
   resolveCaps,
+  titleLengthGuidance,
 };
