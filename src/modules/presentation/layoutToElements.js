@@ -82,6 +82,9 @@ const { isDeviceMultiClusterLayout, layoutDeviceMultiCluster } = require('./diag
 const { isDeviceLaptopSplitLayout, layoutDeviceLaptopSplit } = require('./diagrams/deviceLaptopSplitLayout');
 const { isDeviceTabletSplitLayout, layoutDeviceTabletSplit } = require('./diagrams/deviceTabletSplitLayout');
 const { isDeviceTabletCenteredLayout, layoutDeviceTabletCentered } = require('./diagrams/deviceTabletCenteredLayout');
+const { isTeamThreeHorizontalLayout, layoutTeamThreeHorizontal } = require('./diagrams/teamThreeHorizontalLayout');
+const { isTeamThreeVerticalLayout, layoutTeamThreeVertical } = require('./diagrams/teamThreeVerticalLayout');
+const { isTeamFourLayout, layoutTeamFour } = require('./diagrams/teamFourLayout');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -2764,7 +2767,15 @@ function placementOverlapRatio(a, b) {
 
 function hasOverlappingTextPlacements(elementsDoc) {
   const list = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
-  const textEls = list.filter((el) => el.type === 'text' || el.type === 'textbox');
+  const textEls = list.filter((el) => {
+    if (el.type !== 'text' && el.type !== 'textbox') return false;
+    const opacity = el.placement?.opacity ?? el.content?.opacity ?? 1;
+    if (opacity <= 0) return false;
+    const x = el.placement?.x ?? 0;
+    const y = el.placement?.y ?? 0;
+    if (x < -40 || y < -40) return false;
+    return true;
+  });
   for (let i = 0; i < textEls.length; i += 1) {
     const a = textEls[i].placement || {};
     for (let j = i + 1; j < textEls.length; j += 1) {
@@ -2955,7 +2966,8 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       /^SWOT_HUB_(TITLE|SUB)$/i.test(String(el.slotId || '')) ||
       /^funnel_[1-5]_title$/i.test(String(el.slotId || '')) ||
       /^Q[1-4]_(TITLE|BODY)$/i.test(String(el.slotId || '')) ||
-      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || ''))
+      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || '')) ||
+      /^MEMBER_\d+_(NAME|ROLE|BIO|BODY|DESC|EMAIL)$/i.test(String(el.slotId || ''))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -8778,6 +8790,12 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDeviceTabletSplit(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isDeviceTabletCenteredLayout(layoutSchema?.layout_id)) {
     next = layoutDeviceTabletCentered(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isTeamThreeHorizontalLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamThreeHorizontal(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamThreeVerticalLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamThreeVertical(next, layoutSchema, themeTokens, canvas);
+  } else if (isTeamFourLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamFour(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaMinimalLayout(layoutSchema?.layout_id)) {
     next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaNumberedLayout(layoutSchema?.layout_id)) {
