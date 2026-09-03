@@ -183,6 +183,8 @@ module.exports = {
   COMMENT_NOT_FOUND: 'Comment not found',
   COMMENT_FORBIDDEN: 'You do not have permission to modify this comment',
   COMMENT_INVALID_MENTIONS: 'One or more mentioned users are not workspace members',
+  COMMENT_PARENT_INVALID: 'Cannot reply to this comment',
+  COMMENT_REPLY_LIMIT: 'This thread has reached its reply limit',
   MENTIONABLE_USERS_FETCHED: 'Mentionable users fetched successfully',
   PROJECT_RENDER_STARTED: 'Project render started successfully',
   PROJECT_RENDERS_FETCHED: 'Project renders fetched successfully',

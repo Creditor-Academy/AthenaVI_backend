@@ -483,6 +483,11 @@ model ProjectComment {
   authorId         String    @map("author_id")
   body             String
   mentionedUserIds String[]  @map("mentioned_user_ids")
+  /// Null for a root thread; set for a reply. Only one level of nesting is allowed.
+  parentId         String?   @map("parent_id")
+  /// Roots only. Workspace members resolve / reopen, same as presentation comments.
+  resolvedAt       DateTime? @map("resolved_at")
+  resolvedBy       String?   @map("resolved_by")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   deletedAt        DateTime? @map("deleted_at")
@@ -490,9 +495,12 @@ model ProjectComment {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   author    User      @relation("ProjectCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent    ProjectComment?  @relation("ProjectCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ProjectComment[] @relation("ProjectCommentReplies")
 
   @@index([projectId, createdAt])
   @@index([workspaceId])
+  @@index([parentId])
   @@map("project_comments")
 }
 

@@ -27,6 +27,7 @@ const createCommentSchema = Joi.object({
   body: Joi.object({
     body: Joi.string().trim().min(1).max(4000).required(),
     mentionedUserIds: mentionUserIdsSchema,
+    parentId: Joi.string().uuid().optional(),
   }).required(),
 });
 

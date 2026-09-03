@@ -27,4 +27,16 @@ router.delete(
   commentController.deleteComment
 );
 
+router.post(
+  '/:commentId/resolve',
+  validate(commentValidation.commentIdSchema),
+  commentController.resolveComment
+);
+
+router.post(
+  '/:commentId/unresolve',
+  validate(commentValidation.commentIdSchema),
+  commentController.unresolveComment
+);
+
 module.exports = router;

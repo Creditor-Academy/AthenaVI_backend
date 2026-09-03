@@ -6,10 +6,22 @@ const authorSelect = {
   profileImage: true,
 };
 
+const commentInclude = {
+  author: { select: authorSelect },
+};
+
+const repliesInclude = {
+  replies: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'asc' },
+    include: commentInclude,
+  },
+};
+
 const createComment = async (data) => {
   return prisma.projectComment.create({
     data,
-    include: { author: { select: authorSelect } },
+    include: { ...commentInclude, ...repliesInclude },
   });
 };
 
@@ -21,20 +33,33 @@ const findCommentById = async (workspaceId, projectId, commentId) => {
       projectId,
       deletedAt: null,
     },
-    include: { author: { select: authorSelect } },
+    include: { ...commentInclude, ...repliesInclude },
   });
+};
+
+const findRootWithReplyCount = async (projectId, commentId) => {
+  const row = await prisma.projectComment.findFirst({
+    where: { id: commentId, projectId, deletedAt: null },
+    include: commentInclude,
+  });
+  if (!row) return null;
+  const replyCount = await prisma.projectComment.count({
+    where: { parentId: commentId, deletedAt: null },
+  });
+  return { ...row, _count: { replies: replyCount } };
 };
 
 const listComments = async ({ workspaceId, projectId, limit, cursor }) => {
   const where = {
     workspaceId,
     projectId,
+    parentId: null,
     deletedAt: null,
   };
 
   if (cursor) {
     const cursorRow = await prisma.projectComment.findFirst({
-      where: { id: cursor, workspaceId, projectId, deletedAt: null },
+      where: { id: cursor, workspaceId, projectId, deletedAt: null, parentId: null },
       select: { createdAt: true },
     });
     if (cursorRow) {
@@ -44,7 +69,7 @@ const listComments = async ({ workspaceId, projectId, limit, cursor }) => {
 
   const rows = await prisma.projectComment.findMany({
     where,
-    include: { author: { select: authorSelect } },
+    include: { ...commentInclude, ...repliesInclude },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
   });
@@ -60,13 +85,20 @@ const updateComment = async (commentId, data) => {
   return prisma.projectComment.update({
     where: { id: commentId },
     data,
-    include: { author: { select: authorSelect } },
+    include: { ...commentInclude, ...repliesInclude },
   });
 };
 
 const softDeleteComment = async (commentId) => {
   return prisma.projectComment.update({
     where: { id: commentId },
+    data: { deletedAt: new Date() },
+  });
+};
+
+const softDeleteReplies = async (parentId) => {
+  return prisma.projectComment.updateMany({
+    where: { parentId, deletedAt: null },
     data: { deletedAt: new Date() },
   });
 };
@@ -105,9 +137,11 @@ const findMentionableUsers = async (workspaceId, query, limit = 20) => {
 module.exports = {
   createComment,
   findCommentById,
+  findRootWithReplyCount,
   listComments,
   updateComment,
   softDeleteComment,
+  softDeleteReplies,
   findWorkspaceMemberUserIds,
   findMentionableUsers,
 };
