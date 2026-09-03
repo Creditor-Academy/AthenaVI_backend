@@ -48,6 +48,30 @@ const deleteComment = asyncHandler(async (req, res) => {
   return successResponse(req, res, result, 200, messages.COMMENT_DELETED);
 });
 
+const resolveComment = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId, commentId } = req.params;
+  const comment = await commentService.setResolved(
+    workspaceId,
+    projectId,
+    commentId,
+    req.user.id,
+    true
+  );
+  return successResponse(req, res, { comment }, 200, messages.COMMENT_UPDATED);
+});
+
+const unresolveComment = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId, commentId } = req.params;
+  const comment = await commentService.setResolved(
+    workspaceId,
+    projectId,
+    commentId,
+    req.user.id,
+    false
+  );
+  return successResponse(req, res, { comment }, 200, messages.COMMENT_UPDATED);
+});
+
 const getMentionableUsers = asyncHandler(async (req, res) => {
   const { workspaceId, projectId } = req.params;
   const { q } = req.query;
@@ -60,5 +84,7 @@ module.exports = {
   createComment,
   updateComment,
   deleteComment,
+  resolveComment,
+  unresolveComment,
   getMentionableUsers,
 };

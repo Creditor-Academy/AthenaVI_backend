@@ -20,6 +20,8 @@ function buildSystem() {
     '- Do not describe layout chrome (borders, cards, circles) — shapes are rendered by the layout engine; describe the photo subject only.',
     '- For side-panel hero images: single focal subject, uncluttered background, works in rectangular cover crop.',
     '- When overlay slide: prefer darker overall exposure, soft vignette, or clear negative space for headline zone.',
+    '- When DEVICE_IMAGE / PHONE_IMAGE / WATCH_IMAGE: flat mobile app UI screenshot only — no phone/watch hardware.',
+    '- When TABLET_IMAGE / LAPTOP_IMAGE: flat website or web-app UI screenshot only — no tablet/laptop hardware.',
     '- When DEVICE_IMAGE or device mockup slot: describe flat UI screenshot content only — no phone, laptop, tablet, or device hardware (layout renders the frame).',
     '- When the layout already includes a chart element: never describe a chart, graph, dashboard, axes, or data viz photo;',
     '  photograph a related real-world subject that supports the chart story instead.',
@@ -91,7 +93,7 @@ function buildUser(vars = {}) {
       ? 'Hero/split image slide: if the photo is dark, set exposure_hint to "dark" so the renderer can apply a scrim and light text.'
       : '',
     /device_/i.test(String(vars.layoutId || ''))
-      ? 'Device mockup layout: describe UI screenshot content only — no phone/laptop/tablet bezel in the image.'
+      ? 'Device mockup layout: phone/watch slots → mobile app UI screenshots; tablet/laptop slots → website UI screenshots. Never photographic scenes. No device hardware in the image.'
       : '',
     hasChart
       ? 'IMPORTANT: This layout already renders a chart. Describe a supporting photograph only — forbid charts, graphs, dashboards, axes, pie/bar/line chart photos, and spreadsheet screens. Set image_type to "photo".'

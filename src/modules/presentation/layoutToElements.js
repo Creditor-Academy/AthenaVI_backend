@@ -38,7 +38,7 @@ const {
   isAgendaThreeColumnTextSlot,
 } = require('./diagrams/agendaThreeColumn');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
-const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
+const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, packFunnelStageTextBlocks, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
 const {
   PYRAMID_N,
@@ -82,10 +82,15 @@ const { isDeviceMultiClusterLayout, layoutDeviceMultiCluster } = require('./diag
 const { isDeviceLaptopSplitLayout, layoutDeviceLaptopSplit } = require('./diagrams/deviceLaptopSplitLayout');
 const { isDeviceTabletSplitLayout, layoutDeviceTabletSplit } = require('./diagrams/deviceTabletSplitLayout');
 const { isDeviceTabletCenteredLayout, layoutDeviceTabletCentered } = require('./diagrams/deviceTabletCenteredLayout');
+const { isTeamFourLayout, layoutTeamFour } = require('./diagrams/teamFourLayout');
 const { isTeamThreeHorizontalLayout, layoutTeamThreeHorizontal } = require('./diagrams/teamThreeHorizontalLayout');
 const { isTeamThreeVerticalLayout, layoutTeamThreeVertical } = require('./diagrams/teamThreeVerticalLayout');
 const { isTeamThreeFullCardsLayout, layoutTeamThreeFullCards } = require('./diagrams/teamThreeFullCardsLayout');
-const { isTeamFourLayout, layoutTeamFour } = require('./diagrams/teamFourLayout');
+const {
+  deviceFrameChromeColors,
+  paintDeviceFrameElement,
+  parseHexLum,
+} = require('./diagrams/deviceChrome.util');
 const { isTeamFiveLayout, layoutTeamFive } = require('./diagrams/teamFiveLayout');
 const { isTeamSixLayout, layoutTeamSix } = require('./diagrams/teamSixLayout');
 const { isTeamByDepartmentLayout, layoutTeamByDepartment } = require('./diagrams/teamByDepartmentLayout');
@@ -516,7 +521,7 @@ function insetScreenRect(placement, kind) {
   };
 }
 
-function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl, imageMeta = {}) {
+function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl, imageMeta = {}, themeTokens = null) {
   const kind = deviceFrameKindFromSlot(frameSlot);
   const isPhone = kind === 'phone' || kind === 'phone_landscape';
   const fitted = fitDeviceFramePlacement(framePlacement, kind);
@@ -525,6 +530,7 @@ function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl
   const nest = isPhone ? 0 : 2;
   const phoneShadow = '0 22px 54px rgba(15,23,42,0.22), 0 4px 12px rgba(15,23,42,0.12)';
   const portraitShadow = 'inset 0 0 0 1px rgba(226,232,240,0.28), 0 28px 64px rgba(15,23,42,0.18), 0 8px 18px rgba(15,23,42,0.08)';
+  const chrome = deviceFrameChromeColors(themeTokens, kind);
   const elements = [];
   elements.push({
     id: newElementId('frm'),
@@ -534,9 +540,9 @@ function buildDeviceFrameElements(frameSlot, imageSlot, framePlacement, imageUrl
     placement: fitted,
     content: {
       shape: 'rect',
-      fill: { type: 'solid', color: isPhone ? '#1e293b' : '#f8fafc' },
-      stroke: '#0f172a',
-      strokeWidth: isPhone ? 0 : 4,
+      fill: chrome.fill,
+      stroke: chrome.stroke,
+      strokeWidth: chrome.strokeWidth,
       borderRadius: radius,
       shadow: kind === 'phone' ? portraitShadow : isPhone ? phoneShadow : '0 8px 24px rgba(15,23,42,0.18)',
       boxShadow: kind === 'phone' ? portraitShadow : isPhone ? phoneShadow : '0 8px 24px rgba(15,23,42,0.18)',
@@ -629,7 +635,7 @@ const LIST_SOURCE_KEYS = {
 };
 
 const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column|plan|price|tier)_(\d+)$/;
-const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title|bio)$/;
+const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title|bio|body|desc)$/;
 const PLAN_FIELD_RE = /^plan_(\d+)_(label|name|price|body)$/;
 const AGENDA_ITEM_RE = /^agenda_col_(\d+)_item_(\d+)$/;
 const AGENDA_HEADING_RE = /^agenda_col_(\d+)_heading$/;
@@ -638,6 +644,10 @@ const CARD_FIELD_RE = /^card_(\d+)_(title|body)$/;
 const COL_FIELD_RE = /^col_(\d+)_(title|body)$/;
 const ROW_FIELD_RE = /^row_(\d+)_(title|body)$/;
 const FEATURE_FIELD_RE = /^feature_(\d+)_(title|body|text)$/;
+/** Phone-highlights: FEATURE_L1_HEADING / FEATURE_R2_BODY → columns[0..5] in L1,L2,L3,R1,R2,R3 order */
+const FEATURE_SIDE_FIELD_RE = /^feature_([lr])(\d+)_(heading|body|title|text)$/;
+/** Phone-triple side copy: HEADING_L / BODY_R */
+const SIDE_HEADING_BODY_RE = /^(heading|body)_([lr])$/;
 const MILESTONE_PART_RE = /^milestone_(\d+)_(label|detail)$/;
 const QUADRANT_FIELD_RE = /^q(\d+)_(title|body)$/;
 const STEP_FIELD_RE = /^step_(\d+)_(title|body)$/;
@@ -653,6 +663,22 @@ const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
 const INDEXED_BODY_SLOT_RE =
   /^(body|left_body|right_body|statement|lead|caption|footnote|intro|body_\d+|bullet_\d+|card_\d+_body|col_\d+_body|feature_\d+_(body|text)|agenda_col_\d+_item_\d+|item_\d+|bullet_\d+)$/;
 
+/** Coerce AI/slot payloads to plain text — never return objects (React cannot render them). */
+function coerceSlotText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) {
+      return value.map(coerceSlotText).filter(Boolean).join('\n');
+    }
+    const nested = value.text ?? value.body ?? value.title ?? value.label ?? value.heading;
+    if (nested != null && nested !== value) return coerceSlotText(nested);
+    return '';
+  }
+  return String(value);
+}
+
 function itemToText(item) {
   if (item === null || item === undefined) return '';
   if (typeof item === 'string') return item.trim();
@@ -662,7 +688,7 @@ function itemToText(item) {
   const role = item.role ?? item.subtitle ?? '';
   const detail = item.text ?? item.body ?? item.description ?? item.summary ?? '';
   return [head, label, role, detail]
-    .map((part) => String(part ?? '').trim())
+    .map((part) => coerceSlotText(part).trim())
     .filter(Boolean)
     .join('\n');
 }
@@ -862,6 +888,28 @@ function structuredColumnAt(content, colIndex) {
     if (col != null) return col;
   }
   return null;
+}
+
+/** Map FEATURE_L1..L3,R1..R3 → 0..5 */
+function featureSideColumnIndex(side, num) {
+  const n = Number(num) || 1;
+  const s = String(side || '').toLowerCase();
+  if (s === 'l') return Math.max(0, n - 1);
+  if (s === 'r') return 3 + Math.max(0, n - 1);
+  return Math.max(0, n - 1);
+}
+
+function titleLinesFromContent(content = {}) {
+  const title = String(content.title || '').trim();
+  const fromTitle = title.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  if (fromTitle.length >= 2) return { line1: fromTitle[0], line2: fromTitle.slice(1).join(' ') };
+  const runs = Array.isArray(content.titleRuns)
+    ? content.titleRuns.map((r) => String(r?.text || '').trim()).filter(Boolean)
+    : [];
+  if (runs.length >= 2) return { line1: runs[0], line2: runs.slice(1).join(' ') };
+  if (fromTitle.length === 1) return { line1: fromTitle[0], line2: '' };
+  if (runs.length === 1) return { line1: runs[0], line2: '' };
+  return { line1: title, line2: '' };
 }
 
 function isMainTitleSlot(slotId, role) {
@@ -1083,7 +1131,9 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     if (field === 'name') return String(member.name ?? '').trim();
     if (field === 'role' || field === 'title') return String(member.role ?? member.title ?? '').trim();
     if (field === 'email') return String(member.email ?? '').trim();
-    if (field === 'bio') return String(member.bio ?? member.body ?? member.description ?? '').trim();
+    if (field === 'bio' || field === 'body' || field === 'desc') {
+      return String(member.bio ?? member.body ?? member.description ?? '').trim();
+    }
   }
 
   const quadrantField = id.match(QUADRANT_FIELD_RE);
@@ -1239,6 +1289,61 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     return String(col.body ?? col.text ?? itemToText(col)).trim();
   }
 
+  const featureSide = id.match(FEATURE_SIDE_FIELD_RE);
+  if (featureSide) {
+    const idx = featureSideColumnIndex(featureSide[1], featureSide[2]);
+    const col = structuredColumnAt(content, idx);
+    if (!col) return '';
+    const field = featureSide[3];
+    if (field === 'heading' || field === 'title') {
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        idx,
+        content,
+        'Aspect'
+      );
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const sideHeadingBody = id.match(SIDE_HEADING_BODY_RE);
+  if (sideHeadingBody) {
+    const side = sideHeadingBody[2];
+    const idx = side === 'l' ? 0 : 1;
+    const col = structuredColumnAt(content, idx);
+    if (col) {
+      if (sideHeadingBody[1] === 'heading') {
+        return uniqueColumnTitle(
+          col.title ?? col.heading ?? col.label,
+          col.body ?? col.text,
+          idx,
+          content,
+          'Aspect'
+        );
+      }
+      return String(col.body ?? col.text ?? itemToText(col)).trim();
+    }
+    const sideCopy = sideOf(content, side === 'l' ? 'left' : 'right');
+    return sideHeadingBody[1] === 'heading' ? sideCopy.title : sideCopy.body;
+  }
+
+  if (id === 'heading_2') {
+    const { line2 } = titleLinesFromContent(content);
+    if (line2) return line2;
+    return String(content.subtitle || '').trim();
+  }
+
+  if (id === 'subheading') {
+    return (
+      String(content.subtitle || '').trim() ||
+      String(content.summary || '')
+        .split(/[.!?]/)[0]
+        ?.trim() ||
+      ''
+    );
+  }
+
   const milestonePart = id.match(MILESTONE_PART_RE);
   if (milestonePart) {
     const milestones = objectListForKind('milestone', content);
@@ -1357,7 +1462,11 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
       break;
   }
 
-  if (id === 'heading') return String(content.title || '').trim();
+  if (id === 'heading') {
+    const { line1, line2 } = titleLinesFromContent(content);
+    if (line1 && line2) return `${line1}\n${line2}`;
+    return String(content.title || line1 || '').trim();
+  }
 
   const metricTitle = id.match(/^metric_title_(\d+)$/);
   if (metricTitle) {
@@ -1436,12 +1545,12 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
       id
     )
   ) {
-    return content.title || '';
+    return coerceSlotText(content.title).trim();
   }
   if (id.includes('subtitle')) {
     return (
-      content.subtitle ||
-      content.summary ||
+      coerceSlotText(content.subtitle).trim() ||
+      coerceSlotText(content.summary).trim() ||
       (typeof content.body === 'string' ? content.body.split(/[.!?]/)[0]?.trim() : '') ||
       ''
     );
@@ -1452,7 +1561,9 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
   if (id === 'role' || id === 'author_title') {
     return String(content.role || content.authorTitle || content.titleLine || '').trim();
   }
-  if (id.includes('quote') || id === 'statement') return content.quote || content.body || '';
+  if (id.includes('quote') || id === 'statement') {
+    return coerceSlotText(content.quote || content.body).trim();
+  }
   if (id === 'bullets' || id === 'bullet_list') return bulletBlock(bullets);
 
   const indexedBody = id.match(/^body_(\d+)$/);
@@ -1474,12 +1585,14 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
 
   if (INDEXED_BODY_SLOT_RE.test(id)) {
     if (id === 'body') {
-      if (content.body) return content.body;
-      if (content.summary) return String(content.summary).trim();
+      if (content.body) return coerceSlotText(content.body).trim();
+      if (content.summary) return coerceSlotText(content.summary).trim();
       if (bullets.length) return bulletBlock(bullets);
       return '';
     }
-    if ((id === 'left_body' || id === 'right_body') && content[id]) return content[id];
+    if ((id === 'left_body' || id === 'right_body') && content[id]) {
+      return coerceSlotText(content[id]).trim();
+    }
     return '';
   }
   if (id === 'accent') return '';
@@ -2384,7 +2497,7 @@ function layoutSlotsToElements(
           ...(presentation.shadow ? { boxShadow: presentation.shadow, shadow: presentation.shadow } : {}),
           alt: content.title || '',
           ...(s3Key ? { s3Key } : {}),
-        });
+        }, themeTokens);
         elements.push(...frameEls);
         if (slot.layer == null) layer = Math.max(layer, slotLayer + 3);
         continue;
@@ -2539,7 +2652,7 @@ function layoutSlotsToElements(
       continue;
     }
 
-    const text = textForSlot(slotId, content, layoutSchema);
+    const text = coerceSlotText(textForSlot(slotId, content, layoutSchema));
     const isMainTitle = isMainTitleSlot(slotId, role);
     const style = resolveTextStyle(
       slot,
@@ -2551,7 +2664,7 @@ function layoutSlotsToElements(
     );
     const onImage = layoutRequiresOverlayScrim(layoutSchema);
     let textContent = {
-      text: text || (isMainTitle ? content.title || '' : ''),
+      text: text || (isMainTitle ? coerceSlotText(content.title) : ''),
       fontSize: style.fontSize,
       bold: style.bold,
       fontWeight: style.fontWeight,
@@ -2773,15 +2886,7 @@ function placementOverlapRatio(a, b) {
 
 function hasOverlappingTextPlacements(elementsDoc) {
   const list = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
-  const textEls = list.filter((el) => {
-    if (el.type !== 'text' && el.type !== 'textbox') return false;
-    const opacity = el.placement?.opacity ?? el.content?.opacity ?? 1;
-    if (opacity <= 0) return false;
-    const x = el.placement?.x ?? 0;
-    const y = el.placement?.y ?? 0;
-    if (x < -40 || y < -40) return false;
-    return true;
-  });
+  const textEls = list.filter((el) => el.type === 'text' || el.type === 'textbox');
   for (let i = 0; i < textEls.length; i += 1) {
     const a = textEls[i].placement || {};
     for (let j = i + 1; j < textEls.length; j += 1) {
@@ -2900,10 +3005,21 @@ function applyTextOverImageContrast(elementsDoc, themeTokens = null, layoutSchem
   for (const el of elementsDoc.elements) {
     if (el.type !== 'text' && el.type !== 'textbox') continue;
     const placement = el.placement || {};
+    // Text sitting on a light layout surface (e.g. TRIPLE_BAND) must stay dark.
+    const localBg = localBackgroundHexForText(elementsDoc, el, null);
+    const localLum = localBg ? parseHexLum(localBg) : null;
+    if (localLum != null && localLum >= 0.45) continue;
+
     let maxOverlap = forceOverlay ? 1 : 0;
     if (!forceOverlay) {
       for (const img of images) {
-        maxOverlap = Math.max(maxOverlap, placementOverlapRatio(placement, img.placement || {}));
+        const sid = String(img.slotId || '');
+        const isDeviceScreen = /DEVICE_IMAGE|PHONE_IMAGE|TABLET_IMAGE|LAPTOP_IMAGE|WATCH_IMAGE/i.test(
+          sid
+        );
+        const overlap = placementOverlapRatio(placement, img.placement || {});
+        if (isDeviceScreen && overlap < 0.55) continue;
+        maxOverlap = Math.max(maxOverlap, overlap);
       }
     }
     if (maxOverlap <= 0.25) continue;
@@ -2951,7 +3067,41 @@ function slideBackgroundHex(elementsDoc, themeTokens) {
   );
   const fill = bgEl?.content?.fill;
   if (fill?.type === 'solid' && fill.color) return fill.color;
+  if (typeof fill === 'string' && fill.startsWith('#')) return fill;
   return palette.bg || palette.background || '#F5EDE3';
+}
+
+function surfaceFillHex(el) {
+  const fill = el?.content?.fill;
+  if (!fill) return null;
+  if (typeof fill === 'string' && fill.startsWith('#')) return fill;
+  if (fill?.type === 'solid' && typeof fill.color === 'string' && fill.color.startsWith('#')) {
+    return fill.color;
+  }
+  return null;
+}
+
+/** Prefer a light layout surface under text (e.g. TRIPLE_BAND) over the slide background. */
+function localBackgroundHexForText(elementsDoc, textEl, slideBg) {
+  const placement = textEl?.placement || {};
+  let bestHex = null;
+  let bestScore = 0;
+  for (const el of elementsDoc?.elements || []) {
+    if (el === textEl || el.type !== 'shape') continue;
+    if (el.role === 'device_frame') continue;
+    const hex = surfaceFillHex(el);
+    if (!hex) continue;
+    if (!el.content?.layoutSurface && el.role !== 'decoration' && el.role !== 'design_bg') continue;
+    const overlap = placementOverlapRatio(placement, el.placement || {});
+    if (overlap < 0.35) continue;
+    const area = Math.max(1, (el.placement?.width || 0) * (el.placement?.height || 0));
+    const score = overlap * area;
+    if (score > bestScore) {
+      bestScore = score;
+      bestHex = hex;
+    }
+  }
+  return bestHex || slideBg;
 }
 
 function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema = null) {
@@ -2959,7 +3109,6 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
   const palette = themeTokens?.palette || {};
   const theme = resolveSemanticTheme(themeTokens);
   const bg = slideBackgroundHex(elementsDoc, themeTokens);
-  const bgLum = relativeLuminance(bg);
   const overlay = layoutRequiresOverlayScrim(layoutSchema);
 
   for (const el of elementsDoc.elements) {
@@ -2972,8 +3121,7 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       /^SWOT_HUB_(TITLE|SUB)$/i.test(String(el.slotId || '')) ||
       /^funnel_[1-5]_title$/i.test(String(el.slotId || '')) ||
       /^Q[1-4]_(TITLE|BODY)$/i.test(String(el.slotId || '')) ||
-      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || '')) ||
-      /^MEMBER_\d+_(NAME|ROLE|BIO|BODY|DESC|EMAIL)$/i.test(String(el.slotId || ''))
+      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || ''))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -2990,8 +3138,16 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
     if (normalizedColorRole.includes('primary')) desiredTextRole = 'primary';
     if (normalizedColorRole === 'textonimage') desiredTextRole = 'heading';
 
+    const localBg = localBackgroundHexForText(elementsDoc, el, bg);
+    const bgLum = relativeLuminance(localBg);
     const backgroundMode =
-      overlay ? 'image' : bgLum == null ? 'light' : bgLum < 0.45 ? 'dark' : 'light';
+      overlay && parseHexLum(localBg) != null && parseHexLum(localBg) < 0.45
+        ? 'image'
+        : bgLum == null
+          ? 'light'
+          : bgLum < 0.45
+            ? 'dark'
+            : 'light';
 
     const beforeColor =
       el.content?.color || paletteColor(palette, el.content?.colorRole || 'text', null);
@@ -3003,10 +3159,10 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       theme,
       textRole: desiredTextRole,
       backgroundMode,
-      backgroundHex: bg,
+      backgroundHex: localBg,
     });
 
-    let ratio = contrastRatioCss(attempt.color, bg);
+    let ratio = contrastRatioCss(attempt.color, localBg);
     if (ratio == null || ratio < AA_CONTRAST_RATIO) {
       // Try the safer monotone pair.
       const fallbackRole = desiredTextRole === 'heading' || desiredTextRole === 'accent' ? 'body' : 'heading';
@@ -3014,9 +3170,9 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
         theme,
         textRole: fallbackRole,
         backgroundMode,
-        backgroundHex: bg,
+        backgroundHex: localBg,
       });
-      ratio = contrastRatioCss(attempt.color, bg);
+      ratio = contrastRatioCss(attempt.color, localBg);
     }
 
     if (ratio != null && ratio >= AA_CONTRAST_RATIO) {
@@ -5087,21 +5243,71 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
   const muted = paletteColor(palette, 'muted', '#6B7280');
 
   const headingY = 36;
-  const headingH = 78;
-  const graphicH = Math.min(900, canvasH - headingY - headingH - 40);
-  const graphicW = Math.round(graphicH * (FUNNEL_GEOM.viewW / FUNNEL_GEOM.viewH));
-  const graphicY = headingY + headingH + 6;
-  const graphicX = 72;
+  const headingH = 72;
+  const bottomPad = 48;
+  const bodyByStage = [0, 1, 2, 3].map((i) => {
+    const el = (doc.elements || []).find((e) =>
+      new RegExp(`^funnel_${i + 1}_body$`, 'i').test(String(e.slotId || ''))
+    );
+    return String(el?.content?.text || '').trim();
+  });
+
+  let graphicScale = 0.82;
+  let graphicH = 0;
+  let graphicW = 0;
+  let graphicY = 0;
+  let graphicX = 72;
+  let overlay = { stages: [] };
+  let textX = 0;
+  let textWidth = 400;
+  let packed = { packs: [], bodyFontSize: 16, titleFontSize: 22, titleH: 34 };
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    graphicH = Math.min(Math.round(860 * graphicScale), canvasH - headingY - headingH - bottomPad);
+    graphicW = Math.round(graphicH * (FUNNEL_GEOM.viewW / FUNNEL_GEOM.viewH));
+    graphicY = headingY + headingH + 6;
+    graphicX = 72;
+    overlay = funnelOverlayPlacements(graphicX, graphicY, graphicW, graphicH);
+    textX = graphicX + graphicW + 36;
+    textWidth = Math.max(320, canvasW - textX - 64);
+    packed = packFunnelStageTextBlocks({
+      stages: overlay.stages,
+      bodies: bodyByStage,
+      textWidth,
+      titleH: 34,
+      titleBodyGap: 6,
+      stageGap: 20,
+      bodyFontSize: 15,
+      titleFontSize: 20,
+      bodyLineHeight: 1.35,
+      regionBottomMax: canvasH - bottomPad,
+    });
+    const last = packed.packs[packed.packs.length - 1];
+    const fits = last && last.bodyY + last.bodyH <= canvasH - bottomPad + 2;
+    if (fits && packed.bodyFontSize >= 13) break;
+    graphicScale -= 0.08;
+  }
+
+  const textPack = packed.packs;
+  const bodyFontSize = packed.bodyFontSize;
+  const titleFontSize = packed.titleFontSize;
+  const bgLum = parseHexLum(palette.bg || palette.background);
+  const darkDeck = bgLum != null && bgLum < 0.45;
+  const titleColors = darkDeck
+    ? [
+        paletteColor(palette, 'secondary', '#93C5FD'),
+        paletteColor(palette, 'primary', '#BFDBFE'),
+        paletteColor(palette, 'accent', '#FDBA74'),
+        paletteColor(palette, 'muted', '#CBD5E1'),
+      ]
+    : FUNNEL_TITLE_COLORS;
+
   const colors = [
     paletteColor(palette, 'accent', FUNNEL_STAGE_COLORS[0]),
     paletteColor(palette, 'secondary', FUNNEL_STAGE_COLORS[1]),
     paletteColor(palette, 'primary', FUNNEL_STAGE_COLORS[2]),
     paletteColor(palette, 'highlight', FUNNEL_STAGE_COLORS[3]),
   ];
-  const overlay = funnelOverlayPlacements(graphicX, graphicY, graphicW, graphicH);
-  const textX = graphicX + graphicW + 28;
-  const textWidth = Math.max(360, canvasW - textX - 72);
-
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => /^FUNNEL_SEG_[1-4]$/i.test(String(el.slotId || '')))
@@ -5140,9 +5346,10 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
           ...base,
           align: 'center',
           verticalAlign: 'center',
-          fontSize: 42,
+          fontSize: 36,
           fontWeight: 800,
           color: textColor,
+          clipToSlot: true,
         },
       };
     }
@@ -5158,7 +5365,7 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
           text: el.content?.text || String(i + 1).padStart(2, '0'),
           align: 'center',
           verticalAlign: 'center',
-          fontSize: 28,
+          fontSize: Math.max(18, Math.round(26 * graphicScale)),
           fontWeight: 800,
           wrap: 'nowrap',
           lineHeight: 1,
@@ -5169,15 +5376,15 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
     const titleM = sid.match(/^funnel_([1-4])_title$/i);
     if (titleM) {
       const i = Number(titleM[1]) - 1;
-      const st = overlay.stages[i];
+      const pack = textPack[i] || { titleY: overlay.stages[i].y, titleH: packed.titleH };
       return {
         ...el,
         layer: 10,
         placement: {
           x: textX,
-          y: st.y + Math.round(st.h * 0.22),
+          y: pack.titleY,
           width: textWidth,
-          height: 38,
+          height: pack.titleH,
           rotation: 0,
           opacity: 1,
         },
@@ -5185,24 +5392,28 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
           ...base,
           align: 'left',
           verticalAlign: 'center',
-          fontSize: 22,
+          fontSize: titleFontSize,
           fontWeight: 700,
-          color: FUNNEL_TITLE_COLORS[i],
+          color: titleColors[i],
+          clipToSlot: true,
         },
       };
     }
     const bodyM = sid.match(/^funnel_([1-4])_body$/i);
     if (bodyM) {
       const i = Number(bodyM[1]) - 1;
-      const st = overlay.stages[i];
+      const pack = textPack[i] || {
+        bodyY: overlay.stages[i].y + 40,
+        bodyH: Math.max(40, overlay.stages[i].h - 88),
+      };
       return {
         ...el,
         layer: 10,
         placement: {
           x: textX,
-          y: st.y + Math.round(st.h * 0.22) + 40,
+          y: pack.bodyY,
           width: textWidth,
-          height: Math.max(40, st.h - 88),
+          height: pack.bodyH,
           rotation: 0,
           opacity: 1,
         },
@@ -5210,10 +5421,12 @@ function layoutDiagramFunnel(doc, layoutSchema, themeTokens, canvas = {}) {
           ...base,
           align: 'left',
           verticalAlign: 'flex-start',
-          fontSize: 16,
+          fontSize: bodyFontSize,
           fontWeight: 400,
           color: muted,
-          lineHeight: 1.4,
+          lineHeight: 1.35,
+          clipToSlot: true,
+          wrap: 'pre-wrap',
         },
       };
     }
@@ -8796,14 +9009,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutDeviceTabletSplit(next, layoutSchema, themeTokens, canvas, newElementId);
   } else if (isDeviceTabletCenteredLayout(layoutSchema?.layout_id)) {
     next = layoutDeviceTabletCentered(next, layoutSchema, themeTokens, canvas, newElementId);
+  } else if (isTeamFourLayout(layoutSchema?.layout_id)) {
+    next = layoutTeamFour(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamThreeHorizontalLayout(layoutSchema?.layout_id)) {
     next = layoutTeamThreeHorizontal(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamThreeVerticalLayout(layoutSchema?.layout_id)) {
     next = layoutTeamThreeVertical(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamThreeFullCardsLayout(layoutSchema?.layout_id)) {
     next = layoutTeamThreeFullCards(next, layoutSchema, themeTokens, canvas);
-  } else if (isTeamFourLayout(layoutSchema?.layout_id)) {
-    next = layoutTeamFour(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamFiveLayout(layoutSchema?.layout_id)) {
     next = layoutTeamFive(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamSixLayout(layoutSchema?.layout_id)) {
@@ -8864,6 +9077,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   }
 
   next = stripInvalidOverlayScrims(next);
+
+  // Ensure device bezels follow theme (grey on dark decks).
+  if (Array.isArray(next?.elements)) {
+    next = {
+      ...next,
+      elements: next.elements.map((el) => paintDeviceFrameElement(el, themeTokens)),
+    };
+  }
 
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
   next = applyReadableTextContrast(next, themeTokens, layoutSchema);

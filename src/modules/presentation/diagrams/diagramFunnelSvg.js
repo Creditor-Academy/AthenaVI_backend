@@ -77,6 +77,145 @@ function funnelOverlayPlacements(gx, gy, gw, gh) {
   };
 }
 
+/**
+ * Estimate wrapped text height for funnel body copy (no DOM).
+ */
+function estimateFunnelBodyHeight(text, width, fontSize = 16, lineHeight = 1.4, minLines = 1, maxLines = 5) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return Math.round(fontSize * lineHeight * minLines);
+  const avgCharW = fontSize * 0.58;
+  const charsPerLine = Math.max(10, Math.floor(Number(width) / avgCharW));
+  const words = raw.split(' ').filter(Boolean);
+  let lines = 1;
+  let len = 0;
+  for (const w of words) {
+    const next = len ? len + 1 + w.length : w.length;
+    if (next > charsPerLine && len > 0) {
+      lines += 1;
+      len = w.length;
+    } else {
+      len = next;
+    }
+  }
+  const explicit = String(text || '').split(/\n+/).length - 1;
+  lines = Math.min(maxLines, Math.max(minLines, lines + Math.max(0, explicit)));
+  return Math.round(fontSize * lineHeight * lines);
+}
+
+/**
+ * Pack funnel title+body text columns so boxes size to copy and never overlap.
+ * Shrinks fonts/gaps when content exceeds the available region.
+ * @returns {{ packs: object[], bodyFontSize: number, titleFontSize: number, titleH: number, stageGap: number }}
+ */
+function packFunnelStageTextBlocks({
+  stages,
+  bodies = [],
+  textWidth = 400,
+  titleH = 34,
+  titleBodyGap = 8,
+  stageGap = 22,
+  bodyFontSize = 16,
+  titleFontSize = 22,
+  bodyLineHeight = 1.4,
+  regionBottomMax = null,
+  minBodyFontSize = 12,
+  minTitleFontSize = 16,
+  minStageGap = 14,
+  minTitleH = 26,
+} = {}) {
+  const list = Array.isArray(stages) ? stages : [];
+  const n = Math.max(1, list.length || 4);
+  const regionTop = list[0] ? list[0].y + 6 : 120;
+  const last = list[n - 1] || list[0];
+  const bandBottom = last ? last.y + last.h - 6 : regionTop + 800;
+  const regionBottom =
+    regionBottomMax != null ? Math.min(bandBottom, Number(regionBottomMax)) : bandBottom;
+  const regionH = Math.max(160, regionBottom - regionTop);
+  const gapsCount = Math.max(0, n - 1);
+
+  let fsBody = bodyFontSize;
+  let fsTitle = titleFontSize;
+  let tH = titleH;
+  let gapBase = stageGap;
+  let packs = [];
+
+  const build = () => {
+    const blocks = [];
+    for (let i = 0; i < n; i += 1) {
+      const bodyH = estimateFunnelBodyHeight(bodies[i], textWidth, fsBody, bodyLineHeight, 1, 4);
+      const hBody = Math.max(Math.round(fsBody * bodyLineHeight), bodyH);
+      blocks.push({
+        titleH: tH,
+        bodyH: hBody,
+        blockH: tH + titleBodyGap + hBody,
+      });
+    }
+    let total = blocks.reduce((sum, b) => sum + b.blockH, 0) + gapBase * gapsCount;
+    if (total > regionH && blocks.length) {
+      const fixed = tH * n + titleBodyGap * n + gapBase * gapsCount;
+      const availBodies = Math.max(Math.round(fsBody * bodyLineHeight) * n, regionH - fixed);
+      const rawBodies = blocks.reduce((sum, b) => sum + b.bodyH, 0) || 1;
+      const scale = Math.max(0.35, availBodies / rawBodies);
+      for (const b of blocks) {
+        b.bodyH = Math.max(Math.round(fsBody * bodyLineHeight), Math.round(b.bodyH * scale));
+        b.blockH = tH + titleBodyGap + b.bodyH;
+      }
+      total = blocks.reduce((sum, b) => sum + b.blockH, 0) + gapBase * gapsCount;
+    }
+    const leftover = Math.max(0, regionH - total);
+    const gap = gapsCount > 0 ? gapBase + Math.floor(leftover / gapsCount) : gapBase;
+    const topPad = gapsCount > 0 ? Math.floor((leftover % gapsCount) / 2) : Math.floor(leftover / 2);
+    const out = [];
+    let y = regionTop + topPad;
+    for (let i = 0; i < n; i += 1) {
+      const b = blocks[i];
+      const titleY = Math.round(y);
+      const bodyY = Math.round(y + b.titleH + titleBodyGap);
+      let bodyH = b.bodyH;
+      if (i === n - 1 && bodyY + bodyH > regionBottom) {
+        bodyH = Math.max(Math.round(fsBody * bodyLineHeight), regionBottom - bodyY);
+      }
+      out.push({
+        titleY,
+        titleH: b.titleH,
+        bodyY,
+        bodyH,
+      });
+      y += b.blockH + (i < n - 1 ? gap : 0);
+    }
+    const overflow = y > regionBottom + 2;
+    return { out, overflow, total };
+  };
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const { out, overflow } = build();
+    packs = out;
+    if (!overflow) break;
+    if (fsBody > minBodyFontSize) {
+      fsBody = Math.max(minBodyFontSize, fsBody - 1);
+      continue;
+    }
+    if (fsTitle > minTitleFontSize) {
+      fsTitle = Math.max(minTitleFontSize, fsTitle - 1);
+      tH = Math.max(minTitleH, tH - 2);
+      continue;
+    }
+    if (gapBase > minStageGap) {
+      gapBase = Math.max(minStageGap, gapBase - 2);
+      continue;
+    }
+    break;
+  }
+
+  return {
+    packs,
+    bodyFontSize: fsBody,
+    titleFontSize: fsTitle,
+    titleH: tH,
+    stageGap: gapBase,
+  };
+}
+
 function funnelStageInnerMarkup(i) {
   const g = funnelStageGeom(i);
   const yb = g.y + g.bandH;
@@ -294,6 +433,8 @@ module.exports = {
   FUNNEL_TITLE_COLORS,
   FUNNEL_GEOM,
   funnelOverlayPlacements,
+  estimateFunnelBodyHeight,
+  packFunnelStageTextBlocks,
   funnelDiagramInlineSvg,
   funnelStageInlineSvg,
   funnelStagePlacement,
