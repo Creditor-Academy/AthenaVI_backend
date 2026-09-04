@@ -9,20 +9,27 @@ const {
   agendaTwoColumnRibbonChromeSpecs,
   agendaTwoColumnRibbonOverlayPlacements,
 } = require('./agendaTwoColumnRibbons');
+const {
+  agendaSplitPanelChromeSpecs,
+  agendaSplitPanelOverlayPlacements,
+} = require('./agendaSplitPanel');
+
 function twoColVariantFromSchema(schema) {
   const variant = schema?.preview?.agendaVariant
-  if (variant === 'split_panel' || variant === 'split_visual') return 'split_visual'
+  if (variant === 'split_panel') return 'split_panel'
+  if (variant === 'split_visual') return 'split_visual'
   if (variant === 'asymmetric') return 'asymmetric'
   return 'default'
 }
 
 function agendaTwoColumnChromeSpecs(variant = 'default') {
-  if (variant !== 'split_visual' && variant !== 'split_panel' && variant !== 'asymmetric') {
+  if (variant === 'split_panel') return agendaSplitPanelChromeSpecs()
+  if (variant !== 'split_visual' && variant !== 'asymmetric') {
     return agendaTwoColumnRibbonChromeSpecs()
   }
   const { specs, pushIcon, pushSpine, pushCard, pushBadge, pushDivider } = createAgendaSpecBuilder()
 
-  if (variant === 'split_visual' || variant === 'split_panel') {
+  if (variant === 'split_visual') {
     pushCard('AGENDA_VISUAL_BLOCK', 48, 100, 420, 400)
     pushIcon('AGENDA_ICON_HERO', 260, 220, 36, 0)
     pushSpine('AGENDA_SPLIT_LINE', 498, 100, 4, 400, true)
@@ -53,7 +60,8 @@ function agendaTwoColumnChromeSpecs(variant = 'default') {
 }
 
 function agendaTwoColumnOverlayPlacements(gx, gy, gw, gh, variant = 'default') {
-  if (variant !== 'split_visual' && variant !== 'split_panel' && variant !== 'asymmetric') {
+  if (variant === 'split_panel') return agendaSplitPanelOverlayPlacements(gx, gy, gw, gh)
+  if (variant !== 'split_visual' && variant !== 'asymmetric') {
     return agendaTwoColumnRibbonOverlayPlacements(gx, gy, gw, gh)
   }
   const overlay = { items: [], columns: [], milestones: [], heading: null }

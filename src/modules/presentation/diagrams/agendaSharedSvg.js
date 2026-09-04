@@ -41,7 +41,7 @@ const AGENDA_LAYOUT_META = {
   agenda_progress_path_v1: { family: 'timeline', variant: 'curved' },
   agenda_two_column_v1: { family: 'two_col', variant: 'default' },
   agenda_split_visual_v1: { family: 'two_col', variant: 'split_visual' },
-  agenda_split_panel_v1: { family: 'two_col', variant: 'split_visual' },
+  agenda_split_panel_v1: { family: 'two_col', variant: 'split_panel' },
   agenda_asymmetric_v1: { family: 'two_col', variant: 'asymmetric' },
 }
 

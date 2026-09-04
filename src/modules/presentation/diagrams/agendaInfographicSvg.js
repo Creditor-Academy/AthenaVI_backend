@@ -47,6 +47,7 @@ const { agendaMinimalQuietPreviewSvg } = require('./agendaMinimalQuiet');
 const { agendaEditorialPreviewSvg } = require('./agendaEditorialHub');
 const { agendaCardsPreviewSvg } = require('./agendaCardsTiles');
 const { agendaTwoColumnRibbonPreviewSvg } = require('./agendaTwoColumnRibbons');
+const { agendaSplitPanelPreviewSvg } = require('./agendaSplitPanel');
 
 function agendaChromeSpecs(family, variant, itemCount = 4) {
   switch (family) {
@@ -150,7 +151,10 @@ function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
   if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnPreviewSvg(colors)
   }
-  if (family === 'two_col' && variant !== 'split_visual' && variant !== 'split_panel' && variant !== 'asymmetric') {
+  if (family === 'two_col' && variant === 'split_panel') {
+    return agendaSplitPanelPreviewSvg()
+  }
+  if (family === 'two_col' && variant !== 'split_visual' && variant !== 'asymmetric') {
     return agendaTwoColumnRibbonPreviewSvg()
   }
   return agendaDiagramInlineSvg(family, variant, {

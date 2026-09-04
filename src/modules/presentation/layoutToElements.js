@@ -85,6 +85,13 @@ const {
   isAgendaTwoColumnRibbonLayout,
   isAgendaTwoColumnRibbonTextSlot,
 } = require('./diagrams/agendaTwoColumnRibbons');
+const {
+  agendaSplitPanelGraphicFrame,
+  agendaSplitPanelImageClip,
+  specToSplitPanelContent,
+  isAgendaSplitPanelLayout,
+  isAgendaSplitPanelTextSlot,
+} = require('./diagrams/agendaSplitPanel');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
 const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, packFunnelStageTextBlocks, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
@@ -8853,6 +8860,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const isEditorial = isAgendaEditorialLayout(layoutId, family, variant);
   const isAgendaCards = isAgendaCardsLayout(layoutId, family, variant);
   const isTwoColRibbon = isAgendaTwoColumnRibbonLayout(layoutId, family, variant);
+  const isSplitPanel = isAgendaSplitPanelLayout(layoutId, family, variant);
   const isRibbonCards = isThreeCards || isThreeCardsHero;
   const stacked = isColouredThreeCol || isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline;
   const itemCount = layoutSchema?.preview?.agendaItems?.length
@@ -8878,6 +8886,8 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? agendaCardsGraphicFrame(canvasW, canvasH)
             : isTwoColRibbon
             ? agendaTwoColumnRibbonGraphicFrame(canvasW, canvasH)
+            : isSplitPanel
+            ? agendaSplitPanelGraphicFrame(canvasW, canvasH)
             : isColouredThreeCol
             ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
             : agendaGraphicFrame(canvasW, canvasH);
@@ -8885,7 +8895,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
   const columnTextColor = textColor;
 
-  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_)/i;
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_|SP_)/i;
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => CHROME_RE.test(String(el.slotId || '')))
@@ -8904,6 +8914,8 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     elements = elements.filter((el) => isAgendaCardsTextSlot(el.slotId));
   } else if (isTwoColRibbon) {
     elements = elements.filter((el) => isAgendaTwoColumnRibbonTextSlot(el.slotId));
+  } else if (isSplitPanel) {
+    elements = elements.filter((el) => isAgendaSplitPanelTextSlot(el.slotId));
   } else if (stacked) {
     elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId) || /^HERO_IMAGE$/i.test(String(el.slotId || '')));
   }
@@ -8921,7 +8933,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     const sid = String(el.slotId || '');
     const base = textBase(el);
     if (sid.toUpperCase() === 'HEADING') {
-      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial || isAgendaCards || isTwoColRibbon
+      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial || isAgendaCards || isTwoColRibbon || isSplitPanel
         ? (overlay.heading || { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH })
         : stacked
         ? { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH }
@@ -8931,18 +8943,19 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         placement: { ...h, rotation: 0, opacity: 1 },
         content: {
           ...base,
-          align: isTwoColRibbon || isEditorial ? 'left' : stacked ? 'center' : 'left',
+          align: isSplitPanel ? 'center' : isTwoColRibbon || isEditorial ? 'left' : stacked ? 'center' : 'left',
           verticalAlign: 'center',
-          fontSize: isTwoColRibbon ? 28 : isEditorial || isAgendaCards ? 32 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
+          fontSize: isSplitPanel || isTwoColRibbon ? 28 : isEditorial || isAgendaCards ? 32 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
           fontWeight: 800,
           color: textColor,
           lineHeight: 1.1,
           clipToSlot: true,
+          letterSpacing: isSplitPanel ? '0.08em' : '0',
         },
       };
     }
     const itemBodyM = sid.match(/^ITEM_(\d+)_BODY$/i);
-    if (itemBodyM && (isNumberedTimeline || isAgendaCards) && overlay.itemBodies?.length) {
+    if (itemBodyM && (isNumberedTimeline || isAgendaCards || isSplitPanel) && overlay.itemBodies?.length) {
       const box = overlay.itemBodies[Number(itemBodyM[1]) - 1];
       if (box) {
         return {
@@ -9041,6 +9054,20 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
               lineHeight: 1.2,
               padding: 0,
               paddingX: 0,
+            }
+            : isSplitPanel
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 16,
+              fontWeight: 800,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              wrap: 'nowrap',
+              clipToSlot: true,
+              lineHeight: 1.1,
+              letterSpacing: '0.04em',
             }
             : {
               ...base,
@@ -9245,6 +9272,23 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     return el;
   });
 
+  if (isSplitPanel && overlay.hero) {
+    elements = elements.map((el) => {
+      if (String(el.slotId || '').toUpperCase() !== 'HERO_IMAGE') return el;
+      return {
+        ...el,
+        layer: 2,
+        placement: { ...overlay.hero, rotation: 0, opacity: 1 },
+        content: {
+          ...(el.content || {}),
+          clipPath: agendaSplitPanelImageClip(),
+          objectFit: 'cover',
+          fit: 'cover',
+        },
+      };
+    });
+  }
+
   if (isHeroCards || isThreeCardsHero) {
     const imageH = heroH || Math.round(canvasH * 0.36);
     elements = elements.map((el) => {
@@ -9316,6 +9360,8 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? specToAgendaCardsContent(spec)
             : isTwoColRibbon
             ? specToTwoColumnRibbonContent(spec)
+            : isSplitPanel
+            ? specToSplitPanelContent(spec)
             : isColouredThreeCol
           ? specToThreeColumnContent(spec)
           : specToGraphicContent(spec, accent, soft);
