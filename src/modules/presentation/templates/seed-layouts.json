@@ -19160,33 +19160,78 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 2-4",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
           "placeholder_text": "Agenda",
           "layer": 10,
           "typography": {
-            "fontSize": 40,
+            "fontSize": 44,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "center",
+            "align": "left",
             "lineHeight": 1.15
           },
           "max_lines": 2
         },
         {
-          "id": "BODY",
-          "region": "cols 3-10, rows 4-8",
+          "id": "ITEM_1",
+          "region": "cols 3-11, rows 3-4",
           "role": "body",
-          "placeholder_text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "placeholder_text": "Opening and goals",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "center",
-            "lineHeight": 1.45
+            "fontSize": 22,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.25
           },
-          "max_lines": 6
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_2",
+          "region": "cols 3-11, rows 4-5",
+          "role": "body",
+          "placeholder_text": "Context and constraints",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.25
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_3",
+          "region": "cols 3-11, rows 5-6",
+          "role": "body",
+          "placeholder_text": "Proposal and proof",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.25
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_4",
+          "region": "cols 3-11, rows 6-7",
+          "role": "body",
+          "placeholder_text": "Decisions and next steps",
+          "layer": 10,
+          "typography": {
+            "fontSize": 22,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.25
+          },
+          "max_lines": 1
         }
       ],
       "preview": {
@@ -19199,10 +19244,28 @@
             "bold": true,
             "uppercase": false
           },
-          "BODY": {
-            "text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "ITEM_1": {
+            "text": "Opening and goals",
             "variant": "body",
-            "bold": false,
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_2": {
+            "text": "Context and constraints",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_3": {
+            "text": "Proposal and proof",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_4": {
+            "text": "Decisions and next steps",
+            "variant": "body",
+            "bold": true,
             "uppercase": false
           }
         }
@@ -19594,13 +19657,13 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 2-4",
+          "region": "cols 2-5, rows 4-6",
           "role": "heading",
           "placeholder_text": "Agenda",
           "layer": 10,
           "typography": {
-            "fontSize": 40,
-            "fontWeight": 800,
+            "fontSize": 22,
+            "fontWeight": 700,
             "colorRole": "text",
             "align": "center",
             "lineHeight": 1.15
@@ -19608,19 +19671,79 @@
           "max_lines": 2
         },
         {
-          "id": "BODY",
-          "region": "cols 3-10, rows 4-8",
+          "id": "ITEM_1",
+          "region": "cols 6-12, rows 2-3",
           "role": "body",
-          "placeholder_text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "placeholder_text": "Opening and goals",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "center",
-            "lineHeight": 1.45
+            "fontSize": 16,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
           },
-          "max_lines": 6
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_2",
+          "region": "cols 6-12, rows 3-4",
+          "role": "body",
+          "placeholder_text": "Context and constraints",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_3",
+          "region": "cols 6-12, rows 4-5",
+          "role": "body",
+          "placeholder_text": "Proposal and proof",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_4",
+          "region": "cols 6-12, rows 5-6",
+          "role": "body",
+          "placeholder_text": "Decisions and owners",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "ITEM_5",
+          "region": "cols 6-12, rows 6-7",
+          "role": "body",
+          "placeholder_text": "Q&A and next steps",
+          "layer": 10,
+          "typography": {
+            "fontSize": 16,
+            "fontWeight": 600,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
         }
       ],
       "preview": {
@@ -19633,10 +19756,34 @@
             "bold": true,
             "uppercase": false
           },
-          "BODY": {
-            "text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "ITEM_1": {
+            "text": "Opening and goals",
             "variant": "body",
-            "bold": false,
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_2": {
+            "text": "Context and constraints",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_3": {
+            "text": "Proposal and proof",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_4": {
+            "text": "Decisions and owners",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_5": {
+            "text": "Q&A and next steps",
+            "variant": "body",
+            "bold": true,
             "uppercase": false
           }
         }
