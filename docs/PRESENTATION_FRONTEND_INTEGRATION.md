@@ -192,7 +192,28 @@ FE: show “No visuals” only when `status === "skipped"` or there is no image 
 - Autosave whole slide: `PUT .../slides/:slideId/canvas` (body = canvas doc above)  
 - Or granular: `POST` / `PATCH` / `DELETE` `.../elements...` and `PATCH .../elements/reorder`
 
-Writes set `manuallyEdited: true` on the slide.
+Writes set `manuallyEdited: true` on the slide (except progress-only `PATCH` of `progressStatus`).
+
+### Slide progress status (for reviewers)
+
+Editors mark each slide’s workflow progress. Default is **no status** (`progressStatus: null`).
+
+| Value | UI label |
+|---|---|
+| `null` | None |
+| `TODO` | Todo |
+| `IN_PROGRESS` | In progress |
+| `COMPLETED` | Completed |
+
+```
+PATCH …/slides/:slideId
+{ "progressStatus": "IN_PROGRESS" }   // set
+{ "progressStatus": null }            // clear
+```
+
+- Show a chip/dropdown on the **editor** slide rail.
+- On `/p/:token`, show chips **only** when `linkRole === "reviewer"` (deck slides include `progressStatus`). Viewer links omit the field — hide the UI.
+- Guests cannot set progress. AI regenerate preserves the value. Duplicate copies it.
 
 Sort draw order by `layer` ascending.
 
@@ -209,7 +230,7 @@ Base: `/api/workspaces/:workspaceId/presentations/:presentationId`
 | Duplicate | `POST` | `/slides/:slideId/duplicate` | Fails at deck cap 40 |
 | Reorder | `PATCH` | `/slides/reorder` | `{ "slideIds": ["…"] }` all ids once |
 | Apply layout | `POST` | `/slides/:slideId/apply-layout` | `{ "templateId" }` rebuilds `elements` |
-| Patch fields | `PATCH` | `/slides/:slideId` | `content`, `layoutId`, `imageRef`, `elements`, … |
+| Patch fields | `PATCH` | `/slides/:slideId` | `content`, `layoutId`, `imageRef`, `elements`, `progressStatus` (`TODO`\|`IN_PROGRESS`\|`COMPLETED`\|`null`), … |
 | AI regen one slide | `POST` | `/slides/:slideId/regenerate` | `{ target, overwriteManualEdits, prompt? }` |
 
 While `deck.status === "GENERATING"`, structure/canvas mutations → **409**. Show a blocking “Generating…” state.
@@ -262,6 +283,31 @@ Inbox may notify `PRESENTATION_EXPORT_COMPLETED` / `FAILED`.
 - Slide CRUD / canvas edits are **free**; AI outline, generate pieces, and export charge.  
 
 Details: [`PRESENTATION_CREDITS_FRONTEND.md`](PRESENTATION_CREDITS_FRONTEND.md).
+
+---
+
+## My Work / dashboard preview modal
+
+When the user clicks a presentation card, show a **deck preview** (all slides as images), then **Edit** opens the canvas editor.
+
+**Do not** put list `thumbnailUrl` or `imageRef.url` in a big `<img>` as the modal body — that is a photo *on* the slide, not the slide.
+
+| Step | Call |
+|------|------|
+| Card grid | `GET .../presentations` or `GET .../library?category=presentation` — use `thumbnailUrl` for the **card** only |
+| Modal open | `GET .../presentations/:id/preview` |
+| Poll while `nextPollMs > 0` | Same URL + `If-None-Match: <ETag>` (304 = unchanged) |
+| Edit | Navigate to editor → `GET .../presentations/:id` (full `elements`) |
+| Download | Existing `POST .../export` — never use export to fill the modal |
+
+**Modal UI**
+
+1. Main pane + filmstrip: `<img src={slide.previewImageUrl}>` in a 16:9 or 4:3 box (`object-fit: contain`). Same URL for both (browser cache).
+2. Footer: `slideCount`, deck `status`, `aspectRatio`.
+3. If `previewStatus !== READY`, poll every `nextPollMs` (usually 1000). Stop when READY or ~20s; keep placeholders for PENDING slides.
+4. Do **not** live-render the canvas in this modal.
+
+Snapshots are generated in the background after generate / canvas save / theme / brand kit. First open of an old deck may return `PARTIAL` while JPEGs catch up.
 
 ---
 
@@ -416,6 +462,7 @@ Only when session `canComment` is true (`linkRole === "reviewer"`). Full contrac
 ## Suggested UI checklist
 
 - [ ] Create modal: **AI | Blank | Template**  
+- [ ] My Work card click → `GET .../preview` filmstrip (images); **Edit** → full get-by-id editor  
 - [ ] Theme + layout pickers from workspace GET endpoints  
 - [ ] AI: outline review → generate progress bar (`status`)  
 - [ ] Canvas: 1920×1080 stage, palette from `presentation-elements`, autosave canvas  
@@ -428,7 +475,8 @@ Only when session `canComment` is true (`linkRole === "reviewer"`). Full contrac
 - [ ] Comments sidebar filtered by selected slide; replies + resolve; `@` picker from `mentionable-users`  
 - [ ] Editor shows orphaned threads (`orphaned=true`) so feedback survives a full regenerate  
 - [ ] Share modal: two cards (Viewer | Reviewer) bound to `data.viewer` / `data.reviewer`
-- [ ] `/p/:token` page: composer gated on `canComment` / `linkRole`, guest name prompt, refetch on `commentsUpdatedAt`
+- [ ] Slide progress chip in editor (`progressStatus`); show on `/p` only for reviewer links  
+- [ ] `/p/:token` page: composer gated on `canComment` / `linkRole`, guest name prompt, refetch on `commentsUpdatedAt`  
 - [ ] Admin: separate screens for `DECK_LAYOUT` vs `VIDEO_SCENE` template forms  
 
 ---
@@ -442,6 +490,7 @@ GET    /api/workspaces/:workspaceId/presentation-themes
 GET    /api/workspaces/:workspaceId/presentation-elements
 
 GET    /api/workspaces/:workspaceId/presentations/:presentationId
+GET    .../preview
 GET    .../status
 GET    .../credit-estimate
 POST   .../outline

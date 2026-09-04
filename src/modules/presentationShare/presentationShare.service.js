@@ -387,11 +387,12 @@ function sanitizeElementsDoc(doc) {
   };
 }
 
-function toPublicSlide(slide) {
+function toPublicSlide(slide, { includeProgress = false } = {}) {
   return {
     id: slide.id,
     order: slide.order,
     status: slide.status,
+    ...(includeProgress ? { progressStatus: slide.progressStatus ?? null } : {}),
     ...(slide.title != null ? { title: slide.title } : {}),
     ...(slide.description != null ? { description: slide.description } : {}),
     elements: sanitizeElementsDoc(slide.elements),
@@ -417,8 +418,11 @@ async function getPublicPresentation(token) {
   const readySlides = (deck.slides || []).filter((slide) => slide.status === 'READY');
   const version = buildContentVersion({ deck, slides: readySlides, share });
 
+  const includeProgress = share.role === ROLE_REVIEWER;
   const presigned = await presignSlidesForPublic(readySlides);
-  const slides = enrichSlidesForClient(presigned).map(toPublicSlide);
+  const slides = enrichSlidesForClient(presigned).map((slide) =>
+    toPublicSlide(slide, { includeProgress })
+  );
 
   return {
     etag: version.etag,

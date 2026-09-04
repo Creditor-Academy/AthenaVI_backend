@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+  If-None-Match: "{{presentationPreviewEtag}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const etag = pm.response.headers.get("ETag");
+        if (etag) pm.collectionVariables.set("presentationPreviewEtag", etag);
+        const j = pm.response.json();
+        const slides = j && j.data && j.data.slides;
+        if (Array.isArray(slides) && slides[0]) {
+          pm.collectionVariables.set("slideId", slides[0].id);
+        }
+      }
+    language: text/javascript
+order: 900

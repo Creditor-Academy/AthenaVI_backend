@@ -169,6 +169,7 @@ function enrichSlideForClient(slide) {
     transition: slide.transition || elements.transition || 'none',
     contributorStatus: slide.contributorStatus || elements.contributorStatus || 'none',
     speakerNotes: slide.speakerNotes || elements.speakerNotes || content.speakerNotes || '',
+    progressStatus: slide.progressStatus ?? null,
   };
 }
 

@@ -35,7 +35,7 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 
 **Query (optional):** `folderId`
 
-**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). Full deck/slides: get-by-id.
+**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` prefer the **slide-1 JPEG snapshot** when available (same as deck preview); otherwise fall back to a cover image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
 
 ---
 
@@ -169,7 +169,7 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 - Nested: `project`, `deck`, `slides` (canonical)
 - **Flat FE compatibility fields** (same payload): `id` (= project id), `title` (= project.name), `status` / `themeTokens` / `aspectRatio` / `locale` / `folderId` mirrored from deck/project
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
-- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
+- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, **`progressStatus`** (`null` \| `TODO` \| `IN_PROGRESS` \| `COMPLETED`), manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
 - Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` (or `src` alias) for canvas render.
 - Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed` | `graphic` | `group`. Groups store `childIds` and children store `groupId`. Optional `locked` is persisted. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
@@ -178,6 +178,58 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 Also: `GET .../slides/:slideId` returns a single presigned slide.
 
 **Frontend outcome vs API:** A single mega JSON “final deck” blob is **not** accepted as one POST. Map UI prompt/vibe into outline/theme calls; store/edit via slide + canvas APIs.
+
+---
+
+## Deck preview (My Work / dashboard modal)
+
+Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — not a photo taken from inside the slide). Use this for the dashboard click modal; use full get-by-id only when opening the editor.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` |
+| **Auth** | Bearer + member |
+| **Cache** | `ETag` + `Cache-Control: private, max-age=30` — send `If-None-Match` to get **304** |
+
+**Response `data` (200):**
+
+```json
+{
+  "id": "<presentationId>",
+  "title": "Distributed Team",
+  "status": "READY",
+  "aspectRatio": "16:9",
+  "slideCount": 6,
+  "previewStatus": "READY",
+  "nextPollMs": 0,
+  "slides": [
+    {
+      "id": "…",
+      "order": 0,
+      "status": "READY",
+      "title": "…",
+      "previewImageUrl": "https://…presigned…",
+      "previewStatus": "READY"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `previewStatus` (deck) | `READY` (all READY slides have JPEGs) \| `PARTIAL` \| `PENDING` |
+| `nextPollMs` | `0` when deck preview is READY; otherwise `1000` — FE should poll this interval |
+| `slides[].previewImageUrl` | Presigned JPEG (~1h) of the **full slide** (960×540 for 16:9, 800×600 for 4:3). `null` while pending |
+| `slides[].previewStatus` | `PENDING` \| `READY` \| `FAILED` |
+
+**Behavior**
+
+- Payload is **lean** — no `elements`, outline, or credits.
+- Snapshots are generated **off the request path** after generate / canvas save / theme / brand kit. Opening preview may kick missing/stale jobs; response still returns immediately.
+- List/library `thumbnailUrl` prefers slide-1 snapshot (real first page), not a random image on the slide.
+- **Not** charged (`ppt_export` is only for user-initiated export).
+- Do **not** live-render the canvas in the dashboard modal. **Edit** → navigate to editor → `GET .../presentations/:id`.
 
 ---
 
@@ -417,7 +469,7 @@ Starts async slide generation. Poll **status**. Pre-checks affordability; charge
   "etaSeconds": 24,
   "creditsChargedSoFar": 12,
   "slides": [
-    { "id": "…", "order": 1, "status": "READY", "contentType": "title", "layoutId": "…", "manuallyEdited": false }
+    { "id": "…", "order": 1, "status": "READY", "progressStatus": null, "contentType": "title", "layoutId": "…", "manuallyEdited": false }
   ]
 }
 ```
@@ -497,10 +549,16 @@ Cannot delete the last remaining slide (**400**). While `deck.status === GENERAT
   "contentType": "bullet_list",
   "imageRef": null,
   "elements": { "version": 1, "canvas": { "width": 1920, "height": 1080 }, "elements": [] },
-  "manuallyEdited": true
+  "manuallyEdited": true,
+  "progressStatus": "IN_PROGRESS"
 }
 ```
 
+- **`progressStatus`**: `TODO` \| `IN_PROGRESS` \| `COMPLETED` \| `null` (clear / no status). Editor workflow for reviewers — **not** generation `status`.
+- Progress-only PATCH (body is only `progressStatus`) does **not** set `manuallyEdited: true`.
+- Allowed while the deck is `GENERATING`.
+- Duplicate copies `progressStatus`; AI regenerate **preserves** it.
+- Public `/api/p`: included on **reviewer** links only; omitted on viewer links.
 ### Regenerate slide
 
 | | |
@@ -712,7 +770,7 @@ Send back the `ETag` as `If-None-Match` to get a **304**.
   "contentUpdatedAt": "2026-08-20T08:59:12.000Z",
   "slideCount": 12,
   "slides": [
-    { "id": "…", "order": 0, "status": "READY", "title": "…", "description": ["…"], "elements": { } }
+    { "id": "…", "order": 0, "status": "READY", "progressStatus": "IN_PROGRESS", "title": "…", "description": ["…"], "elements": { } }
   ]
 }
 ```
@@ -720,7 +778,7 @@ Send back the `ETag` as `If-None-Match` to get a **304**.
 - **Only `READY` slides are included.** During a regeneration the call still returns **200** with `status: "GENERATING"` and whatever slides survive, so the UI can show "Updating…" instead of an error.
 - Image URLs are freshly presigned per request, including per-element images on multi-image slides.
 - Editor-only data is stripped: outline, generation metrics, credits, prompt bundle version, folder, workspace, owner, jobs, and internal S3 keys. Comments are **not** inlined here — they have their own uncached endpoint so this payload stays ETag-stable.
-
+- **`progressStatus`** appears on slides **only for reviewer links** (`null` = no status). Viewer links omit the key entirely.
 ### Get viewer session
 
 | | |

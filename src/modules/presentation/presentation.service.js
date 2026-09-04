@@ -26,6 +26,7 @@ const {
   toCoverUrls,
   persistCoverIfEmpty,
 } = require('../../shared/utils/coverThumbnail');
+const slidePreview = require('./slidePreview.service');
 
 function firstNonEmptyText(...values) {
   for (const value of values) {
@@ -81,15 +82,29 @@ async function listPresentations({ workspaceId, folderId }) {
       const deck = rows[index]?.deck || null;
       const firstSlide = Array.isArray(deck?.slides) ? deck.slides[0] : null;
       const storedThumb = project.thumbnail || null;
-      const extracted = extractSlideCover(firstSlide);
-      const cover = await toCoverUrls({
-        url: storedThumb || extracted.url,
-        s3Key: extracted.s3Key,
-      });
-      if (!storedThumb && cover.persistUrl) {
-        persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+      let thumbnailUrl = null;
+
+      if (firstSlide?.previewS3Key && firstSlide.previewStatus === 'READY') {
+        const cover = await toCoverUrls({ s3Key: firstSlide.previewS3Key });
+        thumbnailUrl = cover.displayUrl || null;
+        if (!storedThumb && cover.persistUrl) {
+          persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+        }
+      } else if (storedThumb) {
+        const cover = await toCoverUrls({ url: storedThumb });
+        thumbnailUrl = cover.displayUrl || storedThumb;
+      } else {
+        const extracted = extractSlideCover(firstSlide);
+        const cover = await toCoverUrls({
+          url: extracted.url,
+          s3Key: extracted.s3Key,
+        });
+        if (cover.persistUrl) {
+          persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+        }
+        thumbnailUrl = cover.displayUrl || null;
       }
-      const thumbnailUrl = cover.displayUrl || storedThumb || null;
+
       return {
         ...project,
         title: project.name,
@@ -426,6 +441,7 @@ async function createPresentation({
   const signedSlides = enrichSlidesForClient(
     await attachPresignedMediaToSlides(outDeck.slides || slides)
   );
+  slidePreview.enqueueDeckPreviews(deck.id).catch(() => {});
   return withFlatPresentationFields({
     project,
     deck: { ...outDeck, slides: signedSlides },
@@ -478,6 +494,8 @@ async function applyBrandKit({ workspaceId, presentationId, brandKitId, userId }
     themeTokens,
     generationMetrics: metrics,
   });
+
+  slidePreview.enqueueDeckPreviews(deck.id, { force: true }).catch(() => {});
 
   return {
     deck: {
@@ -675,10 +693,19 @@ async function updateThumbnail(workspaceId, presentationId, { thumbnailUrl, slid
   };
 }
 
+async function getPresentationPreview({ workspaceId, presentationId, ifNoneMatch }) {
+  return slidePreview.getPresentationPreview({
+    workspaceId,
+    presentationId,
+    ifNoneMatch,
+  });
+}
+
 module.exports = {
   createPresentation,
   listPresentations,
   getPresentation,
+  getPresentationPreview,
   updateThumbnail,
   getSlide,
   creditEstimate,

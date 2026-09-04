@@ -61,6 +61,21 @@ const getPresentation = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_FETCHED);
 });
 
+const getPresentationPreview = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const result = await presentationService.getPresentationPreview({
+    workspaceId,
+    presentationId,
+    ifNoneMatch: req.headers['if-none-match'] || null,
+  });
+  res.set('ETag', result.etag);
+  res.set('Cache-Control', 'private, max-age=30');
+  if (result.notModified) {
+    return res.status(304).end();
+  }
+  return successResponse(req, res, result.data, 200, messages.PRESENTATION_PREVIEW_FETCHED);
+});
+
 const updateThumbnail = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const data = await presentationService.updateThumbnail(workspaceId, presentationId, {
@@ -460,6 +475,7 @@ module.exports = {
   createPresentation,
   listPresentations,
   getPresentation,
+  getPresentationPreview,
   updateThumbnail,
   getSlide,
   generateOutline,
