@@ -81,13 +81,14 @@ async function listPresentations({ workspaceId, folderId }) {
       const deck = rows[index]?.deck || null;
       const firstSlide = Array.isArray(deck?.slides) ? deck.slides[0] : null;
       const storedThumb = project.thumbnail || null;
+      const snapshotKey = firstSlide?.previewS3Key || null;
       const extracted = extractSlideCover(firstSlide);
       const cover = await toCoverUrls({
         url: storedThumb || extracted.url,
-        s3Key: extracted.s3Key,
+        s3Key: snapshotKey || extracted.s3Key,
       });
-      if (!storedThumb && cover.persistUrl) {
-        persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+      if (!storedThumb && (cover.persistUrl || snapshotKey)) {
+        persistCoverIfEmpty(prisma, project.id, snapshotKey || cover.persistUrl);
       }
       const thumbnailUrl = cover.displayUrl || storedThumb || null;
       return {
@@ -479,6 +480,13 @@ async function applyBrandKit({ workspaceId, presentationId, brandKitId, userId }
     generationMetrics: metrics,
   });
 
+  try {
+    const { scheduleDeckPreviewRefresh } = require('./deckPreview.service');
+    scheduleDeckPreviewRefresh(deck.id, { force: true });
+  } catch {
+    // best-effort
+  }
+
   return {
     deck: {
       id: updatedDeck.id,
@@ -679,6 +687,10 @@ module.exports = {
   createPresentation,
   listPresentations,
   getPresentation,
+  getDeckPreview: async ({ workspaceId, presentationId, ifNoneMatch }) => {
+    const deckPreview = require('./deckPreview.service');
+    return deckPreview.getDeckPreview({ workspaceId, presentationId, ifNoneMatch });
+  },
   updateThumbnail,
   getSlide,
   creditEstimate,

@@ -260,6 +260,12 @@ async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
     manuallyEdited: true,
     status: 'READY',
   });
+  try {
+    const { scheduleDeckPreviewRefresh } = require('./deckPreview.service');
+    scheduleDeckPreviewRefresh(deck.id);
+  } catch {
+    // preview refresh is best-effort
+  }
   return { slide: enrichSlideForClient(updated) };
 }
 

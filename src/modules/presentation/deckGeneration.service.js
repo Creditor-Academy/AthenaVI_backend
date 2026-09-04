@@ -4844,6 +4844,18 @@ async function processDeckGeneration({
       creditsChargedSoFar: updated.creditsChargedSoFar,
       error: allFailed ? 'All slides failed' : null,
     });
+
+    if (status === 'READY' || status === 'FAILED') {
+      try {
+        const { scheduleDeckPreviewRefresh } = require('./deckPreview.service');
+        scheduleDeckPreviewRefresh(deckId, { force: true });
+      } catch (previewErr) {
+        logger.warn?.('deck_preview_schedule_after_generate_failed', {
+          deckId,
+          error: previewErr.message,
+        });
+      }
+    }
   } catch (err) {
     logger.error?.('processDeckGeneration failed', err) ||
       console.error('processDeckGeneration failed', err);
@@ -5166,6 +5178,12 @@ async function setTheme({ presentationId, themeId, themeTokens, workspaceId }) {
   const updated = await presentationDao.updateDeck(deck.id, {
     themeTokens: merged,
   });
+  try {
+    const { scheduleDeckPreviewRefresh } = require('./deckPreview.service');
+    scheduleDeckPreviewRefresh(deck.id, { force: true });
+  } catch {
+    // best-effort
+  }
   return {
     deckId: updated.id,
     themeId: themeId || null,

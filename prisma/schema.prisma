@@ -908,6 +908,11 @@ model Slide {
   imageRef       Json?
   /// Freeform canvas: { version, canvas: { width, height }, elements: [...] }
   elements       Json?
+  /// Full-slide JPEG snapshot for My Work / dashboard deck preview (not stock photo).
+  previewS3Key  String? @map("preview_s3_key")
+  previewHash   String? @map("preview_hash")
+  /// PENDING | READY | FAILED
+  previewStatus String? @map("preview_status")
   status         String              @default("PENDING") // PENDING | GENERATING | READY | FAILED
   /// Editor workflow progress for reviewers. Null = no status. Not generation status.
   progressStatus SlideProgressStatus? @map("progress_status")

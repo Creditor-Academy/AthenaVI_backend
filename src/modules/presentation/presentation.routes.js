@@ -51,6 +51,12 @@ router.get(
   presentationController.getPresentation
 );
 
+router.get(
+  '/:presentationId/preview',
+  validate(presentationValidations.presentationByIdSchema),
+  presentationController.getDeckPreview
+);
+
 router.put(
   '/:presentationId/thumbnail',
   validate(presentationValidations.updatePresentationThumbnailSchema),
