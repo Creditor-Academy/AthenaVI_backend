@@ -17,6 +17,7 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
+const slidePreview = require('./slidePreview.service');
 const { filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout, layoutFamilyExcludeIds } = require('./layoutSelector.service');
 const { pickLayoutForGeneratedSlide } = require('./deckLayout/pickLayoutForGeneratedSlide');
 const { toDeckLayout } = require('./deckLayout/toDeckLayout');
@@ -4844,6 +4845,10 @@ async function processDeckGeneration({
       creditsChargedSoFar: updated.creditsChargedSoFar,
       error: allFailed ? 'All slides failed' : null,
     });
+
+    if (status === 'READY' || partial) {
+      slidePreview.enqueueDeckPreviews(deckId).catch(() => {});
+    }
   } catch (err) {
     logger.error?.('processDeckGeneration failed', err) ||
       console.error('processDeckGeneration failed', err);
@@ -5166,6 +5171,7 @@ async function setTheme({ presentationId, themeId, themeTokens, workspaceId }) {
   const updated = await presentationDao.updateDeck(deck.id, {
     themeTokens: merged,
   });
+  slidePreview.enqueueDeckPreviews(deck.id, { force: true }).catch(() => {});
   return {
     deckId: updated.id,
     themeId: themeId || null,
@@ -5698,6 +5704,7 @@ async function regenerateSlide({
               visual_need: visualNeed,
             },
           });
+          slidePreview.enqueueSlidePreview(slideId, { force: true }).catch(() => {});
         } catch (err) {
           await presentationDao.updateSlide(slideId, {
             status: 'READY',
@@ -5707,11 +5714,13 @@ async function regenerateSlide({
               { error: err.message }
             ),
           });
+          slidePreview.enqueueSlidePreview(slideId, { force: true }).catch(() => {});
         }
         return;
       }
 
       await processSlide(ctx, fresh || slide);
+      slidePreview.enqueueSlidePreview(slideId, { force: true }).catch(() => {});
     } catch (err) {
       console.error('regenerateSlide failed', err);
     }
@@ -5815,6 +5824,9 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
 
   const updated = await presentationDao.updateSlide(slideId, data);
   const { enrichSlideForClient } = require('./elementContent.normalize');
+  if (data.elements !== undefined || data.content !== undefined || data.imageRef !== undefined) {
+    slidePreview.enqueueSlidePreview(slideId).catch(() => {});
+  }
   return { slide: enrichSlideForClient(updated) };
 }
 

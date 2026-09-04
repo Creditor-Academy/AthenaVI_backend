@@ -102,6 +102,9 @@ async function listPresentations({ workspaceId, folderId }) {
             select: {
               id: true,
               order: true,
+              previewS3Key: true,
+              previewStatus: true,
+              // Legacy fallback cover only when no snapshot yet
               imageRef: true,
               content: true,
               elements: true,
@@ -421,6 +424,99 @@ async function incrementDeckCreditsCharged(deckId, amountAc) {
   });
 }
 
+async function updateProjectThumbnail(projectId, thumbnail) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { thumbnail },
+    select: { id: true, thumbnail: true },
+  });
+}
+
+async function findSlidePreviewContext(slideId) {
+  const slide = await prisma.slide.findUnique({
+    where: { id: slideId },
+  });
+  if (!slide) return null;
+  const deck = await prisma.deck.findUnique({
+    where: { id: slide.deckId },
+    select: {
+      id: true,
+      projectId: true,
+      themeTokens: true,
+      aspectRatio: true,
+      status: true,
+    },
+  });
+  if (!deck) return { slide, deck: null, project: null };
+  const project = await prisma.project.findUnique({
+    where: { id: deck.projectId },
+    select: { id: true, workspaceId: true, name: true, thumbnail: true },
+  });
+  return { slide, deck, project };
+}
+
+async function findSlidePreviewRowsByDeckId(deckId) {
+  return prisma.slide.findMany({
+    where: { deckId },
+    orderBy: { order: 'asc' },
+    select: {
+      id: true,
+      order: true,
+      status: true,
+      elements: true,
+      previewS3Key: true,
+      previewHash: true,
+      previewStatus: true,
+    },
+  });
+}
+
+async function findDeckPreviewMeta(deckId) {
+  return prisma.deck.findUnique({
+    where: { id: deckId },
+    select: {
+      id: true,
+      projectId: true,
+      themeTokens: true,
+      aspectRatio: true,
+      status: true,
+    },
+  });
+}
+
+/** Lean presentation row for GET .../preview (no elements). */
+async function findPresentationPreview(workspaceId, presentationId) {
+  return prisma.project.findFirst({
+    where: { id: presentationId, workspaceId, type: 'PRESENTATION' },
+    select: {
+      id: true,
+      name: true,
+      workspaceId: true,
+      thumbnail: true,
+      deck: {
+        select: {
+          id: true,
+          status: true,
+          aspectRatio: true,
+          themeTokens: true,
+          slides: {
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              order: true,
+              status: true,
+              content: true,
+              previewS3Key: true,
+              previewHash: true,
+              previewStatus: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 module.exports = {
   createPresentationProject,
   findDeckByProjectId,
@@ -428,6 +524,7 @@ module.exports = {
   findDeckById,
   updateDeck,
   updateProjectName,
+  updateProjectThumbnail,
   createSlides,
   createOneSlide,
   updateSlide,
@@ -452,4 +549,8 @@ module.exports = {
   findImageCacheByHash,
   createImageCache,
   incrementDeckCreditsCharged,
+  findSlidePreviewContext,
+  findSlidePreviewRowsByDeckId,
+  findDeckPreviewMeta,
+  findPresentationPreview,
 };

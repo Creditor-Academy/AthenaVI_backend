@@ -35,7 +35,7 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 
 **Query (optional):** `folderId`
 
-**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). Full deck/slides: get-by-id.
+**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` prefer the **slide-1 JPEG snapshot** when available (same as deck preview); otherwise fall back to a cover image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
 
 ---
 
@@ -178,6 +178,58 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 Also: `GET .../slides/:slideId` returns a single presigned slide.
 
 **Frontend outcome vs API:** A single mega JSON “final deck” blob is **not** accepted as one POST. Map UI prompt/vibe into outline/theme calls; store/edit via slide + canvas APIs.
+
+---
+
+## Deck preview (My Work / dashboard modal)
+
+Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — not a photo taken from inside the slide). Use this for the dashboard click modal; use full get-by-id only when opening the editor.
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` |
+| **Auth** | Bearer + member |
+| **Cache** | `ETag` + `Cache-Control: private, max-age=30` — send `If-None-Match` to get **304** |
+
+**Response `data` (200):**
+
+```json
+{
+  "id": "<presentationId>",
+  "title": "Distributed Team",
+  "status": "READY",
+  "aspectRatio": "16:9",
+  "slideCount": 6,
+  "previewStatus": "READY",
+  "nextPollMs": 0,
+  "slides": [
+    {
+      "id": "…",
+      "order": 0,
+      "status": "READY",
+      "title": "…",
+      "previewImageUrl": "https://…presigned…",
+      "previewStatus": "READY"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `previewStatus` (deck) | `READY` (all READY slides have JPEGs) \| `PARTIAL` \| `PENDING` |
+| `nextPollMs` | `0` when deck preview is READY; otherwise `1000` — FE should poll this interval |
+| `slides[].previewImageUrl` | Presigned JPEG (~1h) of the **full slide** (960×540 for 16:9, 800×600 for 4:3). `null` while pending |
+| `slides[].previewStatus` | `PENDING` \| `READY` \| `FAILED` |
+
+**Behavior**
+
+- Payload is **lean** — no `elements`, outline, or credits.
+- Snapshots are generated **off the request path** after generate / canvas save / theme / brand kit. Opening preview may kick missing/stale jobs; response still returns immediately.
+- List/library `thumbnailUrl` prefers slide-1 snapshot (real first page), not a random image on the slide.
+- **Not** charged (`ppt_export` is only for user-initiated export).
+- Do **not** live-render the canvas in the dashboard modal. **Edit** → navigate to editor → `GET .../presentations/:id`.
 
 ---
 
