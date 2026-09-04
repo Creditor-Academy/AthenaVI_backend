@@ -590,12 +590,20 @@ async function withBrowserPage(fn, { args = [] } = {}) {
     const executablePath = resolveChromeExecutable();
     const launchOpts = {
       headless: true,
+      // Desktop Chrome on Windows shows a window on launch even when headless; keep the
+      // process hidden and parked offscreen so an export never flashes on the host.
+      windowsHide: true,
+      pipe: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--font-render-hinting=none',
+        '--window-position=-32000,-32000',
+        '--mute-audio',
+        '--no-first-run',
+        '--no-default-browser-check',
         ...args,
       ],
     };
@@ -740,25 +748,21 @@ async function buildRasterExport(deck, { format, slideId } = {}) {
 
 /**
  * Render one or more slides to raster buffers with a single Puppeteer browser.
- * Used by export and by My Work deck-preview snapshot generation.
+ * Export only — dashboard previews are rendered by the frontend, never screenshotted.
  *
  * @param {object} deck
- * @param {{ slides?: object[], format?: string, mode?: 'export'|'preview', onSlide?: Function }} opts
- *   mode=preview → faster waits, half-res screenshots (dashboard modal)
+ * @param {{ slides?: object[], format?: string, onSlide?: Function }} opts
  *   onSlide → optional callback after each slide (upload progressively)
  */
-async function renderSlideScreenshots(deck, { slides, format = 'jpeg', mode = 'export', onSlide } = {}) {
+async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide } = {}) {
   const type = String(format || 'jpeg').toLowerCase() === 'png' ? 'png' : 'jpeg';
-  const previewMode = mode === 'preview';
   const list = Array.isArray(slides) && slides.length
     ? slides
     : [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (!list.length) return [];
 
-  const scale = previewMode ? 0.5 : 1;
-  const waitUntil = previewMode ? 'domcontentloaded' : 'networkidle0';
-  const contentTimeout = previewMode ? 15000 : 60000;
-  const jpegQuality = previewMode ? 72 : 82;
+  const contentTimeout = 60000;
+  const jpegQuality = 82;
 
   return withBrowserPage(async (page) => {
     // Don't let a single broken remote image hang forever.
@@ -768,21 +772,16 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', mode = 'e
     const images = [];
     for (let i = 0; i < list.length; i += 1) {
       const slide = list[i];
-      const canvasW = Math.max(320, Math.round((slide.elements?.canvas?.width || CANVAS_WIDTH) * scale));
-      const canvasH = Math.max(180, Math.round((slide.elements?.canvas?.height || CANVAS_HEIGHT) * scale));
+      const canvasW = Math.max(320, Math.round(slide.elements?.canvas?.width || CANVAS_WIDTH));
+      const canvasH = Math.max(180, Math.round(slide.elements?.canvas?.height || CANVAS_HEIGHT));
       try {
         // eslint-disable-next-line no-await-in-loop
         await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
         // eslint-disable-next-line no-await-in-loop
         await page.setContent(await buildDeckHtml({ ...deck, slides: [slide] }), {
-          waitUntil,
+          waitUntil: 'networkidle0',
           timeout: contentTimeout,
         });
-        if (previewMode) {
-          // Give fonts/images a short chance without waiting for network idle.
-          // eslint-disable-next-line no-await-in-loop
-          await page.waitForNetworkIdle({ idleTime: 250, timeout: 2500 }).catch(() => null);
-        }
         // eslint-disable-next-line no-await-in-loop
         const buf = await page.screenshot({
           type,
@@ -804,7 +803,6 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', mode = 'e
         logger.warn?.('slide_screenshot_failed', {
           slideId: slide.id,
           error: err.message,
-          mode,
         }) || console.warn('slide screenshot failed', slide.id, err.message);
         if (typeof onSlide === 'function') {
           // eslint-disable-next-line no-await-in-loop

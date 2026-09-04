@@ -1,6 +1,14 @@
 $kind: http-request
-url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview"
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview?offset=0&limit=8"
 method: GET
+params:
+  query:
+    - key: offset
+      value: "0"
+      description: First slide to return (int >= 0, default 0)
+    - key: limit
+      value: "8"
+      description: Slides per page (int 1-24, default 8). Page the rest with nextOffset.
 headers:
   Authorization: Bearer {{accessToken}}
   If-None-Match: "{{presentationPreviewEtag}}"
@@ -11,10 +19,17 @@ scripts:
         const etag = pm.response.headers.get("ETag");
         if (etag) pm.collectionVariables.set("presentationPreviewEtag", etag);
         const j = pm.response.json();
-        const slides = j && j.data && j.data.slides;
+        const data = (j && j.data) || {};
+        const slides = data.slides;
         if (Array.isArray(slides) && slides[0]) {
           pm.collectionVariables.set("slideId", slides[0].id);
         }
+        // coverStale === true -> capture slide 1 and PUT .../thumbnail/image
+        pm.collectionVariables.set("presentationCoverStale", String(data.coverStale === true));
+        pm.collectionVariables.set(
+          "presentationPreviewNextOffset",
+          data.nextOffset == null ? "" : String(data.nextOffset)
+        );
       }
     language: text/javascript
 order: 900

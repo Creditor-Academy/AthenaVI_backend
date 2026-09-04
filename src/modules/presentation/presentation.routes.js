@@ -33,6 +33,25 @@ const uploadOutlineDocument = multer({
   },
 }).single('file');
 
+/**
+ * Deck cover captured by the frontend from the live preview. Intentionally not `uploadAssetS3`:
+ * that allows 50MB and video/audio, neither of which belongs in a thumbnail.
+ */
+const uploadCoverImage = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new AppError(messages.INVALID_IMAGE_TYPE, 400));
+    }
+    return cb(null, true);
+  },
+}).single('file');
+
 router.post(
   '/',
   validate(presentationValidations.createPresentationSchema),
@@ -53,7 +72,7 @@ router.get(
 
 router.get(
   '/:presentationId/preview',
-  validate(presentationValidations.presentationByIdSchema),
+  validate(presentationValidations.presentationPreviewSchema),
   presentationController.getPresentationPreview
 );
 
@@ -61,6 +80,13 @@ router.put(
   '/:presentationId/thumbnail',
   validate(presentationValidations.updatePresentationThumbnailSchema),
   presentationController.updateThumbnail
+);
+
+router.put(
+  '/:presentationId/thumbnail/image',
+  uploadCoverImage,
+  validate(presentationValidations.uploadPresentationCoverSchema),
+  presentationController.uploadPresentationCover
 );
 
 router.use('/:presentationId/share', presentationShareRoutes);

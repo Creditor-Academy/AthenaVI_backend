@@ -1,6 +1,9 @@
+const sharp = require('sharp');
 const prisma = require('../../shared/config/prismaClient');
+const { redisClient } = require('../../shared/config/redis');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
+const s3Service = require('../s3/s3.service');
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const themeService = require('./theme.service');
@@ -26,7 +29,7 @@ const {
   toCoverUrls,
   persistCoverIfEmpty,
 } = require('../../shared/utils/coverThumbnail');
-const slidePreview = require('./slidePreview.service');
+const deckRender = require('./deckRender.service');
 
 function firstNonEmptyText(...values) {
   for (const value of values) {
@@ -84,13 +87,7 @@ async function listPresentations({ workspaceId, folderId }) {
       const storedThumb = project.thumbnail || null;
       let thumbnailUrl = null;
 
-      if (firstSlide?.previewS3Key && firstSlide.previewStatus === 'READY') {
-        const cover = await toCoverUrls({ s3Key: firstSlide.previewS3Key });
-        thumbnailUrl = cover.displayUrl || null;
-        if (!storedThumb && cover.persistUrl) {
-          persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
-        }
-      } else if (storedThumb) {
+      if (storedThumb) {
         const cover = await toCoverUrls({ url: storedThumb });
         thumbnailUrl = cover.displayUrl || storedThumb;
       } else {
@@ -441,7 +438,6 @@ async function createPresentation({
   const signedSlides = enrichSlidesForClient(
     await attachPresignedMediaToSlides(outDeck.slides || slides)
   );
-  slidePreview.enqueueDeckPreviews(deck.id).catch(() => {});
   return withFlatPresentationFields({
     project,
     deck: { ...outDeck, slides: signedSlides },
@@ -494,8 +490,6 @@ async function applyBrandKit({ workspaceId, presentationId, brandKitId, userId }
     themeTokens,
     generationMetrics: metrics,
   });
-
-  slidePreview.enqueueDeckPreviews(deck.id, { force: true }).catch(() => {});
 
   return {
     deck: {
@@ -693,11 +687,91 @@ async function updateThumbnail(workspaceId, presentationId, { thumbnailUrl, slid
   };
 }
 
-async function getPresentationPreview({ workspaceId, presentationId, ifNoneMatch }) {
-  return slidePreview.getPresentationPreview({
+const COVER_SIZES = Object.freeze({
+  '16:9': { width: 640, height: 360 },
+  '4:3': { width: 640, height: 480 },
+  '1:1': { width: 480, height: 480 },
+  '9:16': { width: 360, height: 640 },
+});
+const COVER_JPEG_QUALITY = 75;
+const COVER_THROTTLE_SEC = 10;
+
+/** Only sweep objects this deck wrote itself: `thumbnail` may point at a slide's own image. */
+function isOwnCoverKey(key, { workspaceId, deckId }) {
+  if (!key) return false;
+  return key.startsWith(`presentations/${workspaceId}/${deckId}/cover-`);
+}
+
+/**
+ * Store one rendered cover for the deck, captured by the frontend from the live preview.
+ * This is the only image the backend keeps for a presentation; slides are never rasterized.
+ */
+async function uploadPresentationCover({ workspaceId, presentationId, file }) {
+  if (!file?.buffer?.length) {
+    throw new AppError(messages.PRESENTATION_COVER_REQUIRED, 400);
+  }
+
+  const project = await presentationDao.findPresentationRenderMeta(workspaceId, presentationId);
+  if (!project?.deck) {
+    throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
+  }
+
+  const deckId = project.deck.id;
+  const throttleKey = `ppt:cover:${presentationId}`;
+  let acquired = true;
+  try {
+    acquired =
+      (await redisClient.set(throttleKey, '1', { NX: true, EX: COVER_THROTTLE_SEC })) === 'OK';
+  } catch {
+    // Redis being unavailable must not block a cover upload.
+  }
+  if (!acquired) {
+    const existing = await toCoverUrls({ url: project.thumbnail });
+    return {
+      id: presentationId,
+      skipped: true,
+      thumbnail: existing.displayUrl || project.thumbnail || null,
+      thumbnailUrl: existing.displayUrl || project.thumbnail || null,
+      thumbnailUpdatedAt: project.thumbnailUpdatedAt || null,
+    };
+  }
+
+  const size = COVER_SIZES[String(project.deck.aspectRatio || '16:9')] || COVER_SIZES['16:9'];
+  const jpeg = await sharp(file.buffer)
+    .resize(size.width, size.height, { fit: 'cover' })
+    .jpeg({ quality: COVER_JPEG_QUALITY, mozjpeg: true })
+    .toBuffer();
+
+  const key = `presentations/${workspaceId}/${deckId}/cover-${Date.now()}.jpg`;
+  await s3Service.uploadFileToKey(jpeg, key, 'image/jpeg');
+
+  const previousKey = s3Service.extractS3KeyFromUrl(project.thumbnail);
+  const updated = await presentationDao.updateProjectCover(presentationId, {
+    thumbnail: s3Service.buildPublicUrl(key),
+    thumbnailUpdatedAt: new Date(),
+  });
+
+  if (previousKey && previousKey !== key && isOwnCoverKey(previousKey, { workspaceId, deckId })) {
+    s3Service.deleteFile(previousKey).catch(() => {});
+  }
+
+  const cover = await toCoverUrls({ url: updated.thumbnail });
+  return {
+    id: updated.id,
+    skipped: false,
+    thumbnail: cover.displayUrl || updated.thumbnail,
+    thumbnailUrl: cover.displayUrl || updated.thumbnail,
+    thumbnailUpdatedAt: updated.thumbnailUpdatedAt,
+  };
+}
+
+async function getPresentationPreview({ workspaceId, presentationId, ifNoneMatch, offset, limit }) {
+  return deckRender.getPresentationRenderPreview({
     workspaceId,
     presentationId,
     ifNoneMatch,
+    offset,
+    limit,
   });
 }
 
@@ -708,6 +782,7 @@ module.exports = {
   getPresentationPreview,
   getDeckPreview: getPresentationPreview,
   updateThumbnail,
+  uploadPresentationCover,
   getSlide,
   creditEstimate,
   listPresentationDeckPacks,

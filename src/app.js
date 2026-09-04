@@ -1,6 +1,7 @@
 const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 const errorHandler = require('./middlewares/errorHandler');
 const { connectRedis } = require("./shared/config/redis");
 const { createCorsMiddleware, logCorsConfig } = require('./shared/config/cors');
@@ -29,6 +30,23 @@ logCorsConfig();
 
 app.use(createCorsMiddleware());
 app.use(helmet());
+/**
+ * Deck render payloads (slide element JSON) compress ~8-10x. Already-compressed bodies and the
+ * S3 passthroughs (s3.service streamObjectToResponse / streamRemoteUrlToResponse) are skipped:
+ * compressing them wastes CPU and breaks byte-range playback.
+ */
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      const contentType = String(res.getHeader('Content-Type') || '');
+      if (!contentType) return false;
+      if (/^(video|audio|image)\//i.test(contentType)) return false;
+      if (/(zip|pdf|octet-stream|gzip)/i.test(contentType)) return false;
+      return compression.filter(req, res);
+    },
+  })
+);
 /** Base64 voice clone payloads exceed Express's default (~100kb). Override with JSON_BODY_LIMIT (e.g. 32mb). */
 const jsonBodyLimit =
   (process.env.JSON_BODY_LIMIT && String(process.env.JSON_BODY_LIMIT).trim()) || '32mb';

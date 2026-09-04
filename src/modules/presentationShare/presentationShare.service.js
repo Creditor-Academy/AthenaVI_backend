@@ -3,13 +3,12 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { redisClient } = require('../../shared/config/redis');
 const deckGeneration = require('../presentation/deckGeneration.service');
-const { enrichSlidesForClient } = require('../presentation/elementContent.normalize');
+const deckRender = require('../presentation/deckRender.service');
 const workspaceDao = require('../workspace/workspace.dao');
 const shareDao = require('./presentationShare.dao');
 const presence = require('./presentationShare.presence');
 const { getCommentsUpdatedAt } = require('../presentationComment/presentationComment.activity');
-const { presignSlidesForPublic, buildContentVersion } = require('./presentationShare.presign');
-const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
+const { buildContentVersion } = require('./presentationShare.presign');
 
 const TOKEN_BYTES = 32;
 const TOKEN_PREFIX_LENGTH = 8;
@@ -369,40 +368,12 @@ async function resolveShare(token) {
   return { share, tokenHash };
 }
 
-/** Strip internal storage pointers from element content before it leaves the server. */
-function sanitizeElementsDoc(doc) {
-  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.elements)) {
-    return doc || null;
-  }
-
-  return {
-    ...doc,
-    elements: doc.elements.map((el) => {
-      if (!el || !el.content || typeof el.content !== 'object') return el;
-      const { s3Key, assetId, ...content } = el.content;
-      void s3Key;
-      void assetId;
-      return { ...el, content };
-    }),
-  };
-}
-
-function toPublicSlide(slide, { includeProgress = false } = {}) {
-  return {
-    id: slide.id,
-    order: slide.order,
-    status: slide.status,
-    ...(includeProgress ? { progressStatus: slide.progressStatus ?? null } : {}),
-    ...(slide.title != null ? { title: slide.title } : {}),
-    ...(slide.description != null ? { description: slide.description } : {}),
-    elements: sanitizeElementsDoc(slide.elements),
-  };
-}
-
 /**
  * View-only deck payload. Editor-only fields (outline, generation metrics, credits, folder,
  * workspace, owner) never appear here, and only READY slides are exposed so a regeneration
  * in flight cannot show half-built frames.
+ *
+ * Shares its builder with the member preview so both render identically.
  */
 async function getPublicPresentation(token) {
   const { share } = await resolveShare(token);
@@ -416,30 +387,17 @@ async function getPublicPresentation(token) {
   }
 
   const readySlides = (deck.slides || []).filter((slide) => slide.status === 'READY');
-  const version = buildContentVersion({ deck, slides: readySlides, share });
 
-  const includeProgress = share.role === ROLE_REVIEWER;
-  const presigned = await presignSlidesForPublic(readySlides);
-  const slides = enrichSlidesForClient(presigned).map((slide) =>
-    toPublicSlide(slide, { includeProgress })
-  );
+  const { etag, data } = await deckRender.buildDeckRenderPayload({
+    project,
+    deck,
+    slides: readySlides,
+    share,
+    includeProgress: share.role === ROLE_REVIEWER,
+    extra: { permission: 'view' },
+  });
 
-  return {
-    etag: version.etag,
-    data: {
-      id: project.id,
-      title: project.name,
-      permission: 'view',
-      status: deck.status,
-      aspectRatio: deck.aspectRatio,
-      locale: deck.locale,
-      themeTokens: deck.themeTokens,
-      fontCssUrl: fontCssUrlFromThemeTokens(deck.themeTokens),
-      contentUpdatedAt: version.contentUpdatedAt,
-      slideCount: slides.length,
-      slides,
-    },
-  };
+  return { etag, data };
 }
 
 async function getContentUpdatedAt(projectId) {

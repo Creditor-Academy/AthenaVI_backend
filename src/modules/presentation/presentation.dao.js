@@ -102,15 +102,10 @@ async function listPresentations({ workspaceId, folderId }) {
             select: {
               id: true,
               order: true,
-              previewS3Key: true,
-              previewStatus: true,
-              // Legacy fallback cover only when no snapshot yet
+              // Cover fallback when the deck has no captured thumbnail yet
               imageRef: true,
               content: true,
               elements: true,
-              previewS3Key: true,
-              previewHash: true,
-              previewStatus: true,
               updatedAt: true,
             },
           },
@@ -436,60 +431,19 @@ async function updateProjectThumbnail(projectId, thumbnail) {
   });
 }
 
-async function findSlidePreviewContext(slideId) {
-  const slide = await prisma.slide.findUnique({
-    where: { id: slideId },
-  });
-  if (!slide) return null;
-  const deck = await prisma.deck.findUnique({
-    where: { id: slide.deckId },
-    select: {
-      id: true,
-      projectId: true,
-      themeTokens: true,
-      aspectRatio: true,
-      status: true,
-    },
-  });
-  if (!deck) return { slide, deck: null, project: null };
-  const project = await prisma.project.findUnique({
-    where: { id: deck.projectId },
-    select: { id: true, workspaceId: true, name: true, thumbnail: true },
-  });
-  return { slide, deck, project };
-}
-
-async function findSlidePreviewRowsByDeckId(deckId) {
-  return prisma.slide.findMany({
-    where: { deckId },
-    orderBy: { order: 'asc' },
-    select: {
-      id: true,
-      order: true,
-      status: true,
-      elements: true,
-      previewS3Key: true,
-      previewHash: true,
-      previewStatus: true,
-    },
+async function updateProjectCover(projectId, { thumbnail, thumbnailUpdatedAt }) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { thumbnail, thumbnailUpdatedAt },
+    select: { id: true, thumbnail: true, thumbnailUpdatedAt: true },
   });
 }
 
-async function findDeckPreviewMeta(deckId) {
-  return prisma.deck.findUnique({
-    where: { id: deckId },
-    select: {
-      id: true,
-      projectId: true,
-      themeTokens: true,
-      aspectRatio: true,
-      status: true,
-    },
-  });
-}
-
-/** Lean presentation row for GET .../preview (no elements). */
-async function findPresentationPreview(workspaceId, presentationId) {
+/**
+ * Deck + project envelope for the render payload. Deliberately excludes the editor-only
+ * fields (outline, generation metrics, credits, folder) and never touches slide rows.
+ */
+async function findPresentationRenderMeta(workspaceId, presentationId) {
   return prisma.project.findFirst({
     where: { id: presentationId, workspaceId, type: 'PRESENTATION' },
     select: {
@@ -497,26 +451,84 @@ async function findPresentationPreview(workspaceId, presentationId) {
       name: true,
       workspaceId: true,
       thumbnail: true,
+      thumbnailUpdatedAt: true,
       deck: {
         select: {
           id: true,
           status: true,
           aspectRatio: true,
+          locale: true,
           themeTokens: true,
-          slides: {
-            orderBy: { order: 'asc' },
-            select: {
-              id: true,
-              order: true,
-              status: true,
-              content: true,
-              previewS3Key: true,
-              previewHash: true,
-              previewStatus: true,
-            },
-          },
+          updatedAt: true,
         },
       },
+    },
+  });
+}
+
+/**
+ * Slide half of the version probe, filtered through the deck relation so it needs no prior
+ * deck lookup and can run in parallel with `findPresentationRenderMeta`.
+ */
+async function findSlideVersionByProject(projectId) {
+  const aggregate = await prisma.slide.aggregate({
+    where: { deck: { projectId }, status: 'READY' },
+    _max: { updatedAt: true },
+    _count: { _all: true },
+  });
+
+  return {
+    slideUpdatedAt: aggregate._max.updatedAt,
+    readySlideCount: aggregate._count._all,
+  };
+}
+
+/**
+ * Cheap version probe: answers `If-None-Match` without loading a slide row.
+ * Slide edits go through updateSlide and never touch the Deck row, so `deck.updatedAt`
+ * alone is not a valid version.
+ */
+async function findDeckContentVersion(projectId) {
+  const deck = await prisma.deck.findUnique({
+    where: { projectId },
+    select: { id: true, updatedAt: true },
+  });
+  if (!deck) return null;
+
+  const aggregate = await prisma.slide.aggregate({
+    where: { deckId: deck.id, status: 'READY' },
+    _max: { updatedAt: true },
+    _count: { _all: true },
+  });
+
+  return {
+    deckId: deck.id,
+    deckUpdatedAt: deck.updatedAt,
+    slideUpdatedAt: aggregate._max.updatedAt,
+    readySlideCount: aggregate._count._all,
+  };
+}
+
+/**
+ * One page of READY slides for the render payload. `content` / `imageRef` are read because
+ * titles and legacy hero keys live there, but the render projection drops them before the
+ * response; `contentType`, `layoutId` and `manuallyEdited` are never needed.
+ */
+async function findSlideRenderPage(deckId, { offset = 0, limit = 8 } = {}) {
+  return prisma.slide.findMany({
+    where: { deckId, status: 'READY' },
+    orderBy: { order: 'asc' },
+    skip: offset,
+    take: limit,
+    select: {
+      id: true,
+      order: true,
+      status: true,
+      progressStatus: true,
+      content: true,
+      imageRef: true,
+      elements: true,
+      updatedAt: true,
     },
   });
 }
@@ -553,8 +565,9 @@ module.exports = {
   findImageCacheByHash,
   createImageCache,
   incrementDeckCreditsCharged,
-  findSlidePreviewContext,
-  findSlidePreviewRowsByDeckId,
-  findDeckPreviewMeta,
-  findPresentationPreview,
+  updateProjectCover,
+  findPresentationRenderMeta,
+  findSlideVersionByProject,
+  findDeckContentVersion,
+  findSlideRenderPage,
 };

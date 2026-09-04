@@ -67,10 +67,13 @@ const getPresentationPreview = asyncHandler(async (req, res) => {
     workspaceId,
     presentationId,
     ifNoneMatch: req.get('if-none-match') || req.headers['if-none-match'] || null,
+    offset: req.query.offset,
+    limit: req.query.limit,
   });
   if (result.etag) {
     res.set('ETag', result.etag);
-    res.set('Cache-Control', 'private, max-age=30');
+    // Always revalidate: an edit must not be masked by a cached copy, and a match is a cheap 304.
+    res.set('Cache-Control', 'private, no-cache');
   }
   if (result.notModified) {
     return res.status(304).end();
@@ -85,6 +88,16 @@ const getPresentationPreview = asyncHandler(async (req, res) => {
 });
 
 const getDeckPreview = getPresentationPreview;
+
+const uploadPresentationCover = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await presentationService.uploadPresentationCover({
+    workspaceId,
+    presentationId,
+    file: req.file,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_COVER_UPDATED);
+});
 
 const updateThumbnail = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
@@ -488,6 +501,7 @@ module.exports = {
   getPresentationPreview,
   getDeckPreview,
   updateThumbnail,
+  uploadPresentationCover,
   getSlide,
   generateOutline,
   updateOutline,

@@ -35,7 +35,7 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 
 **Query (optional):** `folderId`
 
-**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` prefer the **slide-1 JPEG snapshot** when available (same as deck preview); otherwise fall back to a cover image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
+**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` use the deck cover captured from the live preview when one exists (see [deck cover capture](#deck-cover-capture)); otherwise they fall back to an image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
 
 ---
 
@@ -183,14 +183,15 @@ Also: `GET .../slides/:slideId` returns a single presigned slide.
 
 ## Deck preview (My Work / dashboard modal)
 
-Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — not a photo taken from inside the slide). Use this for the dashboard click modal; use full get-by-id only when opening the editor.
+Returns the **slide documents the frontend renderer draws** — the same payload the public share link serves. Nothing is rasterized server-side, so the modal is pixel-identical to the editor by construction. Use this for the dashboard click modal and for present/view mode; use full get-by-id only when opening the editor.
 
 | | |
 |---|---|
 | **Method** | `GET` |
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` |
 | **Auth** | Bearer + member |
-| **Cache** | `ETag` + `Cache-Control: private, max-age=30` — send `If-None-Match` to get **304** |
+| **Query** | `offset` (int ≥ 0, default `0`), `limit` (int 1–24, default `8`) |
+| **Cache** | `ETag` + `Cache-Control: private, no-cache` — send `If-None-Match` to get **304** |
 
 **Response `data` (200):**
 
@@ -200,8 +201,15 @@ Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — 
   "title": "Distributed Team",
   "status": "READY",
   "aspectRatio": "16:9",
-  "slideCount": 6,
-  "previewStatus": "READY",
+  "locale": "en",
+  "themeTokens": { },
+  "fontCssUrl": "https://fonts.googleapis.com/css2?…",
+  "contentUpdatedAt": "2026-09-04T06:58:11.089Z",
+  "slideCount": 9,
+  "offset": 0,
+  "limit": 8,
+  "nextOffset": 8,
+  "coverStale": true,
   "nextPollMs": 0,
   "slides": [
     {
@@ -209,8 +217,8 @@ Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — 
       "order": 0,
       "status": "READY",
       "title": "…",
-      "previewImageUrl": "https://…presigned…",
-      "previewStatus": "READY"
+      "description": ["…"],
+      "elements": { "version": 1, "canvas": { "width": 1920, "height": 1080 }, "elements": [] }
     }
   ]
 }
@@ -218,18 +226,52 @@ Canva-style **JPEG snapshots** of each slide (rendered like the real canvas — 
 
 | Field | Meaning |
 |---|---|
-| `previewStatus` (deck) | `READY` (all READY slides have JPEGs) \| `PARTIAL` \| `PENDING` |
-| `nextPollMs` | `0` when deck preview is READY; otherwise `1000` — FE should poll this interval |
-| `slides[].previewImageUrl` | Presigned JPEG (~1h) of the **full slide** (960×540 for 16:9, 800×600 for 4:3). `null` while pending |
-| `slides[].previewStatus` | `PENDING` \| `READY` \| `FAILED` |
+| `slideCount` | Total **READY** slides in the deck, not the length of this page |
+| `offset` / `limit` | Echo of the page actually served (values are clamped, never rejected mid-read) |
+| `nextOffset` | Offset for the next page, or `null` when the deck is fully served |
+| `coverStale` | `true` when the dashboard card thumbnail is missing or older than slide 1. Capture and `PUT .../thumbnail/image` only when this is `true` |
+| `nextPollMs` | `1500` while `status === "GENERATING"`, otherwise `0`. No polling once READY |
+| `fontCssUrl` | Load once before mounting slides so text measures correctly |
+| `slides[].elements` | Canvas document for the renderer. Internal storage pointers (`s3Key`, `assetId`) are stripped; image URLs are presigned per request |
 
 **Behavior**
 
-- Payload is **lean** — no `elements`, outline, or credits.
-- Snapshots are generated **off the request path** after generate / canvas save / theme / brand kit. Opening preview may kick missing/stale jobs; response still returns immediately.
-- List/library `thumbnailUrl` prefers slide-1 snapshot (real first page), not a random image on the slide.
+- **Pure read.** No snapshot job, no thumbnail write, no background work of any kind.
+- Media URLs are presigned **per request** and never cached, so a link cannot be served past its own TTL.
+- The unsigned slide page is cached in Redis keyed by content version, so an unchanged deck does not re-read slide rows.
+- Re-opening an unchanged deck is a **304** with no body — answered before a single slide row is read.
 - **Not** charged (`ppt_export` is only for user-initiated export).
-- Do **not** live-render the canvas in the dashboard modal. **Edit** → navigate to editor → `GET .../presentations/:id`.
+
+---
+
+## Deck cover capture
+
+One rendered thumbnail per deck for the My Work card grid, captured by the frontend from the live preview it already has on screen. This is the only image the backend stores for a presentation.
+
+| | |
+|---|---|
+| **Method** | `PUT` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/thumbnail/image` |
+| **Auth** | Bearer + member |
+| **Body** | `multipart/form-data`, field `file` — `image/jpeg`, `image/png` or `image/webp`, max **2 MB** |
+
+Send it only when `/preview` reports `coverStale: true`. The server re-encodes to a small JPEG (640×360 for 16:9, aspect-matched otherwise, quality 75, metadata stripped), stores it under `presentations/{workspaceId}/{deckId}/cover-{ts}.jpg`, and points `Project.thumbnail` at the **public** URL.
+
+**Response `data` (200):**
+
+```json
+{
+  "id": "<presentationId>",
+  "skipped": false,
+  "thumbnail": "https://…",
+  "thumbnailUrl": "https://…",
+  "thumbnailUpdatedAt": "2026-09-04T09:59:28.172Z"
+}
+```
+
+`skipped: true` means a cover for this deck was already accepted within the last 10 seconds and this upload was ignored — treat it as success. Only covers this deck wrote itself are swept from S3; a `thumbnail` pointing at a slide's own image is left alone.
+
+**Distinct from** `PUT .../thumbnail` (JSON), which just points the card at an existing URL or slide.
 
 ---
 

@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const presentationDao = require('../presentation/presentation.dao');
 
 /**
  * Safe for Redis meta cache / public resolve. Never includes the raw capability token.
@@ -82,25 +83,8 @@ const listSharesInternalByProjectId = (projectId) => {
  * Light version probe for the presence hot path: avoids loading every slide blob.
  * @param {string} projectId
  */
-const getContentVersion = async (projectId) => {
-  const deck = await prisma.deck.findUnique({
-    where: { projectId },
-    select: { id: true, updatedAt: true },
-  });
-  if (!deck) return null;
-
-  const aggregate = await prisma.slide.aggregate({
-    where: { deckId: deck.id, status: 'READY' },
-    _max: { updatedAt: true },
-    _count: { _all: true },
-  });
-
-  return {
-    deckUpdatedAt: deck.updatedAt,
-    slideUpdatedAt: aggregate._max.updatedAt,
-    readySlideCount: aggregate._count._all,
-  };
-};
+/** Shared with the member preview so both paths version a deck identically. */
+const getContentVersion = (projectId) => presentationDao.findDeckContentVersion(projectId);
 
 const createShare = (data) => {
   return prisma.presentationShareLink.create({
