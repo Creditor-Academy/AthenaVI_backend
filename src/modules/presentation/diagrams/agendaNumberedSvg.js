@@ -7,6 +7,10 @@ const {
   createAgendaSpecBuilder,
   overlayBox,
 } = require('./agendaSharedSvg');
+const {
+  agendaNumberedBlocksChromeSpecs,
+  agendaNumberedBlocksOverlayPlacements,
+} = require('./agendaNumberedBlocks');
 function numberedVariantFromSchema(schema) {
   const variant = schema?.preview?.agendaVariant
   if (variant === 'bold') return 'default'
@@ -16,6 +20,9 @@ function numberedVariantFromSchema(schema) {
 }
 
 function agendaNumberedChromeSpecs(variant = 'default', itemCount = 4) {
+  if (variant !== 'cards' && variant !== 'path') {
+    return agendaNumberedBlocksChromeSpecs()
+  }
   const n = clampAgendaItemCount(itemCount)
   const { specs, pushIcon, pushSpine, pushCard, pushBadge, pushDivider } = createAgendaSpecBuilder()
 
@@ -53,6 +60,9 @@ function agendaNumberedChromeSpecs(variant = 'default', itemCount = 4) {
 }
 
 function agendaNumberedOverlayPlacements(gx, gy, gw, gh, variant = 'default', opts = {}) {
+  if (variant !== 'cards' && variant !== 'path') {
+    return agendaNumberedBlocksOverlayPlacements(gx, gy, gw, gh)
+  }
   const n = clampAgendaItemCount(opts.itemCount)
   const overlay = { items: [], columns: [], milestones: [], heading: null }
   overlay.heading = overlayBox(gx, gy, gw, gh, 200, 40, 600, 64)
