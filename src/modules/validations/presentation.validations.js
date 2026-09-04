@@ -366,6 +366,11 @@ const patchSlideSchema = Joi.object({
     transition: Joi.string().trim().max(64).allow('', null).optional(),
     contributorStatus: Joi.string().trim().max(64).allow('', null).optional(),
     speakerNotes: Joi.string().allow('', null).max(20000).optional(),
+    /** Editor workflow progress for reviewers. Null clears. Not generation status. */
+    progressStatus: Joi.string()
+      .valid('TODO', 'IN_PROGRESS', 'COMPLETED')
+      .allow(null)
+      .optional(),
   })
     .min(1)
     .required(),

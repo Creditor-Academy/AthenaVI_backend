@@ -88,6 +88,13 @@ enum PresentationShareRole {
   REVIEWER
 }
 
+/// Editor-set slide progress for reviewers (not generation status).
+enum SlideProgressStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
 enum TemplateType {
   VIDEO_SCENE
   DECK_LAYOUT
@@ -892,7 +899,7 @@ model Deck {
 }
 
 model Slide {
-  id             String   @id @default(cuid())
+  id             String              @id @default(cuid())
   deckId         String
   order          Int
   contentType    String?
@@ -901,10 +908,12 @@ model Slide {
   imageRef       Json?
   /// Freeform canvas: { version, canvas: { width, height }, elements: [...] }
   elements       Json?
-  status         String   @default("PENDING") // PENDING | GENERATING | READY | FAILED
-  manuallyEdited Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  status         String              @default("PENDING") // PENDING | GENERATING | READY | FAILED
+  /// Editor workflow progress for reviewers. Null = no status. Not generation status.
+  progressStatus SlideProgressStatus? @map("progress_status")
+  manuallyEdited Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   deck     Deck                  @relation(fields: [deckId], references: [id], onDelete: Cascade)
   jobs     SlideGenerationJob[]

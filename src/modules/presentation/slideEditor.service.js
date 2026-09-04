@@ -183,6 +183,7 @@ async function duplicateSlide({ workspaceId, presentationId, slideId }) {
     imageRef: source.imageRef,
     elements: source.elements || blankCanvas(canvasSizeForDeck(deck)),
     status: 'READY',
+    progressStatus: source.progressStatus ?? null,
     manuallyEdited: true,
   });
 

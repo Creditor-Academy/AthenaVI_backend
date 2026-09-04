@@ -5734,9 +5734,23 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
     throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
   }
 
-  const data = {
-    manuallyEdited: patch.manuallyEdited !== undefined ? patch.manuallyEdited : true,
-  };
+  const patchKeys = Object.keys(patch || {}).filter((key) => patch[key] !== undefined);
+  const contentKeys = patchKeys.filter((key) => key !== 'progressStatus' && key !== 'manuallyEdited');
+  const progressOnly = contentKeys.length === 0 && patch.progressStatus !== undefined;
+
+  const data = {};
+  if (progressOnly) {
+    // Progress metadata must not flip manuallyEdited (would block regenerate).
+    if (patch.manuallyEdited !== undefined) {
+      data.manuallyEdited = patch.manuallyEdited;
+    }
+  } else {
+    data.manuallyEdited = patch.manuallyEdited !== undefined ? patch.manuallyEdited : true;
+  }
+
+  if (patch.progressStatus !== undefined) {
+    data.progressStatus = patch.progressStatus;
+  }
 
   let nextContent =
     patch.content !== undefined

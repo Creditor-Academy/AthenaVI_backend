@@ -177,6 +177,7 @@ async function createOneSlide(slide) {
       imageRef: slide.imageRef ?? null,
       elements: slide.elements ?? null,
       status: slide.status || 'READY',
+      progressStatus: slide.progressStatus ?? null,
       manuallyEdited: slide.manuallyEdited === true,
     },
   });

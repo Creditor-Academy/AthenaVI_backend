@@ -169,7 +169,7 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 - Nested: `project`, `deck`, `slides` (canonical)
 - **Flat FE compatibility fields** (same payload): `id` (= project id), `title` (= project.name), `status` / `themeTokens` / `aspectRatio` / `locale` / `folderId` mirrored from deck/project
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
-- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
+- slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, **`progressStatus`** (`null` \| `TODO` \| `IN_PROGRESS` \| `COMPLETED`), manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.
 - Image URLs in API responses are **presigned** (~1h). Prefer `elements[].content.url` (or `src` alias) for canvas render.
 - Element `type`: `text` | `image` | `shape` | `icon` | `chart` | `table` | `embed` | `graphic` | `group`. Groups store `childIds` and children store `groupId`. Optional `locked` is persisted. Shape kinds include `rect`, `rounded-rect`, `circle`, `ellipse`, `pill`, `triangle`, `diamond`, `star`, `line`, `plus`, arrows. Shape `fill` may be a token string or `{ type: "solid"|"gradient", ... }`; optional `stroke` / `strokeWidth`.
@@ -417,7 +417,7 @@ Starts async slide generation. Poll **status**. Pre-checks affordability; charge
   "etaSeconds": 24,
   "creditsChargedSoFar": 12,
   "slides": [
-    { "id": "…", "order": 1, "status": "READY", "contentType": "title", "layoutId": "…", "manuallyEdited": false }
+    { "id": "…", "order": 1, "status": "READY", "progressStatus": null, "contentType": "title", "layoutId": "…", "manuallyEdited": false }
   ]
 }
 ```
@@ -497,10 +497,16 @@ Cannot delete the last remaining slide (**400**). While `deck.status === GENERAT
   "contentType": "bullet_list",
   "imageRef": null,
   "elements": { "version": 1, "canvas": { "width": 1920, "height": 1080 }, "elements": [] },
-  "manuallyEdited": true
+  "manuallyEdited": true,
+  "progressStatus": "IN_PROGRESS"
 }
 ```
 
+- **`progressStatus`**: `TODO` \| `IN_PROGRESS` \| `COMPLETED` \| `null` (clear / no status). Editor workflow for reviewers — **not** generation `status`.
+- Progress-only PATCH (body is only `progressStatus`) does **not** set `manuallyEdited: true`.
+- Allowed while the deck is `GENERATING`.
+- Duplicate copies `progressStatus`; AI regenerate **preserves** it.
+- Public `/api/p`: included on **reviewer** links only; omitted on viewer links.
 ### Regenerate slide
 
 | | |
@@ -712,7 +718,7 @@ Send back the `ETag` as `If-None-Match` to get a **304**.
   "contentUpdatedAt": "2026-08-20T08:59:12.000Z",
   "slideCount": 12,
   "slides": [
-    { "id": "…", "order": 0, "status": "READY", "title": "…", "description": ["…"], "elements": { } }
+    { "id": "…", "order": 0, "status": "READY", "progressStatus": "IN_PROGRESS", "title": "…", "description": ["…"], "elements": { } }
   ]
 }
 ```
@@ -720,7 +726,7 @@ Send back the `ETag` as `If-None-Match` to get a **304**.
 - **Only `READY` slides are included.** During a regeneration the call still returns **200** with `status: "GENERATING"` and whatever slides survive, so the UI can show "Updating…" instead of an error.
 - Image URLs are freshly presigned per request, including per-element images on multi-image slides.
 - Editor-only data is stripped: outline, generation metrics, credits, prompt bundle version, folder, workspace, owner, jobs, and internal S3 keys. Comments are **not** inlined here — they have their own uncached endpoint so this payload stays ETag-stable.
-
+- **`progressStatus`** appears on slides **only for reviewer links** (`null` = no status). Viewer links omit the key entirely.
 ### Get viewer session
 
 | | |

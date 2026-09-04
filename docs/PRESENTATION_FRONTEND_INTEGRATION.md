@@ -192,7 +192,28 @@ FE: show “No visuals” only when `status === "skipped"` or there is no image 
 - Autosave whole slide: `PUT .../slides/:slideId/canvas` (body = canvas doc above)  
 - Or granular: `POST` / `PATCH` / `DELETE` `.../elements...` and `PATCH .../elements/reorder`
 
-Writes set `manuallyEdited: true` on the slide.
+Writes set `manuallyEdited: true` on the slide (except progress-only `PATCH` of `progressStatus`).
+
+### Slide progress status (for reviewers)
+
+Editors mark each slide’s workflow progress. Default is **no status** (`progressStatus: null`).
+
+| Value | UI label |
+|---|---|
+| `null` | None |
+| `TODO` | Todo |
+| `IN_PROGRESS` | In progress |
+| `COMPLETED` | Completed |
+
+```
+PATCH …/slides/:slideId
+{ "progressStatus": "IN_PROGRESS" }   // set
+{ "progressStatus": null }            // clear
+```
+
+- Show a chip/dropdown on the **editor** slide rail.
+- On `/p/:token`, show chips **only** when `linkRole === "reviewer"` (deck slides include `progressStatus`). Viewer links omit the field — hide the UI.
+- Guests cannot set progress. AI regenerate preserves the value. Duplicate copies it.
 
 Sort draw order by `layer` ascending.
 
@@ -209,7 +230,7 @@ Base: `/api/workspaces/:workspaceId/presentations/:presentationId`
 | Duplicate | `POST` | `/slides/:slideId/duplicate` | Fails at deck cap 40 |
 | Reorder | `PATCH` | `/slides/reorder` | `{ "slideIds": ["…"] }` all ids once |
 | Apply layout | `POST` | `/slides/:slideId/apply-layout` | `{ "templateId" }` rebuilds `elements` |
-| Patch fields | `PATCH` | `/slides/:slideId` | `content`, `layoutId`, `imageRef`, `elements`, … |
+| Patch fields | `PATCH` | `/slides/:slideId` | `content`, `layoutId`, `imageRef`, `elements`, `progressStatus` (`TODO`\|`IN_PROGRESS`\|`COMPLETED`\|`null`), … |
 | AI regen one slide | `POST` | `/slides/:slideId/regenerate` | `{ target, overwriteManualEdits, prompt? }` |
 
 While `deck.status === "GENERATING"`, structure/canvas mutations → **409**. Show a blocking “Generating…” state.
@@ -428,7 +449,8 @@ Only when session `canComment` is true (`linkRole === "reviewer"`). Full contrac
 - [ ] Comments sidebar filtered by selected slide; replies + resolve; `@` picker from `mentionable-users`  
 - [ ] Editor shows orphaned threads (`orphaned=true`) so feedback survives a full regenerate  
 - [ ] Share modal: two cards (Viewer | Reviewer) bound to `data.viewer` / `data.reviewer`
-- [ ] `/p/:token` page: composer gated on `canComment` / `linkRole`, guest name prompt, refetch on `commentsUpdatedAt`
+- [ ] Slide progress chip in editor (`progressStatus`); show on `/p` only for reviewer links  
+- [ ] `/p/:token` page: composer gated on `canComment` / `linkRole`, guest name prompt, refetch on `commentsUpdatedAt`  
 - [ ] Admin: separate screens for `DECK_LAYOUT` vs `VIDEO_SCENE` template forms  
 
 ---

@@ -1,4 +1,7 @@
 $kind: http-request
+description: |
+  Patch slide fields. progressStatus: TODO | IN_PROGRESS | COMPLETED | null (clear).
+  Progress-only body does not set manuallyEdited. Example below sets progress; for content edits include content/elements as needed.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}"
 method: PATCH
 headers:
@@ -8,10 +11,6 @@ body:
   type: json
   content: |-
     {
-      "content": {
-        "title": "Updated",
-        "notes": "Speaker notes"
-      },
-      "manuallyEdited": true
+      "progressStatus": "IN_PROGRESS"
     }
 order: 6000
