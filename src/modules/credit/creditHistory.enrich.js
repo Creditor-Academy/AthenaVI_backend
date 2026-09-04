@@ -31,6 +31,17 @@ const FEATURE_LABELS = Object.freeze({
   [BRAND_KIT_FEATURE.GUIDELINE_GENERATE]: 'Brand guideline deck',
 });
 
+function isPptFeature(feature) {
+  return typeof feature === 'string' && feature.startsWith('ppt_');
+}
+
+function buildPptDisplayName(featureLabel, presentationName) {
+  if (presentationName) {
+    return `${featureLabel} — “${presentationName}”`;
+  }
+  return featureLabel;
+}
+
 function truncateText(value, max = 120) {
   if (value == null) return null;
   const text = String(value).trim();
@@ -299,8 +310,31 @@ function buildUsageDetail(tx, ctx) {
         voiceId: meta.voiceId || tx.reference || null,
         previewText: meta.previewText || null,
       };
-    default:
+    default: {
+      if (isPptFeature(feature)) {
+        const deckId = meta.deckId || tx.reference || null;
+        const deck = deckId ? ctx.deckById.get(deckId) : null;
+        const projectId = meta.projectId || deck?.projectId || null;
+        const presentationName =
+          meta.presentationName ||
+          meta.projectName ||
+          deck?.project?.name ||
+          (projectId ? ctx.projectById.get(projectId)?.name : null) ||
+          null;
+        const featureLabel = FEATURE_LABELS[feature] || 'Presentation';
+        const displayName = buildPptDisplayName(featureLabel, presentationName);
+        return {
+          ...base,
+          label: displayName,
+          displayName,
+          deckId,
+          projectId,
+          presentationName,
+          where: presentationName ? `Presentation: ${presentationName}` : null,
+        };
+      }
       return base;
+    }
   }
 }
 
@@ -316,6 +350,7 @@ async function loadEnrichmentContext(transactions) {
   const speechGenerationIds = [];
   const renderIds = [];
   const projectIds = [];
+  const deckIds = [];
   const workspaceIds = [];
 
   for (const tx of transactions) {
@@ -332,10 +367,14 @@ async function loadEnrichmentContext(transactions) {
     } else if (meta.feature === FEATURE.REMOTION_EXPORT) {
       renderIds.push(meta.renderId || tx.reference);
       if (meta.projectId) projectIds.push(meta.projectId);
+    } else if (isPptFeature(meta.feature)) {
+      if (meta.deckId) deckIds.push(meta.deckId);
+      else if (tx.reference) deckIds.push(tx.reference);
+      if (meta.projectId) projectIds.push(meta.projectId);
     }
   }
 
-  const [heygenRows, speechRows, renderRows] = await Promise.all([
+  const [heygenRows, speechRows, renderRows, deckRows] = await Promise.all([
     heygenVideoIds.length
       ? prisma.heygenResponse.findMany({
           where: { id: { in: uniqueIds(heygenVideoIds) } },
@@ -366,6 +405,16 @@ async function loadEnrichmentContext(transactions) {
           select: { id: true, projectId: true },
         })
       : [],
+    deckIds.length
+      ? prisma.deck.findMany({
+          where: { id: { in: uniqueIds(deckIds) } },
+          select: {
+            id: true,
+            projectId: true,
+            project: { select: { id: true, name: true } },
+          },
+        })
+      : [],
   ]);
 
   for (const row of heygenRows) {
@@ -375,6 +424,9 @@ async function loadEnrichmentContext(transactions) {
     if (row.projectId) projectIds.push(row.projectId);
   }
   for (const row of renderRows) {
+    if (row.projectId) projectIds.push(row.projectId);
+  }
+  for (const row of deckRows) {
     if (row.projectId) projectIds.push(row.projectId);
   }
 
@@ -403,6 +455,7 @@ async function loadEnrichmentContext(transactions) {
     heygenById: new Map(heygenRows.map((row) => [row.id, row])),
     speechById: new Map(speechRows.map((row) => [row.id, row])),
     renderById: new Map(renderRows.map((row) => [row.id, row])),
+    deckById: new Map(deckRows.map((row) => [row.id, row])),
     projectById: new Map(projects.map((row) => [row.id, row])),
     workspaceById: new Map(workspaces.map((row) => [row.id, row])),
   };
