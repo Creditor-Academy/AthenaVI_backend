@@ -24,17 +24,11 @@ const {
   alignPptElements,
   collectDeleteIds,
 } = require('./elementSelection.ops');
-const slidePreview = require('./slidePreview.service');
 
 function assertNotGenerating(deck) {
   if (deck.status === 'GENERATING') {
     throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
   }
-}
-
-function kickSlidePreview(slideId) {
-  if (!slideId) return;
-  slidePreview.enqueueSlidePreview(slideId).catch(() => {});
 }
 
 function normalizeCanvasPayload(input) {
@@ -143,7 +137,6 @@ async function addSlide({
     manuallyEdited: true,
   });
 
-  kickSlidePreview(slide.id);
   return { slide: enrichSlideForClient(slide), deckId: deck.id };
 }
 
@@ -159,13 +152,10 @@ async function deleteSlide({ workspaceId, presentationId, slideId }) {
     throw new AppError('A presentation must keep at least one slide', 400);
   }
 
-  await slidePreview.deletePreviewForSlide(slide);
   await presentationDao.deleteSlideById(slideId);
   await presentationDao.resequenceSlideOrders(deck.id);
 
   const updated = await presentationDao.findDeckById(deck.id);
-  const first = (updated.slides || [])[0];
-  if (first?.id) kickSlidePreview(first.id);
   return { slides: (updated.slides || []).map(enrichSlideForClient), deckId: deck.id };
 }
 
@@ -195,13 +185,6 @@ async function duplicateSlide({ workspaceId, presentationId, slideId }) {
     status: 'READY',
     progressStatus: source.progressStatus ?? null,
     manuallyEdited: true,
-  });
-
-  await slidePreview.copyPreviewOnDuplicate({
-    sourceSlide: source,
-    newSlide: slide,
-    workspaceId,
-    deckId: deck.id,
   });
 
   return { slide: enrichSlideForClient(slide), deckId: deck.id };
@@ -260,8 +243,6 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
     manuallyEdited: true,
     status: 'READY',
   });
-
-  kickSlidePreview(slideId);
   return { slide: enrichSlideForClient(updated) };
 }
 
@@ -278,7 +259,6 @@ async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
     manuallyEdited: true,
     status: 'READY',
   });
-  kickSlidePreview(slideId);
   return { slide: enrichSlideForClient(updated) };
 }
 
@@ -349,21 +329,15 @@ async function addElement(args) {
     manuallyEdited: true,
     status: 'READY',
   });
-  kickSlidePreview(slideId);
   return { slide: enrichSlideForClient(updated), element: next };
 }
 
 function persistElementsDoc(slideId, doc) {
-  return presentationDao
-    .updateSlide(slideId, {
-      elements: doc,
-      manuallyEdited: true,
-      status: 'READY',
-    })
-    .then((updated) => {
-      kickSlidePreview(slideId);
-      return updated;
-    });
+  return presentationDao.updateSlide(slideId, {
+    elements: doc,
+    manuallyEdited: true,
+    status: 'READY',
+  });
 }
 
 async function patchElement({ workspaceId, presentationId, slideId, elementId, patch }) {
@@ -505,7 +479,6 @@ async function deleteElement({ workspaceId, presentationId, slideId, elementId }
     manuallyEdited: true,
     status: 'READY',
   });
-  kickSlidePreview(slideId);
   return { slide: enrichSlideForClient(updated) };
 }
 
@@ -534,7 +507,6 @@ async function reorderElements({ workspaceId, presentationId, slideId, elementId
     manuallyEdited: true,
     status: 'READY',
   });
-  kickSlidePreview(slideId);
   return { slide: enrichSlideForClient(updated) };
 }
 

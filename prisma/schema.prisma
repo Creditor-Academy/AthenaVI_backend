@@ -461,6 +461,9 @@ model Project {
   type          ProjectType @default(VIDEO)
   data          Json // 🔥 whole editor state (autosave)
   thumbnail     String? // preview image
+  /// When `thumbnail` was last captured from the rendered deck. Null = never captured.
+  /// `updatedAt` cannot answer this: it moves on unrelated writes.
+  thumbnailUpdatedAt DateTime? @map("thumbnail_updated_at")
   duration      Int? // optional
   status        String  @default("draft") // draft | rendering | completed
   storageBytes  BigInt  @default(0)
@@ -911,12 +914,6 @@ model Slide {
   status         String              @default("PENDING") // PENDING | GENERATING | READY | FAILED
   /// Editor workflow progress for reviewers. Null = no status. Not generation status.
   progressStatus SlideProgressStatus? @map("progress_status")
-  /// Dashboard / My Work JPEG snapshot of the rendered canvas (not a photo on the slide).
-  previewS3Key   String?             @map("preview_s3_key")
-  /// sha256 of elements + themeTokens + aspectRatio — skip re-raster when unchanged.
-  previewHash    String?             @map("preview_hash")
-  /// PENDING | READY | FAILED — null = never generated (treat as PENDING on GET).
-  previewStatus  String?             @map("preview_status")
   manuallyEdited Boolean             @default(false)
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt

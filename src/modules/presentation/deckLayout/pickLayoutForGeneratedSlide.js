@@ -133,6 +133,7 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
       ? ''
       : content?.body || (order === 1 ? '' : outlineSlide?.summary || content?.summary || ''),
     summary: galleryOverrides ? '' : outlineSlide?.summary || content?.summary || '',
+    beats: outlineSlide?.beats || content?.beats || [],
     purpose:
       outlineSlide?.intent ||
       outlineSlide?.purpose ||
@@ -146,6 +147,8 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
     imageCount,
     contentTypes: contentTypes.length ? contentTypes : undefined,
     visual_need: outlineVisualNeed || (wantsImage ? 'photo' : undefined),
+    wizardDensity: ctx?.density || null,
+    allowPureImageGrid: Boolean(galleryOverrides),
   });
 }
 

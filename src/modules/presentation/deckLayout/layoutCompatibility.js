@@ -50,6 +50,20 @@ function imageRequired(slide) {
   return slide.imageCount > 0 && types.includes('image');
 }
 
+function textCopyRequired(slide) {
+  if (slide?.allowPureImageGrid === true) return false;
+  const purpose = String(slide.purpose || '').toLowerCase();
+  const isCover =
+    Number(slide.slideNumber) === 1 || purpose === 'cover' || purpose === 'title';
+  if (isCover) return false;
+  const hasTextSignal =
+    (slide.titleLength || 0) > 0 &&
+    ((slide.bodyLength || 0) > 40 ||
+      (slide.bulletCount || 0) >= 2 ||
+      (slide.cardCount || 0) >= 2);
+  return hasTextSignal;
+}
+
 /**
  * @returns {{ status: 'hardReject' | 'ok', reasons: string[], penalties: object[] }}
  */
@@ -58,6 +72,7 @@ function evaluateLayoutCompatibility(slide, layout) {
   const penalties = [];
   const supported = supportedOf(layout);
   const capacity = capacityOf(layout);
+  const layoutId = String(layout?.id || layout?.schema?.layout_id || '').toLowerCase();
 
   const pushSoft = (field, message) => {
     penalties.push({ kind: 'softPenalty', field, message });
@@ -139,6 +154,31 @@ function evaluateLayoutCompatibility(slide, layout) {
     };
   }
 
+  // Text-needing slides must keep a heading (and not land on pure image bentos).
+  if (textCopyRequired(slide) && supported) {
+    const pureBento =
+      /grid_bento|grid_six_images/.test(layoutId) ||
+      (supported.image === true &&
+        supported.title === false &&
+        supported.body === false &&
+        supported.bullets === false &&
+        supported.cards !== true);
+    if (pureBento) {
+      return {
+        status: 'hardReject',
+        reasons: ['Layout is image-only but slide needs heading and explanatory copy'],
+        penalties,
+      };
+    }
+    if (supported.title === false && ((slide.bodyLength || 0) > 80 || (slide.cardCount || 0) >= 2)) {
+      return {
+        status: 'hardReject',
+        reasons: ['Layout has no heading slot for a text-led slide'],
+        penalties,
+      };
+    }
+  }
+
   const checks = [
     ['maxTitleCharacters', slide.titleLength, 'title length'],
     ['maxSubtitleCharacters', slide.subtitleLength, 'subtitle length'],
@@ -191,4 +231,5 @@ module.exports = {
   cardsRequired,
   metricsRequired,
   imageRequired,
+  textCopyRequired,
 };

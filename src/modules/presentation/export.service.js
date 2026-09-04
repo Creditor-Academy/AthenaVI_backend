@@ -582,14 +582,39 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
   return Buffer.isBuffer(out) ? out : Buffer.from(out);
 }
 
-async function withBrowserPage(fn) {
+async function withBrowserPage(fn, { args = [] } = {}) {
   let browser;
   try {
     const puppeteer = require('puppeteer');
-    browser = await puppeteer.launch({
+    const { resolveChromeExecutable } = require('../../shared/utils/chromeExecutable');
+    const executablePath = resolveChromeExecutable();
+    const launchOpts = {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+      // Desktop Chrome on Windows shows a window on launch even when headless; keep the
+      // process hidden and parked offscreen so an export never flashes on the host.
+      windowsHide: true,
+      pipe: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--font-render-hinting=none',
+        '--window-position=-32000,-32000',
+        '--mute-audio',
+        '--no-first-run',
+        '--no-default-browser-check',
+        ...args,
+      ],
+    };
+    if (executablePath) {
+      launchOpts.executablePath = executablePath;
+    } else {
+      // Last resort: ask Puppeteer to use the installed Chrome channel.
+      launchOpts.channel = 'chrome';
+    }
+
+    browser = await puppeteer.launch(launchOpts);
     const page = await browser.newPage();
     return await fn(page);
   } finally {
@@ -704,29 +729,7 @@ async function buildRasterExport(deck, { format, slideId } = {}) {
   if (slideId) slides = slides.filter((s) => s.id === slideId);
   if (!slides.length) throw new AppError('No slides to export', 400);
 
-  const images = [];
-  for (let i = 0; i < slides.length; i += 1) {
-    const slide = slides[i];
-    // eslint-disable-next-line no-await-in-loop
-    const buf = await withBrowserPage(async (page) => {
-      const canvasW = slide.elements?.canvas?.width || CANVAS_WIDTH;
-      const canvasH = slide.elements?.canvas?.height || CANVAS_HEIGHT;
-      await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
-      await page.setContent(await buildDeckHtml({ ...deck, slides: [slide] }), {
-        waitUntil: 'networkidle0',
-        timeout: 60000,
-      });
-      return page.screenshot({
-        type,
-        quality: type === 'jpeg' ? 90 : undefined,
-        fullPage: false,
-      });
-    });
-    images.push({
-      name: `slide-${String(i + 1).padStart(2, '0')}.${type === 'jpeg' ? 'jpg' : 'png'}`,
-      data: Buffer.from(buf),
-    });
-  }
+  const images = await renderSlideScreenshots(deck, { slides, format: type });
 
   if (images.length === 1) {
     return {
@@ -741,6 +744,74 @@ async function buildRasterExport(deck, { format, slideId } = {}) {
     contentType: 'application/zip',
     ext: 'zip',
   };
+}
+
+/**
+ * Render one or more slides to raster buffers with a single Puppeteer browser.
+ * Export only — dashboard previews are rendered by the frontend, never screenshotted.
+ *
+ * @param {object} deck
+ * @param {{ slides?: object[], format?: string, onSlide?: Function }} opts
+ *   onSlide → optional callback after each slide (upload progressively)
+ */
+async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide } = {}) {
+  const type = String(format || 'jpeg').toLowerCase() === 'png' ? 'png' : 'jpeg';
+  const list = Array.isArray(slides) && slides.length
+    ? slides
+    : [...(deck.slides || [])].sort((a, b) => a.order - b.order);
+  if (!list.length) return [];
+
+  const contentTimeout = 60000;
+  const jpegQuality = 82;
+
+  return withBrowserPage(async (page) => {
+    // Don't let a single broken remote image hang forever.
+    page.setDefaultNavigationTimeout(contentTimeout);
+    page.setDefaultTimeout(contentTimeout);
+
+    const images = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const slide = list[i];
+      const canvasW = Math.max(320, Math.round(slide.elements?.canvas?.width || CANVAS_WIDTH));
+      const canvasH = Math.max(180, Math.round(slide.elements?.canvas?.height || CANVAS_HEIGHT));
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
+        // eslint-disable-next-line no-await-in-loop
+        await page.setContent(await buildDeckHtml({ ...deck, slides: [slide] }), {
+          waitUntil: 'networkidle0',
+          timeout: contentTimeout,
+        });
+        // eslint-disable-next-line no-await-in-loop
+        const buf = await page.screenshot({
+          type,
+          quality: type === 'jpeg' ? jpegQuality : undefined,
+          fullPage: false,
+        });
+        const image = {
+          slideId: slide.id,
+          order: slide.order,
+          name: `slide-${String(i + 1).padStart(2, '0')}.${type === 'jpeg' ? 'jpg' : 'png'}`,
+          data: Buffer.from(buf),
+        };
+        images.push(image);
+        if (typeof onSlide === 'function') {
+          // eslint-disable-next-line no-await-in-loop
+          await onSlide(image, slide);
+        }
+      } catch (err) {
+        logger.warn?.('slide_screenshot_failed', {
+          slideId: slide.id,
+          error: err.message,
+        }) || console.warn('slide screenshot failed', slide.id, err.message);
+        if (typeof onSlide === 'function') {
+          // eslint-disable-next-line no-await-in-loop
+          await onSlide(null, slide, err);
+        }
+      }
+    }
+    return images;
+  });
 }
 
 async function processExport({
@@ -920,5 +991,6 @@ module.exports = {
   queueExport,
   processExport,
   getExport,
+  renderSlideScreenshots,
   PRESIGN_EXPIRES_SEC,
 };

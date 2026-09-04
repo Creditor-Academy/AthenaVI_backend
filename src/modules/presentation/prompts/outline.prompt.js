@@ -94,6 +94,9 @@ function buildUser(vars = {}) {
       : density === 'concise'
         ? 'Title length (concise): each slide title 2–6 words, one line.'
         : 'Title length (balanced): each slide title 4–10 words; avoid 1–2 word stubs except brand cover names.',
+    density === 'detailed'
+      ? 'Detailed copy volume: each body slide summary MUST be 2–3 full sentences of argument. beats[] MUST include short detail (label + 1-line explanation), not bare labels. Prefer enough substance that a reader understands the point without the image alone.'
+      : null,
     imageType ? `Image type: ${imageType}` : null,
     imageStyle ? `Image style: ${imageStyle}` : null,
     imageStyleFilter && imageStyleFilter !== 'Suggested' ? `Image filter: ${imageStyleFilter}` : null,
@@ -110,7 +113,8 @@ function buildUser(vars = {}) {
     digestLines,
     '',
     'Narrative job map (describe intent, not layout ids):',
-    '- Cover / brand name: strong title + tagline + visual atmosphere',
+    '- Cover / brand name (purpose: cover): spoken outcome promise as title (not a stub label) + tagline/kicker + visual atmosphere',
+    '- Problem / friction (purpose: problem): early body slide — name the pain; beats[] = 2-4 concrete friction points (situational, not vague)',
     '- Big idea / split: concise argument + supporting visual',
     '- Story / named moments: 2-4 distinct points with labels',
     '- Vision / atmosphere: emotional positioning and brand feel',
@@ -118,18 +122,22 @@ function buildUser(vars = {}) {
     '- Audience / personas: distinct audience segments',
     '- Positioning: explicit comparison dimensions',
     '- Journey: sequence of stages and progression',
-    '- Closing: clear wrap-up and next step',
+    '- Closing (purpose: closing): wrap-up + specific offer CTA intent in summary/beats (verb + outcome; time/number when brief supports) — not "learn more"',
     '',
     'Rules:',
-    '- Strong narrative: title → optional agenda → one idea per body slide → closing',
-    '- Slide 1 MUST be contentType title. Headline = brand or deck name from source. Subtitle = tagline. layoutId MUST be a title layout with heading:yes. Never large_image_v1.',
+    '- Strong narrative: title → optional agenda → problem (when the brief has friction) → one idea per body slide → closing',
+    '- Slide 1 MUST be contentType title. Headline = spoken brand promise or deck name from source (not "Overview"). Subtitle = tagline. layoutId MUST be a title layout with heading:yes. Never large_image_v1.',
     '- Honor slide count, but prefer one story beat per slide (concept, vision, mission, audience…) rather than stuffing two arguments into one two-column slide.',
     '- title: headline that will appear on the slide (honor density title-word guidance above; never default to 2-word stubs for detailed)',
-    '- subtitle: tagline / kicker (1 line)',
-    '- summary: 1–3 sentences of argument (this is the body, not a 25-word topic blurb)',
-    '- beats[]: short labeled points (Wake Slowly / Brew Better / personas / menu items) that map to bullets or columns',
+    '- subtitle: tagline / UPPERCASE-style kicker (1 line)',
+    density === 'detailed'
+      ? '- summary (detailed): 2–3 sentences of real argument — never a one-line topic blurb'
+      : '- summary: 1–3 sentences of argument (this is the body, not a 25-word topic blurb)',
+    density === 'detailed'
+      ? '- beats[] (detailed): labeled points WITH a short detail phrase each (map to bullets/columns); for purpose problem use concrete pains'
+      : '- beats[]: short labeled points (Wake Slowly / Brew Better / personas / menu items) that map to bullets or columns; for purpose problem use concrete pains',
     '- visual: one-line photo direction UNIQUE to this slide (establishing café vs people vs landscape vs food). Do not repeat the same product close-up.',
-    '- Include purpose and contentIntent per slide',
+    '- Include purpose and contentIntent per slide (use purpose values: cover, problem, closing, and other narrative jobs as fit)',
     '- Include contentType[] hints and visualIntent[] hints for downstream layout selection',
     '- layoutId is optional and advisory unless layoutLocked=true',
     '- layoutLocked should be true only when user explicitly requests a fixed layout',
@@ -137,11 +145,12 @@ function buildUser(vars = {}) {
     '- watercolor/gouache/modern-art → include at least one gallery layout in decks of 5+',
     '- infographic/flat-line/isometric → include at least one diagram or icon-grid layout in decks of 5+',
     '- photo/scene/cinematic → at most one multi-image gallery',
-    '- Use chart/device_frames only when the source is quantitative or about an app/product UI',
+    '- Use chart only when the source is quantitative; use device_frames when the slide is about an app/product UI / phone-tablet mockups (never diagram for those)',
     '- Chart density: N≤10 slides → max 2 charts; N≤16 → max 3; else max 4. Do not stack three chart slides in a short deck.',
     '- Deck title: concise natural title (3–10 words). Do NOT paste the prompt.',
     '- suggestedContentType should align with expected content structure',
-    '- How-it-works / N-step workflow / pipeline slides → suggestedContentType "diagram" (process layouts), not grid or bullet_list',
+    '- How-it-works / N-step workflow / pipeline slides → suggestedContentType "diagram" for 2–4 steps; use "timeline" when there are 5+ numbered steps. Never grid or bullet_list for those',
+    '- Product UI / app screens / device mockups → suggestedContentType "device_frames" (not diagram)',
     '- visual_need: none|photo|illustration|chart|diagram_template — none when the layout has no image slots; diagram_template for process/SWOT/funnel layouts',
     '- Do NOT use path_b in the outline; Path B is decided later only for architecture/ERD-style slides',
     '',
@@ -218,6 +227,9 @@ function buildPackEnrichUser(vars = {}) {
       : density === 'concise'
         ? 'Title length (concise): 2–6 words per slide headline.'
         : 'Title length (balanced): 4–10 words per slide headline.',
+    density === 'detailed'
+      ? 'Detailed: each summary 2–3 sentences; beats include short detail text, not labels alone.'
+      : null,
     narrativeLines.length ? narrativeLines.join('\n') : null,
     '',
     'User source / prompt:',
@@ -226,7 +238,8 @@ function buildPackEnrichUser(vars = {}) {
     'Rules:',
     '- Return exactly one slide entry per pack slide (same order values).',
     '- Provide title, subtitle, summary, beats[], and visual per slide aligned with pack intent and user source.',
-    '- Slide 1: brand name + tagline from source when present.',
+    '- Slide 1: spoken brand promise or name + tagline from source when present (not stub labels).',
+    '- If a pack slide is problem/friction: beats[] = concrete pains; if closing: summary/beats imply an offer-style CTA intent.',
     '- Do NOT change layoutId, suggestedContentType, or intent fields.',
     '- Deck title: concise natural title from source meaning (3–10 words).',
     '',

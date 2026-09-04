@@ -1,4 +1,6 @@
 -- AlterTable
-ALTER TABLE "slides" ADD COLUMN "preview_s3_key" TEXT;
-ALTER TABLE "slides" ADD COLUMN "preview_hash" TEXT;
-ALTER TABLE "slides" ADD COLUMN "preview_status" TEXT;
+ALTER TABLE "slides" ADD COLUMN IF NOT EXISTS "preview_s3_key" TEXT;
+ALTER TABLE "slides" ADD COLUMN IF NOT EXISTS "preview_updated_at" TIMESTAMP(3);
+ALTER TABLE "slides" ADD COLUMN IF NOT EXISTS "preview_hash" TEXT;
+ALTER TABLE "slides" ADD COLUMN IF NOT EXISTS "preview_status" TEXT;
+

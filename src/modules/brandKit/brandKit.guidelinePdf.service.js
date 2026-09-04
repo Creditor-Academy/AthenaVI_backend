@@ -117,9 +117,24 @@ async function withBrowserPage(fn) {
   let browser;
   try {
     const puppeteer = require('puppeteer');
+    const { resolveChromeExecutable } = require('../../shared/utils/chromeExecutable');
+    const executablePath = resolveChromeExecutable();
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
+      // Desktop Chrome on Windows shows a window on launch even when headless.
+      windowsHide: true,
+      pipe: true,
+      ...(executablePath ? { executablePath } : { channel: 'chrome' }),
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--font-render-hinting=none',
+        '--window-position=-32000,-32000',
+        '--mute-audio',
+        '--no-first-run',
+        '--no-default-browser-check',
+      ],
     });
     const page = await browser.newPage();
     return await fn(page);

@@ -3,7 +3,7 @@
  * Applied after outline generation and during deck-wide layout planning.
  */
 
-const { looksLikeLinearProcessSlide } = require('./diagramPathPolicy.util');
+const { looksLikeLinearProcessSlide, looksLikeDeviceFramesSlide } = require('./diagramPathPolicy.util');
 
 const ARCHETYPES = {
   general: {
@@ -282,21 +282,29 @@ function enrichOutlineWithArrangement(outline, { sourceText = '', userPrompt = '
       beats: slide.beats,
       visual: slide.visual,
       intent: slide.intent || slide.purpose,
+      purpose: slide.purpose,
       contentType: suggested,
     };
-    // Prefer process layouts for how-it-works style beats (not architecture/ERD).
-    if (
+    // Product UI / app mockups → device_frames (never leave as diagram).
+    if (looksLikeDeviceFramesSlide(processSignals)) {
+      suggested = 'device_frames';
+    } else if (
       looksLikeLinearProcessSlide(processSignals) &&
-      !['title', 'closing', 'chart', 'section_divider'].includes(String(suggested).toLowerCase())
+      !['title', 'closing', 'chart', 'section_divider', 'device_frames', 'team', 'swot'].includes(
+        String(suggested).toLowerCase()
+      )
     ) {
-      suggested = 'diagram';
+      // Prefer process layouts for how-it-works style beats (not architecture/ERD).
+      // 5+ beats → timeline (5-milestone layouts); otherwise diagram.
+      const beatN = Array.isArray(slide.beats) ? slide.beats.filter(Boolean).length : 0;
+      suggested = beatN >= 5 ? 'timeline' : 'diagram';
     }
     return {
       ...slide,
       order,
       suggestedContentType: suggested,
       visual_need:
-        String(suggested).toLowerCase() === 'diagram' && !slide.visual_need
+        ['diagram', 'timeline'].includes(String(suggested).toLowerCase()) && !slide.visual_need
           ? 'diagram_template'
           : slide.visual_need || slide.visualNeed || undefined,
       arrangementHint: hint,

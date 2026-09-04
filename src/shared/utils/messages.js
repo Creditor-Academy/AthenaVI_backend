@@ -291,6 +291,8 @@ module.exports = {
   PRESENTATION_FETCHED: 'Presentation fetched successfully',
   PRESENTATION_PREVIEW_FETCHED: 'Presentation preview fetched successfully',
   PRESENTATION_THUMBNAIL_UPDATED: 'Presentation thumbnail updated',
+  PRESENTATION_COVER_UPDATED: 'Presentation cover updated',
+  PRESENTATION_COVER_REQUIRED: 'A cover image file is required',
   PRESENTATION_NOT_FOUND: 'Presentation not found',
   PRESENTATION_OUTLINE_GENERATED: 'Outline generated successfully',
   PRESENTATION_OUTLINE_UPDATED: 'Outline updated successfully',

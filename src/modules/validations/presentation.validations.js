@@ -169,6 +169,18 @@ const presentationByIdSchema = Joi.object({
   }),
 });
 
+/** Paged render payload for the preview modal / present mode. */
+const presentationPreviewSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  query: Joi.object({
+    offset: Joi.number().integer().min(0).default(0),
+    limit: Joi.number().integer().min(1).max(24).default(8),
+  }),
+});
+
 const updatePresentationThumbnailSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -180,6 +192,14 @@ const updatePresentationThumbnailSchema = Joi.object({
   })
     .or('thumbnailUrl', 'slideId')
     .required(),
+});
+
+/** Multipart cover capture: the file itself is validated by multer. */
+const uploadPresentationCoverSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
 });
 
 const generateOutlineSchema = Joi.object({
@@ -1093,7 +1113,9 @@ module.exports = {
   createPresentationSchema,
   listPresentationsSchema,
   presentationByIdSchema,
+  presentationPreviewSchema,
   updatePresentationThumbnailSchema,
+  uploadPresentationCoverSchema,
   generateOutlineSchema,
   patchOutlineSchema,
   setThemeSchema,

@@ -66,14 +66,37 @@ const getPresentationPreview = asyncHandler(async (req, res) => {
   const result = await presentationService.getPresentationPreview({
     workspaceId,
     presentationId,
-    ifNoneMatch: req.headers['if-none-match'] || null,
+    ifNoneMatch: req.get('if-none-match') || req.headers['if-none-match'] || null,
+    offset: req.query.offset,
+    limit: req.query.limit,
   });
-  res.set('ETag', result.etag);
-  res.set('Cache-Control', 'private, max-age=30');
+  if (result.etag) {
+    res.set('ETag', result.etag);
+    // Always revalidate: an edit must not be masked by a cached copy, and a match is a cheap 304.
+    res.set('Cache-Control', 'private, no-cache');
+  }
   if (result.notModified) {
     return res.status(304).end();
   }
-  return successResponse(req, res, result.data, 200, messages.PRESENTATION_PREVIEW_FETCHED);
+  return successResponse(
+    req,
+    res,
+    result.data,
+    200,
+    messages.PRESENTATION_PREVIEW_FETCHED || messages.PRESENTATION_FETCHED
+  );
+});
+
+const getDeckPreview = getPresentationPreview;
+
+const uploadPresentationCover = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await presentationService.uploadPresentationCover({
+    workspaceId,
+    presentationId,
+    file: req.file,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_COVER_UPDATED);
 });
 
 const updateThumbnail = asyncHandler(async (req, res) => {
@@ -476,7 +499,9 @@ module.exports = {
   listPresentations,
   getPresentation,
   getPresentationPreview,
+  getDeckPreview,
   updateThumbnail,
+  uploadPresentationCover,
   getSlide,
   generateOutline,
   updateOutline,

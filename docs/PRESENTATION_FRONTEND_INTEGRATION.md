@@ -288,26 +288,74 @@ Details: [`PRESENTATION_CREDITS_FRONTEND.md`](PRESENTATION_CREDITS_FRONTEND.md).
 
 ## My Work / dashboard preview modal
 
-When the user clicks a presentation card, show a **deck preview** (all slides as images), then **Edit** opens the canvas editor.
+When the user clicks a presentation card, show a **deck preview** of every slide, then **Edit** opens the canvas editor.
+
+This is the Canva model, and it has two tiers:
+
+- **Inside the modal (and later, present mode): live-render the real slides** with the same renderer the editor uses, read-only. There are no server-side snapshots, so the preview cannot drift from the editor and there is no "waiting for a JPEG" state.
+- **On the card grid: one rendered image per deck**, captured once by you from the live render and uploaded. One image per deck, not per slide.
 
 **Do not** put list `thumbnailUrl` or `imageRef.url` in a big `<img>` as the modal body — that is a photo *on* the slide, not the slide.
 
 | Step | Call |
 |------|------|
 | Card grid | `GET .../presentations` or `GET .../library?category=presentation` — use `thumbnailUrl` for the **card** only |
-| Modal open | `GET .../presentations/:id/preview` |
-| Poll while `nextPollMs > 0` | Same URL + `If-None-Match: <ETag>` (304 = unchanged) |
+| Modal open | `GET .../presentations/:id/preview?offset=0&limit=8` |
+| Remaining slides | Same URL with `offset=nextOffset`, in the background, until `nextOffset` is `null` |
+| Re-open / revalidate | Same URL + `If-None-Match: <ETag>` (304 = unchanged, no body) |
+| Cover capture | `PUT .../presentations/:id/thumbnail/image` — only when `coverStale` is `true` |
 | Edit | Navigate to editor → `GET .../presentations/:id` (full `elements`) |
 | Download | Existing `POST .../export` — never use export to fill the modal |
 
-**Modal UI**
+**Rendering a slide**
 
-1. Main pane + filmstrip: `<img src={slide.previewImageUrl}>` in a 16:9 or 4:3 box (`object-fit: contain`). Same URL for both (browser cache).
-2. Footer: `slideCount`, deck `status`, `aspectRatio`.
-3. If `previewStatus !== READY`, poll every `nextPollMs` (usually 1000). Stop when READY or ~20s; keep placeholders for PENDING slides.
-4. Do **not** live-render the canvas in this modal.
+Each `slides[i].elements` is the same canvas document the editor renders: `{ version, canvas: { width, height }, elements: [] }`. Mount it read-only on a stage sized to `canvas.width × canvas.height` and scale the whole stage to the container:
 
-Snapshots are generated in the background after generate / canvas save / theme / brand kit. First open of an old deck may return `PARTIAL` while JPEGs catch up.
+```jsx
+const scale = containerWidth / slide.elements.canvas.width;
+
+<div style={{ width: containerWidth, height: containerWidth * (canvas.height / canvas.width), overflow: 'hidden' }}>
+  <div style={{
+    width: canvas.width,
+    height: canvas.height,
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+    pointerEvents: 'none',
+  }}>
+    <SlideRenderer doc={slide.elements} readOnly />
+  </div>
+</div>
+```
+
+Scale the stage, never the individual elements — element coordinates are absolute in canvas space, so per-element scaling reintroduces rounding drift.
+
+**Modal checklist**
+
+1. Inject `fontCssUrl` **once** before mounting any slide. Text mounted before its webfont loads measures against a fallback and reflows visibly.
+2. Request `limit=8` for the first paint, then page the rest in the background with `nextOffset`. A 40-slide deck must not block on one response.
+3. Render only slides near the viewport (`IntersectionObserver`); keep a lightweight placeholder at the correct aspect ratio for the rest so the scrollbar does not jump.
+4. Footer: `slideCount`, deck `status`, `aspectRatio`.
+5. Poll only while `nextPollMs > 0` (deck is `GENERATING`). Once it is `0`, stop — there is nothing to wait for.
+6. Keep the loaded slide documents in memory: clicking **Edit** can hand them straight to the editor instead of refetching.
+
+**Cover capture**
+
+When `/preview` returns `coverStale: true`, the card grid image is missing or older than slide 1. Once slide 1 has rendered in the modal, rasterize that node once and upload it:
+
+```js
+if (data.coverStale) {
+  const blob = await captureNodeToBlob(slideOneEl, { type: 'image/jpeg', quality: 0.8 });
+  const form = new FormData();
+  form.append('file', blob, 'cover.jpg');
+  await fetch(`${base}/api/workspaces/${wsId}/presentations/${id}/thumbnail/image`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+}
+```
+
+The server re-encodes and resizes, so send whatever your capture produces (≤2 MB, JPEG/PNG/WebP). Capture **once per modal open**, not per render — repeat uploads within 10 seconds come back as `{ skipped: true }`, which is a success, not an error. Do not block the modal on this; it is fire-and-forget.
 
 ---
 
@@ -462,7 +510,8 @@ Only when session `canComment` is true (`linkRole === "reviewer"`). Full contrac
 ## Suggested UI checklist
 
 - [ ] Create modal: **AI | Blank | Template**  
-- [ ] My Work card click → `GET .../preview` filmstrip (images); **Edit** → full get-by-id editor  
+- [ ] My Work card click → `GET .../preview` live-rendered slides (paged, `fontCssUrl` first); **Edit** → full get-by-id editor  
+- [ ] Capture slide 1 to `PUT .../thumbnail/image` once per modal open when `coverStale`  
 - [ ] Theme + layout pickers from workspace GET endpoints  
 - [ ] AI: outline review → generate progress bar (`status`)  
 - [ ] Canvas: 1920×1080 stage, palette from `presentation-elements`, autosave canvas  
@@ -490,7 +539,8 @@ GET    /api/workspaces/:workspaceId/presentation-themes
 GET    /api/workspaces/:workspaceId/presentation-elements
 
 GET    /api/workspaces/:workspaceId/presentations/:presentationId
-GET    .../preview
+GET    .../preview?offset=&limit=
+PUT    .../thumbnail/image        (multipart cover capture)
 GET    .../status
 GET    .../credit-estimate
 POST   .../outline

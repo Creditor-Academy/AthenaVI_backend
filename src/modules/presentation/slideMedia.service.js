@@ -126,12 +126,6 @@ async function persistSlideImage({
     manuallyEdited: true,
     status: 'READY',
   });
-  try {
-    const slidePreview = require('./slidePreview.service');
-    slidePreview.enqueueSlidePreview(slideId).catch(() => {});
-  } catch {
-    // optional
-  }
   return {
     project: { id: deck.projectId },
     deck: { id: deck.id },

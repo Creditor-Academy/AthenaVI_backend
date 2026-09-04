@@ -60,13 +60,13 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
 
   if (slideOrder === 1 || type === 'title') {
     lines.push(
-      'Title slide: REQUIRED titleRuns (2-3 segments, accent on final line). Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
+      'Title slide: spoken outcome headline (5–12 words, period OK) — not "Overview / Introduction / Product". REQUIRED titleRuns (2-3 segments, accent on final punch line). Subtitle/eyebrow = short UPPERCASE kicker when those slots exist. Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
     );
   }
 
   if (type === 'closing' || /closing|cta/.test(id)) {
     lines.push(
-      'Closing slide: REQUIRED subtitle (1 line), cta (short action phrase), and contact when layout has CONTACT slot. CTA must be topic-specific (e.g. "Explore the archive", "Start learning"). NEVER use generic "Book a demo" unless the deck is explicitly a sales/demo pitch.'
+      'Closing slide: REQUIRED subtitle (1 line), cta (offer-style action: verb + concrete outcome; add a time/number when the brief supports it), and contact when layout has CONTACT slot. Ban "Book a demo / Get started / Learn more" unless the deck is explicitly a sales/demo pitch. Prefer shapeDecisions.CTA.behind "pill".'
     );
   }
 
@@ -215,6 +215,8 @@ function buildUser(vars = {}) {
       'calloutLength',
       'titleTone',
       'ctaFormat',
+      'eyebrowFormat',
+      'bodyVoice',
       'imagePromptStyle',
       'parallelStructure',
       'pointCount',
@@ -260,8 +262,11 @@ function buildUser(vars = {}) {
     `Next slide title: ${vars.nextSlideTitle || '(none)'}`,
     vars.wizardBrief ? `\nWizard brief (honor voice, audience, purpose, narrative):\n${vars.wizardBrief}` : '',
     hintLines.length ? `\nGeneration hints:\n${hintLines.join('\n')}` : '',
-    vars.layoutContext?.hasImageOverlay || vars.layoutContext?.hasTextOverImageRisk
-      ? '\nImage-heavy slide: text renders over a photo with an automatic dark scrim and light text. Keep titles ≤6 words; body ≤2 short lines. Set shapeDecisions.__overlay__.enabled to true.'
+    vars.layoutContext?.hasImageOverlay
+      ? '\nFull-bleed overlay slide: text renders over a photo with an automatic dark scrim and light text. Keep titles ≤6 words; body ≤2 short lines. Set shapeDecisions.__overlay__.enabled to true.'
+      : '',
+    density === 'detailed' && !vars.layoutContext?.hasImageOverlay
+      ? '\nDetailed density: fill body/bullets/columns to layout slot capacity — multi-line bodies (not one-line stubs), labeled beats with supporting detail, and use the max bullet/column count the slots allow.'
       : '',
     String(vars.layoutId || '').includes('grid_metrics_masonry')
       ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for the two para cards METRIC_TITLE_1/METRIC_BODY_1 and METRIC_TITLE_3/METRIC_BODY_3. Fill stats[] with { value, label } for STAT_1 (wide bottom) and STAT_2 (top). One image slot METRIC_IMAGE_2 sits between the top stat and the right card. Do NOT put bullets or long body copy into metric or stat slots.'
@@ -280,7 +285,13 @@ function buildUser(vars = {}) {
     '',
     'Rules:',
     '- Fill every text slot from the required seed (title, subtitle, beats). Do NOT invent a 25-word recap and leave heading/body empty.',
-    '- Title slides: title = brand or deck name, subtitle = tagline, titleRuns required (2–3 segments).',
+    '- Title slides: spoken promise headline (not a stub label); subtitle = tagline/kicker; titleRuns required (2–3 segments, accent on final line).',
+    '- Eyebrow / kicker slots: short UPPERCASE role line (2–5 words) when the layout has eyebrow or uses subtitle as kicker.',
+    '- Body copy: prefer situational/sensory detail over feature laundry lists when density allows.',
+    density === 'detailed'
+      ? '- Detailed density: every text slot that can hold body/bullets must be filled; avoid single-line stubs when max_lines ≥ 2 or max words allow more.'
+      : null,
+    '- Closing CTA: offer-style (verb + outcome); concrete time/number when the brief supports it; ban generic CTAs unless sales/demo brief.',
     '- Replace any template placeholder wording with original content from the brief.',
     '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
@@ -361,7 +372,7 @@ function buildUser(vars = {}) {
       2
     ),
   ]
-    .filter((line) => line !== '')
+    .filter((line) => line != null && line !== '')
     .join('\n');
 }
 

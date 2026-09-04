@@ -87,7 +87,8 @@
 | GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
 | GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |
-| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` | Bearer + member | Lean deck JPEG preview (My Work modal; ETag) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` | Bearer + member | Live-render slide payload for the My Work modal / present mode (`offset`, `limit`; ETag → 304) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/thumbnail/image` | Bearer + member | Upload the deck cover captured from the preview (multipart `file`, ≤2 MB) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/status` | Bearer + member | Generation progress |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/credit-estimate` | Bearer + member | Outline/generate/export AC estimate |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Generate outline (prompt/outline/document) |
