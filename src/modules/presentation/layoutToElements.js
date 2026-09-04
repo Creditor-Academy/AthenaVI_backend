@@ -73,6 +73,18 @@ const {
   isAgendaEditorialLayout,
   isAgendaEditorialTextSlot,
 } = require('./diagrams/agendaEditorialHub');
+const {
+  agendaCardsGraphicFrame,
+  specToAgendaCardsContent,
+  isAgendaCardsLayout,
+  isAgendaCardsTextSlot,
+} = require('./diagrams/agendaCardsTiles');
+const {
+  agendaTwoColumnRibbonGraphicFrame,
+  specToTwoColumnRibbonContent,
+  isAgendaTwoColumnRibbonLayout,
+  isAgendaTwoColumnRibbonTextSlot,
+} = require('./diagrams/agendaTwoColumnRibbons');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
 const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, packFunnelStageTextBlocks, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
@@ -8839,6 +8851,8 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const isNumberedTimeline = isAgendaNumberedTimelineLayout(layoutId, family, variant);
   const isMinimalQuiet = isAgendaMinimalQuietLayout(layoutId, family, variant);
   const isEditorial = isAgendaEditorialLayout(layoutId, family, variant);
+  const isAgendaCards = isAgendaCardsLayout(layoutId, family, variant);
+  const isTwoColRibbon = isAgendaTwoColumnRibbonLayout(layoutId, family, variant);
   const isRibbonCards = isThreeCards || isThreeCardsHero;
   const stacked = isColouredThreeCol || isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline;
   const itemCount = layoutSchema?.preview?.agendaItems?.length
@@ -8860,6 +8874,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? agendaMinimalQuietGraphicFrame(canvasW, canvasH)
             : isEditorial
             ? agendaEditorialGraphicFrame(canvasW, canvasH)
+            : isAgendaCards
+            ? agendaCardsGraphicFrame(canvasW, canvasH)
+            : isTwoColRibbon
+            ? agendaTwoColumnRibbonGraphicFrame(canvasW, canvasH)
             : isColouredThreeCol
             ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
             : agendaGraphicFrame(canvasW, canvasH);
@@ -8867,7 +8885,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
   const columnTextColor = textColor;
 
-  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_)/i;
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_)/i;
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => CHROME_RE.test(String(el.slotId || '')))
@@ -8882,6 +8900,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     elements = elements.filter((el) => isAgendaMinimalQuietTextSlot(el.slotId));
   } else if (isEditorial) {
     elements = elements.filter((el) => isAgendaEditorialTextSlot(el.slotId));
+  } else if (isAgendaCards) {
+    elements = elements.filter((el) => isAgendaCardsTextSlot(el.slotId));
+  } else if (isTwoColRibbon) {
+    elements = elements.filter((el) => isAgendaTwoColumnRibbonTextSlot(el.slotId));
   } else if (stacked) {
     elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId) || /^HERO_IMAGE$/i.test(String(el.slotId || '')));
   }
@@ -8899,7 +8921,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     const sid = String(el.slotId || '');
     const base = textBase(el);
     if (sid.toUpperCase() === 'HEADING') {
-      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial
+      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial || isAgendaCards || isTwoColRibbon
         ? (overlay.heading || { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH })
         : stacked
         ? { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH }
@@ -8909,18 +8931,18 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         placement: { ...h, rotation: 0, opacity: 1 },
         content: {
           ...base,
-          align: isEditorial ? 'center' : stacked ? 'center' : 'left',
+          align: isTwoColRibbon || isEditorial ? 'left' : stacked ? 'center' : 'left',
           verticalAlign: 'center',
-          fontSize: isEditorial ? 22 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
-          fontWeight: isEditorial ? 700 : 800,
-          color: isEditorial ? '#4B5563' : textColor,
+          fontSize: isTwoColRibbon ? 28 : isEditorial || isAgendaCards ? 32 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
+          fontWeight: 800,
+          color: textColor,
           lineHeight: 1.1,
           clipToSlot: true,
         },
       };
     }
     const itemBodyM = sid.match(/^ITEM_(\d+)_BODY$/i);
-    if (itemBodyM && isNumberedTimeline && overlay.itemBodies?.length) {
+    if (itemBodyM && (isNumberedTimeline || isAgendaCards) && overlay.itemBodies?.length) {
       const box = overlay.itemBodies[Number(itemBodyM[1]) - 1];
       if (box) {
         return {
@@ -8930,7 +8952,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           content: {
             ...colouredColumnTextContent(el.content, {
               color: '#6B7280',
-              fontSize: 13,
+              fontSize: isAgendaCards ? 14 : 13,
               fontWeight: 400,
               align: 'left',
               verticalAlign: 'flex-start',
@@ -9002,6 +9024,23 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
               wrap: 'nowrap',
               clipToSlot: true,
               lineHeight: 1,
+              padding: 0,
+              paddingX: 0,
+            }
+            : isAgendaCards
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 20,
+              fontWeight: 700,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              wrap: 'wrap',
+              clipToSlot: true,
+              lineHeight: 1.2,
+              padding: 0,
+              paddingX: 0,
             }
             : {
               ...base,
@@ -9045,7 +9084,19 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           ...el,
           layer: 12,
           placement: { ...col.heading, rotation: 0, opacity: isRibbonCards ? 0 : 1 },
-          content: isRibbonCards
+          content: isTwoColRibbon
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#ffffff',
+              fontSize: 18,
+              fontWeight: 800,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              clipToSlot: true,
+              lineHeight: 1,
+            }
+            : isRibbonCards
             ? {
               ...colouredColumnTextContent(el.content, {
               color: '#ffffff',
@@ -9083,6 +9134,32 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         };
       }
     }
+    const colBodyM = sid.match(/^AGENDA_COL_(\d+)_ITEM_(\d+)_BODY$/i);
+    if (colBodyM && overlay.columns?.length) {
+      const ci = Number(colBodyM[1]) - 1;
+      const ii = Number(colBodyM[2]) - 1;
+      const col = overlay.columns[ci];
+      const box = col?.itemBodies?.[ii];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: {
+            ...colouredColumnTextContent(el.content, {
+              color: '#6B7280',
+              fontSize: 12,
+              fontWeight: 400,
+              align: 'left',
+              verticalAlign: 'flex-start',
+            }),
+            wrap: 'wrap',
+            clipToSlot: true,
+            lineHeight: 1.3,
+          },
+        };
+      }
+    }
     const colItemM = sid.match(/^AGENDA_COL_(\d+)_ITEM_(\d+)$/i);
     if (colItemM && overlay.columns?.length) {
       const ci = Number(colItemM[1]) - 1;
@@ -9094,7 +9171,20 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           ...el,
           layer: 12,
           placement: { ...box, rotation: 0, opacity: 1 },
-          content: isRibbonCards
+          content: isTwoColRibbon
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 14,
+              fontWeight: 700,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              wrap: 'nowrap',
+              clipToSlot: true,
+              lineHeight: 1.1,
+            }
+            : isRibbonCards
             ? {
               ...colouredColumnTextContent(el.content, {
               color: '#4B5563',
@@ -9222,6 +9312,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? specToMinimalQuietContent(spec)
             : isEditorial
             ? specToEditorialContent(spec)
+            : isAgendaCards
+            ? specToAgendaCardsContent(spec)
+            : isTwoColRibbon
+            ? specToTwoColumnRibbonContent(spec)
             : isColouredThreeCol
           ? specToThreeColumnContent(spec)
           : specToGraphicContent(spec, accent, soft);

@@ -45,6 +45,8 @@ const { agendaNumberedBlocksPreviewSvg } = require('./agendaNumberedBlocks');
 const { agendaNumberedTimelinePreviewSvg } = require('./agendaNumberedTimeline');
 const { agendaMinimalQuietPreviewSvg } = require('./agendaMinimalQuiet');
 const { agendaEditorialPreviewSvg } = require('./agendaEditorialHub');
+const { agendaCardsPreviewSvg } = require('./agendaCardsTiles');
+const { agendaTwoColumnRibbonPreviewSvg } = require('./agendaTwoColumnRibbons');
 
 function agendaChromeSpecs(family, variant, itemCount = 4) {
   switch (family) {
@@ -76,7 +78,7 @@ function agendaOverlayPlacements(gx, gy, gw, gh, family, variant, opts = {}) {
     case 'timeline':
       return agendaTimelineOverlayPlacements(gx, gy, gw, gh, variant, opts)
     case 'two_col':
-      return agendaTwoColumnOverlayPlacements(gx, gy, gw, gh)
+      return agendaTwoColumnOverlayPlacements(gx, gy, gw, gh, variant)
     default:
       return agendaMinimalOverlayPlacements(gx, gy, gw, gh, variant, opts)
   }
@@ -130,6 +132,9 @@ function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
   if (family === 'minimal' && variant === 'editorial') {
     return agendaEditorialPreviewSvg()
   }
+  if (family === 'minimal' && variant === 'cards') {
+    return agendaCardsPreviewSvg()
+  }
   if (family === 'minimal' && variant !== 'editorial' && variant !== 'icon_list' && variant !== 'cards') {
     return agendaMinimalQuietPreviewSvg()
   }
@@ -144,6 +149,9 @@ function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
   }
   if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnPreviewSvg(colors)
+  }
+  if (family === 'two_col' && variant !== 'split_visual' && variant !== 'split_panel' && variant !== 'asymmetric') {
+    return agendaTwoColumnRibbonPreviewSvg()
   }
   return agendaDiagramInlineSvg(family, variant, {
     accent: colors.accent || '#6366f1',

@@ -15,6 +15,10 @@ const {
   agendaEditorialChromeSpecs,
   agendaEditorialOverlayPlacements,
 } = require('./agendaEditorialHub');
+const {
+  agendaCardsChromeSpecs,
+  agendaCardsOverlayPlacements,
+} = require('./agendaCardsTiles');
 function minimalVariantFromSchema(schema) {
   const variant = schema?.preview?.agendaVariant
   if (variant === 'editorial' || variant === 'icon_list' || variant === 'cards') return variant === 'cards' ? 'icon_list' : variant
@@ -25,7 +29,10 @@ function agendaMinimalChromeSpecs(variant = 'default', itemCount = 4) {
   if (variant === 'editorial') {
     return agendaEditorialChromeSpecs()
   }
-  if (variant !== 'editorial' && variant !== 'icon_list' && variant !== 'cards') {
+  if (variant === 'cards') {
+    return agendaCardsChromeSpecs()
+  }
+  if (variant !== 'icon_list') {
     return agendaMinimalQuietChromeSpecs()
   }
   const n = clampAgendaItemCount(itemCount)
@@ -57,7 +64,10 @@ function agendaMinimalOverlayPlacements(gx, gy, gw, gh, variant = 'default', opt
   if (variant === 'editorial') {
     return agendaEditorialOverlayPlacements(gx, gy, gw, gh)
   }
-  if (variant !== 'editorial' && variant !== 'icon_list' && variant !== 'cards') {
+  if (variant === 'cards') {
+    return agendaCardsOverlayPlacements(gx, gy, gw, gh)
+  }
+  if (variant !== 'icon_list') {
     return agendaMinimalQuietOverlayPlacements(gx, gy, gw, gh)
   }
   const n = clampAgendaItemCount(opts.itemCount)

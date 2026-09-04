@@ -18,8 +18,10 @@ const EDITORIAL_ROW_PALETTE = ['#2F6FED', '#E57373', '#9CCC65', '#26A69A', '#42A
 
 function rowMetrics() {
   const g = AGENDA_EDITORIAL_GEOM
+  const headingReserve = 56
   const total = g.n * g.rowH + (g.n - 1) * g.gap
-  const top = (g.viewH - total) / 2
+  const available = g.viewH - headingReserve
+  const top = headingReserve + Math.max(8, (available - total) / 2)
   return { top, total, hubCy: top + total / 2 }
 }
 
@@ -71,6 +73,7 @@ function hubInlineSvg() {
     <circle cx="152" cy="152" r="146" fill="url(#edHubShade)" stroke="currentColor" stroke-width="3"/>
     <circle cx="152" cy="152" r="138" fill="none" stroke="#d8dee8" stroke-width="7"/>
     <circle cx="152" cy="152" r="128" fill="none" stroke="#000000" stroke-opacity="0.06" stroke-width="10"/>
+    <text x="152" y="162" text-anchor="middle" fill="#4B5563" stroke="none" font-size="28" font-weight="800" font-family="Arial,Helvetica,sans-serif">Agenda</text>
   </svg>`
 }
 
@@ -169,7 +172,6 @@ function agendaEditorialChromeSpecs() {
 
 function agendaEditorialOverlayPlacements(gx, gy, gw, gh) {
   const g = AGENDA_EDITORIAL_GEOM
-  const { hubCy } = rowMetrics()
   const sx = gw / g.viewW
   const sy = gh / g.viewH
   const box = (x, y, w, h) => ({
@@ -179,13 +181,15 @@ function agendaEditorialOverlayPlacements(gx, gy, gw, gh) {
     height: Math.max(20, Math.round(h * sy)),
   })
   const overlay = {
-    heading: box(g.hubCx - 96, hubCy - 40, 192, 80),
+    heading: box(48, 14, 900, 42),
     items: [],
   }
-  const textX = g.rowX + 68
-  const textW = g.rowW - 118
+  const textX = g.rowX + 70
+  const textW = 360
+  const textH = 28
   for (let i = 0; i < g.n; i += 1) {
-    overlay.items.push(box(textX, rowTop(i) + 2, textW, g.rowH - 8))
+    const y = rowTop(i) + (g.rowH - textH) / 2
+    overlay.items.push(box(textX, y, textW, textH))
   }
   return overlay
 }

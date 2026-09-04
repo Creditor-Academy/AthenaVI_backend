@@ -19657,15 +19657,15 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-5, rows 4-6",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Agenda",
+          "placeholder_text": "Today's agenda",
           "layer": 10,
           "typography": {
-            "fontSize": 22,
-            "fontWeight": 700,
+            "fontSize": 32,
+            "fontWeight": 800,
             "colorRole": "text",
-            "align": "center",
+            "align": "left",
             "lineHeight": 1.15
           },
           "max_lines": 2
@@ -19751,7 +19751,7 @@
         "agendaVariant": "editorial",
         "slots": {
           "HEADING": {
-            "text": "Agenda",
+            "text": "Today's agenda",
             "variant": "title",
             "bold": true,
             "uppercase": false
@@ -19803,33 +19803,138 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 2-4",
+          "region": "cols 2-11, rows 1-2",
           "role": "heading",
           "placeholder_text": "Agenda",
           "layer": 10,
           "typography": {
-            "fontSize": 40,
+            "fontSize": 32,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "center",
+            "align": "left",
             "lineHeight": 1.15
           },
           "max_lines": 2
         },
         {
-          "id": "BODY",
-          "region": "cols 3-10, rows 4-8",
+          "id": "ITEM_1",
+          "region": "cols 1-6, rows 3-5",
           "role": "body",
-          "placeholder_text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "placeholder_text": "Opening and goals",
           "layer": 10,
           "typography": {
             "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_2",
+          "region": "cols 7-12, rows 3-5",
+          "role": "body",
+          "placeholder_text": "Context and constraints",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_3",
+          "region": "cols 1-6, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Proposal and proof",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_4",
+          "region": "cols 7-12, rows 6-8",
+          "role": "body",
+          "placeholder_text": "Decisions and next steps",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "ITEM_1_BODY",
+          "region": "cols 1-6, rows 5-6",
+          "role": "body",
+          "placeholder_text": "Set the purpose and what a good outcome looks like.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
-            "align": "center",
-            "lineHeight": 1.45
+            "align": "left",
+            "lineHeight": 1.35
           },
-          "max_lines": 6
+          "max_lines": 3
+        },
+        {
+          "id": "ITEM_2_BODY",
+          "region": "cols 7-12, rows 5-6",
+          "role": "body",
+          "placeholder_text": "Share the context, constraints, and what is already decided.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.35
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "ITEM_3_BODY",
+          "region": "cols 1-6, rows 8-9",
+          "role": "body",
+          "placeholder_text": "Walk through the proposal and the proof behind it.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.35
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "ITEM_4_BODY",
+          "region": "cols 7-12, rows 8-9",
+          "role": "body",
+          "placeholder_text": "Agree owners, dates, and the next concrete steps.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.35
+          },
+          "max_lines": 3
         }
       ],
       "preview": {
@@ -19842,8 +19947,50 @@
             "bold": true,
             "uppercase": false
           },
-          "BODY": {
-            "text": "Topic one\nTopic two\nTopic three\nTopic four",
+          "ITEM_1": {
+            "text": "Opening and goals",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_2": {
+            "text": "Context and constraints",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_3": {
+            "text": "Proposal and proof",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_4": {
+            "text": "Decisions and next steps",
+            "variant": "body",
+            "bold": true,
+            "uppercase": false
+          },
+          "ITEM_1_BODY": {
+            "text": "Set the purpose and what a good outcome looks like.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_2_BODY": {
+            "text": "Share the context, constraints, and what is already decided.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_3_BODY": {
+            "text": "Walk through the proposal and the proof behind it.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_4_BODY": {
+            "text": "Agree owners, dates, and the next concrete steps.",
             "variant": "body",
             "bold": false,
             "uppercase": false
