@@ -36,6 +36,13 @@ const {
   isAgendaThreeColumnColouredLayout,
   specToThreeColumnContent,
 } = require('./agendaThreeColumn');
+const {
+  agendaThreeCardsPreviewSvg,
+  isAgendaThreeCardsLayout,
+  specToThreeCardsContent,
+} = require('./agendaThreeCards');
+const { agendaNumberedBlocksPreviewSvg } = require('./agendaNumberedBlocks');
+const { agendaNumberedTimelinePreviewSvg } = require('./agendaNumberedTimeline');
 
 function agendaChromeSpecs(family, variant, itemCount = 4) {
   switch (family) {
@@ -118,7 +125,16 @@ function agendaDiagramInlineSvg(family, variant, colors = {}, opts = {}) {
 }
 
 function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
-  if (family === 'three_col' && variant === 'coloured') {
+  if (family === 'numbered' && (variant === 'path' || variant === 'timeline')) {
+    return agendaNumberedTimelinePreviewSvg()
+  }
+  if (family === 'numbered' && variant !== 'cards') {
+    return agendaNumberedBlocksPreviewSvg(colors)
+  }
+  if (family === 'three_col' && variant === 'cards') {
+    return agendaThreeCardsPreviewSvg(colors)
+  }
+  if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnPreviewSvg(colors)
   }
   return agendaDiagramInlineSvg(family, variant, {
@@ -173,5 +189,7 @@ module.exports = {
   agendaDividerInlineSvg,
   isAgendaThreeColumnColouredLayout,
   specToThreeColumnContent,
+  isAgendaThreeCardsLayout,
+  specToThreeCardsContent,
   specToGraphicContent,
 };

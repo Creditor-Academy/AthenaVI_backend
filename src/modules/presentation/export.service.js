@@ -7,7 +7,6 @@ const { loadPresentationDeck } = require('./deckGeneration.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
-const { downloadRemote } = require('../../shared/utils/downloadRemote');
 const {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -15,13 +14,14 @@ const {
   PPTX_HEIGHT_IN,
   resolveAspectCanvas,
 } = require('./presentation.constants');
-const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
+const { firstHexFromFill } = require('./canvasFill');
 const {
-  cssFromFill,
-  firstHexFromFill,
-  slideBackgroundCss,
-  textPaintCss,
-} = require('./canvasFill');
+  bulletsFromContent,
+  fetchImageAsBase64,
+  contentFlipFlags,
+  slideHasElements,
+  buildDeckHtml,
+} = require('./slideHtml');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 
@@ -63,30 +63,6 @@ async function notifyExportFinished({
   }
 }
 
-function bulletsFromContent(content) {
-  if (!content || typeof content !== 'object') return [];
-  if (Array.isArray(content.bullets)) {
-    return content.bullets
-      .map((b) => (typeof b === 'string' ? b : b?.text || ''))
-      .filter(Boolean);
-  }
-  return [];
-}
-
-async function fetchImageAsBase64(url, s3Key) {
-  try {
-    if (s3Key) {
-      const buffer = await s3Service.getObjectBuffer(s3Key);
-      return buffer.toString('base64');
-    }
-    if (!url || !/^https?:\/\//i.test(String(url))) return null;
-    const buffer = await downloadRemote(url, { maxBytes: 12 * 1024 * 1024 });
-    return buffer.toString('base64');
-  } catch {
-    return null;
-  }
-}
-
 function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
   return {
     x: (Number(x) || 0) / canvasW * PPTX_WIDTH_IN,
@@ -94,22 +70,6 @@ function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
     w: Math.max(0.1, (Number(w) || 100) / canvasW * PPTX_WIDTH_IN),
     h: Math.max(0.1, (Number(h) || 100) / canvasH * PPTX_HEIGHT_IN),
   };
-}
-
-function contentFlipFlags(content = {}) {
-  return {
-    flipH: content.flipHorizontal === true || content.scaleX === -1,
-    flipV: content.flipVertical === true || content.scaleY === -1,
-  };
-}
-
-function placementTransformCss(placement = {}, content = {}) {
-  const rotate = Number(placement.rotation) || 0;
-  const { flipH, flipV } = contentFlipFlags(content);
-  const parts = [];
-  if (rotate) parts.push(`rotate(${rotate}deg)`);
-  if (flipH || flipV) parts.push(`scale(${flipH ? -1 : 1}, ${flipV ? -1 : 1})`);
-  return parts.length ? parts.join(' ') : 'none';
 }
 
 function resolveColor(value, palette, fallback = '111111') {
@@ -162,15 +122,6 @@ function resolveFillForExport(fill, palette, fallback = '0A84FF') {
 function chartColorHexes(colors, palette, fallback = '0A84FF') {
   if (!Array.isArray(colors) || !colors.length) return [];
   return colors.map((c) => firstHexFromFill(c, palette, fallback));
-}
-
-function slideHasElements(slide) {
-  return (
-    slide?.elements &&
-    typeof slide.elements === 'object' &&
-    Array.isArray(slide.elements.elements) &&
-    slide.elements.elements.length > 0
-  );
 }
 
 function shapeTypeForPptx(shape) {
@@ -629,191 +580,6 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
 
   const out = await pptx.write({ outputType: 'nodebuffer' });
   return Buffer.isBuffer(out) ? out : Buffer.from(out);
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function htmlTextInner(c, palette, fallbackColor) {
-  const runs = Array.isArray(c.runs) ? c.runs : [];
-  if (runs.length) {
-    return runs
-      .map((run) => {
-        const paint = textPaintCss(run.fill || run.color || run.colorRole, palette, fallbackColor);
-        return `<span style="${paint}">${escapeHtml(run.text || '')}</span>`;
-      })
-      .join('');
-  }
-  const paint = textPaintCss(c.fill || c.color || c.colorRole, palette, fallbackColor);
-  return `<span style="${paint}">${escapeHtml(c.text || '')}</span>`;
-}
-
-function htmlChartInner(c, palette) {
-  const labels = Array.isArray(c.labels) ? c.labels : Array.isArray(c.data?.labels) ? c.data.labels : [];
-  const series = Array.isArray(c.series) ? c.series : Array.isArray(c.data?.series) ? c.data.series : [];
-  const values = Array.isArray(series[0]?.values)
-    ? series[0].values
-    : Array.isArray(c.series) && typeof c.series[0] === 'number'
-      ? c.series
-      : [];
-  const colors = Array.isArray(c.colors) && c.colors.length ? c.colors : [palette.primary || '#64748b'];
-  if (!values.length) {
-    return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b">chart</div>`;
-  }
-  const max = Math.max(...values.map(Number), 1);
-  const bars = values
-    .map((v, i) => {
-      const fill = cssFromFill(colors[i % colors.length], palette, '#64748b');
-      const h = Math.max(8, (Number(v) / max) * 100);
-      return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%"><div style="height:${h}%;background:${escapeHtml(fill)};border-radius:4px 4px 0 0"></div></div>`;
-    })
-    .join('');
-  const axis = labels.length
-    ? `<div style="display:flex;gap:4px;margin-top:4px;font-size:11px;color:#64748b">${labels
-        .slice(0, values.length)
-        .map((l) => `<div style="flex:1;text-align:center;overflow:hidden">${escapeHtml(l)}</div>`)
-        .join('')}</div>`
-    : '';
-  return `<div style="width:100%;height:100%;display:flex;flex-direction:column;padding:8px;box-sizing:border-box"><div style="flex:1;display:flex;align-items:stretch;gap:6px">${bars}</div>${axis}</div>`;
-}
-
-function buildSlideHtmlPage(slide, palette) {
-  const text = palette.text || '#111111';
-  const bg = slideBackgroundCss(slide, palette);
-
-  if (slideHasElements(slide)) {
-    const canvasW = slide.elements.canvas?.width || CANVAS_WIDTH;
-    const canvasH = slide.elements.canvas?.height || CANVAS_HEIGHT;
-    const els = [...(slide.elements.elements || [])]
-      .sort((a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0))
-      .map((el) => {
-        const p = el.placement || {};
-        const c = el.content || {};
-        const isText = el.type === 'text' || el.type === 'textbox';
-        const transformCss = placementTransformCss(p, isText ? {} : c);
-        const style = [
-          `position:absolute`,
-          `left:${Number(p.x) || 0}px`,
-          `top:${Number(p.y) || 0}px`,
-          `width:${Number(p.width) || 100}px`,
-          `height:${Number(p.height) || 100}px`,
-          `opacity:${p.opacity != null ? p.opacity : 1}`,
-          `transform:${transformCss}`,
-          `transform-origin:center center`,
-          `box-sizing:border-box`,
-          `overflow:${isText ? 'visible' : 'hidden'}`,
-        ].join(';');
-
-        if (el.type === 'group') {
-          return '';
-        }
-        if (isText) {
-          const fallback = c.color || (c.colorRole && palette[c.colorRole]) || text;
-          const ls =
-            c.letterSpacing != null ? `letter-spacing:${Number(c.letterSpacing)}em;` : '';
-          const lh = c.lineHeight != null ? `line-height:${Number(c.lineHeight)};` : 'line-height:1.25;';
-          return `<div style="${style};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap;${ls}${lh}">${htmlTextInner(c, palette, fallback)}</div>`;
-        }
-        if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
-          if (c.url) {
-            return `<img src="${escapeHtml(c.url)}" alt="" style="${style};object-fit:${escapeHtml(c.fit || 'cover')}" />`;
-          }
-          return `<div style="${style};background:#ddd;display:flex;align-items:center;justify-content:center;color:#666;font-size:14px">${escapeHtml(el.type)}</div>`;
-        }
-        if (el.type === 'shape') {
-          const bgCss = cssFromFill(c.fill, palette, palette.primary || '#0A84FF');
-          const radius =
-            c.borderRadius != null
-              ? `${c.borderRadius}px`
-              : String(c.shape || '').toLowerCase() === 'ellipse' ||
-                  String(c.shape || '').toLowerCase() === 'circle'
-                ? '50%'
-                : String(c.shape || '').toLowerCase() === 'pill'
-                  ? '999px'
-                  : String(c.shape || '').toLowerCase() === 'rounded-rect'
-                    ? '16px'
-                    : '0';
-          const border =
-            c.stroke || c.line
-              ? `border:${Number(c.strokeWidth) || 2}px solid ${escapeHtml(c.stroke || c.line)}`
-              : '';
-          return `<div style="${style};background:${escapeHtml(bgCss)};border-radius:${radius};${border}"></div>`;
-        }
-        if (el.type === 'embed') {
-          const title = escapeHtml(c.title || c.provider || 'Link');
-          const url = escapeHtml(c.url || c.src || '');
-          return `<div style="${style};background:#F8FAFC;border:1px solid #CBD5E1;padding:12px;color:${escapeHtml(text)};font-size:14px"><strong>${title}</strong><div>${url}</div></div>`;
-        }
-        if (el.type === 'chart') {
-          return `<div style="${style}">${htmlChartInner(c, palette)}</div>`;
-        }
-        if (el.type === 'table') {
-          return `<div style="${style};background:#f5f5f5;border:1px solid #ccc;display:flex;align-items:center;justify-content:center;color:#666">${escapeHtml(el.type)}</div>`;
-        }
-        return '';
-      })
-      .join('\n');
-
-    return `<section class="slide" style="width:${canvasW}px;height:${canvasH}px;position:relative;background:${escapeHtml(bg)};overflow:hidden">${els}</section>`;
-  }
-
-  const content = slide.content || {};
-  const bullets = bulletsFromContent(content)
-    .map((b) => `<li>${escapeHtml(b)}</li>`)
-    .join('');
-  const image = slide.imageRef?.url
-    ? `<img src="${escapeHtml(slide.imageRef.url)}" alt="" />`
-    : '';
-  return `
-    <section class="slide legacy">
-      <div class="text">
-        <h1>${escapeHtml(content.title || `Slide ${slide.order}`)}</h1>
-        ${content.subtitle ? `<h2>${escapeHtml(content.subtitle)}</h2>` : ''}
-        ${content.body ? `<p>${escapeHtml(content.body)}</p>` : ''}
-        ${bullets ? `<ul>${bullets}</ul>` : ''}
-      </div>
-      <div class="media">${image}</div>
-    </section>`;
-}
-
-async function buildDeckHtml(deck, { slideId } = {}) {
-  const palette = deck.themeTokens?.palette || {};
-  const text = palette.text || '#111111';
-  let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
-  if (slideId) slides = slides.filter((s) => s.id === slideId);
-  slides = await attachPresignedMediaToSlides(slides);
-
-  const pages = slides.map((slide) => buildSlideHtmlPage(slide, palette)).join('\n');
-
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    @page { size: 13.333in 7.5in; margin: 0; }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: ${escapeHtml(text)}; }
-    .slide { page-break-after: always; }
-    .slide span { background-repeat: no-repeat; }
-    .slide.legacy {
-      width: 13.333in; height: 7.5in;
-      box-sizing: border-box; padding: 0.6in; display: flex; gap: 0.4in;
-      background: ${escapeHtml(palette.bg || '#ffffff')};
-    }
-    .legacy .text { flex: 1; }
-    .legacy .media { width: 4.5in; display: flex; align-items: center; justify-content: center; }
-    .legacy .media img { max-width: 100%; max-height: 5.5in; object-fit: contain; }
-    .legacy h1 { font-size: 36px; margin: 0 0 12px; }
-    .legacy h2 { font-size: 20px; margin: 0 0 16px; font-weight: normal; }
-    .legacy p, .legacy li { font-size: 18px; line-height: 1.4; }
-  </style>
-</head>
-<body>${pages}</body>
-</html>`;
 }
 
 async function withBrowserPage(fn, { args = [] } = {}) {

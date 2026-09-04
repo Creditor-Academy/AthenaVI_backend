@@ -286,6 +286,31 @@ Details: [`PRESENTATION_CREDITS_FRONTEND.md`](PRESENTATION_CREDITS_FRONTEND.md).
 
 ---
 
+## My Work / dashboard preview modal
+
+When the user clicks a presentation card, show a **deck preview** (all slides as images), then **Edit** opens the canvas editor.
+
+**Do not** put list `thumbnailUrl` or `imageRef.url` in a big `<img>` as the modal body — that is a photo *on* the slide, not the slide.
+
+| Step | Call |
+|------|------|
+| Card grid | `GET .../presentations` or `GET .../library?category=presentation` — use `thumbnailUrl` for the **card** only |
+| Modal open | `GET .../presentations/:id/preview` |
+| Poll while `nextPollMs > 0` | Same URL + `If-None-Match: <ETag>` (304 = unchanged) |
+| Edit | Navigate to editor → `GET .../presentations/:id` (full `elements`) |
+| Download | Existing `POST .../export` — never use export to fill the modal |
+
+**Modal UI**
+
+1. Main pane + filmstrip: `<img src={slide.previewImageUrl}>` in a 16:9 or 4:3 box (`object-fit: contain`). Same URL for both (browser cache).
+2. Footer: `slideCount`, deck `status`, `aspectRatio`.
+3. If `previewStatus !== READY`, poll every `nextPollMs` (usually 1000). Stop when READY or ~20s; keep placeholders for PENDING slides.
+4. Do **not** live-render the canvas in this modal.
+
+Snapshots are generated in the background after generate / canvas save / theme / brand kit. First open of an old deck may return `PARTIAL` while JPEGs catch up.
+
+---
+
 ## Listing projects in a folder
 
 `GET /api/workspaces/:workspaceId/projects?folderId=`
@@ -437,6 +462,7 @@ Only when session `canComment` is true (`linkRole === "reviewer"`). Full contrac
 ## Suggested UI checklist
 
 - [ ] Create modal: **AI | Blank | Template**  
+- [ ] My Work card click → `GET .../preview` filmstrip (images); **Edit** → full get-by-id editor  
 - [ ] Theme + layout pickers from workspace GET endpoints  
 - [ ] AI: outline review → generate progress bar (`status`)  
 - [ ] Canvas: 1920×1080 stage, palette from `presentation-elements`, autosave canvas  
@@ -464,6 +490,7 @@ GET    /api/workspaces/:workspaceId/presentation-themes
 GET    /api/workspaces/:workspaceId/presentation-elements
 
 GET    /api/workspaces/:workspaceId/presentations/:presentationId
+GET    .../preview
 GET    .../status
 GET    .../credit-estimate
 POST   .../outline

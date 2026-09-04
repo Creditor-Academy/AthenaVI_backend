@@ -10,6 +10,14 @@ const {
   agendaThreeColumnChromeSpecs,
   agendaThreeColumnOverlayPlacements,
 } = require('./agendaThreeColumn');
+const {
+  agendaThreeCardsChromeSpecs,
+  agendaThreeCardsOverlayPlacements,
+} = require('./agendaThreeCards');
+const {
+  agendaHeroCardsChromeSpecs,
+  agendaHeroCardsOverlayPlacements,
+} = require('./agendaHeroCards');
 function columnsVariantFromSchema(schema) {
   const variant = schema?.preview?.agendaVariant
   if (variant === 'panels' || variant === 'cards' || variant === 'step' || variant === 'coloured') return variant
@@ -18,7 +26,16 @@ function columnsVariantFromSchema(schema) {
 }
 
 function agendaColumnsChromeSpecs(family, variant = 'default') {
-  if (family === 'three_col' && variant === 'coloured') {
+  if (family === 'hero' && variant === 'cards') {
+    return agendaThreeCardsChromeSpecs({ hero: true })
+  }
+  if (family === 'hero' && variant !== 'panels') {
+    return agendaHeroCardsChromeSpecs()
+  }
+  if (family === 'three_col' && variant === 'cards') {
+    return agendaThreeCardsChromeSpecs()
+  }
+  if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnChromeSpecs()
   }
   const { specs, pushIcon, pushCard, pushBadge, pushArrow } = createAgendaSpecBuilder()
@@ -58,7 +75,16 @@ function agendaColumnsChromeSpecs(family, variant = 'default') {
 }
 
 function agendaColumnsOverlayPlacements(gx, gy, gw, gh, family, variant = 'default') {
-  if (family === 'three_col' && variant === 'coloured') {
+  if (family === 'hero' && variant === 'cards') {
+    return agendaThreeCardsOverlayPlacements(gx, gy, gw, gh, { hero: true })
+  }
+  if (family === 'hero' && variant !== 'panels') {
+    return agendaHeroCardsOverlayPlacements(gx, gy, gw, gh)
+  }
+  if (family === 'three_col' && variant === 'cards') {
+    return agendaThreeCardsOverlayPlacements(gx, gy, gw, gh)
+  }
+  if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnOverlayPlacements(gx, gy, gw, gh)
   }
   const overlay = { items: [], columns: [], milestones: [], heading: null }

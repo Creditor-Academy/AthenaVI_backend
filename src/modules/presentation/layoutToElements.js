@@ -37,6 +37,30 @@ const {
   specToThreeColumnContent,
   isAgendaThreeColumnTextSlot,
 } = require('./diagrams/agendaThreeColumn');
+const {
+  agendaThreeCardsGraphicFrame,
+  agendaThreeCardsChromeSpecs,
+  specToThreeCardsContent,
+  isAgendaThreeCardsLayout,
+  isAgendaThreeCardsHeroLayout,
+} = require('./diagrams/agendaThreeCards');
+const {
+  agendaHeroCardsGraphicFrame,
+  specToHeroCardsContent,
+  isAgendaHeroCardsLayout,
+} = require('./diagrams/agendaHeroCards');
+const {
+  agendaNumberedBlocksGraphicFrame,
+  specToNumberedBlocksContent,
+  isAgendaNumberedBlocksLayout,
+  isAgendaNumberedBlocksTextSlot,
+} = require('./diagrams/agendaNumberedBlocks');
+const {
+  agendaNumberedTimelineGraphicFrame,
+  specToNumberedTimelineContent,
+  isAgendaNumberedTimelineLayout,
+  isAgendaNumberedTimelineTextSlot,
+} = require('./diagrams/agendaNumberedTimeline');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
 const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, packFunnelStageTextBlocks, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
@@ -8756,27 +8780,48 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const { family, variant } = resolveAgendaMeta(layoutSchema);
   const layoutId = layoutSchema?.layout_id || layoutSchema?.id || layoutSchema?.layoutId || '';
   const isColouredThreeCol = isAgendaThreeColumnColouredLayout(layoutId, family, variant);
+  const isThreeCards = isAgendaThreeCardsLayout(layoutId, family, variant);
+  const isThreeCardsHero = isAgendaThreeCardsHeroLayout(layoutId, family, variant);
+  const isHeroCards = isAgendaHeroCardsLayout(layoutId, family, variant);
+  const isNumberedBlocks = isAgendaNumberedBlocksLayout(layoutId, family, variant);
+  const isNumberedTimeline = isAgendaNumberedTimelineLayout(layoutId, family, variant);
+  const isRibbonCards = isThreeCards || isThreeCardsHero;
+  const stacked = isColouredThreeCol || isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline;
   const itemCount = layoutSchema?.preview?.agendaItems?.length
     || layoutSchema?.preview?.milestones?.length
     || (doc.elements || []).filter((el) => /^ITEM_\d+$/i.test(String(el.slotId || ''))).length
     || 4;
 
-  const frame = isColouredThreeCol
-    ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
-    : agendaGraphicFrame(canvasW, canvasH);
-  const { graphicX, graphicY, graphicW, graphicH, headingY, headingH } = frame;
+  const frame = isThreeCardsHero
+    ? agendaThreeCardsGraphicFrame(canvasW, canvasH, { hero: true })
+    : isHeroCards
+      ? agendaHeroCardsGraphicFrame(canvasW, canvasH)
+      : isThreeCards
+        ? agendaThreeCardsGraphicFrame(canvasW, canvasH)
+        : isNumberedBlocks
+          ? agendaNumberedBlocksGraphicFrame(canvasW, canvasH)
+          : isNumberedTimeline
+            ? agendaNumberedTimelineGraphicFrame(canvasW, canvasH)
+            : isColouredThreeCol
+            ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
+            : agendaGraphicFrame(canvasW, canvasH);
+  const { graphicX, graphicY, graphicW, graphicH, headingY, headingH, heroH } = frame;
   const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
-  const columnTextColor = isColouredThreeCol ? '#FFFFFF' : textColor;
+  const columnTextColor = textColor;
 
-  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE)/i;
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_)/i;
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => CHROME_RE.test(String(el.slotId || '')))
       .map((el) => [String(el.slotId || '').toUpperCase(), el])
   );
   let elements = (doc.elements || []).filter((el) => !CHROME_RE.test(String(el.slotId || '')));
-  if (isColouredThreeCol) {
-    elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId));
+  if (isNumberedTimeline) {
+    elements = elements.filter((el) => isAgendaNumberedTimelineTextSlot(el.slotId));
+  } else if (isNumberedBlocks) {
+    elements = elements.filter((el) => isAgendaNumberedBlocksTextSlot(el.slotId));
+  } else if (stacked) {
+    elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId) || /^HERO_IMAGE$/i.test(String(el.slotId || '')));
   }
 
   const textBase = (el) => ({
@@ -8792,7 +8837,9 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     const sid = String(el.slotId || '');
     const base = textBase(el);
     if (sid.toUpperCase() === 'HEADING') {
-      const h = isColouredThreeCol
+      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline
+        ? (overlay.heading || { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH })
+        : stacked
         ? { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH }
         : (overlay.heading || { x: 72, y: headingY, width: canvasW - 144, height: headingH });
       return {
@@ -8800,13 +8847,38 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         placement: { ...h, rotation: 0, opacity: 1 },
         content: {
           ...base,
-          align: isColouredThreeCol ? 'center' : 'left',
+          align: stacked ? 'center' : 'left',
           verticalAlign: 'center',
-          fontSize: isColouredThreeCol ? 40 : 36,
+          fontSize: isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
           fontWeight: 800,
           color: textColor,
+          lineHeight: 1.1,
+          clipToSlot: true,
         },
       };
+    }
+    const itemBodyM = sid.match(/^ITEM_(\d+)_BODY$/i);
+    if (itemBodyM && isNumberedTimeline && overlay.itemBodies?.length) {
+      const box = overlay.itemBodies[Number(itemBodyM[1]) - 1];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: {
+            ...colouredColumnTextContent(el.content, {
+              color: '#6B7280',
+              fontSize: 13,
+              fontWeight: 400,
+              align: 'left',
+              verticalAlign: 'flex-start',
+            }),
+            wrap: 'wrap',
+            clipToSlot: true,
+            lineHeight: 1.35,
+          },
+        };
+      }
     }
     const itemM = sid.match(/^ITEM_(\d+)$/i);
     if (itemM && overlay.items?.length) {
@@ -8817,18 +8889,47 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           ...el,
           layer: 12,
           placement: { ...box, rotation: 0, opacity: 1 },
-          content: {
-            ...base,
-            align: 'left',
-            verticalAlign: 'center',
-            fontSize: 18,
-            fontWeight: 600,
-            color: textColor,
-          },
+          content: isNumberedTimeline
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 16,
+              fontWeight: 800,
+              align: 'center',
+              verticalAlign: 'center',
+            }),
+              wrap: 'wrap',
+              clipToSlot: true,
+              lineHeight: 1.15,
+            }
+            : isNumberedBlocks
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#4B5563',
+              fontSize: 14,
+              fontWeight: 400,
+              align: 'left',
+              verticalAlign: 'flex-start',
+            }),
+              wrap: 'wrap',
+              clipToSlot: true,
+              lineHeight: 1.35,
+            }
+            : {
+              ...base,
+              align: 'left',
+              verticalAlign: 'center',
+              fontSize: 18,
+              fontWeight: 600,
+              color: textColor,
+            },
         };
       }
     }
     const bodyM = sid.toUpperCase() === 'BODY';
+    if (bodyM && isNumberedBlocks) {
+      return el;
+    }
     if (bodyM && overlay.items?.length) {
       const box = overlay.items[0];
       return {
@@ -8855,10 +8956,31 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         return {
           ...el,
           layer: 12,
-          placement: { ...col.heading, rotation: 0, opacity: 1 },
-          content: isColouredThreeCol
+          placement: { ...col.heading, rotation: 0, opacity: isRibbonCards ? 0 : 1 },
+          content: isRibbonCards
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#ffffff',
+              fontSize: 20,
+              fontWeight: 800,
+              align: 'center',
+              verticalAlign: 'center',
+            }),
+              clipToSlot: true,
+              lineHeight: 1,
+            }
+            : isHeroCards
             ? colouredColumnTextContent(el.content, {
-              fontSize: 24,
+              color: '#111827',
+              fontSize: 20,
+              fontWeight: 800,
+              align: 'center',
+              verticalAlign: 'center',
+            })
+            : isColouredThreeCol
+            ? colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 26,
               fontWeight: 800,
               align: 'center',
               verticalAlign: 'center',
@@ -8884,14 +9006,42 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           ...el,
           layer: 12,
           placement: { ...box, rotation: 0, opacity: 1 },
-          content: isColouredThreeCol
-            ? colouredColumnTextContent(el.content, {
-              fontSize: 15,
+          content: isRibbonCards
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#4B5563',
+              fontSize: isThreeCardsHero ? 14 : 15,
               fontWeight: 400,
-              fontStyle: 'italic',
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              wrap: 'wrap',
+              clipToSlot: false,
+            }
+            : isHeroCards
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#4B5563',
+              fontSize: 14,
+              fontWeight: 400,
               align: 'center',
-              verticalAlign: 'flex-start',
-            })
+              verticalAlign: 'center',
+            }),
+              wrap: 'wrap',
+              clipToSlot: false,
+            }
+            : isColouredThreeCol
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#6B7280',
+              fontSize: 16,
+              fontWeight: 400,
+              align: 'center',
+              verticalAlign: 'center',
+            }),
+              wrap: 'wrap',
+              clipToSlot: false,
+            }
             : {
               ...base,
               align: 'center',
@@ -8917,7 +9067,33 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     return el;
   });
 
-  const specs = agendaChromeSpecs(family, variant, itemCount);
+  if (isHeroCards || isThreeCardsHero) {
+    const imageH = heroH || Math.round(canvasH * 0.36);
+    elements = elements.map((el) => {
+      if (String(el.slotId || '').toUpperCase() !== 'HERO_IMAGE') return el;
+      return {
+        ...el,
+        layer: 1,
+        placement: { x: 0, y: 0, width: canvasW, height: imageH, rotation: 0, opacity: 1 },
+      };
+    });
+  }
+
+  const specs = isRibbonCards
+    ? agendaThreeCardsChromeSpecs({
+      hero: isThreeCardsHero,
+      labels: ['Morning', 'Afternoon', 'Evening'].map((fb, i) => {
+        const el = elements.find((item) => String(item.slotId || '').toUpperCase() === `AGENDA_COL_${i + 1}_HEADING`);
+        const c = el?.content || {};
+        const text = typeof c.text === 'string'
+          ? c.text
+          : Array.isArray(c.runs)
+            ? c.runs.map((r) => r.text || '').join('')
+            : '';
+        return String(text).trim() || fb;
+      }),
+    })
+    : agendaChromeSpecs(family, variant, itemCount);
   const sx = graphicW / 1000;
   const sy = graphicH / 560;
   const chrome = specs.map((spec) => {
@@ -8946,19 +9122,28 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         slotId,
       };
     }
-    const graphic = isColouredThreeCol
-      ? specToThreeColumnContent(spec)
-      : specToGraphicContent(spec, accent, soft);
+    const graphic = isHeroCards
+      ? specToHeroCardsContent(spec)
+      : isRibbonCards
+        ? specToThreeCardsContent(spec)
+        : isNumberedBlocks
+          ? specToNumberedBlocksContent(spec)
+          : isNumberedTimeline
+            ? specToNumberedTimelineContent(spec)
+            : isColouredThreeCol
+          ? specToThreeColumnContent(spec)
+          : specToGraphicContent(spec, accent, soft);
     return {
       id: prev?.id || newElementId('shp-agenda'),
       type: 'graphic',
       layer: spec.layer || 4,
       placement,
-      content: timelineGraphicContent(
-        graphic.svg,
-        { type: 'solid', color: accent, colorRole: 'accent' },
-        slotId
-      ),
+      content: {
+        svg: graphic.svg,
+        colorMode: graphic.colorMode || 'recolorable',
+        fill: graphic.fill || { type: 'solid', color: accent, colorRole: 'accent' },
+        alt: slotId,
+      },
       role: 'decoration',
       slotId,
     };

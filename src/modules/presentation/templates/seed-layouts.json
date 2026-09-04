@@ -19013,13 +19013,13 @@
           "placeholder_text": "01 · Opening and goals",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 600,
+            "fontSize": 14,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 1
+          "max_lines": 3
         },
         {
           "id": "ITEM_2",
@@ -19028,13 +19028,13 @@
           "placeholder_text": "02 · Market context",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 600,
+            "fontSize": 14,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 1
+          "max_lines": 3
         },
         {
           "id": "ITEM_3",
@@ -19043,13 +19043,13 @@
           "placeholder_text": "03 · Product demo",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 600,
+            "fontSize": 14,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 1
+          "max_lines": 3
         },
         {
           "id": "ITEM_4",
@@ -19058,13 +19058,43 @@
           "placeholder_text": "04 · Q&A",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 600,
+            "fontSize": 14,
+            "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
             "lineHeight": 1.45
           },
-          "max_lines": 1
+          "max_lines": 3
+        },
+        {
+          "id": "ITEM_5",
+          "region": "cols 3-6, rows 8-9",
+          "role": "body",
+          "placeholder_text": "Workshop breakout",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "ITEM_6",
+          "region": "cols 7-10, rows 8-9",
+          "role": "body",
+          "placeholder_text": "Closing remarks",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.45
+          },
+          "max_lines": 3
         }
       ],
       "preview": {
@@ -19097,6 +19127,18 @@
           },
           "ITEM_4": {
             "text": "04 · Q&A",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_5": {
+            "text": "Workshop breakout",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "ITEM_6": {
+            "text": "Closing remarks",
             "variant": "body",
             "bold": false,
             "uppercase": false

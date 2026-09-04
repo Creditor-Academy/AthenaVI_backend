@@ -54,7 +54,7 @@ router.get(
 router.get(
   '/:presentationId/preview',
   validate(presentationValidations.presentationByIdSchema),
-  presentationController.getDeckPreview
+  presentationController.getPresentationPreview
 );
 
 router.put(
