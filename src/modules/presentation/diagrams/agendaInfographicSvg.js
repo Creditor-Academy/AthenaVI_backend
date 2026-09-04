@@ -42,6 +42,7 @@ const {
   specToThreeCardsContent,
 } = require('./agendaThreeCards');
 const { agendaNumberedBlocksPreviewSvg } = require('./agendaNumberedBlocks');
+const { agendaNumberedTimelinePreviewSvg } = require('./agendaNumberedTimeline');
 
 function agendaChromeSpecs(family, variant, itemCount = 4) {
   switch (family) {
@@ -124,7 +125,10 @@ function agendaDiagramInlineSvg(family, variant, colors = {}, opts = {}) {
 }
 
 function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
-  if (family === 'numbered' && variant !== 'cards' && variant !== 'path' && variant !== 'timeline') {
+  if (family === 'numbered' && (variant === 'path' || variant === 'timeline')) {
+    return agendaNumberedTimelinePreviewSvg()
+  }
+  if (family === 'numbered' && variant !== 'cards') {
     return agendaNumberedBlocksPreviewSvg(colors)
   }
   if (family === 'three_col' && variant === 'cards') {
