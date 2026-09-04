@@ -48,6 +48,7 @@ const { resolveTitlePreferredLayoutId } = require('./titleLayout.util');
 const {
   countProcessSteps,
   looksLikeLinearProcessSlide,
+  looksLikeDeviceFramesSlide,
   hasUsablePathBSpec,
   preferredProcessLayoutId,
   resolveDiagramVisualPolicy,
@@ -1015,22 +1016,46 @@ function normalizeDiagramContent(content, layoutSchema) {
   const sourceCols = content.columns || content.cards || content.features || [];
   const sourceBullets = Array.isArray(content.bullets) ? content.bullets : [];
   const sourceItems = Array.isArray(content.items) ? content.items : [];
+  const sourceBeats = Array.isArray(content.beats) ? content.beats : [];
   const summaryParts = String(content.summary || content.body || content.subtitle || '')
     .split(/[.;]\s+/)
     .map((part) => part.trim())
     .filter(Boolean);
 
+  const sourceCount = Math.max(
+    Array.isArray(sourceCols) ? sourceCols.filter(Boolean).length : 0,
+    sourceBullets.filter(Boolean).length,
+    sourceItems.filter(Boolean).length,
+    sourceBeats.filter(Boolean).length,
+    0
+  );
+  // Prefer matching layout slot count to real beats — do not invent filler steps from summary.
+  const cellTarget =
+    sourceCount > 0 && sourceCount < needed ? sourceCount : needed;
+
   const cells = [];
-  for (let i = 0; i < needed; i += 1) {
+  for (let i = 0; i < cellTarget; i += 1) {
     const schemaTitle = schemaTitleForDiagramSlot(slots, i, kind);
     let title = schemaTitle;
     let body = '';
 
+    const beat = sourceBeats[i];
+    if (beat != null) {
+      if (typeof beat === 'string') {
+        body = beat.trim();
+        title = titleWordsFromBody(body, schemaTitle || `Step ${i + 1}`);
+      } else if (typeof beat === 'object') {
+        title =
+          String(beat.label || beat.title || beat.heading || schemaTitle).trim() || schemaTitle;
+        body = String(beat.text || beat.body || beat.detail || '').trim();
+      }
+    }
+
     const col = sourceCols[i];
-    if (col && typeof col === 'object') {
+    if ((!body || !title || title === schemaTitle) && col && typeof col === 'object') {
       title = String(col.title ?? col.heading ?? col.label ?? schemaTitle).trim() || schemaTitle;
-      body = String(col.body ?? col.text ?? '').trim();
-    } else if (sourceItems[i]) {
+      body = String(col.body ?? col.text ?? '').trim() || body;
+    } else if (!body && sourceItems[i]) {
       const item = sourceItems[i];
       if (typeof item === 'string') {
         body = item.trim();
@@ -1039,13 +1064,13 @@ function normalizeDiagramContent(content, layoutSchema) {
         title = String(item.title ?? item.heading ?? item.label ?? schemaTitle).trim();
         body = String(item.body ?? item.text ?? item.detail ?? '').trim();
       }
-    } else if (sourceBullets[i]) {
+    } else if (!body && sourceBullets[i]) {
       const bullet = sourceBullets[i];
       body = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
       title = titleWordsFromBody(body, schemaTitle || `Point ${i + 1}`);
     }
 
-    if (!body) {
+    if (!body && sourceCount === 0) {
       body = summaryParts[i % Math.max(summaryParts.length, 1)] || '';
     }
     if (!title) title = schemaTitle || `Section ${i + 1}`;
@@ -1394,6 +1419,44 @@ async function resolveLayoutTemplates(contentType, { layoutIdWhitelist = null } 
   return templates || [];
 }
 
+/**
+ * Inject a preferred layout by id even when its content_type differs from the pool
+ * (e.g. 3-step process_* chart layouts while selecting diagram).
+ */
+async function ensurePreferredLayoutInTemplates(templates, preferredLayoutId) {
+  const id = String(preferredLayoutId || '').trim();
+  const list = Array.isArray(templates) ? [...templates] : [];
+  if (!id) return list;
+  const already = list.some(
+    (t) => String(t.schema?.layout_id || t.variant || t.id || '').trim() === id
+  );
+  if (already) return list;
+  let rows = [];
+  try {
+    rows = await presentationDao.findLayoutsByLayoutIds([id]);
+  } catch {
+    rows = [];
+  }
+  if (!rows?.length) {
+    const seed = loadSeedTemplates(null).find(
+      (t) => String(t.schema?.layout_id || t.variant || '').trim() === id
+    );
+    if (seed) rows = [seed];
+  }
+  for (const row of rows || []) {
+    list.unshift(row);
+  }
+  return list;
+}
+
+function layoutContentTypeFromTemplate(template, fallback = null) {
+  return (
+    String(template?.contentType || template?.schema?.content_type || fallback || '')
+      .trim()
+      .toLowerCase() || fallback
+  );
+}
+
 async function loadAllLayoutTemplates(layoutIdWhitelist = null) {
   return resolveLayoutTemplates(null, { layoutIdWhitelist });
 }
@@ -1502,11 +1565,18 @@ function contentNeedsFreshGeneration(content, layoutSchema = null) {
 
   if (layoutNeedsDiagramCellsFromSchema(layoutSchema)) {
     const cells = content.diagram?.cells || content.cells || content.quadrants || [];
-    const minCells = countDiagramCellSlotsFromSchema(layoutSchema) || 2;
+    const schemaCells = countDiagramCellSlotsFromSchema(layoutSchema) || 2;
     const validCells = cells.filter((cell) => {
       const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
       return body && !isCatalogPlaceholderText(body);
     });
+    const sourceBeats = Array.isArray(content?.beats) ? content.beats.filter(Boolean).length : 0;
+    const sourceCols = Array.isArray(content?.columns) ? content.columns.filter(Boolean).length : 0;
+    const sourceHint = Math.max(sourceBeats, sourceCols, validCells.length, 0);
+    const minCells =
+      sourceHint > 0 && sourceHint < schemaCells
+        ? Math.max(2, sourceHint)
+        : schemaCells;
     if (validCells.length < minCells) return true;
   }
 
@@ -2232,10 +2302,18 @@ function resolvePreferredLayoutIdForSlide({
     columns: content?.columns,
     visual: outlineSlide?.visual,
     intent: outlineSlide?.intent || outlineSlide?.purpose || content?.intent,
+    purpose: outlineSlide?.purpose || content?.purpose,
     contentType: layoutContentType,
   };
   if (
+    looksLikeDeviceFramesSlide(processSignals) ||
+    String(layoutContentType || '').toLowerCase() === 'device_frames'
+  ) {
+    return preferredLayoutForSlide(ctx, 'device_frames', usedLayoutIds, order) || 'grid_device_mockups_v1';
+  }
+  if (
     String(layoutContentType || '').toLowerCase() === 'diagram' ||
+    String(layoutContentType || '').toLowerCase() === 'timeline' ||
     looksLikeLinearProcessSlide(processSignals)
   ) {
     if (looksLikeLinearProcessSlide(processSignals)) {
@@ -2464,10 +2542,32 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     }
   }
 
-  normalizedSlides = normalizedSlides.map((s) => ({
-    ...s,
-    layoutId: s.layoutLocked ? s.layoutId || null : null,
-  }));
+  normalizedSlides = normalizedSlides.map((s) => {
+    const signals = {
+      title: s.title,
+      summary: s.summary,
+      beats: s.beats,
+      visual: s.visual,
+      intent: s.intent || s.purpose,
+      purpose: s.purpose,
+      contentType: s.suggestedContentType,
+    };
+    let suggested = String(s.suggestedContentType || '').toLowerCase() || null;
+    if (looksLikeDeviceFramesSlide(signals)) {
+      suggested = 'device_frames';
+    } else if (
+      looksLikeLinearProcessSlide(signals) &&
+      !['title', 'closing', 'chart', 'device_frames', 'team'].includes(String(suggested || ''))
+    ) {
+      const beatN = Array.isArray(s.beats) ? s.beats.filter(Boolean).length : 0;
+      suggested = beatN >= 5 ? 'timeline' : 'diagram';
+    }
+    return {
+      ...s,
+      suggestedContentType: suggested || s.suggestedContentType,
+      layoutId: s.layoutLocked ? s.layoutId || null : null,
+    };
+  });
 
   const sourcePrompt = sourceText != null ? String(sourceText).trim().slice(0, 8000) : data?.sourcePrompt || null;
 
@@ -3354,6 +3454,7 @@ async function planDeckLayouts(ctx, slides) {
       title: outlineSlide.title || slide.content?.title || '',
       summary: outlineSlide.summary || '',
       body: outlineSlide.summary || '',
+      beats: outlineSlide.beats || [],
       bullets: outlineSlide.summary
         ? String(outlineSlide.summary)
             .split(/[.;]\s+/)
@@ -3437,6 +3538,7 @@ async function planDeckLayouts(ctx, slides) {
         ? 'closing_contact_cta_v1'
         : 'closing_thank_you_v1';
     }
+    templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
     let ranked = [];
     try {
       const profile = toSlideContentProfile({
@@ -3444,7 +3546,8 @@ async function planDeckLayouts(ctx, slides) {
         purpose: outlineSlide.purpose || outlineSlide.intent || null,
         suggestedContentType: layoutContentType,
         slideNumber: Number(slide.order),
-        ...(galleryOverrides ? { body: '', summary: '', bullets: [] } : {}),
+        wizardDensity: ctx.density || null,
+        ...(galleryOverrides ? { body: '', summary: '', bullets: [], allowPureImageGrid: true } : {}),
         ...(galleryOverrides?.imageCount ? { imageCount: galleryOverrides.imageCount } : {}),
       });
       const deckLayouts = templates.map((t) => toDeckLayout(t));
@@ -3459,6 +3562,9 @@ async function planDeckLayouts(ctx, slides) {
         if (idx > 0) {
           const hit = ranked.splice(idx, 1)[0];
           ranked.unshift(hit);
+        } else if (idx < 0) {
+          // Preferred injected but not ranked (hard-reject) — still surface it first for process match.
+          ranked.unshift({ layoutId: preferredLayoutId, score: 99 });
         }
       }
     } catch {
@@ -3481,6 +3587,9 @@ async function planDeckLayouts(ctx, slides) {
       banned.add(String(prevPlannedId));
     }
     const topLayoutId =
+      (preferredLayoutId && !banned.has(String(preferredLayoutId))
+        ? preferredLayoutId
+        : null) ||
       (galleryPolicy?.preferredLayoutId && !banned.has(String(galleryPolicy.preferredLayoutId))
         ? galleryPolicy.preferredLayoutId
         : null) ||
@@ -3494,6 +3603,16 @@ async function planDeckLayouts(ctx, slides) {
       ctx.layoutIdByOrder[Number(slide.order)] = String(topLayoutId);
       if (Number(slide.order) === 1) ctx.titleLayoutId = String(topLayoutId);
       if (isFullBleedLayoutId(topLayoutId)) fullBleedUsed = true;
+      const topTemplate = templates.find(
+        (t) => String(t.schema?.layout_id || t.variant || '') === String(topLayoutId)
+      );
+      const typed = layoutContentTypeFromTemplate(topTemplate, layoutContentType);
+      if (typed) {
+        planned[Number(slide.order)].layoutContentType = typed;
+        planned[Number(slide.order)].layoutId = String(topLayoutId);
+        planned[Number(slide.order)].template = topTemplate || null;
+        planned[Number(slide.order)].schema = topTemplate?.schema || null;
+      }
     }
   }
 
@@ -3542,6 +3661,8 @@ async function resolvePreGenerationLayout({
   const stubContent = {
     title: resolvedTitle || outlineSlide.title || '',
     summary: resolvedSummary,
+    body: resolvedSummary || '',
+    beats: outlineSlide.beats || [],
     bullets: [],
   };
   const galleryPolicy = resolvePureGallerySlidePolicy({
@@ -3609,6 +3730,7 @@ async function resolvePreGenerationLayout({
     preferVisuals,
     slideOrder: slide.order,
   });
+  templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
   const { layoutId, template } = await pickLayoutForGeneratedSlide({
     content: stubContent,
     templates,
@@ -3626,11 +3748,12 @@ async function resolvePreGenerationLayout({
     theme: ctx.themeTokens || ctx.theme || null,
   });
 
+  const resolvedType = layoutContentTypeFromTemplate(template, layoutContentType);
   return {
     layoutId,
     template,
     schema: template?.schema || null,
-    layoutContentType,
+    layoutContentType: resolvedType || layoutContentType,
     policy,
   };
 }
@@ -3736,10 +3859,24 @@ function generationHintsFromLayout(layoutSchema) {
   }
   if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
     hints.ctaFormat =
-      'Topic-specific CTA — never use generic "Book a demo" unless the deck is explicitly sales/demo.';
+      'Offer-style CTA: strong verb + concrete outcome (include a time, number, or specificity when the brief supports it). Ban "Book a demo / Get started / Learn more / Contact us" unless the deck is explicitly a sales/demo pitch. Prefer shapeDecisions.CTA.behind "pill".';
   }
   if (ct === 'title' || (layoutId.includes('title') && ct === 'title')) {
-    hints.titleTone = 'Require titleRuns with 2-3 segments; accent on final line.';
+    hints.titleTone =
+      'Spoken headline (5–12 words), period OK — an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
+  }
+  const hasEyebrow = slots.some((s) => {
+    const role = String(s.role || '').toLowerCase();
+    const id = String(s.id || '').toUpperCase();
+    return role === 'eyebrow' || id === 'EYEBROW' || id === 'KICKER';
+  });
+  if (hasEyebrow) {
+    hints.eyebrowFormat =
+      'Fill eyebrow/subtitle kicker as a short UPPERCASE role line (2–5 words), not a second headline.';
+  }
+  if (ct !== 'title' && ct !== 'closing' && ct !== 'chart' && ct !== 'device_frames') {
+    hints.bodyVoice =
+      'Prefer situational or sensory detail over feature laundry lists when density allows; one concrete scene beats three vague benefits.';
   }
   return Object.keys(hints).length ? hints : null;
 }
@@ -3783,11 +3920,19 @@ function layoutContextFromSchema(layoutSchema) {
       suggestedBehind: s.shapeHint?.suggestedBehind || null,
       kind: s.shapeHint?.kind || null,
     }));
+  const hasSplitTitleEdgeFade =
+    (String(contentType || '').toLowerCase() === 'title' || /^title_/i.test(String(layoutId || ''))) &&
+    hasHeroImage &&
+    slots.some((s) =>
+      ['heading', 'title', 'subheading', 'body', 'subtitle'].includes(String(s.role || '').toLowerCase())
+    );
+
   return {
     layoutId,
     hasImageOverlay,
     hasHeroImage,
     hasTextOverImageRisk,
+    hasSplitTitleEdgeFade,
     shapePolicy: layoutSchema?.shapePolicy || 'ai_decides',
     shapeHints,
     isSimpleSlide: ['title', 'image+text', 'bullet_list', 'section_divider', 'closing', 'quote', 'grid'].includes(
@@ -4228,17 +4373,20 @@ async function processSlide(ctx, slide) {
       const plannedMatches =
         plannedEntry?.template &&
         plannedEntry?.layoutId &&
-        String(plannedEntry.layoutContentType || '') === String(policy.layoutContentType);
+        (String(plannedEntry.layoutContentType || '') === String(policy.layoutContentType) ||
+          /process_|diagram_process/i.test(String(plannedEntry.layoutId)));
       const plannedMatchesOutline =
         outlineExplicit &&
         plannedEntry?.template &&
         plannedEntry?.layoutId &&
-        String(plannedEntry.layoutContentType || '').toLowerCase() === outlineType;
+        (String(plannedEntry.layoutContentType || '').toLowerCase() === outlineType ||
+          /process_|diagram_process/i.test(String(plannedEntry.layoutId)));
       const preselectedMatches =
         preSelectedTemplate &&
         preSelectedLayoutId &&
-        String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
-          String(policy.layoutContentType);
+        (String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
+          String(policy.layoutContentType) ||
+          /process_|diagram_process/i.test(String(preSelectedLayoutId)));
       const galleryBlocksReuse =
         policy.galleryPreferredLayoutId &&
         ((preSelectedLayoutId && isTextImageGridLayout(preSelectedLayoutId)) ||
@@ -4249,7 +4397,14 @@ async function processSlide(ctx, slide) {
       if (canReusePreselected) {
         template = plannedEntry?.template || preSelectedTemplate;
         layoutId = plannedEntry?.layoutId || preSelectedLayoutId;
-        if (plannedMatchesOutline && !plannedMatches && plannedEntry?.layoutContentType) {
+        const typed = layoutContentTypeFromTemplate(template, plannedEntry?.layoutContentType);
+        if (typed) {
+          policy.layoutContentType = typed;
+          contentType = typed;
+          if (content && typeof content === 'object') {
+            content.content_type = contentType;
+          }
+        } else if (plannedMatchesOutline && !plannedMatches && plannedEntry?.layoutContentType) {
           policy.layoutContentType = plannedEntry.layoutContentType;
           contentType = plannedEntry.layoutContentType;
           if (content && typeof content === 'object') {
@@ -4306,6 +4461,7 @@ async function processSlide(ctx, slide) {
         ) {
           preferredLayoutId = preferredLayoutId || 'closing_contact_cta_v1';
         }
+        templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
         ({ layoutId, template } = await pickLayoutForGeneratedSlide({
           content,
           templates,
@@ -4326,6 +4482,12 @@ async function processSlide(ctx, slide) {
           debug: layoutDebug,
           theme: ctx.themeTokens || ctx.theme || null,
         }));
+        const typed = layoutContentTypeFromTemplate(template, policy.layoutContentType);
+        if (typed) {
+          policy.layoutContentType = typed;
+          contentType = typed;
+          if (content && typeof content === 'object') content.content_type = typed;
+        }
       }
     }
     if (!layoutId && existingLayoutId) layoutId = existingLayoutId;
@@ -4475,11 +4637,13 @@ async function processSlide(ctx, slide) {
                 '',
               themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
               themeColorTreatment: imageColorTreatmentForCtx(ctx),
+              themeAppearance: ctx.themeTokens?.appearance || '',
               wizardBrief: ctx.wizardBrief || '',
               authorImagePrompt: resolveAuthorImagePrompt(content) || outlineSlide.visual || '',
               layoutContext: {
                 ...layoutCtx,
                 hasChartSlot: layoutHasChartSlot(template?.schema),
+                themeAppearance: ctx.themeTokens?.appearance || '',
               },
               layoutId: template?.schema?.layout_id || layoutId || null,
               hasImageOverlay: layoutCtx.hasImageOverlay,
@@ -5612,11 +5776,13 @@ async function regenerateSlide({
                   '',
                 themeImageStyle: ctx.imageStylePhrase || ctx.themeTokens?.imageStyle,
                 themeColorTreatment: imageColorTreatmentForCtx(ctx),
+                themeAppearance: ctx.themeTokens?.appearance || '',
                 wizardBrief: ctx.wizardBrief || '',
                 authorImagePrompt: resolveAuthorImagePrompt(content),
                 layoutContext: {
                   ...layoutCtx,
                   hasChartSlot: layoutHasChartSlot(layoutSchema),
+                  themeAppearance: ctx.themeTokens?.appearance || '',
                 },
                 layoutId: layoutSchema?.layout_id || fresh.layoutId || null,
                 hasImageOverlay: layoutCtx.hasImageOverlay,

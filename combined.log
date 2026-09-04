@@ -9199,7 +9199,6 @@
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-09-02T09:35:19.049Z"}
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-09-02T09:35:19.050Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-09-02T09:35:19.051Z"}
-<<<<<<< Updated upstream
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":4.42,"timestamp":"2026-09-02T09:35:21.440Z"}
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-09-02T10:31:30.333Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-09-02T10:31:30.336Z"}
@@ -9267,7 +9266,6 @@
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-09-02T11:15:28.622Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-09-02T11:15:28.624Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":4.42,"timestamp":"2026-09-02T11:15:30.585Z"}
-=======
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":4.42,"timestamp":"2026-09-02T09:35:21.440Z"}{"level":"info","message":"Server running on port 9000","timestamp":"2026-09-02T10:34:38.702Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-09-02T10:34:38.708Z"}
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-09-02T10:34:38.764Z"}
@@ -9329,7 +9327,6 @@
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":4.42,"timestamp":"2026-09-02T11:00:50.600Z"}
 {"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-09-02T11:07:48.702Z"}
 {"level":"error","message":"Error: Socket closed unexpectedly\n    at TLSSocket.<anonymous> (D:\\Athena VS\\AthenaVI_backend\\node_modules\\@redis\\client\\dist\\lib\\client\\socket.js:232:33)\n    at Object.onceWrapper (node:events:633:26)\n    at TLSSocket.emit (node:events:530:35)\n    at node:net:346:12\n    at TCP.done (node:_tls_wrap:650:7)","timestamp":"2026-09-02T11:25:48.662Z"}
->>>>>>> Stashed changes
 {"level":"info","message":"Server running on port 9000","timestamp":"2026-09-02T11:53:03.544Z"}
 {"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-09-02T11:53:03.550Z"}
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-09-02T11:53:03.615Z"}

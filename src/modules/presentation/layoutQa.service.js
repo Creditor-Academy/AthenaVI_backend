@@ -360,12 +360,20 @@ function validateStructuredFields(content, layoutSchema, issues) {
   }
 
   if (layoutNeedsDiagramCells(slots)) {
-    const minCells = Math.max(2, countDiagramCellSlots(slots) || 4);
+    const schemaCells = Math.max(2, countDiagramCellSlots(slots) || 4);
     const cells = diagramCellsFromContent(content);
     const validCells = cells.filter((cell) => {
       const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
       return body && !isCatalogPlaceholderText(body);
     });
+    // Allow underfill when source only provided N < schema steps (prefer rematch; don't invent filler).
+    const sourceBeats = Array.isArray(content?.beats) ? content.beats.filter(Boolean).length : 0;
+    const sourceCols = Array.isArray(content?.columns) ? content.columns.filter(Boolean).length : 0;
+    const sourceHint = Math.max(sourceBeats, sourceCols, validCells.length, 0);
+    const minCells =
+      sourceHint > 0 && sourceHint < schemaCells
+        ? Math.max(2, sourceHint)
+        : schemaCells;
     if (validCells.length < minCells) {
       issues.push({ path: 'diagram.cells', rule: 'required_structured', repairable: true });
     } else if (cells.some((cell) => isCatalogPlaceholderText(cell?.body ?? cell?.text ?? cell?.detail ?? ''))) {

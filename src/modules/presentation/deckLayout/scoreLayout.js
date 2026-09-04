@@ -170,6 +170,11 @@ function inferredVisualNeed(slide) {
   const isCover =
     Number(slide.slideNumber) === 1 || purpose === 'cover' || purpose === 'title';
   if (isCover && slide.imageCount > 0) return 'image-heavy';
+  const wizardDensity = String(slide.wizardDensity || '').toLowerCase();
+  if (wizardDensity === 'detailed' || wizardDensity === 'extensive' || slide.density === 'high') {
+    if (slide.bodyLength >= 80 || slide.bulletCount >= 3 || slide.cardCount >= 2) return 'text-heavy';
+    return 'balanced';
+  }
   if (slide.imageCount > 0 && slide.bodyLength < 120 && slide.bulletCount <= 2 && slide.cardCount <= 1) {
     return 'image-heavy';
   }
@@ -247,6 +252,26 @@ function scoreDomainIntent(slide, layout, reasons) {
     boost += 5;
     reasons.push('Layout aligns with contact/CTA closing intent');
   }
+
+  // Detailed wizard density: prefer body/heading/multi-para; demote pure bentos & full-bleed overlays.
+  const wizardDensity = String(slide.wizardDensity || '').toLowerCase();
+  const isDetailed = wizardDensity === 'detailed' || wizardDensity === 'extensive' || slide.density === 'high';
+  if (isDetailed && Number(slide.slideNumber) !== 1) {
+    const supported = layout?.supportedElements || {};
+    const pureBento = /grid_bento|grid_six_images|full_bg_image_overlay/.test(id);
+    if (pureBento) {
+      boost -= 8;
+      reasons.push('Detailed density demotes image-only / full-bleed overlay layouts');
+    } else if (supported.title && (supported.body || supported.bullets || supported.cards)) {
+      boost += 4;
+      reasons.push('Detailed density prefers heading + body/card layouts');
+    }
+    if (/two_para|three_para|four_para|bullet_split|intro_four|intro_three/.test(id)) {
+      boost += 3;
+      reasons.push('Detailed density boosts multi-para / dense text layouts');
+    }
+  }
+
   // Title / cover: boost split-hero and image-capable layouts when image intent is set.
   const isCover =
     Number(slide.slideNumber) === 1 ||

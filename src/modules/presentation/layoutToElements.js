@@ -1999,8 +1999,12 @@ function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, can
 
     const placement = targetEl.placement || regionToPlacement(targetSlot.region, canvas);
     let fillRole = 'cardBg';
-    if (behind === 'pill') fillRole = 'primary';
+    if (behind === 'pill') fillRole = 'accent';
     if (behind === 'surface') fillRole = 'surface';
+    // Prefer accent; fall back to primary when accent missing from palette.
+    if (behind === 'pill' && !paletteColor(palette, 'accent', null)) {
+      fillRole = 'primary';
+    }
 
     elements.unshift({
       id: newElementId('shp'),
@@ -2018,6 +2022,33 @@ function applyRuntimeShapeDecisions(doc, layoutSchema, content, themeTokens, can
       },
       role: 'decoration',
     });
+
+    // Pill behind CTA must use on-accent label (cream/white), not primary-on-primary.
+    if (behind === 'pill') {
+      const slotRole = String(targetSlot.role || '').toLowerCase();
+      const sid = String(slotId || '').toUpperCase();
+      if (
+        (slotRole === 'cta' || sid === 'CTA' || /^CTA(_|$)/.test(sid)) &&
+        (targetEl.type === 'text' || targetEl.type === 'textbox')
+      ) {
+        const onAccent =
+          paletteColor(palette, 'textOnImage', null) ||
+          paletteColor(palette, 'bg', null) ||
+          '#FFFFFF';
+        targetEl.content = {
+          ...(targetEl.content || {}),
+          color: onAccent,
+          colorRole: 'textOnImage',
+        };
+        if (Array.isArray(targetEl.content.runs) && targetEl.content.runs.length) {
+          targetEl.content.runs = targetEl.content.runs.map((run) => ({
+            ...run,
+            color: onAccent,
+            colorRole: 'textOnImage',
+          }));
+        }
+      }
+    }
 
     if (decision.mask && decision.mask !== 'none' && targetEl.type === 'image') {
       targetEl.content = {
@@ -3149,6 +3180,15 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
+    // Keep on-accent CTA labels set by pill shape decisions (cream/white on accent fill).
+    const elRole = String(el.role || '').toLowerCase();
+    const slotKey = String(el.slotId || '').toUpperCase();
+    if (
+      (elRole === 'cta' || slotKey === 'CTA' || /^CTA(_|$)/.test(slotKey)) &&
+      (role === 'textonimage' || role === 'textonimagemuted')
+    ) {
+      continue;
+    }
     const colorRoleRaw = String(el.content?.colorRole || '');
 
     // Semantic repair target:

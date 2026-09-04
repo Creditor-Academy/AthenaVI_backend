@@ -19,6 +19,7 @@ function buildSystem() {
     '- Always include negative_terms covering: text, words, letters, captions, typography, watermarks, logos.',
     '- Do not describe layout chrome (borders, cards, circles) — shapes are rendered by the layout engine; describe the photo subject only.',
     '- For side-panel hero images: single focal subject, uncluttered background, works in rectangular cover crop.',
+    '- When light-theme split title / cover with edge fade: high-key scene that matches the slide background temperature (white/cream field); soft empty space on the fade side so the photo dissolves into the field — no hard panel edge, no dark vignette.',
     '- When overlay slide: prefer darker overall exposure, soft vignette, or clear negative space for headline zone.',
     '- When DEVICE_IMAGE / PHONE_IMAGE / WATCH_IMAGE: flat mobile app UI screenshot only — no phone/watch hardware.',
     '- When TABLET_IMAGE / LAPTOP_IMAGE: flat website or web-app UI screenshot only — no tablet/laptop hardware.',
@@ -26,6 +27,7 @@ function buildSystem() {
     '- When the layout already includes a chart element: never describe a chart, graph, dashboard, axes, or data viz photo;',
     '  photograph a related real-world subject that supports the chart story instead.',
     '- When exposure_hint is dark: image should support light overlay text.',
+    '- When exposure_hint is bright / light_blend: keep overall exposure high and background near white/cream.',
     '- Avoid cliche stock tropes: handshakes, lightbulbs, people',
     '  pointing at whiteboards, puzzle pieces, rocket ships.',
     '- Prefer specificity: "server rack in a dim data center" beats',
@@ -74,6 +76,16 @@ function buildUser(vars = {}) {
   const hasChart =
     vars.hasChartSlot === true || vars.layoutContext?.hasChartSlot === true;
 
+  const appearance = String(
+    vars.themeAppearance || vars.layoutContext?.themeAppearance || ''
+  ).toLowerCase();
+  const lightSplitBlend =
+    appearance === 'light' &&
+    (vars.layoutContext?.hasSplitTitleEdgeFade === true ||
+      (/^title_/i.test(String(vars.layoutId || '')) &&
+        !vars.hasImageOverlay &&
+        !vars.layoutContext?.hasImageOverlay));
+
   return [
     `Slide title: ${vars.slideTitle || ''}`,
     slideSummary ? `Slide summary (prefer over title alone): ${slideSummary}` : '',
@@ -82,6 +94,7 @@ function buildUser(vars = {}) {
       : '',
     vars.suggestedContentType ? `Slide job / content type: ${vars.suggestedContentType}` : '',
     vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
+    appearance ? `Theme appearance: ${appearance}` : '',
     vars.visual ? `Blueprint visual (primary subject — do not ignore): ${vars.visual}` : '',
     Array.isArray(vars.previousVisuals) && vars.previousVisuals.length
       ? `Already used in this deck (do not repeat):\n${vars.previousVisuals.map((v) => `- ${v}`).join('\n')}`
@@ -91,6 +104,9 @@ function buildUser(vars = {}) {
       : '',
     vars.layoutContext?.hasTextOverImageRisk && !vars.hasImageOverlay
       ? 'Hero/split image slide: if the photo is dark, set exposure_hint to "dark" so the renderer can apply a scrim and light text.'
+      : '',
+    lightSplitBlend
+      ? 'Light split-title with edge fade: high-key photographic scene matching a white/cream slide field; soft empty space on the text-adjacent edge; set exposure_hint to "bright"; avoid dark panels and hard vertical cuts.'
       : '',
     /device_/i.test(String(vars.layoutId || ''))
       ? 'Device mockup layout: phone/watch slots → mobile app UI screenshots; tablet/laptop slots → website UI screenshots. Never photographic scenes. No device hardware in the image.'

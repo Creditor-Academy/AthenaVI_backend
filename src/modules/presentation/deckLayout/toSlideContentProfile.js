@@ -135,13 +135,21 @@ function toSlideContentProfile(input = {}) {
           listLen(input.members),
           listLen(input.plans),
           listLen(input.columns),
-          listLen(input.agenda?.columns)
+          listLen(input.agenda?.columns),
+          listLen(input.beats),
+          listLen(input.diagram?.cells),
+          listLen(input.cells)
         );
 
   const columnCount =
     typeof input.columnCount === 'number'
       ? input.columnCount
-      : Math.max(listLen(input.columns), listLen(input.agenda?.columns), cardCount || 0) || undefined;
+      : Math.max(
+          listLen(input.columns),
+          listLen(input.agenda?.columns),
+          listLen(input.beats),
+          cardCount || 0
+        ) || undefined;
 
   const hasChart = input.hasChart != null ? Boolean(input.hasChart) : hasChartPayload(input.chart);
   const hasTable = input.hasTable != null ? Boolean(input.hasTable) : hasTablePayload(input.table);
@@ -166,7 +174,15 @@ function toSlideContentProfile(input = {}) {
   const density =
     input.density === 'low' || input.density === 'medium' || input.density === 'high'
       ? input.density
-      : inferDensity(counts);
+      : (() => {
+          const wizard = String(input.wizardDensity || input.textDensityWizard || '').toLowerCase();
+          if (wizard === 'detailed' || wizard === 'extensive') return 'high';
+          if (wizard === 'concise' || wizard === 'minimal') {
+            const inferred = inferDensity(counts);
+            return inferred === 'high' ? 'medium' : 'low';
+          }
+          return inferDensity(counts);
+        })();
 
   const profile = {
     slideNumber: input.slideNumber != null ? Number(input.slideNumber) : undefined,
@@ -184,6 +200,8 @@ function toSlideContentProfile(input = {}) {
     hasTable,
     hasQuote,
     density,
+    wizardDensity: String(input.wizardDensity || '').toLowerCase() || undefined,
+    allowPureImageGrid: input.allowPureImageGrid === true,
     wordCount: Math.max(
       0,
       Math.round((titleLength + subtitleLength + bodyLength) / 6) +
@@ -194,9 +212,9 @@ function toSlideContentProfile(input = {}) {
     visualWeight:
       hasChart || hasTable || metricCount >= 3
         ? 'data-heavy'
-        : imageCount > 0 && bodyLength < 140
+        : imageCount > 0 && bodyLength < 140 && density !== 'high'
           ? 'image-heavy'
-          : bodyLength >= 180 || bulletCount >= 5
+          : bodyLength >= 180 || bulletCount >= 5 || density === 'high'
             ? 'text-heavy'
             : 'balanced',
     contentStructure:
@@ -206,7 +224,7 @@ function toSlideContentProfile(input = {}) {
           ? 'cards'
           : bulletCount >= 3
             ? 'list'
-            : imageCount > 0
+            : imageCount > 0 && density !== 'high'
               ? 'visual'
               : 'narrative',
     chartType: String(input.chartType || input.chart?.type || '').toLowerCase() || undefined,

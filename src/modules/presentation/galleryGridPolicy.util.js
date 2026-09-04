@@ -204,8 +204,41 @@ function resolvePureGallerySlidePolicy({
     visualIntent: outlineSlide?.visualIntent || outlineSlide?.visual_intent,
     wizardBrief: ctx?.wizardBrief || ctx?.sourceText || ctx?.outline?.sourcePrompt || '',
   };
+
+  const density = String(ctx?.density || '').toLowerCase();
+  const hay = textHay([
+    signals.title,
+    signals.summary,
+    signals.beats,
+    signals.bullets,
+    signals.visual,
+    signals.intent,
+    signals.wizardBrief,
+  ]);
+  const purposeHay = `${String(outlineSlide?.purpose || '')} ${String(outlineSlide?.intent || '')} ${hay}`;
+  const explanatory =
+    /problem|how.?it.?works|feature|benefit|solution|approach|friction|overview|explain|workflow|process/i.test(
+      purposeHay
+    );
+  const substantial = hasSubstantialCopy({
+    summary: signals.summary,
+    body: content?.body || signals.summary,
+    bullets: signals.bullets,
+    columns: signals.columns,
+    beats: signals.beats,
+  });
+
+  // Detailed / explanatory slides need text slots — never force pure image bentos.
+  if (density === 'detailed') return null;
+  if (substantial) return null;
+  if (explanatory && !strongGalleryOnlyCue(hay, signals.visual)) return null;
+
   if (!looksLikeImageLedGallery(signals)) return null;
+  // Prefer text+image grids when beats exist but copy is non-trivial and not gallery-only.
   const n = beatCount(signals);
+  if (n >= 2 && !strongGalleryOnlyCue(hay, signals.visual) && String(signals.summary || '').trim().length > 60) {
+    return null;
+  }
   return {
     layoutContentType: 'grid',
     preferredLayoutId: preferredPureGalleryLayoutId(n, usedLayoutIds),
