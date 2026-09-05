@@ -172,6 +172,8 @@ const { isPricingFourPlansLayout, layoutPricingFourPlans } = require('./diagrams
 const { isPricingFourPlansFeaturedLayout, layoutPricingFourPlansFeatured } = require('./diagrams/pricingFourPlansFeatured');
 const { isPricingFourParaLayout, layoutPricingFourPara } = require('./diagrams/pricingFourPara');
 const { isPricingFourParaCardsLayout, layoutPricingFourParaCards } = require('./diagrams/pricingFourParaCards');
+const { isPricingComparisonTableLayout, layoutPricingComparisonTable } = require('./diagrams/pricingComparisonTable');
+const { isPricingComparisonCardsLayout, layoutPricingComparisonCards } = require('./diagrams/pricingComparisonCards');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -3232,7 +3234,9 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isPricingFourPlansLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
       (isPricingFourPlansFeaturedLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
       (isPricingFourParaLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
-      (isPricingFourParaCardsLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY'))
+      (isPricingFourParaCardsLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
+      (isPricingComparisonTableLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || /^FEATURE_\d+$/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'HEADING')) ||
+      (isPricingComparisonCardsLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || '')))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -9554,6 +9558,10 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutPricingThreeHighlight(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingThreeHighlightSplitLayout(layoutSchema?.layout_id)) {
     next = layoutPricingThreeHighlightSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingComparisonTable(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {
