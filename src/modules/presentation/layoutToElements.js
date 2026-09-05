@@ -92,6 +92,19 @@ const {
   isAgendaSplitPanelLayout,
   isAgendaSplitPanelTextSlot,
 } = require('./diagrams/agendaSplitPanel');
+const {
+  agendaTimelineHexGraphicFrame,
+  specToTimelineHexContent,
+  isAgendaTimelineHexLayout,
+  isAgendaTimelineHexTextSlot,
+} = require('./diagrams/agendaTimelineHex');
+const {
+  agendaVerticalRoadmapGraphicFrame,
+  specToVerticalRoadmapContent,
+  isAgendaVerticalRoadmapLayout,
+  isAgendaVerticalRoadmapTextSlot,
+  VR_PALETTE,
+} = require('./diagrams/agendaVerticalRoadmap');
 const { cycleDiagramInlineSvg, cycleSegmentInlineSvg, cycleSegmentPlacement, CYCLE_SEGMENT_COLORS, cycleOverlayPlacements, cycleNodePalette, cycleNodeTopArcSvg, cycleNodeBotArcSvg, cycleNodeIconSvg, CYCLE_RING_N, CYCLE_RING_COLORS, CYCLE_RING_GEOM, cycleRingSegSvg, cycleRingSegPlacement, cycleRingDiamondSvg, cycleRingCalloutSvg, cycleRingCallouts } = require('./diagrams/diagramCycleSvg');
 const { funnelStageInlineSvg, funnelStagePlacement, FUNNEL_TITLE_COLORS, FUNNEL_GEOM, FUNNEL_STAGE_COLORS, funnelOverlayPlacements, packFunnelStageTextBlocks, FUNNEL_H_GEOM, funnelHSegInlineSvg, funnelHSegPlacement, funnelHOverlayPlacements } = require('./diagrams/diagramFunnelSvg');
 const { matrixQuadPlacement, matrixArrowPlacement, matrixArrowInlineSvg, MATRIX_GEOM, MATRIX_QUAD_COLORS, MATRIX_ARROW_COLOR, matrixOverlayPlacements, MATRIX_GRID_COLORS, MATRIX_Q_TINTS, MATRIX_Q_TITLE, MATRIX_Q_AXIS, matrixQuadrantCrossInlineSvg } = require('./diagrams/diagramMatrixSvg');
@@ -8861,6 +8874,8 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const isAgendaCards = isAgendaCardsLayout(layoutId, family, variant);
   const isTwoColRibbon = isAgendaTwoColumnRibbonLayout(layoutId, family, variant);
   const isSplitPanel = isAgendaSplitPanelLayout(layoutId, family, variant);
+  const isTimelineHex = isAgendaTimelineHexLayout(layoutId, family, variant);
+  const isVerticalRoadmap = isAgendaVerticalRoadmapLayout(layoutId, family, variant);
   const isRibbonCards = isThreeCards || isThreeCardsHero;
   const stacked = isColouredThreeCol || isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline;
   const itemCount = layoutSchema?.preview?.agendaItems?.length
@@ -8888,6 +8903,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? agendaTwoColumnRibbonGraphicFrame(canvasW, canvasH)
             : isSplitPanel
             ? agendaSplitPanelGraphicFrame(canvasW, canvasH)
+            : isTimelineHex
+            ? agendaTimelineHexGraphicFrame(canvasW, canvasH)
+            : isVerticalRoadmap
+            ? agendaVerticalRoadmapGraphicFrame(canvasW, canvasH)
             : isColouredThreeCol
             ? agendaThreeColumnGraphicFrame(canvasW, canvasH)
             : agendaGraphicFrame(canvasW, canvasH);
@@ -8895,7 +8914,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
   const columnTextColor = textColor;
 
-  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_|SP_)/i;
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_|SP_|TLH_|VR_)/i;
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => CHROME_RE.test(String(el.slotId || '')))
@@ -8916,6 +8935,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     elements = elements.filter((el) => isAgendaTwoColumnRibbonTextSlot(el.slotId));
   } else if (isSplitPanel) {
     elements = elements.filter((el) => isAgendaSplitPanelTextSlot(el.slotId));
+  } else if (isTimelineHex) {
+    elements = elements.filter((el) => isAgendaTimelineHexTextSlot(el.slotId));
+  } else if (isVerticalRoadmap) {
+    elements = elements.filter((el) => isAgendaVerticalRoadmapTextSlot(el.slotId));
   } else if (stacked) {
     elements = elements.filter((el) => isAgendaThreeColumnTextSlot(el.slotId) || /^HERO_IMAGE$/i.test(String(el.slotId || '')));
   }
@@ -8933,7 +8956,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
     const sid = String(el.slotId || '');
     const base = textBase(el);
     if (sid.toUpperCase() === 'HEADING') {
-      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial || isAgendaCards || isTwoColRibbon || isSplitPanel
+      const h = isRibbonCards || isHeroCards || isNumberedBlocks || isNumberedTimeline || isMinimalQuiet || isEditorial || isAgendaCards || isTwoColRibbon || isSplitPanel || isTimelineHex || isVerticalRoadmap
         ? (overlay.heading || { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH })
         : stacked
         ? { x: Math.round(canvasW * 0.06), y: headingY, width: Math.round(canvasW * 0.88), height: headingH }
@@ -8943,9 +8966,9 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         placement: { ...h, rotation: 0, opacity: 1 },
         content: {
           ...base,
-          align: isSplitPanel ? 'center' : isTwoColRibbon || isEditorial ? 'left' : stacked ? 'center' : 'left',
+          align: isTimelineHex || isVerticalRoadmap || isSplitPanel ? 'center' : isTwoColRibbon || isEditorial ? 'left' : stacked ? 'center' : 'left',
           verticalAlign: 'center',
-          fontSize: isSplitPanel || isTwoColRibbon ? 28 : isEditorial || isAgendaCards ? 32 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
+          fontSize: isTimelineHex || isVerticalRoadmap ? 30 : isSplitPanel || isTwoColRibbon ? 28 : isEditorial || isAgendaCards ? 32 : isMinimalQuiet ? 44 : isHeroCards || isThreeCardsHero ? 32 : isNumberedBlocks || isNumberedTimeline ? 34 : isThreeCards ? 36 : stacked ? 40 : 36,
           fontWeight: 800,
           color: textColor,
           lineHeight: 1.1,
@@ -8954,8 +8977,24 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
         },
       };
     }
+    if (sid.toUpperCase() === 'SUBHEADING' && isTimelineHex && overlay.subheading) {
+      return {
+        ...el,
+        layer: 12,
+        placement: { ...overlay.subheading, rotation: 0, opacity: 1 },
+        content: {
+          ...base,
+          align: 'center',
+          verticalAlign: 'center',
+          fontSize: 14,
+          fontWeight: 500,
+          color: '#374151',
+          clipToSlot: true,
+        },
+      };
+    }
     const itemBodyM = sid.match(/^ITEM_(\d+)_BODY$/i);
-    if (itemBodyM && (isNumberedTimeline || isAgendaCards || isSplitPanel) && overlay.itemBodies?.length) {
+    if (itemBodyM && (isNumberedTimeline || isAgendaCards || isSplitPanel || isTimelineHex || isVerticalRoadmap) && overlay.itemBodies?.length) {
       const box = overlay.itemBodies[Number(itemBodyM[1]) - 1];
       if (box) {
         return {
@@ -8965,14 +9004,37 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           content: {
             ...colouredColumnTextContent(el.content, {
               color: '#6B7280',
-              fontSize: isAgendaCards ? 14 : 13,
+              fontSize: isVerticalRoadmap || isTimelineHex ? 13 : isAgendaCards ? 14 : 13,
               fontWeight: 400,
               align: 'left',
               verticalAlign: 'flex-start',
             }),
             wrap: 'wrap',
             clipToSlot: true,
-            lineHeight: 1.35,
+            lineHeight: isVerticalRoadmap || isTimelineHex ? 1.45 : 1.35,
+          },
+        };
+      }
+    }
+    const yearM = sid.match(/^ITEM_(\d+)_YEAR$/i);
+    if (yearM && isVerticalRoadmap && overlay.years?.length) {
+      const i = Number(yearM[1]) - 1;
+      const box = overlay.years[i];
+      if (box) {
+        return {
+          ...el,
+          layer: 12,
+          placement: { ...box, rotation: 0, opacity: 1 },
+          content: {
+            ...colouredColumnTextContent(el.content, {
+              color: VR_PALETTE[i % VR_PALETTE.length].main,
+              fontSize: 22,
+              fontWeight: 800,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+            clipToSlot: true,
+            lineHeight: 1,
           },
         };
       }
@@ -9068,6 +9130,32 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
               clipToSlot: true,
               lineHeight: 1.1,
               letterSpacing: '0.04em',
+            }
+            : isVerticalRoadmap
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#4B5563',
+              fontSize: 16,
+              fontWeight: 700,
+              align: 'left',
+              verticalAlign: 'center',
+            }),
+              wrap: 'nowrap',
+              clipToSlot: true,
+              lineHeight: 1.1,
+            }
+            : isTimelineHex
+            ? {
+              ...colouredColumnTextContent(el.content, {
+              color: '#111827',
+              fontSize: 15,
+              fontWeight: 800,
+              align: 'center',
+              verticalAlign: 'center',
+            }),
+              wrap: 'nowrap',
+              clipToSlot: true,
+              lineHeight: 1.1,
             }
             : {
               ...base,
@@ -9362,6 +9450,10 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
             ? specToTwoColumnRibbonContent(spec)
             : isSplitPanel
             ? specToSplitPanelContent(spec)
+            : isTimelineHex
+            ? specToTimelineHexContent(spec)
+            : isVerticalRoadmap
+            ? specToVerticalRoadmapContent(spec)
             : isColouredThreeCol
           ? specToThreeColumnContent(spec)
           : specToGraphicContent(spec, accent, soft);

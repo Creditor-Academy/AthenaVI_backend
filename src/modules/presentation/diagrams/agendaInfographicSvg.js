@@ -48,6 +48,8 @@ const { agendaEditorialPreviewSvg } = require('./agendaEditorialHub');
 const { agendaCardsPreviewSvg } = require('./agendaCardsTiles');
 const { agendaTwoColumnRibbonPreviewSvg } = require('./agendaTwoColumnRibbons');
 const { agendaSplitPanelPreviewSvg } = require('./agendaSplitPanel');
+const { agendaTimelineHexPreviewSvg } = require('./agendaTimelineHex');
+const { agendaVerticalRoadmapPreviewSvg } = require('./agendaVerticalRoadmap');
 
 function agendaChromeSpecs(family, variant, itemCount = 4) {
   switch (family) {
@@ -150,6 +152,12 @@ function agendaPreviewSvg(family, variant, colors = {}, opts = {}) {
   }
   if (family === 'three_col' && variant !== 'panels' && variant !== 'step') {
     return agendaThreeColumnPreviewSvg(colors)
+  }
+  if (family === 'timeline' && variant === 'vertical') {
+    return agendaVerticalRoadmapPreviewSvg()
+  }
+  if (family === 'timeline' && variant !== 'vertical' && variant !== 'curved' && variant !== 'path') {
+    return agendaTimelineHexPreviewSvg()
   }
   if (family === 'two_col' && variant === 'split_panel') {
     return agendaSplitPanelPreviewSvg()
