@@ -164,6 +164,14 @@ const { isTeamSixLayout, layoutTeamSix } = require('./diagrams/teamSixLayout');
 const { isTeamByDepartmentLayout, layoutTeamByDepartment } = require('./diagrams/teamByDepartmentLayout');
 const { isTeamFeaturedLeadLayout, layoutTeamFeaturedLead } = require('./diagrams/teamFeaturedLeadLayout');
 const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamOrgSimpleLayout');
+const { isPricingThreePlansLayout, layoutPricingThreePlans } = require('./diagrams/pricingThreePlans');
+const { isPricingThreePlansFeaturedLayout, layoutPricingThreePlansFeatured } = require('./diagrams/pricingThreePlansFeatured');
+const { isPricingThreeHighlightLayout, layoutPricingThreeHighlight } = require('./diagrams/pricingThreeHighlight');
+const { isPricingThreeHighlightSplitLayout, layoutPricingThreeHighlightSplit } = require('./diagrams/pricingThreeHighlightSplit');
+const { isPricingFourPlansLayout, layoutPricingFourPlans } = require('./diagrams/pricingFourPlans');
+const { isPricingFourPlansFeaturedLayout, layoutPricingFourPlansFeatured } = require('./diagrams/pricingFourPlansFeatured');
+const { isPricingFourParaLayout, layoutPricingFourPara } = require('./diagrams/pricingFourPara');
+const { isPricingFourParaCardsLayout, layoutPricingFourParaCards } = require('./diagrams/pricingFourParaCards');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -3220,7 +3228,11 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       /^SWOT_HUB_(TITLE|SUB)$/i.test(String(el.slotId || '')) ||
       /^funnel_[1-5]_title$/i.test(String(el.slotId || '')) ||
       /^Q[1-4]_(TITLE|BODY)$/i.test(String(el.slotId || '')) ||
-      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || ''))
+      /^MATRIX_(CENTER|X_LABEL|Y_LABEL)$/i.test(String(el.slotId || '')) ||
+      (isPricingFourPlansLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
+      (isPricingFourPlansFeaturedLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
+      (isPricingFourParaLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
+      (isPricingFourParaCardsLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY'))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -9536,6 +9548,22 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTeamFeaturedLead(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamOrgSimpleLayout(layoutSchema?.layout_id)) {
     next = layoutTeamOrgSimple(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingThreePlansFeaturedLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingThreePlansFeatured(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingThreeHighlightLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingThreeHighlight(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingThreeHighlightSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingThreeHighlightSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingFourPara(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingFourPlansFeaturedLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingFourPlansFeatured(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingFourPlansLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingFourPlans(next, layoutSchema, themeTokens, canvas);
+  } else if (isPricingThreePlansLayout(layoutSchema?.layout_id)) {
+    next = layoutPricingThreePlans(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaMinimalLayout(layoutSchema?.layout_id)) {
     next = layoutAgendaInfographic(next, layoutSchema, themeTokens, canvas);
   } else if (isAgendaNumberedLayout(layoutSchema?.layout_id)) {
