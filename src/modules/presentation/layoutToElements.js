@@ -178,6 +178,7 @@ const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diag
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
 const { isTimelineRoadmapLayout, layoutTimelineRoadmap } = require('./diagrams/timelineRoadmap');
+const { isTimelineRoadmapHorizontalLayout, layoutTimelineRoadmapHorizontal } = require('./diagrams/timelineRoadmapHorizontal');
 const { isTimelineHorizontalCardsLayout, layoutTimelineHorizontalCards } = require('./diagrams/timelineHorizontalCards');
 const { isTimelineMilestonesLayout, layoutTimelineMilestones } = require('./diagrams/timelineMilestones');
 const { isTimelineMilestonesCardsLayout, layoutTimelineMilestonesCards } = require('./diagrams/timelineMilestonesCards');
@@ -3254,7 +3255,8 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isTimelineMilestonesImageRightLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
       (isTimelineVerticalLayout(layoutSchema?.layout_id) && /^milestone_\d+_num$/i.test(String(el.slotId || ''))) ||
       (isTimelineVerticalCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
-      (isTimelineRoadmapLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || '')))
+      (isTimelineRoadmapLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || ''))) ||
+      (isTimelineRoadmapHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || '')))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -8538,6 +8540,7 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
   if (isTimelineVerticalLayout(layoutId)) return doc;
   if (isTimelineRoadmapLayout(layoutId)) return doc;
+  if (isTimelineRoadmapHorizontalLayout(layoutId)) return doc;
   if (isTimelineVerticalCardsLayout(layoutId)) return doc;
   if (isTimelineMilestonesImageLayout(layoutId)) return doc;
   if (isTimelineMilestonesImageRightLayout(layoutId)) return doc;
@@ -9585,6 +9588,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutPricingThreeHighlight(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingThreeHighlightSplitLayout(layoutSchema?.layout_id)) {
     next = layoutPricingThreeHighlightSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineRoadmapHorizontalLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineRoadmapHorizontal(next, layoutSchema, themeTokens, canvas);
   } else if (isTimelineRoadmapLayout(layoutSchema?.layout_id)) {
     next = layoutTimelineRoadmap(next, layoutSchema, themeTokens, canvas);
   } else if (isTimelineVerticalCardsLayout(layoutSchema?.layout_id)) {

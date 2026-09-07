@@ -53,7 +53,7 @@ const ARCHETYPES = {
       device_frames: ['grid_device_mockups_v1'],
       quote: ['statement_left_v1', 'quote_portrait_v1', 'statement_large_v1', 'quote_testimonial_card_v1', 'quote_attribution_v1', 'quote_grid_v1'],
       comparison: ['comparison_side_by_side_v1', 'comparison_pros_cons_v1', 'comparison_before_after_v1', 'comparison_table_v1'],
-      timeline: ['timeline_milestones_v1', 'timeline_roadmap_v1', 'timeline_process_steps_v1', 'timeline_milestones_image_v1', 'timeline_horizontal_v1', 'timeline_vertical_v1'],
+      timeline: ['timeline_milestones_v1', 'timeline_roadmap_v1', 'timeline_roadmap_horizontal_v1', 'timeline_process_steps_v1', 'timeline_milestones_image_v1', 'timeline_horizontal_v1', 'timeline_vertical_v1'],
       diagram: ['diagram_process_steps_v1', 'diagram_swot_v1', 'diagram_matrix_v1', 'diagram_funnel_v1'],
       section_divider: ['section_divider_split_v1', 'section_divider_numbered_v1', 'section_divider_band_v1', 'section_divider_centered_v1'],
       closing: ['closing_thank_you_v1', 'closing_contact_cta_v1', 'centered_text_cta_v1', 'para_image_cta_v1', 'closing_thank_you_fullbleed_v1'],
