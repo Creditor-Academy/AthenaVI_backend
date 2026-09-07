@@ -174,6 +174,15 @@ const { isPricingFourParaLayout, layoutPricingFourPara } = require('./diagrams/p
 const { isPricingFourParaCardsLayout, layoutPricingFourParaCards } = require('./diagrams/pricingFourParaCards');
 const { isPricingComparisonTableLayout, layoutPricingComparisonTable } = require('./diagrams/pricingComparisonTable');
 const { isPricingComparisonCardsLayout, layoutPricingComparisonCards } = require('./diagrams/pricingComparisonCards');
+const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
+const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
+const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
+const { isTimelineRoadmapLayout, layoutTimelineRoadmap } = require('./diagrams/timelineRoadmap');
+const { isTimelineHorizontalCardsLayout, layoutTimelineHorizontalCards } = require('./diagrams/timelineHorizontalCards');
+const { isTimelineMilestonesLayout, layoutTimelineMilestones } = require('./diagrams/timelineMilestones');
+const { isTimelineMilestonesCardsLayout, layoutTimelineMilestonesCards } = require('./diagrams/timelineMilestonesCards');
+const { isTimelineMilestonesImageLayout, layoutTimelineMilestonesImage } = require('./diagrams/timelineMilestonesImage');
+const { isTimelineMilestonesImageRightLayout, layoutTimelineMilestonesImageRight } = require('./diagrams/timelineMilestonesImageRight');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -3236,7 +3245,16 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isPricingFourParaLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
       (isPricingFourParaCardsLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
       (isPricingComparisonTableLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || /^FEATURE_\d+$/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'HEADING')) ||
-      (isPricingComparisonCardsLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || '')))
+      (isPricingComparisonCardsLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
+      (isTimelineHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineHorizontalCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(num|label|foot)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineMilestonesLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num|title)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineMilestonesCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num|detail)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineMilestonesImageLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineMilestonesImageRightLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineVerticalLayout(layoutSchema?.layout_id) && /^milestone_\d+_num$/i.test(String(el.slotId || ''))) ||
+      (isTimelineVerticalCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
+      (isTimelineRoadmapLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || '')))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -8518,6 +8536,15 @@ function findProcessAnchorElements(elements) {
 function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {}) {
   if (!doc || !layoutSchema?.slots?.length) return doc;
   const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
+  if (isTimelineVerticalLayout(layoutId)) return doc;
+  if (isTimelineRoadmapLayout(layoutId)) return doc;
+  if (isTimelineVerticalCardsLayout(layoutId)) return doc;
+  if (isTimelineMilestonesImageLayout(layoutId)) return doc;
+  if (isTimelineMilestonesImageRightLayout(layoutId)) return doc;
+  if (isTimelineMilestonesCardsLayout(layoutId)) return doc;
+  if (isTimelineMilestonesLayout(layoutId)) return doc;
+  if (isTimelineHorizontalCardsLayout(layoutId)) return doc;
+  if (isTimelineHorizontalLayout(layoutId)) return doc;
   if (isProcessLinnerLayout(layoutId)) return doc;
   if (isProcessLinnerHortiLayout(layoutId)) return doc;
   if (!isProcessFlowLayout(layoutId)) return doc;
@@ -8930,7 +8957,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const overlay = agendaOverlayPlacements(graphicX, graphicY, graphicW, graphicH, family, variant, { itemCount });
   const columnTextColor = textColor;
 
-  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_|SP_|TLH_|VR_)/i;
+  const CHROME_RE = /^AGENDA_(INFOGRAPHIC_CHROME|SPINE|PATH|SPLIT_LINE|TIMELINE|CURVE|TITLE_BLOCK|VISUAL_BLOCK|ZONE_|PANEL_|CARD_|ICON_|BADGE_|DIVIDER_|ARROW_|NODE_|COL_BLOCK_|COL_BAND_|COL_ICON_|COL_NUM_|COL_RULE|COL_CHROME_|NUM_CHROME_|NUM_TL_|MIN_|ED_|CRD_|TC_|SP_|TLH_|TLHC_|TLM_|TLMC_|TLMI_|TLMIR_|TLV_|TLVC_|TLR_|VR_)/i;
   const prevBySlot = new Map(
     (doc.elements || [])
       .filter((el) => CHROME_RE.test(String(el.slotId || '')))
@@ -9558,6 +9585,24 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutPricingThreeHighlight(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingThreeHighlightSplitLayout(layoutSchema?.layout_id)) {
     next = layoutPricingThreeHighlightSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineRoadmapLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineRoadmap(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineVerticalCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineVerticalCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineVerticalLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineVertical(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineMilestonesImageRightLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineMilestonesImageRight(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineMilestonesImageLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineMilestonesImage(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineMilestonesCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineMilestonesCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineMilestonesLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineMilestones(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineHorizontalCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineHorizontalCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isTimelineHorizontalLayout(layoutSchema?.layout_id)) {
+    next = layoutTimelineHorizontal(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
