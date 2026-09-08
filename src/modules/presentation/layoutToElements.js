@@ -184,6 +184,14 @@ const { isTimelineMilestonesLayout, layoutTimelineMilestones } = require('./diag
 const { isTimelineMilestonesCardsLayout, layoutTimelineMilestonesCards } = require('./diagrams/timelineMilestonesCards');
 const { isTimelineMilestonesImageLayout, layoutTimelineMilestonesImage } = require('./diagrams/timelineMilestonesImage');
 const { isTimelineMilestonesImageRightLayout, layoutTimelineMilestonesImageRight } = require('./diagrams/timelineMilestonesImageRight');
+const { isTimelineProcessStepsHorizontalLayout, layoutTimelineProcessStepsHorizontal } = require('./diagrams/timelineProcessStepsHorizontal');
+const { isTimelineProcessHorizontalLayout, layoutTimelineProcessHorizontal } = require('./diagrams/diagramProcessHorizontal');
+const { isChartSingleBarLayout, layoutChartSingleBar } = require('./diagrams/chartSingleBar');
+const { isChartSingleBarSplitLayout, layoutChartSingleBarSplit } = require('./diagrams/chartSingleBarSplit');
+const { isChartTwoBarLayout, layoutChartTwoBar } = require('./diagrams/chartTwoBar');
+const { isChartTwoBarSplitLayout, layoutChartTwoBarSplit } = require('./diagrams/chartTwoBarSplit');
+const { isChartThreeBarLayout, layoutChartThreeBar } = require('./diagrams/chartThreeBar');
+const { isChartTwoMetricsComparisonLayout, layoutChartTwoMetricsComparison } = require('./diagrams/chartTwoMetricsComparison');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -9608,6 +9616,18 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTimelineHorizontalCards(next, layoutSchema, themeTokens, canvas);
   } else if (isTimelineHorizontalLayout(layoutSchema?.layout_id)) {
     next = layoutTimelineHorizontal(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartSingleBarLayout(layoutSchema?.layout_id)) {
+    next = layoutChartSingleBar(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartSingleBarSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutChartSingleBarSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartTwoBarLayout(layoutSchema?.layout_id)) {
+    next = layoutChartTwoBar(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartTwoBarSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutChartTwoBarSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartThreeBarLayout(layoutSchema?.layout_id)) {
+    next = layoutChartThreeBar(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartTwoMetricsComparisonLayout(layoutSchema?.layout_id)) {
+    next = layoutChartTwoMetricsComparison(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
