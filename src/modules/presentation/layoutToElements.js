@@ -192,6 +192,10 @@ const { isChartTwoBarLayout, layoutChartTwoBar } = require('./diagrams/chartTwoB
 const { isChartTwoBarSplitLayout, layoutChartTwoBarSplit } = require('./diagrams/chartTwoBarSplit');
 const { isChartThreeBarLayout, layoutChartThreeBar } = require('./diagrams/chartThreeBar');
 const { isChartTwoMetricsComparisonLayout, layoutChartTwoMetricsComparison } = require('./diagrams/chartTwoMetricsComparison');
+const { isChartTwoCardsLayout, layoutChartTwoCards } = require('./diagrams/chartTwoCards');
+const { isChartThreeCardsLayout, layoutChartThreeCards } = require('./diagrams/chartThreeCards');
+const { isChartThreeContextLayout, layoutChartThreeContext } = require('./diagrams/chartThreeContext');
+const { isChartThreeContextCardsLayout, layoutChartThreeContextCards } = require('./diagrams/chartThreeContextCards');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -2754,12 +2758,27 @@ function layoutSlotsToElements(
         chartData = sampleChartDataset(idx, layoutSchema?.layout_id);
       }
       const brandChartColors = themeTokens?.brand?.chartColors;
+      
+      // Custom colors per chart for three-chart layouts
+      let customColors = null;
+      const layoutId = String(layoutSchema?.layout_id || '').toLowerCase();
+      if (layoutId === 'chart_three_cards_v1' || layoutId === 'chart_three_context_cards_v1') {
+        if (slotId === 'CHART_1') {
+          customColors = ['#60A5FA', '#3B82F6', '#1D4ED8', '#1E40AF']; // Blue shades
+        } else if (slotId === 'CHART_2') {
+          customColors = ['#C084FC', '#A855F7', '#9333EA', '#7E22CE']; // Purple shades
+        } else if (slotId === 'CHART_3') {
+          customColors = ['#34D399', '#10B981', '#059669', '#047857']; // Green/Teal shades
+        }
+      }
+      
       const rawChart = {
         chartType: resolveChartTypeForSlot(slot, chartData || content.chart || {}, content, layoutSchema),
         labels: chartData?.labels || content.chart?.labels || [],
         series: chartData?.series || chartData?.data || content.chart?.series || content.chart?.data || [],
         values: chartData?.values || content.chart?.values,
         colors:
+          customColors ||
           (Array.isArray(chartData?.colors) && chartData.colors.length ? chartData.colors : null) ||
           (Array.isArray(content.chart?.colors) && content.chart.colors.length ? content.chart.colors : null) ||
           (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
@@ -9628,6 +9647,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutChartThreeBar(next, layoutSchema, themeTokens, canvas);
   } else if (isChartTwoMetricsComparisonLayout(layoutSchema?.layout_id)) {
     next = layoutChartTwoMetricsComparison(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartTwoCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutChartTwoCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartThreeCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutChartThreeCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartThreeContextLayout(layoutSchema?.layout_id)) {
+    next = layoutChartThreeContext(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartThreeContextCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutChartThreeContextCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
