@@ -201,6 +201,8 @@ const { isMetricThreeCardsLayout, layoutMetricThreeCards } = require('./diagrams
 const { isMetricSingleLayout, layoutMetricSingle } = require('./diagrams/metricSingle');
 const { isMetricTwoLayout, layoutMetricTwo } = require('./diagrams/metricTwo');
 const { isMetricSingleSplitLayout, layoutMetricSingleSplit } = require('./diagrams/metricSingleSplit');
+const { isMetricThreeLayout, layoutMetricThree } = require('./diagrams/metricThree');
+const { isMetricTwoSplitLayout, layoutMetricTwoSplit } = require('./diagrams/metricTwoSplit');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -9670,6 +9672,10 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutMetricTwo(next, layoutSchema, themeTokens, canvas);
   } else if (isMetricSingleSplitLayout(layoutSchema?.layout_id)) {
     next = layoutMetricSingleSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricThreeLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricThree(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricTwoSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricTwoSplit(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
