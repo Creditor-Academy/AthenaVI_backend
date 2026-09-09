@@ -196,6 +196,7 @@ const { isChartTwoCardsLayout, layoutChartTwoCards } = require('./diagrams/chart
 const { isChartThreeCardsLayout, layoutChartThreeCards } = require('./diagrams/chartThreeCards');
 const { isChartThreeContextLayout, layoutChartThreeContext } = require('./diagrams/chartThreeContext');
 const { isChartThreeContextCardsLayout, layoutChartThreeContextCards } = require('./diagrams/chartThreeContextCards');
+const { isChartDonutContextLayout, layoutChartDonutContext } = require('./diagrams/chartDonutContext');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -9655,6 +9656,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutChartThreeContext(next, layoutSchema, themeTokens, canvas);
   } else if (isChartThreeContextCardsLayout(layoutSchema?.layout_id)) {
     next = layoutChartThreeContextCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isChartDonutContextLayout(layoutSchema?.layout_id)) {
+    next = layoutChartDonutContext(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {

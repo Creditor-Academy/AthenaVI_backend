@@ -1,5 +1,5 @@
 /**
- * Chart three context — three quarterly cards with icons, charts, and insights.
+ * Chart three context — Custom SVG bars (3 quarters) + context panel.
  * Layout id: chart_three_context_v1.
  */
 
@@ -8,86 +8,108 @@ const CTXC_GEOM = {
   viewH: 560,
   
   // Badge at top
-  badgeX: 50,
-  badgeY: 20,
-  badgeW: 180,
-  badgeH: 22,
+  badgeX: 40,
+  badgeY: 35,
+  badgeW: 170,
+  badgeH: 26,
   
-  // Heading section
-  headingX: 50,
-  headingY: 50,
-  headingW: 900,
+  // Heading below badge
+  headingX: 40,
+  headingY: 75,
+  headingW: 500,
   headingH: 50,
   
-  subheadingX: 50,
-  subheadingY: 105,
-  subheadingW: 900,
-  subheadingH: 25,
+  // Subheading below heading
+  subheadingX: 40,
+  subheadingY: 132,
+  subheadingW: 500,
+  subheadingH: 24,
   
-  // Card dimensions
-  cardStartY: 150,
-  cardW: 305,  // Increased from 290 (little bit wider)
-  cardH: 380,
-  cardGap: 25,  // Reduced gap slightly to compensate
+  // Legend (below subheading)
+  legendY: 170,
+  legendX: 40,
+  legendDotSize: 12,
+  legendGap: 110,
   
-  // Inside each card
-  iconSize: 52,
-  iconX: 35,
-  iconY: 30,
+  // Chart area - more space for bars
+  chartX: 40,
+  chartY: 220,
+  chartW: 600,
+  chartH: 280,
   
-  quarterX: 100,
-  quarterY: 35,
-  subtitleX: 100,
-  subtitleY: 60,  // Moved down slightly to prevent clipping
+  // Bar dimensions - taller, more prominent
+  barWidth: 45,
+  barGap: 10,
+  groupGap: 55,
+  barStartX: 60,
   
-  descX: 35,
-  descY: 95,
-  descW: 230,
-  descH: 70,
+  // Quarter labels
+  labelY: 515,
   
-  // Chart in card
-  chartX: 35,
-  chartY: 175,
-  chartW: 230,
-  chartH: 110,
+  // Right side - Context panel (smaller)
+  panelX: 710,
+  panelY: 35,
+  panelW: 260,
+  panelH: 490,
   
-  // Insight box at bottom
-  insightX: 35,
-  insightY: 300,
-  insightW: 230,
-  insightH: 65,
-  insightIconSize: 40,
-  insightTextX: 50,
+  // Inside panel - adjusted for smaller width
+  panelIconX: 30,
+  panelIconY: 30,
+  panelIconSize: 32,
+  panelHeadingX: 30,
+  panelHeadingY: 75,
+  contextX: 30,
+  contextY: 115,
+  contextW: 200,
+  contextH: 90,
+  
+  // Metric breakdowns in panel
+  metricStartY: 230,
+  metricGap: 70,
+  metricDotX: 30,
+  metricLabelX: 50,
+  metricDescX: 50,
+  metricDescY: 26,
 }
 
+const CTXC_BAR_DATA = [
+  // Q1 - 3 bars
+  { quarter: 'Q1', metric: 'A', value: 68, height: 177, color: '#3B82F6' },
+  { quarter: 'Q1', metric: 'B', value: 54, height: 140, color: '#8B5CF6' },
+  { quarter: 'Q1', metric: 'C', value: 60, height: 156, color: '#10B981' },
+  
+  // Q2 - 3 bars
+  { quarter: 'Q2', metric: 'A', value: 92, height: 239, color: '#3B82F6' },
+  { quarter: 'Q2', metric: 'B', value: 88, height: 229, color: '#8B5CF6' },
+  { quarter: 'Q2', metric: 'C', value: 82, height: 213, color: '#10B981' },
+  
+  // Q3 - 3 bars
+  { quarter: 'Q3', metric: 'A', value: 76, height: 198, color: '#3B82F6' },
+  { quarter: 'Q3', metric: 'B', value: 72, height: 187, color: '#8B5CF6' },
+  { quarter: 'Q3', metric: 'C', value: 70, height: 182, color: '#10B981' },
+]
+
 const CTXC_COLORS = {
-  card1: '#3B82F6',  // Blue
-  card2: '#8B5CF6',  // Purple
-  card3: '#10B981',  // Teal/Green
+  metricA: '#3B82F6',
+  metricB: '#8B5CF6',  
+  metricC: '#10B981',
 }
 
 const CTXC_DEFAULTS = {
   BADGE: 'QUARTERLY OVERVIEW',
-  HEADING: 'Quarterly Breakdown',
+  HEADING: 'Quarterly',
   SUBHEADING: 'Tracking progress, performance and key milestones across each quarter.',
-  
-  CARD_1_QUARTER: 'Q1',
-  CARD_1_SUBTITLE: 'FOUNDATION & FOCUS',
-  CARD_1_DESC: 'We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.',
-  CARD_1_INSIGHT_TITLE: 'Strong start',
-  CARD_1_INSIGHT_DESC: 'Momentum built across all key areas this quarter.',
-  
-  CARD_2_QUARTER: 'Q2',
-  CARD_2_SUBTITLE: 'GROWTH & EXPANSION',
-  CARD_2_DESC: 'Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.',
-  CARD_2_INSIGHT_TITLE: 'Steady growth',
-  CARD_2_INSIGHT_DESC: 'Consistent improvement across all quarters.',
-  
-  CARD_3_QUARTER: 'Q3',
-  CARD_3_SUBTITLE: 'DELIVERY & IMPACT',
-  CARD_3_DESC: 'From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.',
-  CARD_3_INSIGHT_TITLE: 'High impact',
-  CARD_3_INSIGHT_DESC: 'Delivered strong results and higher engagement.',
+  LEGEND_A: 'Metric A',
+  LEGEND_B: 'Metric B',
+  LEGEND_C: 'Metric C',
+  PANEL_HEADING: 'Context',
+  CONTEXT_TEXT: 'Add your analysis, insights, and key findings about the quarterly performance here. This panel provides space for detailed explanations and observations.',
+  METRIC_A_LABEL: 'Metric A',
+  METRIC_A_DESC: 'Shows steady growth across all quarters, with the highest value in Q4.',
+  METRIC_B_LABEL: 'Metric B',
+  METRIC_B_DESC: 'Reaches its peak in Q3 and remains strong in Q4.',
+  METRIC_C_LABEL: 'Metric C',
+  METRIC_C_DESC: 'Consistent improvement throughout, with the highest value in Q4.',
 }
 
 function isChartThreeContextLayout(layoutId) {
@@ -99,118 +121,60 @@ function isChartThreeContextTextSlot(slotId) {
   return sid === 'BADGE'
     || sid === 'HEADING'
     || sid === 'SUBHEADING'
-    || sid === 'CARD_1_QUARTER'
-    || sid === 'CARD_1_SUBTITLE'
-    || sid === 'CARD_1_DESC'
-    || sid === 'CARD_1_INSIGHT_TITLE'
-    || sid === 'CARD_1_INSIGHT_DESC'
-    || sid === 'CARD_2_QUARTER'
-    || sid === 'CARD_2_SUBTITLE'
-    || sid === 'CARD_2_DESC'
-    || sid === 'CARD_2_INSIGHT_TITLE'
-    || sid === 'CARD_2_INSIGHT_DESC'
-    || sid === 'CARD_3_QUARTER'
-    || sid === 'CARD_3_SUBTITLE'
-    || sid === 'CARD_3_DESC'
-    || sid === 'CARD_3_INSIGHT_TITLE'
-    || sid === 'CARD_3_INSIGHT_DESC'
+    || sid === 'LEGEND_A'
+    || sid === 'LEGEND_B'
+    || sid === 'LEGEND_C'
+    || sid === 'PANEL_HEADING'
+    || sid === 'CONTEXT_TEXT'
+    || sid === 'METRIC_A_LABEL'
+    || sid === 'METRIC_A_DESC'
+    || sid === 'METRIC_B_LABEL'
+    || sid === 'METRIC_B_DESC'
+    || sid === 'METRIC_C_LABEL'
+    || sid === 'METRIC_C_DESC'
 }
 
 function badgeSvg() {
   const g = CTXC_GEOM
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + g.badgeW + ' ' + g.badgeH + '" width="100%" height="100%" preserveAspectRatio="none">' +
-    '<rect x="0" y="0" width="' + g.badgeW + '" height="' + g.badgeH + '" fill="#DBEAFE" rx="' + (g.badgeH/2) + '"/>' +
+    '<rect x="0" y="0" width="' + g.badgeW + '" height="' + g.badgeH + '" fill="#DBEAFE" rx="8"/>' +
     '</svg>'
 }
 
-function cardBackgroundSvg(color) {
+function panelBgSvg() {
   const g = CTXC_GEOM
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + g.cardW + ' ' + g.cardH + '" width="100%" height="100%" preserveAspectRatio="none">' +
-    '<rect x="0" y="0" width="' + g.cardW + '" height="' + g.cardH + '" fill="' + color + '" rx="12"/>' +
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + g.panelW + ' ' + g.panelH + '" width="100%" height="100%" preserveAspectRatio="none">' +
+    '<rect x="0" y="0" width="' + g.panelW + '" height="' + g.panelH + '" fill="#F0F9FF" stroke="#BFDBFE" stroke-width="2" rx="16"/>' +
     '</svg>'
 }
 
-function iconCircleSvg(color) {
-  const size = CTXC_GEOM.iconSize
+function panelIconSvg() {
+  const size = CTXC_GEOM.panelIconSize
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<circle cx="' + (size/2) + '" cy="' + (size/2) + '" r="' + (size/2) + '" fill="' + color + '" opacity="0.1"/>' +
+    '<rect x="5" y="9" width="26" height="22" rx="2" fill="none" stroke="#3B82F6" stroke-width="2.5"/>' +
+    '<path d="M9 9 L9 6 C9 4.9 9.9 4 11 4 L25 4 C26.1 4 27 4.9 27 6 L27 9" fill="none" stroke="#3B82F6" stroke-width="2.5"/>' +
+    '<line x1="11" y1="16" x2="25" y2="16" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<line x1="11" y1="22" x2="20" y2="22" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>' +
     '</svg>'
 }
 
-function targetIconSvg(color) {
-  const size = CTXC_GEOM.iconSize
+function barSvg(width, height, color) {
+  var colorId = color.replace('#','')
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="100%" preserveAspectRatio="none">' +
+    '<defs>' +
+    '<linearGradient id="barGrad_' + colorId + '" x1="0%" y1="0%" x2="0%" y2="100%">' +
+    '<stop offset="0%" style="stop-color:' + color + ';stop-opacity:1" />' +
+    '<stop offset="100%" style="stop-color:' + color + ';stop-opacity:0.85" />' +
+    '</linearGradient>' +
+    '</defs>' +
+    '<rect x="0" y="0" width="' + width + '" height="' + height + '" fill="url(#barGrad_' + colorId + ')" rx="6"/>' +
+    '</svg>'
+}
+
+function legendDotSvg(color) {
+  const size = CTXC_GEOM.legendDotSize
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<circle cx="0" cy="0" r="14" fill="none" stroke="' + color + '" stroke-width="2.5"/>' +
-    '<circle cx="0" cy="0" r="8" fill="none" stroke="' + color + '" stroke-width="2.5"/>' +
-    '<circle cx="0" cy="0" r="3" fill="' + color + '"/>' +
-    '</g>' +
-    '</svg>'
-}
-
-function bulbIconSvg(color) {
-  const size = CTXC_GEOM.iconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<path d="M -6 8 L -6 12 L 6 12 L 6 8 M -4 12 L -4 14 L 4 14 L 4 12" fill="' + color + '"/>' +
-    '<circle cx="0" cy="-2" r="10" fill="none" stroke="' + color + '" stroke-width="2.5"/>' +
-    '<line x1="0" y1="-14" x2="0" y2="-16" stroke="' + color + '" stroke-width="2" stroke-linecap="round"/>' +
-    '</g>' +
-    '</svg>'
-}
-
-function groupIconSvg(color) {
-  const size = CTXC_GEOM.iconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<circle cx="-7" cy="-4" r="5" fill="' + color + '"/>' +
-    '<circle cx="7" cy="-4" r="5" fill="' + color + '"/>' +
-    '<circle cx="0" cy="6" r="6" fill="' + color + '"/>' +
-    '</g>' +
-    '</svg>'
-}
-
-function insightBoxSvg(color) {
-  const g = CTXC_GEOM
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + g.insightW + ' ' + g.insightH + '" width="100%" height="100%" preserveAspectRatio="none">' +
-    '<rect x="0" y="0" width="' + g.insightW + '" height="' + g.insightH + '" fill="' + color + '" opacity="0.08" rx="8"/>' +
-    '</svg>'
-}
-
-function insightIconCircleSvg(color) {
-  const size = CTXC_GEOM.insightIconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<circle cx="' + (size/2) + '" cy="' + (size/2) + '" r="' + (size/2) + '" fill="' + color + '" opacity="0.15"/>' +
-    '</svg>'
-}
-
-function arrowUpIconSvg(color) {
-  const size = CTXC_GEOM.insightIconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<line x1="0" y1="8" x2="0" y2="-8" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"/>' +
-    '<polyline points="-5,-3 0,-8 5,-3" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '</g>' +
-    '</svg>'
-}
-
-function chartIconSvg(color) {
-  const size = CTXC_GEOM.insightIconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<rect x="-8" y="2" width="4" height="6" fill="' + color + '" rx="1"/>' +
-    '<rect x="-2" y="-4" width="4" height="12" fill="' + color + '" rx="1"/>' +
-    '<rect x="4" y="-2" width="4" height="10" fill="' + color + '" rx="1"/>' +
-    '</g>' +
-    '</svg>'
-}
-
-function checkIconSvg(color) {
-  const size = CTXC_GEOM.insightIconSize
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' +
-    '<g transform="translate(' + (size/2) + ', ' + (size/2) + ')">' +
-    '<polyline points="-6,0 -2,6 8,-6" fill="none" stroke="' + color + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '</g>' +
+    '<circle cx="' + (size/2) + '" cy="' + (size/2) + '" r="' + (size/2) + '" fill="' + color + '"/>' +
     '</svg>'
 }
 
@@ -233,55 +197,130 @@ function headingInk(palette) {
 
 function chartThreeContextChromeSpecs() {
   const g = CTXC_GEOM
-  const card1X = 15  // Start even closer to edge for better centering
-  const card2X = card1X + g.cardW + g.cardGap
-  const card3X = card2X + g.cardW + g.cardGap
+  const specs = []
   
-  const specs = [
-    // Badge
-    {
-      slotId: 'CTXC_BADGE',
-      x: g.badgeX,
-      y: g.badgeY,
-      w: g.badgeW,
-      h: g.badgeH,
-      color: '#DBEAFE',
-      layer: 5,
-      kind: 'badge',
-    },
-  ]
+  // Badge background
+  specs.push({
+    slotId: 'CTXC_BADGE_BG',
+    x: g.badgeX,
+    y: g.badgeY,
+    w: g.badgeW,
+    h: g.badgeH,
+    color: '#DBEAFE',
+    layer: 3,
+    kind: 'badge',
+  })
   
-  // Card 1
-  const card1Specs = [
-    { slotId: 'CTXC_CARD_1_BG', x: card1X, y: g.cardStartY, w: g.cardW, h: g.cardH, color: '#EFF6FF', layer: 3, kind: 'cardBg' },
-    { slotId: 'CTXC_CARD_1_ICON_CIRCLE', x: card1X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card1, layer: 4, kind: 'iconCircle' },
-    { slotId: 'CTXC_CARD_1_ICON', x: card1X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card1, layer: 5, kind: 'targetIcon' },
-    { slotId: 'CTXC_CARD_1_INSIGHT_BG', x: card1X + g.insightX, y: g.cardStartY + g.insightY, w: g.insightW, h: g.insightH, color: CTXC_COLORS.card1, layer: 4, kind: 'insightBox' },
-    { slotId: 'CTXC_CARD_1_INSIGHT_ICON_CIRCLE', x: card1X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card1, layer: 5, kind: 'insightIconCircle' },
-    { slotId: 'CTXC_CARD_1_INSIGHT_ICON', x: card1X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card1, layer: 6, kind: 'arrowUpIcon' },
-  ]
+  // Panel background
+  specs.push({
+    slotId: 'CTXC_PANEL_BG',
+    x: g.panelX,
+    y: g.panelY,
+    w: g.panelW,
+    h: g.panelH,
+    color: '#EFF6FF',
+    layer: 3,
+    kind: 'panelBg',
+  })
   
-  // Card 2
-  const card2Specs = [
-    { slotId: 'CTXC_CARD_2_BG', x: card2X, y: g.cardStartY, w: g.cardW, h: g.cardH, color: '#F5F3FF', layer: 3, kind: 'cardBg' },
-    { slotId: 'CTXC_CARD_2_ICON_CIRCLE', x: card2X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card2, layer: 4, kind: 'iconCircle' },
-    { slotId: 'CTXC_CARD_2_ICON', x: card2X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card2, layer: 5, kind: 'bulbIcon' },
-    { slotId: 'CTXC_CARD_2_INSIGHT_BG', x: card2X + g.insightX, y: g.cardStartY + g.insightY, w: g.insightW, h: g.insightH, color: CTXC_COLORS.card2, layer: 4, kind: 'insightBox' },
-    { slotId: 'CTXC_CARD_2_INSIGHT_ICON_CIRCLE', x: card2X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card2, layer: 5, kind: 'insightIconCircle' },
-    { slotId: 'CTXC_CARD_2_INSIGHT_ICON', x: card2X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card2, layer: 6, kind: 'chartIcon' },
-  ]
+  // Panel icon
+  specs.push({
+    slotId: 'CTXC_PANEL_ICON',
+    x: g.panelX + g.panelIconX,
+    y: g.panelY + g.panelIconY,
+    w: g.panelIconSize,
+    h: g.panelIconSize,
+    color: '#3B82F6',
+    layer: 10,
+    kind: 'panelIcon',
+  })
   
-  // Card 3
-  const card3Specs = [
-    { slotId: 'CTXC_CARD_3_BG', x: card3X, y: g.cardStartY, w: g.cardW, h: g.cardH, color: '#ECFDF5', layer: 3, kind: 'cardBg' },
-    { slotId: 'CTXC_CARD_3_ICON_CIRCLE', x: card3X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card3, layer: 4, kind: 'iconCircle' },
-    { slotId: 'CTXC_CARD_3_ICON', x: card3X + g.iconX, y: g.cardStartY + g.iconY, w: g.iconSize, h: g.iconSize, color: CTXC_COLORS.card3, layer: 5, kind: 'groupIcon' },
-    { slotId: 'CTXC_CARD_3_INSIGHT_BG', x: card3X + g.insightX, y: g.cardStartY + g.insightY, w: g.insightW, h: g.insightH, color: CTXC_COLORS.card3, layer: 4, kind: 'insightBox' },
-    { slotId: 'CTXC_CARD_3_INSIGHT_ICON_CIRCLE', x: card3X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card3, layer: 5, kind: 'insightIconCircle' },
-    { slotId: 'CTXC_CARD_3_INSIGHT_ICON', x: card3X + g.insightX + 10, y: g.cardStartY + g.insightY + 12, w: g.insightIconSize, h: g.insightIconSize, color: CTXC_COLORS.card3, layer: 6, kind: 'checkIcon' },
-  ]
+  // Legend dots (top legend)
+  specs.push({
+    slotId: 'CTXC_LEGEND_DOT_A',
+    x: g.legendX,
+    y: g.legendY + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricA,
+    layer: 10,
+    kind: 'legendDot',
+  })
+  specs.push({
+    slotId: 'CTXC_LEGEND_DOT_B',
+    x: g.legendX + g.legendGap,
+    y: g.legendY + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricB,
+    layer: 10,
+    kind: 'legendDot',
+  })
+  specs.push({
+    slotId: 'CTXC_LEGEND_DOT_C',
+    x: g.legendX + g.legendGap * 2,
+    y: g.legendY + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricC,
+    layer: 10,
+    kind: 'legendDot',
+  })
   
-  return specs.concat(card1Specs).concat(card2Specs).concat(card3Specs)
+  // Metric breakdown dots in panel
+  specs.push({
+    slotId: 'CTXC_METRIC_DOT_A',
+    x: g.panelX + g.metricDotX,
+    y: g.panelY + g.metricStartY + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricA,
+    layer: 10,
+    kind: 'legendDot',
+  })
+  specs.push({
+    slotId: 'CTXC_METRIC_DOT_B',
+    x: g.panelX + g.metricDotX,
+    y: g.panelY + g.metricStartY + g.metricGap + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricB,
+    layer: 10,
+    kind: 'legendDot',
+  })
+  specs.push({
+    slotId: 'CTXC_METRIC_DOT_C',
+    x: g.panelX + g.metricDotX,
+    y: g.panelY + g.metricStartY + g.metricGap * 2 + 5,
+    w: g.legendDotSize,
+    h: g.legendDotSize,
+    color: CTXC_COLORS.metricC,
+    layer: 10,
+    kind: 'legendDot',
+  })
+  
+  // CUSTOM SVG BARS (9 bars total - 3 per quarter)
+  CTXC_BAR_DATA.forEach(function(bar, i) {
+    const quarterIndex = Math.floor(i / 3)
+    const barInGroup = i % 3
+    const groupStartX = g.barStartX + quarterIndex * (3 * g.barWidth + 2 * g.barGap + g.groupGap)
+    const x = groupStartX + barInGroup * (g.barWidth + g.barGap)
+    const y = g.chartY + g.chartH - bar.height
+    
+    specs.push({
+      slotId: 'CTXC_BAR_' + (i + 1),
+      x: x,
+      y: y,
+      w: g.barWidth,
+      h: bar.height,
+      color: bar.color,
+      layer: 6,
+      kind: 'bar',
+      barData: bar,
+    })
+  })
+  
+  return specs
 }
 
 function chartThreeContextOverlay(gx, gy, gw, gh) {
@@ -297,53 +336,38 @@ function chartThreeContextOverlay(gx, gy, gw, gh) {
     }
   }
   
-  const card1X = 15  // Match the chrome specs
-  const card2X = card1X + g.cardW + g.cardGap
-  const card3X = card2X + g.cardW + g.cardGap
-  
-  return {
+  const overlays = {
     badge: box(g.badgeX, g.badgeY, g.badgeW, g.badgeH),
     heading: box(g.headingX, g.headingY, g.headingW, g.headingH),
     subheading: box(g.subheadingX, g.subheadingY, g.subheadingW, g.subheadingH),
     
-    // Card 1
-    card1_quarter: box(card1X + g.quarterX, g.cardStartY + g.quarterY, 180, 24),  // Wider and taller
-    card1_subtitle: box(card1X + g.subtitleX, g.cardStartY + g.subtitleY, 180, 20),  // Wider
-    card1_desc: box(card1X + g.descX, g.cardStartY + g.descY, g.descW, g.descH),
-    card1_chart: box(card1X + g.chartX, g.cardStartY + g.chartY, g.chartW, g.chartH),
-    card1_insight_title: box(card1X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 15, 170, 18),
-    card1_insight_desc: box(card1X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 35, 170, 22),
+    // Top legend labels
+    legendA: box(g.legendX + g.legendDotSize + 10, g.legendY, 90, 22),
+    legendB: box(g.legendX + g.legendGap + g.legendDotSize + 10, g.legendY, 90, 22),
+    legendC: box(g.legendX + g.legendGap * 2 + g.legendDotSize + 10, g.legendY, 90, 22),
     
-    // Card 2
-    card2_quarter: box(card2X + g.quarterX, g.cardStartY + g.quarterY, 180, 24),  // Wider and taller
-    card2_subtitle: box(card2X + g.subtitleX, g.cardStartY + g.subtitleY, 180, 20),  // Wider
-    card2_desc: box(card2X + g.descX, g.cardStartY + g.descY, g.descW, g.descH),
-    card2_chart: box(card2X + g.chartX, g.cardStartY + g.chartY, g.chartW, g.chartH),
-    card2_insight_title: box(card2X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 15, 170, 18),
-    card2_insight_desc: box(card2X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 35, 170, 22),
+    // Context panel
+    panelHeading: box(g.panelX + g.panelHeadingX, g.panelY + g.panelHeadingY, 200, 32),
+    contextText: box(g.panelX + g.contextX, g.panelY + g.contextY, g.contextW, g.contextH),
     
-    // Card 3
-    card3_quarter: box(card3X + g.quarterX, g.cardStartY + g.quarterY, 180, 24),  // Wider and taller
-    card3_subtitle: box(card3X + g.subtitleX, g.cardStartY + g.subtitleY, 180, 20),  // Wider
-    card3_desc: box(card3X + g.descX, g.cardStartY + g.descY, g.descW, g.descH),
-    card3_chart: box(card3X + g.chartX, g.cardStartY + g.chartY, g.chartW, g.chartH),
-    card3_insight_title: box(card3X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 15, 170, 18),
-    card3_insight_desc: box(card3X + g.insightX + g.insightTextX, g.cardStartY + g.insightY + 35, 170, 22),
+    // Metric breakdowns in panel
+    metricALabel: box(g.panelX + g.metricLabelX, g.panelY + g.metricStartY, 180, 22),
+    metricADesc: box(g.panelX + g.metricDescX, g.panelY + g.metricStartY + g.metricDescY, 180, 36),
+    metricBLabel: box(g.panelX + g.metricLabelX, g.panelY + g.metricStartY + g.metricGap, 180, 22),
+    metricBDesc: box(g.panelX + g.metricDescX, g.panelY + g.metricStartY + g.metricGap + g.metricDescY, 180, 36),
+    metricCLabel: box(g.panelX + g.metricLabelX, g.panelY + g.metricStartY + g.metricGap * 2, 180, 22),
+    metricCDesc: box(g.panelX + g.metricDescX, g.panelY + g.metricStartY + g.metricGap * 2 + g.metricDescY, 180, 36),
   }
+  
+  return overlays
 }
 
 function specToChartThreeContextContent(spec) {
   if (spec.kind === 'badge') return { svg: badgeSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'cardBg') return { svg: cardBackgroundSvg(spec.color), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'iconCircle') return { svg: iconCircleSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'targetIcon') return { svg: targetIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'bulbIcon') return { svg: bulbIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'groupIcon') return { svg: groupIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'insightBox') return { svg: insightBoxSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'insightIconCircle') return { svg: insightIconCircleSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'arrowUpIcon') return { svg: arrowUpIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'chartIcon') return { svg: chartIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
-  if (spec.kind === 'checkIcon') return { svg: checkIconSvg(spec.color), colorMode: 'fixed', fill: 'none' }
+  if (spec.kind === 'panelBg') return { svg: panelBgSvg(), colorMode: 'fixed', fill: spec.color }
+  if (spec.kind === 'panelIcon') return { svg: panelIconSvg(), colorMode: 'fixed', fill: spec.color }
+  if (spec.kind === 'legendDot') return { svg: legendDotSvg(spec.color), colorMode: 'fixed', fill: spec.color }
+  if (spec.kind === 'bar') return { svg: barSvg(spec.w, spec.h, spec.color), colorMode: 'fixed', fill: spec.color }
   return null
 }
 
@@ -420,64 +444,52 @@ function layoutChartThreeContext(elements, schema, palette, canvas) {
 
   const next = [
     placeText('BADGE', overlay.badge, {
-      align: 'left', verticalAlign: 'middle', fontSize: 10, fontWeight: 600, color: '#3B82F6', clipToSlot: true, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.05em',
+      align: 'center', verticalAlign: 'center', fontSize: 11, fontWeight: 700, color: '#2563EB', clipToSlot: true, lineHeight: 1, letterSpacing: '0.8px',
     }, 'caption'),
     placeText('HEADING', overlay.heading, {
-      align: 'left', verticalAlign: 'top', fontSize: 42, fontWeight: 700, color: headingInk(palette), clipToSlot: true, lineHeight: 1.1,
+      align: 'left', verticalAlign: 'top', fontSize: 44, fontWeight: 800, color: headingInk(palette), clipToSlot: true, lineHeight: 1.1,
     }, 'heading'),
     placeText('SUBHEADING', overlay.subheading, {
-      align: 'left', verticalAlign: 'top', fontSize: 14, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.4,
+      align: 'left', verticalAlign: 'top', fontSize: 14, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.4,
     }, 'subheading'),
     
-    // Card 1
-    placeText('CARD_1_QUARTER', overlay.card1_quarter, {
-      align: 'left', verticalAlign: 'top', fontSize: 24, fontWeight: 700, color: CTXC_COLORS.card1, clipToSlot: true, lineHeight: 1,
-    }, 'heading'),
-    placeText('CARD_1_SUBTITLE', overlay.card1_subtitle, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 700, color: CTXC_COLORS.card1, clipToSlot: true, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.05em',
+    // Top legend labels
+    placeText('LEGEND_A', overlay.legendA, {
+      align: 'left', verticalAlign: 'center', fontSize: 14, fontWeight: 600, color: '#475569', clipToSlot: true, lineHeight: 1,
     }, 'caption'),
-    placeText('CARD_1_DESC', overlay.card1_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 13, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.4, wrap: 'wrap',
-    }, 'body'),
-    placeText('CARD_1_INSIGHT_TITLE', overlay.card1_insight_title, {
-      align: 'left', verticalAlign: 'top', fontSize: 14, fontWeight: 700, color: CTXC_COLORS.card1, clipToSlot: true, lineHeight: 1.2,
+    placeText('LEGEND_B', overlay.legendB, {
+      align: 'left', verticalAlign: 'center', fontSize: 14, fontWeight: 600, color: '#475569', clipToSlot: true, lineHeight: 1,
+    }, 'caption'),
+    placeText('LEGEND_C', overlay.legendC, {
+      align: 'left', verticalAlign: 'center', fontSize: 14, fontWeight: 600, color: '#475569', clipToSlot: true, lineHeight: 1,
+    }, 'caption'),
+    
+    // Context panel
+    placeText('PANEL_HEADING', overlay.panelHeading, {
+      align: 'left', verticalAlign: 'top', fontSize: 24, fontWeight: 700, color: '#0F172A', clipToSlot: true, lineHeight: 1.2,
     }, 'heading'),
-    placeText('CARD_1_INSIGHT_DESC', overlay.card1_insight_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.3, wrap: 'wrap',
+    placeText('CONTEXT_TEXT', overlay.contextText, {
+      align: 'left', verticalAlign: 'top', fontSize: 13, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.6, wrap: 'wrap',
     }, 'body'),
     
-    // Card 2
-    placeText('CARD_2_QUARTER', overlay.card2_quarter, {
-      align: 'left', verticalAlign: 'top', fontSize: 24, fontWeight: 700, color: CTXC_COLORS.card2, clipToSlot: true, lineHeight: 1,
-    }, 'heading'),
-    placeText('CARD_2_SUBTITLE', overlay.card2_subtitle, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 700, color: CTXC_COLORS.card2, clipToSlot: true, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.05em',
+    // Metric breakdowns in panel
+    placeText('METRIC_A_LABEL', overlay.metricALabel, {
+      align: 'left', verticalAlign: 'center', fontSize: 16, fontWeight: 700, color: '#0F172A', clipToSlot: true, lineHeight: 1,
     }, 'caption'),
-    placeText('CARD_2_DESC', overlay.card2_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 13, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.4, wrap: 'wrap',
+    placeText('METRIC_A_DESC', overlay.metricADesc, {
+      align: 'left', verticalAlign: 'top', fontSize: 12, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.5, wrap: 'wrap',
     }, 'body'),
-    placeText('CARD_2_INSIGHT_TITLE', overlay.card2_insight_title, {
-      align: 'left', verticalAlign: 'top', fontSize: 14, fontWeight: 700, color: CTXC_COLORS.card2, clipToSlot: true, lineHeight: 1.2,
-    }, 'heading'),
-    placeText('CARD_2_INSIGHT_DESC', overlay.card2_insight_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.3, wrap: 'wrap',
-    }, 'body'),
-    
-    // Card 3
-    placeText('CARD_3_QUARTER', overlay.card3_quarter, {
-      align: 'left', verticalAlign: 'top', fontSize: 24, fontWeight: 700, color: CTXC_COLORS.card3, clipToSlot: true, lineHeight: 1,
-    }, 'heading'),
-    placeText('CARD_3_SUBTITLE', overlay.card3_subtitle, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 700, color: CTXC_COLORS.card3, clipToSlot: true, lineHeight: 1, textTransform: 'uppercase', letterSpacing: '0.05em',
+    placeText('METRIC_B_LABEL', overlay.metricBLabel, {
+      align: 'left', verticalAlign: 'center', fontSize: 16, fontWeight: 700, color: '#0F172A', clipToSlot: true, lineHeight: 1,
     }, 'caption'),
-    placeText('CARD_3_DESC', overlay.card3_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 13, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.4, wrap: 'wrap',
+    placeText('METRIC_B_DESC', overlay.metricBDesc, {
+      align: 'left', verticalAlign: 'top', fontSize: 12, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.5, wrap: 'wrap',
     }, 'body'),
-    placeText('CARD_3_INSIGHT_TITLE', overlay.card3_insight_title, {
-      align: 'left', verticalAlign: 'top', fontSize: 14, fontWeight: 700, color: CTXC_COLORS.card3, clipToSlot: true, lineHeight: 1.2,
-    }, 'heading'),
-    placeText('CARD_3_INSIGHT_DESC', overlay.card3_insight_desc, {
-      align: 'left', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.3, wrap: 'wrap',
+    placeText('METRIC_C_LABEL', overlay.metricCLabel, {
+      align: 'left', verticalAlign: 'center', fontSize: 16, fontWeight: 700, color: '#0F172A', clipToSlot: true, lineHeight: 1,
+    }, 'caption'),
+    placeText('METRIC_C_DESC', overlay.metricCDesc, {
+      align: 'left', verticalAlign: 'top', fontSize: 12, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.5, wrap: 'wrap',
     }, 'body'),
   ]
 
@@ -503,32 +515,7 @@ function layoutChartThreeContext(elements, schema, palette, canvas) {
     }
   }).filter(Boolean)
   
-  // Find chart elements
-  const chart1El = elements.find(function(el) { return el.slotId === 'CHART_1' })
-  const chart2El = elements.find(function(el) { return el.slotId === 'CHART_2' })
-  const chart3El = elements.find(function(el) { return el.slotId === 'CHART_3' })
-  
-  const charts = []
-  if (chart1El) {
-    charts.push(Object.assign({}, chart1El, {
-      placement: overlay.card1_chart,
-      layer: 8,
-    }))
-  }
-  if (chart2El) {
-    charts.push(Object.assign({}, chart2El, {
-      placement: overlay.card2_chart,
-      layer: 8,
-    }))
-  }
-  if (chart3El) {
-    charts.push(Object.assign({}, chart3El, {
-      placement: overlay.card3_chart,
-      layer: 8,
-    }))
-  }
-  
-  return chrome.concat(next).concat(charts)
+  return chrome.concat(next)
 }
 
 module.exports = {
