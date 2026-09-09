@@ -89,6 +89,10 @@ function isChartDonutContextLayout(layoutId) {
   return /chart_donut_context(_v1|_right_v1)?$/i.test(String(layoutId || ''))
 }
 
+function isChartDonutContextRightLayout(layoutId) {
+  return /chart_donut_context_right_v1$/i.test(String(layoutId || ''))
+}
+
 function isChartDonutContextTextSlot(slotId) {
   const sid = String(slotId || '')
   return sid === 'BADGE'
@@ -261,6 +265,41 @@ function chartDonutContextChromeSpecs() {
   return specs
 }
 
+// Mirrored version for right-side donut
+function chartDonutContextRightChromeSpecs() {
+  var specs = chartDonutContextChromeSpecs()
+  var g = CDC_GEOM
+  
+  // Mirror positions horizontally
+  return specs.map(function(spec) {
+    var mirrored = Object.assign({}, spec)
+    
+    // Mirror badge
+    if (spec.slotId === 'CDC_BADGE_BG' || spec.slotId === 'CDC_BADGE_ICON') {
+      mirrored.x = g.viewW - spec.x - spec.w
+    }
+    
+    // Mirror panel
+    if (spec.slotId === 'CDC_PANEL_BG') {
+      mirrored.x = 40 // Left side instead of right
+    }
+    
+    // Mirror donut
+    if (spec.slotId.indexOf('CDC_SEGMENT_') === 0) {
+      var donutNewCenterX = 770 // Right side
+      var donutLeft = donutNewCenterX - g.donutOuterRadius
+      mirrored.x = donutLeft
+    }
+    
+    // Mirror metric dots
+    if (spec.slotId.indexOf('CDC_METRIC_DOT_') === 0) {
+      mirrored.x = 40 + g.metricDotX
+    }
+    
+    return mirrored
+  })
+}
+
 function chartDonutContextOverlay(gx, gy, gw, gh) {
   const g = CDC_GEOM
   const sx = gw / g.viewW
@@ -292,6 +331,46 @@ function chartDonutContextOverlay(gx, gy, gw, gh) {
     overlays['metric' + segment.id + 'Label'] = box(g.panelX + g.metricLabelX, y, 240, 20)
     overlays['metric' + segment.id + 'Value'] = box(g.panelX + g.metricValueX, y, 40, 20)
     overlays['metric' + segment.id + 'Desc'] = box(g.panelX + g.metricDescX, y + g.metricDescY, 360, g.metricDescH || 42)
+  })
+  
+  return overlays
+}
+
+// Mirrored overlay for right-side donut
+function chartDonutContextRightOverlay(gx, gy, gw, gh) {
+  var g = CDC_GEOM
+  var sx = gw / g.viewW
+  var sy = gh / g.viewH
+  function box(x, y, w, h) {
+    return {
+      x: Math.round(gx + x * sx),
+      y: Math.round(gy + y * sy),
+      width: Math.max(12, Math.round(w * sx)),
+      height: Math.max(10, Math.round(h * sy)),
+    }
+  }
+  
+  var donutNewCenterX = 770 // Right side
+  var panelNewX = 40 // Left side
+  
+  var overlays = {
+    badge: box(g.viewW - g.badgeX - g.badgeW + g.badgeIconSize + 14, g.badgeY, g.badgeW - g.badgeIconSize - 20, g.badgeH),
+    
+    // Center text in donut (right side)
+    centerValue: box(donutNewCenterX - 60, g.centerTextY - 20, 120, 40),
+    centerLabel: box(donutNewCenterX - 60, g.centerLabelY - 10, 120, 24),
+    
+    // Context panel (left side)
+    panelHeading: box(panelNewX + g.panelHeadingX, g.panelY + g.panelHeadingY, 340, 36),
+    panelSubheading: box(panelNewX + g.panelSubheadingX, g.panelY + g.panelSubheadingY, g.panelSubheadingW, g.panelSubheadingH),
+  }
+  
+  // Metric breakdowns in panel (left side)
+  CDC_SEGMENTS.forEach(function(segment, i) {
+    var y = g.panelY + g.metricStartY + (i * g.metricGap)
+    overlays['metric' + segment.id + 'Label'] = box(panelNewX + g.metricLabelX, y, 240, 20)
+    overlays['metric' + segment.id + 'Value'] = box(panelNewX + g.metricValueX, y, 40, 20)
+    overlays['metric' + segment.id + 'Desc'] = box(panelNewX + g.metricDescX, y + g.metricDescY, 360, g.metricDescH || 42)
   })
   
   return overlays
@@ -348,7 +427,15 @@ function layoutChartDonutContext(elements, schema, palette, canvas) {
   const canvasH = canvas.height || 1080
   const sx = canvasW / CDC_GEOM.viewW
   const sy = canvasH / CDC_GEOM.viewH
-  const overlay = chartDonutContextOverlay(0, 0, canvasW, canvasH)
+  
+  // Detect if this is the mirrored "right" layout
+  var layoutId = (schema && (schema.layout_id || schema.id || schema.layoutId)) || ''
+  var isRightLayout = isChartDonutContextRightLayout(layoutId)
+  
+  var overlay = isRightLayout 
+    ? chartDonutContextRightOverlay(0, 0, canvasW, canvasH)
+    : chartDonutContextOverlay(0, 0, canvasW, canvasH)
+    
   const chromeRe = /^CDC_/i
   
   const prevBySlot = new Map()
@@ -416,7 +503,7 @@ function layoutChartDonutContext(elements, schema, palette, canvas) {
     )
   })
 
-  const chrome = chartDonutContextChromeSpecs().map(function(spec) {
+  const chrome = (isRightLayout ? chartDonutContextRightChromeSpecs() : chartDonutContextChromeSpecs()).map(function(spec) {
     const prev = prevBySlot.get(spec.slotId.toUpperCase())
     const graphic = specToChartDonutContextContent(spec)
     if (!graphic) return null

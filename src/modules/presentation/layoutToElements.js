@@ -197,6 +197,10 @@ const { isChartThreeCardsLayout, layoutChartThreeCards } = require('./diagrams/c
 const { isChartThreeContextLayout, layoutChartThreeContext } = require('./diagrams/chartThreeContext');
 const { isChartThreeContextCardsLayout, layoutChartThreeContextCards } = require('./diagrams/chartThreeContextCards');
 const { isChartDonutContextLayout, layoutChartDonutContext } = require('./diagrams/chartDonutContext');
+const { isMetricThreeCardsLayout, layoutMetricThreeCards } = require('./diagrams/metricThreeCards');
+const { isMetricSingleLayout, layoutMetricSingle } = require('./diagrams/metricSingle');
+const { isMetricTwoLayout, layoutMetricTwo } = require('./diagrams/metricTwo');
+const { isMetricSingleSplitLayout, layoutMetricSingleSplit } = require('./diagrams/metricSingleSplit');
 const {
   QUOTE_GRID_N,
   QUOTE_MARK_COLOR,
@@ -9658,6 +9662,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutChartThreeContextCards(next, layoutSchema, themeTokens, canvas);
   } else if (isChartDonutContextLayout(layoutSchema?.layout_id)) {
     next = layoutChartDonutContext(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricThreeCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricThreeCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricSingleLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricSingle(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricTwoLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricTwo(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricSingleSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricSingleSplit(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
