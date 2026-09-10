@@ -11007,35 +11007,69 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Data table",
+          "placeholder_text": "Annual Financial Summary Table",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 26, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.15 }
         },
         {
-          "id": "TABLE",
-          "region": "cols 2-11, rows 3-10",
-          "role": "table",
-          "layer": 10
-        }
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Revenue, Cost of Goods, Operations, Gross Profit, EBITDA, Net Income",
+          "layer": 10,
+          "typography": { "fontSize": 13, "fontWeight": 500, "colorRole": "muted", "align": "left", "lineHeight": 1.25 }
+        },
+        { "id": "COL_1_HEADER", "region": "cols 4-5, rows 3-4", "role": "heading", "placeholder_text": "20XX", "layer": 12, "typography": { "fontSize": 20, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_2_HEADER", "region": "cols 6-7, rows 3-4", "role": "heading", "placeholder_text": "20XX", "layer": 12, "typography": { "fontSize": 20, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_3_HEADER", "region": "cols 8-9, rows 3-4", "role": "heading", "placeholder_text": "20XX", "layer": 12, "typography": { "fontSize": 20, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_HEADER", "region": "cols 10-11, rows 3-4", "role": "heading", "placeholder_text": "20XX", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_SUB", "region": "cols 10-11, rows 4-4", "role": "caption", "placeholder_text": "plan", "layer": 12, "typography": { "fontSize": 11, "fontWeight": 600, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_5_HEADER", "region": "cols 11-12, rows 3-4", "role": "heading", "placeholder_text": "20XX", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_5_SUB", "region": "cols 11-12, rows 4-4", "role": "caption", "placeholder_text": "fact", "layer": 12, "typography": { "fontSize": 11, "fontWeight": 600, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "ROW_1_LABEL", "region": "cols 2-4, rows 4-5", "role": "body", "placeholder_text": "Revenue", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600 } },
+        { "id": "ROW_2_LABEL", "region": "cols 2-4, rows 5-6", "role": "body", "placeholder_text": "Cost of Goods Sold", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600 } },
+        { "id": "ROW_3_LABEL", "region": "cols 2-4, rows 6-7", "role": "body", "placeholder_text": "Gross Profit", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600 } },
+        { "id": "ROW_4_LABEL", "region": "cols 2-4, rows 7-8", "role": "body", "placeholder_text": "Costs of operations", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600 } },
+        { "id": "ROW_5_LABEL", "region": "cols 2-4, rows 8-9", "role": "body", "placeholder_text": "EBITDA", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600 } },
+        { "id": "ROW_6_LABEL", "region": "cols 2-4, rows 9-10", "role": "body", "placeholder_text": "Net Income", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800 } },
+        { "id": "CELL_1_1", "region": "cols 4-5, rows 4-5", "role": "stat", "placeholder_text": "150 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_2", "region": "cols 6-7, rows 4-5", "role": "stat", "placeholder_text": "200 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_3", "region": "cols 8-9, rows 4-5", "role": "stat", "placeholder_text": "210 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_4", "region": "cols 10-11, rows 4-5", "role": "stat", "placeholder_text": "350 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_5", "region": "cols 11-12, rows 4-5", "role": "stat", "placeholder_text": "340 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_1", "region": "cols 4-5, rows 5-6", "role": "stat", "placeholder_text": "30 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_2", "region": "cols 6-7, rows 5-6", "role": "stat", "placeholder_text": "60 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_3", "region": "cols 8-9, rows 5-6", "role": "stat", "placeholder_text": "60 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_4", "region": "cols 10-11, rows 5-6", "role": "stat", "placeholder_text": "75 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_5", "region": "cols 11-12, rows 5-6", "role": "stat", "placeholder_text": "80 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_1", "region": "cols 4-5, rows 6-7", "role": "stat", "placeholder_text": "120 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_2", "region": "cols 6-7, rows 6-7", "role": "stat", "placeholder_text": "140 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_3", "region": "cols 8-9, rows 6-7", "role": "stat", "placeholder_text": "150 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_4", "region": "cols 10-11, rows 6-7", "role": "stat", "placeholder_text": "190 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_5", "region": "cols 11-12, rows 6-7", "role": "stat", "placeholder_text": "200 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_1", "region": "cols 4-5, rows 7-8", "role": "stat", "placeholder_text": "30 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_2", "region": "cols 6-7, rows 7-8", "role": "stat", "placeholder_text": "20 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_3", "region": "cols 8-9, rows 7-8", "role": "stat", "placeholder_text": "10 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_4", "region": "cols 10-11, rows 7-8", "role": "stat", "placeholder_text": "25 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_5", "region": "cols 11-12, rows 7-8", "role": "stat", "placeholder_text": "30 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_1", "region": "cols 4-5, rows 8-9", "role": "stat", "placeholder_text": "90 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_2", "region": "cols 6-7, rows 8-9", "role": "stat", "placeholder_text": "120 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_3", "region": "cols 8-9, rows 8-9", "role": "stat", "placeholder_text": "140 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_4", "region": "cols 10-11, rows 8-9", "role": "stat", "placeholder_text": "190 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_5", "region": "cols 11-12, rows 8-9", "role": "stat", "placeholder_text": "190 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_6_1", "region": "cols 4-5, rows 9-10", "role": "stat", "placeholder_text": "70 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center" } },
+        { "id": "CELL_6_2", "region": "cols 6-7, rows 9-10", "role": "stat", "placeholder_text": "100 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center" } },
+        { "id": "CELL_6_3", "region": "cols 8-9, rows 9-10", "role": "stat", "placeholder_text": "110 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center" } },
+        { "id": "CELL_6_4", "region": "cols 10-11, rows 9-10", "role": "stat", "placeholder_text": "200 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center" } },
+        { "id": "CELL_6_5", "region": "cols 11-12, rows 9-10", "role": "stat", "placeholder_text": "210 000 000", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center" } }
       ],
       "preview": {
         "mode": "table_preview",
         "slots": {
-          "HEADING": {
-            "text": "Data table",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Annual Financial Summary Table", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "Revenue, Cost of Goods, Operations, Gross Profit, EBITDA, Net Income", "variant": "subheading", "bold": false, "uppercase": false }
         }
       }
     }
@@ -11053,56 +11087,152 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-5, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Data table",
+          "placeholder_text": "Table Template",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 32, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.15 }
+        },
+        {
+          "id": "DESCRIPTION",
+          "region": "cols 5-12, rows 1-2",
+          "role": "body",
+          "placeholder_text": "This slide presents a set of customizable table templates designed for clear and structured data presentation. Each row is visually supported by intuitive icons, making it easy to categorize and compare information across different business functions or metrics.",
+          "layer": 10,
+          "typography": { "fontSize": 13, "fontWeight": 500, "colorRole": "muted", "align": "left", "lineHeight": 1.45 }
+        },
+        { "id": "COL_1_HEADER", "region": "cols 4-6, rows 3-4", "role": "heading", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_2_HEADER", "region": "cols 6-8, rows 3-4", "role": "heading", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_3_HEADER", "region": "cols 8-10, rows 3-4", "role": "heading", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_HEADER", "region": "cols 10-12, rows 3-4", "role": "heading", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+
+        { "id": "ROW_1_LABEL", "region": "cols 1-4, rows 4-5", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+        { "id": "ROW_2_LABEL", "region": "cols 1-4, rows 5-6", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+        { "id": "ROW_3_LABEL", "region": "cols 1-4, rows 6-7", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+        { "id": "ROW_4_LABEL", "region": "cols 1-4, rows 7-8", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+        { "id": "ROW_5_LABEL", "region": "cols 1-4, rows 8-9", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+        { "id": "ROW_6_LABEL", "region": "cols 1-4, rows 9-10", "role": "body", "placeholder_text": "Add Text Here", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "colorRole": "textOnImage" } },
+
+        { "id": "CELL_1_1", "region": "cols 4-6, rows 4-5", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_1_2", "region": "cols 6-8, rows 4-5", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_1_3", "region": "cols 8-10, rows 4-5", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_1_4", "region": "cols 10-12, rows 4-5", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "CELL_2_1", "region": "cols 4-6, rows 5-6", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_2_2", "region": "cols 6-8, rows 5-6", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_2_3", "region": "cols 8-10, rows 5-6", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_2_4", "region": "cols 10-12, rows 5-6", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "CELL_3_1", "region": "cols 4-6, rows 6-7", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_3_2", "region": "cols 6-8, rows 6-7", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_3_3", "region": "cols 8-10, rows 6-7", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_3_4", "region": "cols 10-12, rows 6-7", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "CELL_4_1", "region": "cols 4-6, rows 7-8", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_4_2", "region": "cols 6-8, rows 7-8", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_4_3", "region": "cols 8-10, rows 7-8", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_4_4", "region": "cols 10-12, rows 7-8", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "CELL_5_1", "region": "cols 4-6, rows 8-9", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_5_2", "region": "cols 6-8, rows 8-9", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_5_3", "region": "cols 8-10, rows 8-9", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_5_4", "region": "cols 10-12, rows 8-9", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "CELL_6_1", "region": "cols 4-6, rows 9-10", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_6_2", "region": "cols 6-8, rows 9-10", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_6_3", "region": "cols 8-10, rows 9-10", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "CELL_6_4", "region": "cols 10-12, rows 9-10", "role": "body", "placeholder_text": "Lorem ipsum dolor\\nsit amet", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } }
+      ],
+      "preview": {
+        "mode": "table_with_desc",
+        "slots": {
+          "HEADING": { "text": "Table Template", "variant": "title", "bold": true, "uppercase": false },
+          "DESCRIPTION": { "text": "This slide presents a set of customizable table templates designed for clear and structured data presentation. Each row is visually supported by intuitive icons, making it easy to categorize and compare information across different business functions or metrics.", "variant": "body", "bold": false, "uppercase": false }
+        }
+      }
+    }
+  },
+  {
+    "name": "Table With Description Side",
+    "contentType": "chart",
+    "variant": "table_with_description_side_v1",
+    "schema": {
+      "layout_id": "table_with_description_side_v1",
+      "content_type": "chart",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 1-12, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Table Slide",
+          "layer": 10,
+          "typography": { "fontSize": 32, "fontWeight": 800, "colorRole": "text", "align": "center", "lineHeight": 1.15 }
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Make a big impact with our professional slides and charts",
+          "layer": 10,
+          "typography": { "fontSize": 14, "fontWeight": 500, "colorRole": "muted", "align": "center", "lineHeight": 1.25 }
+        },
+        { "id": "COL_1_HEADER", "region": "cols 1-2, rows 3-4", "role": "heading", "placeholder_text": "Target", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_2_HEADER", "region": "cols 3-4, rows 3-4", "role": "heading", "placeholder_text": "Sales", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_3_HEADER", "region": "cols 5-6, rows 3-4", "role": "heading", "placeholder_text": "Execution", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_HEADER", "region": "cols 7-8, rows 3-4", "role": "heading", "placeholder_text": "Control", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+
+        { "id": "CELL_1_1", "region": "cols 1-2, rows 4-5", "role": "body", "placeholder_text": "10,000", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_2", "region": "cols 3-4, rows 4-5", "role": "body", "placeholder_text": "12,450", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_3", "region": "cols 5-6, rows 4-5", "role": "body", "placeholder_text": "98.5%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_4", "region": "cols 7-8, rows 4-5", "role": "body", "placeholder_text": "Approved", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_2_1", "region": "cols 1-2, rows 5-6", "role": "body", "placeholder_text": "15,000", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_2", "region": "cols 3-4, rows 5-6", "role": "body", "placeholder_text": "18,200", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_3", "region": "cols 5-6, rows 5-6", "role": "body", "placeholder_text": "94.2%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_4", "region": "cols 7-8, rows 5-6", "role": "body", "placeholder_text": "Pending", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_3_1", "region": "cols 1-2, rows 6-7", "role": "body", "placeholder_text": "20,000", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_2", "region": "cols 3-4, rows 6-7", "role": "body", "placeholder_text": "24,800", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_3", "region": "cols 5-6, rows 6-7", "role": "body", "placeholder_text": "99.1%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_4", "region": "cols 7-8, rows 6-7", "role": "body", "placeholder_text": "Complete", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_4_1", "region": "cols 1-2, rows 7-8", "role": "body", "placeholder_text": "25,000", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_2", "region": "cols 3-4, rows 7-8", "role": "body", "placeholder_text": "15,600", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_3", "region": "cols 5-6, rows 7-8", "role": "body", "placeholder_text": "96.4%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_4", "region": "cols 7-8, rows 7-8", "role": "body", "placeholder_text": "In Review", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_5_1", "region": "cols 1-2, rows 8-9", "role": "body", "placeholder_text": "30,000", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_2", "region": "cols 3-4, rows 8-9", "role": "body", "placeholder_text": "31,500", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_3", "region": "cols 5-6, rows 8-9", "role": "body", "placeholder_text": "97.8%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_4", "region": "cols 7-8, rows 8-9", "role": "body", "placeholder_text": "Verified", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        {
+          "id": "SIDE_HEADING",
+          "region": "cols 9-12, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Project Planning",
+          "layer": 10,
+          "typography": { "fontSize": 22, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.2 }
         },
         {
           "id": "BODY",
-          "region": "cols 2-11, rows 2-3",
+          "region": "cols 9-12, rows 5-8",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Make a big impact with professional slides, charts, infographics and more. Turn complex data into easy to understand infographics.",
           "layer": 10,
-          "typography": {
-            "fontSize": 18,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
-        },
-        {
-          "id": "TABLE",
-          "region": "cols 2-11, rows 4-10",
-          "role": "table",
-          "layer": 10
+          "typography": { "fontSize": 13.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.5 }
         }
       ],
       "preview": {
         "mode": "table_with_desc",
         "slots": {
-          "HEADING": {
-            "text": "Data table",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Table Slide", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "Make a big impact with our professional slides and charts", "variant": "subheading", "bold": false, "uppercase": false },
+          "SIDE_HEADING": { "text": "Project Planning", "variant": "title", "bold": true, "uppercase": false },
+          "BODY": { "text": "Make a big impact with professional slides, charts, infographics and more. Turn complex data into easy to understand infographics.", "variant": "body", "bold": false, "uppercase": false }
         }
       }
     }
@@ -11120,83 +11250,80 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Compare datasets",
+          "placeholder_text": "Compare Datasets",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 32, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.15 }
         },
         {
-          "id": "TABLE_1",
-          "region": "cols 1-6, rows 3-8",
-          "role": "table",
-          "layer": 10
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Explore the differences and similarities between the two datasets side by side for a clearer understanding.",
+          "layer": 10,
+          "typography": { "fontSize": 14, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.25 }
         },
+
+        { "id": "DATASET_1_TITLE", "region": "cols 1-4, rows 3-4", "role": "heading", "placeholder_text": "Dataset 1", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 700, "align": "left" } },
+        { "id": "DATASET_1_BADGE", "region": "cols 5-6, rows 3-4", "role": "badge", "placeholder_text": "Source A", "layer": 12, "typography": { "fontSize": 11, "fontWeight": 600, "align": "center", "colorRole": "primary" } },
+        { "id": "T1_COL_1_HEADER", "region": "cols 1-2, rows 4-5", "role": "heading", "placeholder_text": "A", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_COL_2_HEADER", "region": "cols 3-4, rows 4-5", "role": "heading", "placeholder_text": "B", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_COL_3_HEADER", "region": "cols 5-6, rows 4-5", "role": "heading", "placeholder_text": "C", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_ROW_1_LABEL", "region": "cols 1-2, rows 5-6", "role": "body", "placeholder_text": "Row 1", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_1_1", "region": "cols 3-4, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_1_2", "region": "cols 5-6, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_ROW_2_LABEL", "region": "cols 1-2, rows 6-7", "role": "body", "placeholder_text": "Row 2", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_2_1", "region": "cols 3-4, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_2_2", "region": "cols 5-6, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_ROW_3_LABEL", "region": "cols 1-2, rows 7-8", "role": "body", "placeholder_text": "Row 3", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_3_1", "region": "cols 3-4, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_3_2", "region": "cols 5-6, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "DESC_1_TITLE", "region": "cols 1-6, rows 8-9", "role": "heading", "placeholder_text": "Description 1", "layer": 12, "typography": { "fontSize": 16, "fontWeight": 700, "align": "left" } },
         {
           "id": "DESC_1",
-          "region": "cols 1-6, rows 8-9",
+          "region": "cols 1-6, rows 9-10",
           "role": "body",
-          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "placeholder_text": "Add a short description about Dataset 1 here. You can mention key details, purpose, or any important insights.",
           "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 12.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.4 }
         },
-        {
-          "id": "TABLE_2",
-          "region": "cols 7-12, rows 3-8",
-          "role": "table",
-          "layer": 10
-        },
+
+        { "id": "DATASET_2_TITLE", "region": "cols 7-10, rows 3-4", "role": "heading", "placeholder_text": "Dataset 2", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 700, "align": "left" } },
+        { "id": "DATASET_2_BADGE", "region": "cols 11-12, rows 3-4", "role": "badge", "placeholder_text": "Source B", "layer": 12, "typography": { "fontSize": 11, "fontWeight": 600, "align": "center", "colorRole": "secondary" } },
+        { "id": "T2_COL_1_HEADER", "region": "cols 7-8, rows 4-5", "role": "heading", "placeholder_text": "A", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_COL_2_HEADER", "region": "cols 9-10, rows 4-5", "role": "heading", "placeholder_text": "B", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_COL_3_HEADER", "region": "cols 11-12, rows 4-5", "role": "heading", "placeholder_text": "C", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_ROW_1_LABEL", "region": "cols 7-8, rows 5-6", "role": "body", "placeholder_text": "Row 1", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_1_1", "region": "cols 9-10, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_1_2", "region": "cols 11-12, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_ROW_2_LABEL", "region": "cols 7-8, rows 6-7", "role": "body", "placeholder_text": "Row 2", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_2_1", "region": "cols 9-10, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_2_2", "region": "cols 11-12, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_ROW_3_LABEL", "region": "cols 7-8, rows 7-8", "role": "body", "placeholder_text": "Row 3", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_3_1", "region": "cols 9-10, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_3_2", "region": "cols 11-12, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "DESC_2_TITLE", "region": "cols 7-12, rows 8-9", "role": "heading", "placeholder_text": "Description 2", "layer": 12, "typography": { "fontSize": 16, "fontWeight": 700, "align": "left" } },
         {
           "id": "DESC_2",
-          "region": "cols 7-12, rows 8-9",
+          "region": "cols 7-12, rows 9-10",
           "role": "body",
-          "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+          "placeholder_text": "Add a short description about Dataset 2 here. You can mention key details, purpose, or any important insights.",
           "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 12.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.4 }
         }
       ],
       "preview": {
         "mode": "table_dual",
         "slots": {
-          "HEADING": {
-            "text": "Compare datasets",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "DESC_1": {
-            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          },
-          "DESC_2": {
-            "text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Compare Datasets", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "Explore the differences and similarities between the two datasets side by side for a clearer understanding.", "variant": "subheading", "bold": false, "uppercase": false },
+          "DATASET_1_TITLE": { "text": "Dataset 1", "variant": "heading", "bold": true, "uppercase": false },
+          "DATASET_2_TITLE": { "text": "Dataset 2", "variant": "heading", "bold": true, "uppercase": false },
+          "DESC_1_TITLE": { "text": "Description 1", "variant": "heading", "bold": true, "uppercase": false },
+          "DESC_2_TITLE": { "text": "Description 2", "variant": "heading", "bold": true, "uppercase": false }
         }
       }
     }
@@ -15754,36 +15881,69 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Data table",
+          "placeholder_text": "Investment Report",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 28, "fontWeight": 800, "colorRole": "text", "align": "center", "lineHeight": 1.15 }
         },
         {
-          "id": "TABLE",
-          "region": "cols 2-11, rows 3-10",
-          "role": "table",
-          "layer": 10
-        }
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "This is the sample dummy text insert your desired text here because this is the dummy text.",
+          "layer": 10,
+          "typography": { "fontSize": 13, "fontWeight": 500, "colorRole": "muted", "align": "center", "lineHeight": 1.25 }
+        },
+        { "id": "COL_0_HEADER", "region": "cols 1-2, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_1_HEADER", "region": "cols 3-4, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 1", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_2_HEADER", "region": "cols 5-5, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 2", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_3_HEADER", "region": "cols 6-7, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 3", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_HEADER", "region": "cols 8-9, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 4", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_5_HEADER", "region": "cols 10-10, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 5", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_6_HEADER", "region": "cols 11-12, rows 3-4", "role": "heading", "placeholder_text": "COLUMN 6", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "ROW_1_LABEL", "region": "cols 1-2, rows 4-5", "role": "body", "placeholder_text": "This is the sample", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600 } },
+        { "id": "ROW_2_LABEL", "region": "cols 1-2, rows 5-6", "role": "body", "placeholder_text": "dummy text insert your", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600 } },
+        { "id": "ROW_3_LABEL", "region": "cols 1-2, rows 6-7", "role": "body", "placeholder_text": "desired text here because", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600 } },
+        { "id": "ROW_4_LABEL", "region": "cols 1-2, rows 7-8", "role": "body", "placeholder_text": "this is the dummy text.", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600 } },
+        { "id": "CELL_1_1", "region": "cols 3-4, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_2", "region": "cols 5-5, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_3", "region": "cols 6-7, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_4", "region": "cols 8-9, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_5", "region": "cols 10-10, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_6", "region": "cols 11-12, rows 4-5", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_1", "region": "cols 3-4, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_2", "region": "cols 5-5, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_3", "region": "cols 6-7, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_4", "region": "cols 8-9, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_5", "region": "cols 10-10, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_6", "region": "cols 11-12, rows 5-6", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_1", "region": "cols 3-4, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_2", "region": "cols 5-5, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_3", "region": "cols 6-7, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_4", "region": "cols 8-9, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_5", "region": "cols 10-10, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_6", "region": "cols 11-12, rows 6-7", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_1", "region": "cols 3-4, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_2", "region": "cols 5-5, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_3", "region": "cols 6-7, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_4", "region": "cols 8-9, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_5", "region": "cols 10-10, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_6", "region": "cols 11-12, rows 7-8", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 600, "align": "center" } },
+        { "id": "TOTAL_LABEL", "region": "cols 1-2, rows 8-9", "role": "heading", "placeholder_text": "TOTAL", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_1", "region": "cols 3-4, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_2", "region": "cols 5-5, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_3", "region": "cols 6-7, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_4", "region": "cols 8-9, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_5", "region": "cols 10-10, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "TOTAL_6", "region": "cols 11-12, rows 8-9", "role": "stat", "placeholder_text": "$100.0", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 800, "align": "center", "colorRole": "textOnImage" } }
       ],
       "preview": {
         "mode": "table_preview",
         "dataVariant": "cards",
         "slots": {
-          "HEADING": {
-            "text": "Data table",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Investment Report", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "This is the sample dummy text insert your desired text here because this is the dummy text.", "variant": "subheading", "bold": false, "uppercase": false }
         }
       }
     }
@@ -15801,84 +15961,81 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Compare datasets",
+          "placeholder_text": "Compare Datasets",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 32, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.15 }
         },
         {
-          "id": "TABLE_1",
-          "region": "cols 1-6, rows 3-8",
-          "role": "table",
-          "layer": 10
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Explore the differences and similarities between the two datasets side by side for a clearer understanding.",
+          "layer": 10,
+          "typography": { "fontSize": 14, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.25 }
         },
+
+        { "id": "DATASET_1_TITLE", "region": "cols 1-4, rows 3-4", "role": "heading", "placeholder_text": "Dataset 1", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 700, "align": "left" } },
+        { "id": "DATASET_1_SUB", "region": "cols 1-4, rows 4-4", "role": "caption", "placeholder_text": "Key details and values", "layer": 12, "typography": { "fontSize": 12, "fontWeight": 500, "align": "left", "colorRole": "muted" } },
+        { "id": "T1_COL_1_HEADER", "region": "cols 1-2, rows 4-5", "role": "heading", "placeholder_text": "A", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_COL_2_HEADER", "region": "cols 3-4, rows 4-5", "role": "heading", "placeholder_text": "B", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_COL_3_HEADER", "region": "cols 5-6, rows 4-5", "role": "heading", "placeholder_text": "C", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T1_ROW_1_LABEL", "region": "cols 1-2, rows 5-6", "role": "body", "placeholder_text": "Row 1", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_1_1", "region": "cols 3-4, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_1_2", "region": "cols 5-6, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_ROW_2_LABEL", "region": "cols 1-2, rows 6-7", "role": "body", "placeholder_text": "Row 2", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_2_1", "region": "cols 3-4, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_2_2", "region": "cols 5-6, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_ROW_3_LABEL", "region": "cols 1-2, rows 7-8", "role": "body", "placeholder_text": "Row 3", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T1_CELL_3_1", "region": "cols 3-4, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T1_CELL_3_2", "region": "cols 5-6, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "DESC_1_TITLE", "region": "cols 1-6, rows 8-9", "role": "heading", "placeholder_text": "Description 1", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 700, "align": "left" } },
         {
           "id": "DESC_1",
-          "region": "cols 1-6, rows 8-9",
+          "region": "cols 1-6, rows 9-10",
           "role": "body",
-          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "placeholder_text": "Add a short description about Dataset 1 here. You can mention key details, purpose, or any important insights.",
           "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 11.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.35 }
         },
-        {
-          "id": "TABLE_2",
-          "region": "cols 7-12, rows 3-8",
-          "role": "table",
-          "layer": 10
-        },
+
+        { "id": "DATASET_2_TITLE", "region": "cols 7-10, rows 3-4", "role": "heading", "placeholder_text": "Dataset 2", "layer": 12, "typography": { "fontSize": 18, "fontWeight": 700, "align": "left" } },
+        { "id": "DATASET_2_SUB", "region": "cols 7-10, rows 4-4", "role": "caption", "placeholder_text": "Key details and values", "layer": 12, "typography": { "fontSize": 12, "fontWeight": 500, "align": "left", "colorRole": "muted" } },
+        { "id": "T2_COL_1_HEADER", "region": "cols 7-8, rows 4-5", "role": "heading", "placeholder_text": "A", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_COL_2_HEADER", "region": "cols 9-10, rows 4-5", "role": "heading", "placeholder_text": "B", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_COL_3_HEADER", "region": "cols 11-12, rows 4-5", "role": "heading", "placeholder_text": "C", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 700, "align": "center" } },
+        { "id": "T2_ROW_1_LABEL", "region": "cols 7-8, rows 5-6", "role": "body", "placeholder_text": "Row 1", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_1_1", "region": "cols 9-10, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_1_2", "region": "cols 11-12, rows 5-6", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_ROW_2_LABEL", "region": "cols 7-8, rows 6-7", "role": "body", "placeholder_text": "Row 2", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_2_1", "region": "cols 9-10, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_2_2", "region": "cols 11-12, rows 6-7", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_ROW_3_LABEL", "region": "cols 7-8, rows 7-8", "role": "body", "placeholder_text": "Row 3", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "left" } },
+        { "id": "T2_CELL_3_1", "region": "cols 9-10, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+        { "id": "T2_CELL_3_2", "region": "cols 11-12, rows 7-8", "role": "body", "placeholder_text": "—", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 500, "align": "center" } },
+
+        { "id": "DESC_2_TITLE", "region": "cols 7-12, rows 8-9", "role": "heading", "placeholder_text": "Description 2", "layer": 12, "typography": { "fontSize": 15, "fontWeight": 700, "align": "left" } },
         {
           "id": "DESC_2",
-          "region": "cols 7-12, rows 8-9",
+          "region": "cols 7-12, rows 9-10",
           "role": "body",
-          "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+          "placeholder_text": "Add a short description about Dataset 2 here. You can mention key details, purpose, or any important insights.",
           "layer": 10,
-          "typography": {
-            "fontSize": 14,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 11.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.35 }
         }
       ],
       "preview": {
         "mode": "table_dual",
         "dataVariant": "cards",
         "slots": {
-          "HEADING": {
-            "text": "Compare datasets",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "DESC_1": {
-            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          },
-          "DESC_2": {
-            "text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Compare Datasets", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "Explore the differences and similarities between the two datasets side by side for a clearer understanding.", "variant": "subheading", "bold": false, "uppercase": false },
+          "DATASET_1_TITLE": { "text": "Dataset 1", "variant": "heading", "bold": true, "uppercase": false },
+          "DATASET_2_TITLE": { "text": "Dataset 2", "variant": "heading", "bold": true, "uppercase": false },
+          "DESC_1_TITLE": { "text": "Description 1", "variant": "heading", "bold": true, "uppercase": false },
+          "DESC_2_TITLE": { "text": "Description 2", "variant": "heading", "bold": true, "uppercase": false }
         }
       }
     }
@@ -15969,57 +16126,75 @@
       "slots": [
         {
           "id": "HEADING",
-          "region": "cols 2-11, rows 1-2",
+          "region": "cols 1-12, rows 1-2",
           "role": "heading",
-          "placeholder_text": "Data table",
+          "placeholder_text": "Table Slide",
           "layer": 10,
-          "typography": {
-            "fontSize": 28,
-            "fontWeight": 800,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.15
-          },
-          "max_lines": 2
+          "typography": { "fontSize": 32, "fontWeight": 800, "colorRole": "text", "align": "center", "lineHeight": 1.15 }
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Make a big impact with our professional slides and charts",
+          "layer": 10,
+          "typography": { "fontSize": 14, "fontWeight": 500, "colorRole": "muted", "align": "center", "lineHeight": 1.25 }
+        },
+        { "id": "COL_1_HEADER", "region": "cols 1-2, rows 3-4", "role": "heading", "placeholder_text": "Target", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_2_HEADER", "region": "cols 3-4, rows 3-4", "role": "heading", "placeholder_text": "Sales", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_3_HEADER", "region": "cols 5-6, rows 3-4", "role": "heading", "placeholder_text": "Execution", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+        { "id": "COL_4_HEADER", "region": "cols 7-8, rows 3-4", "role": "heading", "placeholder_text": "Control", "layer": 12, "typography": { "fontSize": 14, "fontWeight": 700, "align": "center", "colorRole": "textOnImage" } },
+
+        { "id": "CELL_1_1", "region": "cols 1-2, rows 4-5", "role": "body", "placeholder_text": "Q1 Launch", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_2", "region": "cols 3-4, rows 4-5", "role": "body", "placeholder_text": "12,450", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_3", "region": "cols 5-6, rows 4-5", "role": "body", "placeholder_text": "98.5%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_1_4", "region": "cols 7-8, rows 4-5", "role": "body", "placeholder_text": "Approved", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_2_1", "region": "cols 1-2, rows 5-6", "role": "body", "placeholder_text": "Phase II", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_2", "region": "cols 3-4, rows 5-6", "role": "body", "placeholder_text": "18,200", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_3", "region": "cols 5-6, rows 5-6", "role": "body", "placeholder_text": "94.2%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_2_4", "region": "cols 7-8, rows 5-6", "role": "body", "placeholder_text": "Pending", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_3_1", "region": "cols 1-2, rows 6-7", "role": "body", "placeholder_text": "Rollout", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_2", "region": "cols 3-4, rows 6-7", "role": "body", "placeholder_text": "24,800", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_3", "region": "cols 5-6, rows 6-7", "role": "body", "placeholder_text": "99.1%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_3_4", "region": "cols 7-8, rows 6-7", "role": "body", "placeholder_text": "Complete", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_4_1", "region": "cols 1-2, rows 7-8", "role": "body", "placeholder_text": "Scale", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_2", "region": "cols 3-4, rows 7-8", "role": "body", "placeholder_text": "15,600", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_3", "region": "cols 5-6, rows 7-8", "role": "body", "placeholder_text": "96.4%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_4_4", "region": "cols 7-8, rows 7-8", "role": "body", "placeholder_text": "In Review", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        { "id": "CELL_5_1", "region": "cols 1-2, rows 8-9", "role": "body", "placeholder_text": "Audit", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_2", "region": "cols 3-4, rows 8-9", "role": "body", "placeholder_text": "31,500", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_3", "region": "cols 5-6, rows 8-9", "role": "body", "placeholder_text": "97.8%", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+        { "id": "CELL_5_4", "region": "cols 7-8, rows 8-9", "role": "body", "placeholder_text": "Verified", "layer": 12, "typography": { "fontSize": 13, "fontWeight": 600, "align": "center" } },
+
+        {
+          "id": "SIDE_HEADING",
+          "region": "cols 9-12, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Project Planning",
+          "layer": 12,
+          "typography": { "fontSize": 22, "fontWeight": 800, "colorRole": "text", "align": "left", "lineHeight": 1.2 }
         },
         {
           "id": "BODY",
-          "region": "cols 2-11, rows 2-3",
+          "region": "cols 9-12, rows 5-8",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-          "layer": 10,
-          "typography": {
-            "fontSize": 18,
-            "fontWeight": 400,
-            "colorRole": "muted",
-            "align": "left",
-            "lineHeight": 1.45
-          },
-          "max_lines": 2
-        },
-        {
-          "id": "TABLE",
-          "region": "cols 2-11, rows 4-10",
-          "role": "table",
-          "layer": 10
+          "placeholder_text": "Make a big impact with professional slides, charts, infographics and more. Turn complex data into easy to understand infographics.",
+          "layer": 12,
+          "typography": { "fontSize": 13.5, "fontWeight": 400, "colorRole": "muted", "align": "left", "lineHeight": 1.5 }
         }
       ],
       "preview": {
         "mode": "table_with_desc",
         "dataVariant": "side",
         "slots": {
-          "HEADING": {
-            "text": "Data table",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
-            "variant": "body",
-            "bold": false,
-            "uppercase": false
-          }
+          "HEADING": { "text": "Table Slide", "variant": "title", "bold": true, "uppercase": false },
+          "SUBTITLE": { "text": "Make a big impact with our professional slides and charts", "variant": "subheading", "bold": false, "uppercase": false },
+          "SIDE_HEADING": { "text": "Project Planning", "variant": "title", "bold": true, "uppercase": false },
+          "BODY": { "text": "Make a big impact with professional slides, charts, infographics and more. Turn complex data into easy to understand infographics.", "variant": "body", "bold": false, "uppercase": false }
         }
       }
     }

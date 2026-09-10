@@ -174,6 +174,12 @@ const { isPricingFourParaLayout, layoutPricingFourPara } = require('./diagrams/p
 const { isPricingFourParaCardsLayout, layoutPricingFourParaCards } = require('./diagrams/pricingFourParaCards');
 const { isPricingComparisonTableLayout, layoutPricingComparisonTable } = require('./diagrams/pricingComparisonTable');
 const { isPricingComparisonCardsLayout, layoutPricingComparisonCards } = require('./diagrams/pricingComparisonCards');
+const { isTableSingleLayout, layoutTableSingle } = require('./diagrams/tableSingleLayout');
+const { isTableSingleCardsLayout, layoutTableSingleCards } = require('./diagrams/tableSingleCardsLayout');
+const { isTableWithDescriptionLayout, layoutTableWithDescription } = require('./diagrams/tableWithDescriptionLayout');
+const { isTableWithDescriptionSideLayout, layoutTableWithDescriptionSide } = require('./diagrams/tableWithDescriptionSideLayout');
+const { isTableTwoDescLayout, layoutTableTwoDesc } = require('./diagrams/tableTwoDescLayout');
+const { isTableTwoDescCardsLayout, layoutTableTwoDescCards } = require('./diagrams/tableTwoDescCardsLayout');
 const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
@@ -3281,6 +3287,12 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isPricingFourParaCardsLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'BODY')) ||
       (isPricingComparisonTableLayout(layoutSchema?.layout_id) && (/^PLAN_\d+_/i.test(String(el.slotId || '')) || /^FEATURE_\d+$/i.test(String(el.slotId || '')) || String(el.slotId || '').toUpperCase() === 'HEADING')) ||
       (isPricingComparisonCardsLayout(layoutSchema?.layout_id) && /^PLAN_\d+_/i.test(String(el.slotId || ''))) ||
+      (isTableSingleLayout(layoutSchema?.layout_id) && (/^(COL|ROW|CELL)_\d+/i.test(String(el.slotId || '')) || /^(HEADING|SUBTITLE)$/i.test(String(el.slotId || '')) && !/cards/i.test(String(layoutSchema?.layout_id || '')))) ||
+      (isTableSingleCardsLayout(layoutSchema?.layout_id) && (/^(COL|ROW|CELL|TOTAL)_\d+/i.test(String(el.slotId || '')) || /^(HEADING|SUBTITLE|TOTAL_LABEL)$/i.test(String(el.slotId || '')))) ||
+      (isTableWithDescriptionLayout(layoutSchema?.layout_id) && (/^(COL|ROW|CELL)_\d+/i.test(String(el.slotId || '')) || /^(HEADING|SUBTITLE|DESCRIPTION)$/i.test(String(el.slotId || '')))) ||
+      (isTableWithDescriptionSideLayout(layoutSchema?.layout_id) && (/^(COL|ROW|CELL)_\d+/i.test(String(el.slotId || '')) || /^(HEADING|SUBTITLE|SIDE_HEADING|BODY|DESCRIPTION)$/i.test(String(el.slotId || '')))) ||
+      (isTableTwoDescLayout(layoutSchema?.layout_id) && (/^(T[12]_|DATASET_|TABLE_|TAG_|DESC_|HEADING|SUBTITLE)/i.test(String(el.slotId || '')))) ||
+      (isTableTwoDescCardsLayout(layoutSchema?.layout_id) && (/^(T[12]_|DATASET_|TABLE_|TAG_|DESC_|SUB_|HEADING|SUBTITLE)/i.test(String(el.slotId || '')))) ||
       (isTimelineHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
       (isTimelineHorizontalCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(num|label|foot)$/i.test(String(el.slotId || ''))) ||
       (isTimelineMilestonesLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num|title)$/i.test(String(el.slotId || ''))) ||
@@ -9680,6 +9692,18 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutPricingComparisonCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonTableLayout(layoutSchema?.layout_id)) {
     next = layoutPricingComparisonTable(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableSingleLayout(layoutSchema?.layout_id)) {
+    next = layoutTableSingle(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableSingleCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTableSingleCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableWithDescriptionLayout(layoutSchema?.layout_id)) {
+    next = layoutTableWithDescription(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableWithDescriptionSideLayout(layoutSchema?.layout_id)) {
+    next = layoutTableWithDescriptionSide(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableTwoDescLayout(layoutSchema?.layout_id)) {
+    next = layoutTableTwoDesc(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableTwoDescCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTableTwoDescCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {
