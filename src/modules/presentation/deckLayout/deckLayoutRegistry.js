@@ -24,7 +24,7 @@ function listDeckLayouts(options = {}) {
 }
 
 const LAYOUT_ID_ALIASES = {
-  process_linear_v1: 'process_linner_horti_v1',
+  process_linear_v1: 'process_linear_business_v1',
 };
 
 function normalizeLayoutId(layoutId) {

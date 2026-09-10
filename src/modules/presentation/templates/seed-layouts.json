@@ -11401,6 +11401,258 @@
     }
   },
   {
+    "name": "Linear Business Process",
+    "contentType": "chart",
+    "variant": "process_linear_business_v1",
+    "schema": {
+      "layout_id": "process_linear_business_v1",
+      "content_type": "chart",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "HEADING",
+          "region": "cols 1-12, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Linear Business Process Diagram",
+          "layer": 10,
+          "typography": {
+            "fontSize": 26,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "STEP_1_TITLE",
+          "region": "cols 1-2, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_1_BODY",
+          "region": "cols 1-2, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_2_TITLE",
+          "region": "cols 3-4, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_2_BODY",
+          "region": "cols 3-4, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_3_TITLE",
+          "region": "cols 5-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_3_BODY",
+          "region": "cols 5-6, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_4_TITLE",
+          "region": "cols 6-7, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_4_BODY",
+          "region": "cols 6-7, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_5_TITLE",
+          "region": "cols 8-9, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_5_BODY",
+          "region": "cols 8-9, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_6_TITLE",
+          "region": "cols 10-11, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_6_BODY",
+          "region": "cols 10-11, rows 8-10",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "STEP_7_TITLE",
+          "region": "cols 11-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Text goes here",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "center",
+            "lineHeight": 1.2
+          }
+        },
+        {
+          "id": "STEP_7_BODY",
+          "region": "cols 11-12, rows 4-6",
+          "role": "body",
+          "placeholder_text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 11,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1.35
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "process_linear_business",
+        "slots": {
+          "HEADING": { "text": "Linear Business Process Diagram", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_1_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_1_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_2_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_2_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_3_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_3_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_4_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_4_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_5_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_5_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_6_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_6_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false },
+          "STEP_7_TITLE": { "text": "Text goes here", "variant": "title", "bold": true, "uppercase": false },
+          "STEP_7_BODY": { "text": "Lorem Ipsum is simply dummy text of the printing and typesetting industry.", "variant": "body", "bold": false, "uppercase": false }
+        }
+      }
+    }
+  },
+  {
     "name": "Process Linner Horti",
     "contentType": "chart",
     "variant": "process_linner_horti_v1",
