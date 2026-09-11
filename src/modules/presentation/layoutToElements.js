@@ -188,6 +188,24 @@ const { isTableWithDescriptionSideLayout, layoutTableWithDescriptionSide } = req
 const { isTableTwoDescLayout, layoutTableTwoDesc } = require('./diagrams/tableTwoDescLayout');
 const { isTableTwoDescCardsLayout, layoutTableTwoDescCards } = require('./diagrams/tableTwoDescCardsLayout');
 const { isProcessLinearBusinessLayout, layoutProcessLinearBusiness } = require('./diagrams/processLinearBusinessLayout');
+const {
+  isTableTwoSameHeaderLayout,
+  layoutTableTwoSameHeader,
+  isTableTwoSameHeaderCardsLayout,
+  layoutTableTwoSameHeaderCards,
+} = require('./diagrams/tableTwoSameHeaderLayout');
+const {
+  isEightShortTextsImageLayout,
+  layoutEightShortTextsImage,
+} = require('./diagrams/eightShortTextsImageLayout');
+const {
+  isIntroThreeParaIconsLayout,
+  layoutIntroThreeParaIcons,
+} = require('./diagrams/introThreeParaIconsLayout');
+const {
+  isGridBentoThreeLayout,
+  layoutGridBentoThree,
+} = require('./diagrams/gridBentoThreeLayout');
 const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
@@ -3302,6 +3320,7 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isTableTwoDescLayout(layoutSchema?.layout_id) && (/^(T[12]_|DATASET_|TABLE_|TAG_|DESC_|HEADING|SUBTITLE)/i.test(String(el.slotId || '')))) ||
       (isTableTwoDescCardsLayout(layoutSchema?.layout_id) && (/^(T[12]_|DATASET_|TABLE_|TAG_|DESC_|SUB_|HEADING|SUBTITLE)/i.test(String(el.slotId || '')))) ||
       (isProcessLinearBusinessLayout(layoutSchema?.layout_id) && (/^(STEP_\d+_(TITLE|BODY|SHAPE|CHEVRON|CARD|ICON)|HEADING|PROCESS_LINEAR_CHROME)$/i.test(String(el.slotId || '')))) ||
+      ((isTableTwoSameHeaderLayout(layoutSchema?.layout_id) || isTableTwoSameHeaderCardsLayout(layoutSchema?.layout_id)) && (/^(T[12]_|COL_[A-C]_HEADER|TAG_BADGE|HEADING|SUBTITLE|TABLE_HEADER)/i.test(String(el.slotId || '')))) ||
       (isTimelineHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num)$/i.test(String(el.slotId || ''))) ||
       (isTimelineHorizontalCardsLayout(layoutSchema?.layout_id) && /^milestone_\d+_(num|label|foot)$/i.test(String(el.slotId || ''))) ||
       (isTimelineMilestonesLayout(layoutSchema?.layout_id) && /^milestone_\d+_(label|num|title)$/i.test(String(el.slotId || ''))) ||
@@ -9731,6 +9750,16 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTableTwoDescCards(next, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearBusinessLayout(layoutSchema?.layout_id)) {
     next = layoutProcessLinearBusiness(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableTwoSameHeaderCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutTableTwoSameHeaderCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isTableTwoSameHeaderLayout(layoutSchema?.layout_id)) {
+    next = layoutTableTwoSameHeader(next, layoutSchema, themeTokens, canvas);
+  } else if (isEightShortTextsImageLayout(layoutSchema?.layout_id)) {
+    next = layoutEightShortTextsImage(next, layoutSchema, themeTokens, canvas);
+  } else if (isIntroThreeParaIconsLayout(layoutSchema?.layout_id)) {
+    next = layoutIntroThreeParaIcons(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridBentoThreeLayout(layoutSchema?.layout_id)) {
+    next = layoutGridBentoThree(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {

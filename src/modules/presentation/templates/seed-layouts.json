@@ -6691,49 +6691,123 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
+          "id": "HEADING",
+          "region": "cols 1-12, rows 1-2",
+          "role": "heading",
+          "placeholder_text": "Three-part bento overview",
+          "typography": { "fontSize": 32, "fontWeight": 800 }
+        },
+        {
+          "id": "SUBTITLE",
+          "region": "cols 1-12, rows 2-3",
+          "role": "body",
+          "placeholder_text": "Flagship product experiences, botanical purity, and sensory wellness highlights."
+        },
+        {
+          "id": "CARD_1_TAG",
+          "region": "cols 1-7, rows 3-4",
+          "role": "eyebrow",
+          "placeholder_text": "FOOD & CULINARY"
+        },
+        {
+          "id": "CARD_1_TITLE",
+          "region": "cols 1-7, rows 4-5",
+          "role": "heading",
+          "placeholder_text": "Wake Up and Smell the Coffee",
+          "typography": { "fontSize": 22, "fontWeight": 800 }
+        },
+        {
+          "id": "CARD_1_BODY",
+          "region": "cols 1-7, rows 5-6",
+          "role": "body",
+          "placeholder_text": "Artisan morning rituals crafted with sustainably harvested beans and rich aromatic depth."
+        },
+        {
+          "id": "CARD_1_CTA",
+          "region": "cols 1-3, rows 6-7",
+          "role": "button",
+          "placeholder_text": "Learn more →"
+        },
+        {
           "id": "IMAGE_1",
-          "region": "cols 1-6, rows 1-5",
+          "region": "cols 8-12, rows 3-6",
           "role": "image",
           "layer": 2,
           "fit": "cover",
           "imageStyle": "card",
-          "borderRadius": 12,
-          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+          "borderRadius": 14
+        },
+        {
+          "id": "CARD_2_TAG",
+          "region": "cols 1-6, rows 7-8",
+          "role": "eyebrow",
+          "placeholder_text": "ECO & SUSTAINABILITY"
+        },
+        {
+          "id": "CARD_2_TITLE",
+          "region": "cols 1-6, rows 8-9",
+          "role": "heading",
+          "placeholder_text": "Purify the air in your home",
+          "typography": { "fontSize": 18, "fontWeight": 800 }
+        },
+        {
+          "id": "CARD_2_BODY",
+          "region": "cols 1-6, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Clean living botanicals designed to cultivate restorative atmospheres and indoor vitality."
+        },
+        {
+          "id": "CARD_2_CTA",
+          "region": "cols 1-3, rows 10-11",
+          "role": "button",
+          "placeholder_text": "Learn more →"
         },
         {
           "id": "IMAGE_2",
-          "region": "cols 1-6, rows 6-10",
+          "region": "cols 4-6, rows 7-10",
           "role": "image",
           "layer": 2,
           "fit": "cover",
           "imageStyle": "card",
-          "borderRadius": 12,
-          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+          "borderRadius": 14
+        },
+        {
+          "id": "CARD_3_TAG",
+          "region": "cols 7-12, rows 7-8",
+          "role": "eyebrow",
+          "placeholder_text": "HEALTH & WELLNESS"
+        },
+        {
+          "id": "CARD_3_TITLE",
+          "region": "cols 7-12, rows 8-9",
+          "role": "heading",
+          "placeholder_text": "Experience the fluidity of the gel",
+          "typography": { "fontSize": 18, "fontWeight": 800 }
+        },
+        {
+          "id": "CARD_3_BODY",
+          "region": "cols 7-12, rows 9-10",
+          "role": "body",
+          "placeholder_text": "Lightweight, ultra-hydrating formulations engineered for daily cellular renewal."
+        },
+        {
+          "id": "CARD_3_CTA",
+          "region": "cols 7-9, rows 10-11",
+          "role": "button",
+          "placeholder_text": "Learn more →"
         },
         {
           "id": "IMAGE_3",
-          "region": "cols 7-12, rows 1-10",
+          "region": "cols 10-12, rows 7-10",
           "role": "image",
           "layer": 2,
           "fit": "cover",
           "imageStyle": "card",
-          "borderRadius": 12,
-          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+          "borderRadius": 14
         }
       ],
       "preview": {
-        "mode": "grid_bento_three",
-        "slots": {
-          "IMAGE_1": {
-            "variant": "image"
-          },
-          "IMAGE_2": {
-            "variant": "image"
-          },
-          "IMAGE_3": {
-            "variant": "image"
-          }
-        }
+        "mode": "grid_bento_three"
       }
     }
   },
@@ -6750,7 +6824,7 @@
       "slots": [
         {
           "id": "IMAGE_1",
-          "region": "cols 1-8, rows 1-5",
+          "region": "cols 1-5, rows 1-10",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -6760,7 +6834,7 @@
         },
         {
           "id": "IMAGE_2",
-          "region": "cols 9-12, rows 1-5",
+          "region": "cols 6-12, rows 1-5",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -6770,7 +6844,7 @@
         },
         {
           "id": "IMAGE_3",
-          "region": "cols 1-4, rows 6-10",
+          "region": "cols 6-9, rows 6-10",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -6780,7 +6854,7 @@
         },
         {
           "id": "IMAGE_4",
-          "region": "cols 5-12, rows 6-10",
+          "region": "cols 10-12, rows 6-10",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -13999,6 +14073,13 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
+          "id": "TAG_BADGE",
+          "region": "cols 2-5, rows 1-1",
+          "role": "caption",
+          "placeholder_text": "DUAL DATASET COMPARISON",
+          "layer": 10
+        },
+        {
           "id": "HEADING",
           "region": "cols 2-11, rows 1-2",
           "role": "heading",
@@ -14014,18 +14095,53 @@
           "max_lines": 2
         },
         {
-          "id": "TABLE_HEADER",
+          "id": "SUBTITLE",
           "region": "cols 1-12, rows 2-3",
           "role": "subheading",
-          "placeholder_text": "Shared column headers",
+          "placeholder_text": "Shared column headers across both operational datasets",
           "layer": 10,
           "typography": {
-            "fontSize": 24,
-            "fontWeight": 700,
+            "fontSize": 14,
+            "fontWeight": 500,
             "colorRole": "muted",
-            "align": "center",
+            "align": "left",
             "lineHeight": 1.4
           }
+        },
+        {
+          "id": "COL_A_HEADER",
+          "region": "cols 1-3, rows 3-4",
+          "role": "caption",
+          "placeholder_text": "Performance Metric",
+          "layer": 10
+        },
+        {
+          "id": "COL_B_HEADER",
+          "region": "cols 3-5, rows 3-4",
+          "role": "caption",
+          "placeholder_text": "Standard Tier",
+          "layer": 10
+        },
+        {
+          "id": "COL_C_HEADER",
+          "region": "cols 5-6, rows 3-4",
+          "role": "caption",
+          "placeholder_text": "Enterprise Tier",
+          "layer": 10
+        },
+        {
+          "id": "T1_TITLE",
+          "region": "cols 1-6, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Dataset A — Standard",
+          "layer": 10
+        },
+        {
+          "id": "T2_TITLE",
+          "region": "cols 7-12, rows 3-4",
+          "role": "heading",
+          "placeholder_text": "Dataset B — Accelerated",
+          "layer": 10
         },
         {
           "id": "TABLE_1",
