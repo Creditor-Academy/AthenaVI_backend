@@ -164,6 +164,13 @@ const { isTeamSixLayout, layoutTeamSix } = require('./diagrams/teamSixLayout');
 const { isTeamByDepartmentLayout, layoutTeamByDepartment } = require('./diagrams/teamByDepartmentLayout');
 const { isTeamFeaturedLeadLayout, layoutTeamFeaturedLead } = require('./diagrams/teamFeaturedLeadLayout');
 const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamOrgSimpleLayout');
+const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
+const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
+const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
+const { isComparisonProsConsLayout, layoutComparisonProsCons } = require('./diagrams/comparisonProsConsLayout');
+const { isComparisonBeforeAfterLayout, layoutComparisonBeforeAfter } = require('./diagrams/comparisonBeforeAfterLayout');
+const { isComparisonProsConsSplitLayout, layoutComparisonProsConsSplit } = require('./diagrams/comparisonProsConsSplitLayout');
+const { isTextTwoColumnCardsLayout, layoutTextTwoColumnCards } = require('./diagrams/textTwoColumnCardsLayout');
 const { isPricingThreePlansLayout, layoutPricingThreePlans } = require('./diagrams/pricingThreePlans');
 const { isPricingThreePlansFeaturedLayout, layoutPricingThreePlansFeatured } = require('./diagrams/pricingThreePlansFeatured');
 const { isPricingThreeHighlightLayout, layoutPricingThreeHighlight } = require('./diagrams/pricingThreeHighlight');
@@ -9632,6 +9639,20 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTeamFeaturedLead(next, layoutSchema, themeTokens, canvas);
   } else if (isTeamOrgSimpleLayout(layoutSchema?.layout_id)) {
     next = layoutTeamOrgSimple(next, layoutSchema, themeTokens, canvas);
+  } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
+    next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
+  } else if (isBulletListCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonTableLayout(layoutSchema?.layout_id)) {
+    next = layoutComparisonTable(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonProsConsLayout(layoutSchema?.layout_id)) {
+    next = layoutComparisonProsCons(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonBeforeAfterLayout(layoutSchema?.layout_id)) {
+    next = layoutComparisonBeforeAfter(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonProsConsSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutComparisonProsConsSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isTextTwoColumnCardsLayout(layoutSchema?.layout_id) || layoutSchema?.preview?.mode === 'text_two_column_cards') {
+    next = layoutTextTwoColumnCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingThreePlansFeaturedLayout(layoutSchema?.layout_id)) {
     next = layoutPricingThreePlansFeatured(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingThreeHighlightLayout(layoutSchema?.layout_id)) {
