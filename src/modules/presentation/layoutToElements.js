@@ -206,6 +206,26 @@ const {
   isGridBentoThreeLayout,
   layoutGridBentoThree,
 } = require('./diagrams/gridBentoThreeLayout');
+const {
+  isGridBentoFourLayout,
+  layoutGridBentoFour,
+} = require('./diagrams/gridBentoFourLayout');
+const {
+  isGridFourMosaicLayout,
+  layoutGridFourMosaic,
+} = require('./diagrams/gridFourMosaicLayout');
+const {
+  isGridSixImagesLayout,
+  layoutGridSixImages,
+} = require('./diagrams/gridSixImagesLayout');
+const {
+  isGridSixImagesMosaicLayout,
+  layoutGridSixImagesMosaic,
+} = require('./diagrams/gridSixImagesMosaicLayout');
+const {
+  isGridTextImageCardsLayout,
+  layoutGridTextImageCards,
+} = require('./diagrams/gridTextImageCardsLayout');
 const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
@@ -9760,6 +9780,16 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutIntroThreeParaIcons(next, layoutSchema, themeTokens, canvas);
   } else if (isGridBentoThreeLayout(layoutSchema?.layout_id)) {
     next = layoutGridBentoThree(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridBentoFourLayout(layoutSchema?.layout_id)) {
+    next = layoutGridBentoFour(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridFourMosaicLayout(layoutSchema?.layout_id)) {
+    next = layoutGridFourMosaic(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridSixImagesMosaicLayout(layoutSchema?.layout_id)) {
+    next = layoutGridSixImagesMosaic(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridSixImagesLayout(layoutSchema?.layout_id)) {
+    next = layoutGridSixImages(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridTextImageCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutGridTextImageCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {
