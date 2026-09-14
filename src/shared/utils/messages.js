@@ -380,6 +380,7 @@ module.exports = {
   PRESENTATION_SHARE_SESSION_FETCHED: 'Viewer session fetched',
   PRESENTATION_SHARE_PRESENCE_FETCHED: 'Viewers fetched',
   PRESENTATION_SHARE_PRESENCE_LEFT: 'Left presentation preview',
+  PRESENTATION_ALREADY_PRESENTING: 'Someone else is already presenting this deck',
   PRESENTATION_SHARE_RATE_LIMITED: 'Too many requests for this share link. Try again later.',
   PRESENTATION_COMMENT_GUEST_NAME_REQUIRED: 'A display name is required to comment as a guest',
   PRESENTATION_COMMENT_RESOLVE_FORBIDDEN:

@@ -7,6 +7,8 @@ const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const presentationValidations = require('../validations/presentation.validations');
 const presentationController = require('./presentation.controller');
 const presentationShareRoutes = require('../presentationShare/presentationShare.routes');
+const presentationShareController = require('../presentationShare/presentationShare.controller');
+const presentationShareValidations = require('../validations/presentationShare.validations');
 const presentationCommentRoutes = require('../presentationComment/presentationComment.routes');
 
 const router = express.Router({ mergeParams: true });
@@ -89,6 +91,26 @@ router.put(
   presentationController.uploadPresentationCover
 );
 
+
+/**
+ * Member Present heartbeat. Auth: OWNER|ADMIN|MEMBER (parent mount).
+ * First-writer-wins presenter lock; 409 if another member holds it.
+ */
+router.put(
+  '/:presentationId/presence',
+  validate(presentationShareValidations.memberPresenceHeartbeatSchema),
+  presentationShareController.memberHeartbeatPresence
+);
+
+/**
+ * Authenticated leave (keepalive fetch with Bearer). sendBeacon uses the optionalAuth
+ * twin mounted on workspace.routes.js so Authorization is not required.
+ */
+router.post(
+  '/:presentationId/presence/leave',
+  validate(presentationShareValidations.memberPresenceLeaveSchema),
+  presentationShareController.memberLeavePresence
+);
 router.use('/:presentationId/share', presentationShareRoutes);
 router.use('/:presentationId/comments', presentationCommentRoutes);
 

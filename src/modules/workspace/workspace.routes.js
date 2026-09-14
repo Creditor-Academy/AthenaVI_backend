@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { authMiddleware } = require('../../middlewares/auth.middlware');
+const { authMiddleware, optionalAuthMiddleware } = require('../../middlewares/auth.middlware');
 const {
   requireWorkspaceRole,
 } = require('../../middlewares/requireWorkspaceRole');
@@ -32,6 +32,8 @@ const speechRoutes = require('../speech/speech.routes');
 const commentRoutes = require('../comment/comment.routes');
 const heygenShareRoutes = require('../heygen/heygenShare.routes');
 const presentationRoutes = require('../presentation/presentation.routes');
+const presentationShareController = require('../presentationShare/presentationShare.controller');
+const presentationShareValidations = require('../validations/presentationShare.validations');
 const presentationController = require('../presentation/presentation.controller');
 const presentationValidations = require('../validations/presentation.validations');
 const brandKitRoutes = require('../brandKit/brandKit.routes');
@@ -71,6 +73,17 @@ router.get(
   requireWorkspaceRole(anyMember),
   validate(presentationValidations.listWorkspacePresentationElementsSchema),
   presentationController.listPresentationElements
+);
+
+/**
+ * Present leave via sendBeacon (leaveToken) or Bearer. Registered before the auth-gated
+ * presentations mount so Authorization is optional when leaveToken is present.
+ */
+router.post(
+  '/:workspaceId/presentations/:presentationId/presence/leave',
+  optionalAuthMiddleware,
+  validate(presentationShareValidations.memberPresenceLeaveSchema),
+  presentationShareController.memberLeavePresence
 );
 router.use(
   '/:workspaceId/presentations',

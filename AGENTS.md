@@ -294,7 +294,13 @@ Request
 
 ## Testing
 
-There is **no** `npm test` script in `package.json` today. If you add tests, document the runner here and in `package.json`.
+Run unit tests with:
+
+```
+npm test
+```
+
+Today that runs `node --test` on `src/modules/presentation/deckRender.service.test.js` (speakerNotes) and `src/modules/presentationShare/presentationShare.presence.smoke.test.js` (presenter lock). Add more `*.test.js` files under `src/` and extend the `test` script as needed.
 
 ---
 

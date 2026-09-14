@@ -16,12 +16,13 @@ const { enrichSlidesForClient } = require('./elementContent.normalize');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const { redisClient } = require('../../shared/config/redis');
 const presentationDao = require('./presentation.dao');
+const { DECK_SLIDE_MAX } = require('./presentation.constants');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const logger = require('../../shared/utils/logger');
 
 const DEFAULT_PAGE_LIMIT = 8;
-const MAX_PAGE_LIMIT = 24;
+const MAX_PAGE_LIMIT = DECK_SLIDE_MAX;
 const GENERATING_POLL_MS = 1500;
 
 const RENDER_CACHE_TTL_SEC =
@@ -55,7 +56,7 @@ function sanitizeElementsDoc(doc) {
  * Render-only projection of a slide. `content` / `imageRef` are read from the DB (titles and
  * legacy hero keys live there) but never shipped — the renderer only reads `elements`.
  */
-function toPublicSlide(slide, { includeProgress = false } = {}) {
+function toPublicSlide(slide, { includeProgress = false, includeNotes = false } = {}) {
   return {
     id: slide.id,
     order: slide.order,
@@ -63,14 +64,17 @@ function toPublicSlide(slide, { includeProgress = false } = {}) {
     ...(includeProgress ? { progressStatus: slide.progressStatus ?? null } : {}),
     ...(slide.title != null ? { title: slide.title } : {}),
     ...(slide.description != null ? { description: slide.description } : {}),
+    ...(includeNotes ? { speakerNotes: slide.speakerNotes || '' } : {}),
     elements: sanitizeElementsDoc(slide.elements),
   };
 }
 
 /** Presign media, normalize element content, then reduce to the render projection. */
-async function buildRenderSlides(slides, { includeProgress = false } = {}) {
+async function buildRenderSlides(slides, { includeProgress = false, includeNotes = false } = {}) {
   const presigned = await presignSlidesForPublic(slides || []);
-  return enrichSlidesForClient(presigned).map((slide) => toPublicSlide(slide, { includeProgress }));
+  return enrichSlidesForClient(presigned).map((slide) =>
+    toPublicSlide(slide, { includeProgress, includeNotes })
+  );
 }
 
 /**
@@ -280,7 +284,7 @@ async function getPresentationRenderPreview({
     );
   }
 
-  const slides = await buildRenderSlides(slideRows);
+  const slides = await buildRenderSlides(slideRows, { includeNotes: true });
   const servedThrough = offset + slides.length;
 
   return {
@@ -309,6 +313,7 @@ async function getPresentationRenderPreview({
 
 module.exports = {
   DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
   sanitizeElementsDoc,
   toPublicSlide,
   buildRenderSlides,

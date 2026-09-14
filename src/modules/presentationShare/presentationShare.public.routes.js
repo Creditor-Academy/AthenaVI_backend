@@ -54,6 +54,13 @@ router.delete(
   validate(presentationShareValidations.publicPresenceLeaveSchema),
   presentationShareController.leavePresence
 );
+/** sendBeacon-friendly alias — DELETE + beacon is unreliable in browsers. */
+router.post(
+  '/:token/presence/leave',
+  validate(presentationShareValidations.publicPresenceLeavePostSchema),
+  presentationShareController.leavePresence
+);
+
 
 /**
  * Comments. Guests identify themselves with the same `viewerSessionId` the presence heartbeat

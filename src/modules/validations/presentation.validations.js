@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const {
   AI_SLIDE_MAX,
+  DECK_SLIDE_MAX,
   MAX_ELEMENTS_PER_SLIDE,
   ELEMENT_TYPES,
   CANVAS_WIDTH,
@@ -177,7 +178,7 @@ const presentationPreviewSchema = Joi.object({
   }),
   query: Joi.object({
     offset: Joi.number().integer().min(0).default(0),
-    limit: Joi.number().integer().min(1).max(24).default(8),
+    limit: Joi.number().integer().min(1).max(DECK_SLIDE_MAX).default(8),
   }),
 });
 

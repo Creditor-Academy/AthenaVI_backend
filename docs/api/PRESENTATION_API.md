@@ -190,7 +190,7 @@ Returns the **slide documents the frontend renderer draws** — the same payload
 | **Method** | `GET` |
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` |
 | **Auth** | Bearer + member |
-| **Query** | `offset` (int ≥ 0, default `0`), `limit` (int 1–24, default `8`) |
+| **Query** | `offset` (int ≥ 0, default `0`), `limit` (int 1–**40** (`DECK_SLIDE_MAX`), default `8`) |
 | **Cache** | `ETag` + `Cache-Control: private, no-cache` — send `If-None-Match` to get **304** |
 
 **Response `data` (200):**
@@ -233,6 +233,7 @@ Returns the **slide documents the frontend renderer draws** — the same payload
 | `nextPollMs` | `1500` while `status === "GENERATING"`, otherwise `0`. No polling once READY |
 | `fontCssUrl` | Load once before mounting slides so text measures correctly |
 | `slides[].elements` | Canvas document for the renderer. Internal storage pointers (`s3Key`, `assetId`) are stripped; image URLs are presigned per request |
+| `slides[].speakerNotes` | **Member preview only.** Presenter notes for Present chrome. Key is omitted on `GET /api/p/:token` (guest builder never passes `includeNotes`) |
 
 **Behavior**
 
@@ -244,6 +245,48 @@ Returns the **slide documents the frontend renderer draws** — the same payload
 
 ---
 
+
+## Member Present presence
+
+Workspace members run Present on the same Redis presence room guests already use. Auth is **any workspace member** (`OWNER|ADMIN|MEMBER`) — same mount as other presentation routes. No WebSocket; heartbeat every ~10–15s.
+
+| Method | Path | Notes |
+|---|---|---|
+| `PUT` | `/api/workspaces/:workspaceId/presentations/:presentationId/presence` | Heartbeat. Body `{ slideIndex, presenting }`. `Cache-Control: no-store` |
+| `POST` | `/api/workspaces/:workspaceId/presentations/:presentationId/presence/leave` | Release lock. Body/query `leaveToken` and/or Bearer holder. Optional-auth twin exists for `sendBeacon` |
+
+**Body**
+
+```json
+{ "slideIndex": 0, "presenting": true }
+```
+
+- `presenting` defaults to `false`. `slideIndex` is `0..DECK_SLIDE_MAX-1` and is clamped to `readySlideCount - 1` on write.
+- First writer wins a Redis NX lock (TTL ≈ viewer TTL). Same user keeps the lock and bumps monotonic `seq`.
+- Another member → **409** with message matching `PRESENTATION_ALREADY_PRESENTING` and `errors: [{ message, presentingUserId, displayName }]` (identity lives on `errors` because the error envelope has no `data`).
+- On NX acquire the response includes `leaveToken` **once**. Store it for `sendBeacon`; later heartbeats do not remint it. Bearer `POST .../leave` still works if the token is lost.
+- `presenting: false` from the holder releases the lock (they stay in the viewer zset until leave/TTL).
+
+**Response `data` (200)**
+
+```json
+{
+  "self": { "displayName": "Alex", "isAnonymous": false },
+  "viewerCount": 3,
+  "viewers": [],
+  "presenter": {
+    "slideIndex": 2,
+    "displayName": "Alex",
+    "seq": 4,
+    "updatedAt": "2026-09-14T10:00:00.000Z"
+  },
+  "leaveToken": "<only on first acquire>"
+}
+```
+
+`presenter` is `null` when nobody holds the lock. It never includes `userId` or `leaveToken`. Followers apply the cursor only when `seq` is greater than their last applied seq.
+
+Winston: `ppt_present_started` / `ppt_present_ended` (with duration on end) only.
 ## Deck cover capture
 
 One rendered thumbnail per deck for the My Work card grid, captured by the frontend from the live preview it already has on screen. This is the only image the backend stores for a presentation.
@@ -891,6 +934,7 @@ Display names are always computed server-side from `User.name`. A logged-in user
 |---|---|---|
 | `GET` | `/api/p/:token/presence` | Same payload without recording a heartbeat |
 | `DELETE` | `/api/p/:token/presence?viewerSessionId=…` | Explicit leave; the TTL covers missed calls |
+| `POST` | `/api/p/:token/presence/leave?viewerSessionId=…` | `sendBeacon`-friendly alias for DELETE (same query) |
 
 ### Rate limits
 

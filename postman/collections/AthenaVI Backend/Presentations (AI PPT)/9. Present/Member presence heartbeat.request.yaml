@@ -1,0 +1,32 @@
+$kind: http-request
+description: |
+  Present heartbeat. First writer wins the presenter lock.
+  On first acquire, save data.leaveToken for sendBeacon leave.
+  409 when another member is already presenting.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/presence"
+method: PUT
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "slideIndex": 0,
+      "presenting": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const data = (j && j.data) || {};
+        if (data.leaveToken) {
+          pm.collectionVariables.set("presentLeaveToken", data.leaveToken);
+        }
+        if (data.presenter && data.presenter.seq != null) {
+          pm.collectionVariables.set("presenterSeq", String(data.presenter.seq));
+        }
+      }
+    language: text/javascript
+order: 1000

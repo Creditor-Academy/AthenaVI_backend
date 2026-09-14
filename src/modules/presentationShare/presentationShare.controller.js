@@ -161,6 +161,45 @@ const leavePresence = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_LEFT);
 });
 
+
+/* =========================
+   Member Present (Bearer + workspace member)
+========================= */
+
+const memberHeartbeatPresence = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const { slideIndex, presenting } = req.body;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.memberHeartbeatPresence({
+    workspaceId,
+    presentationId,
+    user: req.user,
+    slideIndex,
+    presenting,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_FETCHED);
+});
+
+const memberLeavePresence = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const leaveToken =
+    (req.body && req.body.leaveToken) ||
+    (req.query && req.query.leaveToken) ||
+    null;
+
+  const data = await shareService.memberLeavePresence({
+    workspaceId,
+    presentationId,
+    user: req.user || null,
+    leaveToken,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_LEFT);
+});
 module.exports = {
   enableShareViewer,
   enableShareReviewer,
@@ -174,4 +213,6 @@ module.exports = {
   heartbeatPresence,
   listPresence,
   leavePresence,
+  memberHeartbeatPresence,
+  memberLeavePresence,
 };

@@ -7,6 +7,8 @@ const deckRender = require('../presentation/deckRender.service');
 const workspaceDao = require('../workspace/workspace.dao');
 const shareDao = require('./presentationShare.dao');
 const presence = require('./presentationShare.presence');
+const presentationDao = require('../presentation/presentation.dao');
+const logger = require('../../shared/utils/logger');
 const { getCommentsUpdatedAt } = require('../presentationComment/presentationComment.activity');
 const { buildContentVersion } = require('./presentationShare.presign');
 
@@ -487,16 +489,19 @@ async function resolveShareForComments({ token, user }) {
 
 async function buildPresencePayload({ share, user, identity }) {
   const resolved = identity || (await loadViewerIdentity(user));
-  const [{ viewerCount, viewers }, contentUpdatedAt, commentsUpdatedAt] = await Promise.all([
-    presence.listViewers(share.projectId),
-    getContentUpdatedAt(share.projectId),
-    getCommentsUpdatedAt(share.projectId),
-  ]);
+  const [{ viewerCount, viewers }, presenter, contentUpdatedAt, commentsUpdatedAt] =
+    await Promise.all([
+      presence.listViewers(share.projectId),
+      presence.getPublicPresenter(share.projectId),
+      getContentUpdatedAt(share.projectId),
+      getCommentsUpdatedAt(share.projectId),
+    ]);
 
   return {
     self: { displayName: resolved.displayName, isAnonymous: resolved.isAnonymous },
     viewerCount,
     viewers,
+    presenter,
     contentUpdatedAt,
     // Lets the viewer refetch comments off this same heartbeat instead of polling the list.
     commentsUpdatedAt,
@@ -523,6 +528,113 @@ async function listPresence({ token, user }) {
   return buildPresencePayload({ share, user });
 }
 
+
+function presentDurationMs(startedAt) {
+  if (!startedAt) return null;
+  const ms = Date.now() - new Date(startedAt).getTime();
+  return Number.isFinite(ms) && ms >= 0 ? ms : null;
+}
+
+async function buildMemberPresencePayload({ projectId, identity }) {
+  const [{ viewerCount, viewers }, presenter] = await Promise.all([
+    presence.listViewers(projectId),
+    presence.getPublicPresenter(projectId),
+  ]);
+
+  return {
+    self: { displayName: identity.displayName, isAnonymous: identity.isAnonymous },
+    viewerCount,
+    viewers,
+    presenter,
+  };
+}
+
+/**
+ * Member Present heartbeat. Auth: any workspace member (OWNER|ADMIN|MEMBER).
+ * First writer wins the presenter lock; others get 409.
+ */
+async function memberHeartbeatPresence({
+  workspaceId,
+  presentationId,
+  user,
+  slideIndex = 0,
+  presenting = false,
+}) {
+  await loadOwnerContext(workspaceId, presentationId);
+  const identity = await loadViewerIdentity(user);
+  const slideVersion = await presentationDao.findSlideVersionByProject(presentationId);
+  const ready = Number(slideVersion?.readySlideCount) || 0;
+  const maxIdx = Math.max(ready - 1, 0);
+  const clamped = Math.min(Math.max(Number(slideIndex) || 0, 0), maxIdx);
+
+  const lockResult = await presence.acquireOrRefreshPresenter({
+    projectId: presentationId,
+    userId: user.id,
+    displayName: identity.displayName,
+    slideIndex: clamped,
+    presenting: Boolean(presenting),
+  });
+
+  const viewerKey = presence.buildViewerKey({ user, viewerSessionId: null });
+  await presence.heartbeat({
+    projectId: presentationId,
+    viewerKey,
+    identity,
+    slideIndex: clamped,
+  });
+
+  if (lockResult.acquired) {
+    logger.info('ppt_present_started', { presentationId, userId: user.id });
+  }
+  if (lockResult.released) {
+    logger.info('ppt_present_ended', {
+      presentationId,
+      userId: user.id,
+      durationMs: presentDurationMs(lockResult.startedAt),
+    });
+  }
+
+  const payload = await buildMemberPresencePayload({
+    projectId: presentationId,
+    identity,
+  });
+
+  return {
+    ...payload,
+    ...(lockResult.leaveToken ? { leaveToken: lockResult.leaveToken } : {}),
+  };
+}
+
+/**
+ * Release Present lock via leaveToken (sendBeacon) and/or Bearer holder.
+ * Always drops the holder from the viewer zset when the lock is released.
+ */
+async function memberLeavePresence({ workspaceId, presentationId, user, leaveToken }) {
+  await loadOwnerContext(workspaceId, presentationId);
+
+  const lockResult = await presence.leavePresenter(presentationId, {
+    userId: user?.id || null,
+    leaveToken: leaveToken || null,
+  });
+
+  const leaveUserId = lockResult.released ? lockResult.userId : user?.id || null;
+  if (leaveUserId) {
+    await presence.leave({
+      projectId: presentationId,
+      viewerKey: `user:${leaveUserId}`,
+    });
+  }
+
+  if (lockResult.released) {
+    logger.info('ppt_present_ended', {
+      presentationId,
+      userId: lockResult.userId,
+      durationMs: presentDurationMs(lockResult.startedAt),
+    });
+  }
+
+  return { left: true, released: Boolean(lockResult.released) };
+}
 async function leavePresence({ token, user, viewerSessionId }) {
   const { share } = await resolveShare(token);
   const viewerKey = presence.buildViewerKey({ user, viewerSessionId });
@@ -546,4 +658,6 @@ module.exports = {
   heartbeatPresence,
   listPresence,
   leavePresence,
+  memberHeartbeatPresence,
+  memberLeavePresence,
 };

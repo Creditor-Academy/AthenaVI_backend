@@ -1,14 +1,14 @@
 $kind: http-request
-url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview?offset=0&limit=8"
+description: Present loads the full deck in one page (limit max DECK_SLIDE_MAX=40). Member responses include speakerNotes.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview?offset=0&limit=40"
 method: GET
 params:
   query:
     - key: offset
       value: "0"
-      description: First slide to return (int >= 0, default 0)
     - key: limit
-      value: "8"
-      description: Slides per page (int 1-40, default 8). Page the rest with nextOffset.
+      value: "40"
+      description: Present full-deck page (max 40)
 headers:
   Authorization: Bearer {{accessToken}}
   If-None-Match: "{{presentationPreviewEtag}}"
@@ -23,13 +23,11 @@ scripts:
         const slides = data.slides;
         if (Array.isArray(slides) && slides[0]) {
           pm.collectionVariables.set("slideId", slides[0].id);
+          pm.collectionVariables.set(
+            "hasSpeakerNotes",
+            String(Object.prototype.hasOwnProperty.call(slides[0], "speakerNotes"))
+          );
         }
-        // coverStale === true -> capture slide 1 and PUT .../thumbnail/image
-        pm.collectionVariables.set("presentationCoverStale", String(data.coverStale === true));
-        pm.collectionVariables.set(
-          "presentationPreviewNextOffset",
-          data.nextOffset == null ? "" : String(data.nextOffset)
-        );
       }
     language: text/javascript
-order: 900
+order: 910

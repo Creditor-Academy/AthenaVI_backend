@@ -87,8 +87,10 @@
 | GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
 | GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |
-| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` | Bearer + member | Live-render slide payload for the My Work modal / present mode (`offset`, `limit`; ETag → 304) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` | Bearer + member | Live-render slide payload for My Work / Present (`offset`, `limit` max **40**; member responses include `speakerNotes`; ETag → 304) |
 | PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/thumbnail/image` | Bearer + member | Upload the deck cover captured from the preview (multipart `file`, ≤2 MB) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/presence` | Bearer + member | Present heartbeat (`slideIndex`, `presenting`); 409 if another presenter |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/presence/leave` | Bearer and/or `leaveToken` | Release Present lock (`sendBeacon` OK) |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/status` | Bearer + member | Generation progress |
 | GET | `/api/workspaces/:workspaceId/presentations/:presentationId/credit-estimate` | Bearer + member | Outline/generate/export AC estimate |
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Generate outline (prompt/outline/document) |
@@ -122,9 +124,10 @@
 | POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer/rotate` | Bearer + member | Rotate reviewer token |
 | GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
 | GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer name, `canComment`, `canOpenInEditor` |
-| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → viewers + `commentsUpdatedAt` |
-| GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list |
+| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → viewers + `presenter` + `commentsUpdatedAt` |
+| GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list + `presenter` |
 | DELETE | `/api/p/:token/presence` | Public (optional Bearer) | Leave preview (`viewerSessionId` query) |
+| POST | `/api/p/:token/presence/leave` | Public (optional Bearer) | `sendBeacon` leave alias (same query) |
 | GET | `/api/p/:token/comments` | Public (optional Bearer) | Comments on READY slides (empty when `access: VIEW`) |
 | POST | `/api/p/:token/comments` | Public (optional Bearer) | Guest/visitor comment or reply (reviewer link only) |
 | PATCH | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Edit own comment (guests send `viewerSessionId`) |

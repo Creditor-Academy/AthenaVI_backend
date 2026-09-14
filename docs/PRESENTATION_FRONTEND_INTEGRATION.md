@@ -446,6 +446,49 @@ Each card reads from `data.viewer` or `data.reviewer`. When `exists: false`, sho
 - If an older link has no `link.url` (pre-persistence rows), call **rotate** once for that role to mint a recoverable URL.
 - You can enable viewer only, reviewer only, or both. Do not auto-enable the other type when one is turned on.
 
+## Present mode (member player + follow cursor)
+
+One shared FE player, two chromes (presenter notes vs audience). **Do not** open Present from full `GET .../presentations/:id` — use the render preview.
+
+### Load the deck
+
+```http
+GET /api/workspaces/:workspaceId/presentations/:presentationId/preview?offset=0&limit=40
+Authorization: Bearer <accessToken>
+```
+
+- `limit` max is `DECK_SLIDE_MAX` (**40**). A full deck usually returns `nextOffset: null` in one request; if `slideCount > slides.length`, page with `nextOffset`.
+- Inject the preview font CSS URL before mounting.
+- Member preview includes `speakerNotes` per slide for the presenter chrome. Guest `GET /api/p/:token` **never** includes that key.
+- Clamp `?slide=` client-side to `0..slides.length-1`.
+
+### Heartbeat + Present lock
+
+Every **10–15s** while Present is open:
+
+```http
+PUT /api/workspaces/:workspaceId/presentations/:presentationId/presence
+{ "slideIndex": 2, "presenting": true }
+```
+
+- First member to send `presenting: true` wins. Others get **409** with `errors[0].presentingUserId` / `displayName` — show that copy; do not steal the cursor.
+- On first acquire, store `leaveToken` from the response (returned once). Do not expect it on later heartbeats.
+- Response `presenter: { slideIndex, displayName, seq, updatedAt }` — followers apply **only when `seq` > lastAppliedSeq**.
+- When `presenter` becomes `null` (TTL or leave), stop following.
+
+### Leave
+
+Prefer both:
+
+1. `navigator.sendBeacon` → `POST .../presence/leave?leaveToken=...` (no Authorization).
+2. `keepalive` `fetch` with Bearer as backup.
+
+Hard tab-kill: presenter row disappears within one viewer TTL (~45s); followers see `presenter: null`.
+
+### Guest follow
+
+Guests keep `GET /api/p/:token` + existing presence. Presence payloads include the same public `presenter` cursor. Use `POST /api/p/:token/presence/leave?viewerSessionId=` for beacon leave (DELETE+beacon is unreliable). Guests never acquire the Present lock.
+
 ### Viewer: the `/p/:token` page
 
 Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the user happens to be logged in; omit it otherwise. Never redirect a guest to login.
@@ -453,7 +496,7 @@ Public route in your app. Send `Authorization: Bearer <accessToken>` **if** the 
 1. `GET /api/p/:token` → deck. Cache the response `ETag` and send it as `If-None-Match` on refetch (**304** = nothing changed).
 2. `GET /api/p/:token/session` → `linkRole`, `self.displayName`, `canComment` / `canResolveComments`, and `canOpenInEditor` (+ `workspaceId` / `presentationId`) for members.
 3. `PUT /api/p/:token/presence` every **10–15s** with `{ viewerSessionId, slideIndex }` → live viewer list (unified across viewer and reviewer URLs).
-4. `DELETE /api/p/:token/presence?viewerSessionId=…` on unload (best-effort; the server drops silent viewers after 45s anyway).
+4. `DELETE /api/p/:token/presence?viewerSessionId=…` on unload, or `POST /api/p/:token/presence/leave?viewerSessionId=…` via `sendBeacon` (best-effort; the server drops silent viewers after 45s anyway).
 5. If `canComment` (reviewer link only), `GET /api/p/:token/comments?slideId=…` for the current slide and render the composer.
 
 **`viewerSessionId`**: generate a UUID once, persist in `localStorage`, reuse across reloads. It identifies guests for presence **and proves comment authorship**, so the same value must survive reloads or a guest loses the ability to edit their own comments. Logged-in users are keyed by account so multiple tabs collapse into one avatar.
@@ -540,6 +583,8 @@ GET    /api/workspaces/:workspaceId/presentation-elements
 
 GET    /api/workspaces/:workspaceId/presentations/:presentationId
 GET    .../preview?offset=&limit=
+PUT    .../presence
+POST   .../presence/leave
 PUT    .../thumbnail/image        (multipart cover capture)
 GET    .../status
 GET    .../credit-estimate
@@ -585,6 +630,7 @@ GET    /api/p/:token/session
 PUT    /api/p/:token/presence
 GET    /api/p/:token/presence
 DELETE /api/p/:token/presence
+POST   /api/p/:token/presence/leave
 GET    /api/p/:token/comments
 POST   /api/p/:token/comments
 PATCH  /api/p/:token/comments/:commentId
