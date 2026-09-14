@@ -1,8 +1,8 @@
-function isTextTwoColumnLayout(layoutId) {
-  return /^text_two_column/i.test(layoutId)
+function isComparisonSideBySideLayout(layoutId) {
+  return /comparison_side_by_side/i.test(layoutId)
 }
 
-function renderColumnCardSvg(w, h, color) {
+function renderCardSvg(w, h, color) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w + 40} ${h + 40}" width="${w + 40}" height="${h + 40}" style="overflow:visible">
     <defs>
       <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -10,12 +10,11 @@ function renderColumnCardSvg(w, h, color) {
       </filter>
     </defs>
     <rect x="20" y="20" width="${w}" height="${h}" rx="24" fill="${color}" filter="url(#shadow)" opacity="0.3" />
-    <!-- A small decorative top-border line inside the card -->
     <path d="M44,20 L${w-4},20" stroke="${color}" stroke-width="4" stroke-linecap="round" />
   </svg>`
 }
 
-function textTwoColumnCardsGeom(canvasW = 1920, canvasH = 1080) {
+function comparisonSideBySideGeom(canvasW = 1920, canvasH = 1080) {
   const sx = canvasW / 1920
   const sy = canvasH / 1080
   
@@ -23,13 +22,13 @@ function textTwoColumnCardsGeom(canvasW = 1920, canvasH = 1080) {
   const padY = Math.round(100 * sy)
   const headingH = Math.round(120 * sy)
   
-  const contentStartY = padY + headingH + Math.round(40 * sy)
+  const contentStartY = padY + headingH + Math.round(60 * sy)
   const contentH = canvasH - contentStartY - padY
   
-  const colGap = Math.round(80 * sx)
+  const colGap = Math.round(120 * sx)
   const colW = (canvasW - padX * 2 - colGap) / 2
   
-  // Create padding inside the cards
+  // Padding inside cards (if variant is cards)
   const cardPadX = Math.round(60 * sx)
   const cardPadY = Math.round(60 * sy)
   
@@ -51,9 +50,13 @@ function textTwoColumnCardsGeom(canvasW = 1920, canvasH = 1080) {
     rightTitle: { x: padX + colW + colGap + cardPadX, y: contentStartY + cardPadY, width: textColW, height: titleH },
     rightBody: { x: padX + colW + colGap + cardPadX, y: contentStartY + cardPadY + titleH + Math.round(20 * sy), width: textColW, height: bodyH },
     
-    // Split geometry
-    splitLeft: { x: 0, y: 0, width: canvasW / 2, height: canvasH },
-    splitRight: { x: canvasW / 2, y: 0, width: canvasW / 2, height: canvasH },
+    // Centerline geometry
+    centerline: {
+      x: canvasW / 2,
+      y: contentStartY + Math.round(40 * sy),
+      width: 2,
+      height: contentH - Math.round(80 * sy)
+    }
   }
 
   return geom
@@ -64,21 +67,18 @@ const COLORS = {
   right: '#a855f7' // Pastel purple base
 }
 
-function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {}) {
+function layoutComparisonSideBySide(docOrElements, schema, themeTokens, canvas = {}) {
   let elements = Array.isArray(docOrElements) ? docOrElements : docOrElements?.elements;
   if (!Array.isArray(elements)) return docOrElements;
 
   const canvasW = canvas.width || 1920
   const canvasH = canvas.height || 1080
   const layoutId = String(schema?.layout_id || '')
-  const mode = schema?.mode || schema?.preview?.mode || ''
   
-  if (!isTextTwoColumnLayout(mode) && !isTextTwoColumnLayout(layoutId)) return docOrElements;
+  const isCards = /_cards/i.test(layoutId)
+  const isCenterline = /_centerline/i.test(layoutId)
   
-  const isCards = /_cards/i.test(layoutId) || /_cards/i.test(mode)
-  const isSplit = /_split/i.test(layoutId) || /_split/i.test(mode)
-  
-  const g = textTwoColumnCardsGeom(canvasW, canvasH)
+  const g = comparisonSideBySideGeom(canvasW, canvasH)
   
   let out = []
 
@@ -91,7 +91,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
     }
 
     if (slotId === 'LEFT_TITLE') {
-      out.push({ ...el, layer: 10, placement: { ...g.leftTitle, rotation: 0, opacity: 1 }, content: { ...el.content, color: COLORS.left, colorOverride: true, align: 'center' } })
+      out.push({ ...el, layer: 10, placement: { ...g.leftTitle, rotation: 0, opacity: 1 }, content: { ...el.content, color: isCards ? COLORS.left : undefined, colorOverride: isCards, align: 'center' } })
       return
     }
     
@@ -101,7 +101,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
     }
     
     if (slotId === 'RIGHT_TITLE') {
-      out.push({ ...el, layer: 10, placement: { ...g.rightTitle, rotation: 0, opacity: 1 }, content: { ...el.content, color: COLORS.right, colorOverride: true, align: 'center' } })
+      out.push({ ...el, layer: 10, placement: { ...g.rightTitle, rotation: 0, opacity: 1 }, content: { ...el.content, color: isCards ? COLORS.right : undefined, colorOverride: isCards, align: 'center' } })
       return
     }
     
@@ -117,7 +117,6 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
     out.push(el)
   })
 
-
   if (isCards) {
     out.unshift({
       id: 'shp-left-card',
@@ -125,7 +124,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
       layer: 2,
       role: 'decoration',
       placement: { ...g.leftCard, x: g.leftCard.x - 20, y: g.leftCard.y - 20, width: g.leftCard.width + 40, height: g.leftCard.height + 40, rotation: 0, opacity: 1 },
-      content: { svg: renderColumnCardSvg(g.leftCard.width, g.leftCard.height, COLORS.left), colorMode: 'preserve' }
+      content: { svg: renderCardSvg(g.leftCard.width, g.leftCard.height, COLORS.left), colorMode: 'preserve' }
     })
     
     out.unshift({
@@ -134,38 +133,29 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
       layer: 2,
       role: 'decoration',
       placement: { ...g.rightCard, x: g.rightCard.x - 20, y: g.rightCard.y - 20, width: g.rightCard.width + 40, height: g.rightCard.height + 40, rotation: 0, opacity: 1 },
-      content: { svg: renderColumnCardSvg(g.rightCard.width, g.rightCard.height, COLORS.right), colorMode: 'preserve' }
+      content: { svg: renderCardSvg(g.rightCard.width, g.rightCard.height, COLORS.right), colorMode: 'preserve' }
     })
   }
 
-  if (isSplit) {
+  if (isCenterline) {
     out.unshift({
-      id: 'shp-left-split',
+      id: 'shp-centerline',
       type: 'shape',
-      layer: 1,
+      layer: 2,
       role: 'decoration',
-      placement: { ...g.splitLeft, rotation: 0, opacity: 0.1 },
-      content: { shape: 'rectangle', fill: COLORS.left }
-    })
-    
-    out.unshift({
-      id: 'shp-right-split',
-      type: 'shape',
-      layer: 1,
-      role: 'decoration',
-      placement: { ...g.splitRight, rotation: 0, opacity: 0.1 },
-      content: { shape: 'rectangle', fill: COLORS.right }
+      placement: { ...g.centerline, rotation: 0, opacity: 0.2 },
+      content: { shape: 'rectangle', fill: '#6b7280' }
     })
   }
 
-  if (!isCards && !isSplit) {
+  if (!isCards && !isCenterline) {
     // Default mode: just a subtle line above each title
     out.unshift({
       id: 'shp-left-line',
       type: 'shape',
       layer: 2,
       role: 'decoration',
-      placement: { x: g.leftTitle.x, y: g.leftTitle.y - 20, width: 60, height: 4, rotation: 0, opacity: 1 },
+      placement: { x: g.leftTitle.x + g.leftTitle.width / 2 - 40, y: g.leftTitle.y - 20, width: 80, height: 4, rotation: 0, opacity: 1 },
       content: { shape: 'rectangle', fill: COLORS.left }
     })
     
@@ -174,7 +164,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
       type: 'shape',
       layer: 2,
       role: 'decoration',
-      placement: { x: g.rightTitle.x, y: g.rightTitle.y - 20, width: 60, height: 4, rotation: 0, opacity: 1 },
+      placement: { x: g.rightTitle.x + g.rightTitle.width / 2 - 40, y: g.rightTitle.y - 20, width: 80, height: 4, rotation: 0, opacity: 1 },
       content: { shape: 'rectangle', fill: COLORS.right }
     })
   }
@@ -186,7 +176,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
 }
 
 module.exports = {
-  isTextTwoColumnLayout,
-  textTwoColumnCardsGeom,
-  layoutTextTwoColumnCards
-};
+  isComparisonSideBySideLayout,
+  comparisonSideBySideGeom,
+  layoutComparisonSideBySide
+}

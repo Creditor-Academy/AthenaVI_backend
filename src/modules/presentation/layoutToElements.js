@@ -167,6 +167,7 @@ const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamO
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
+const { isComparisonSideBySideLayout, layoutComparisonSideBySide } = require('./diagrams/comparisonSideBySideLayout');
 const { isComparisonProsConsLayout, layoutComparisonProsCons } = require('./diagrams/comparisonProsConsLayout');
 const { isComparisonBeforeAfterLayout, layoutComparisonBeforeAfter } = require('./diagrams/comparisonBeforeAfterLayout');
 const { isComparisonProsConsSplitLayout, layoutComparisonProsConsSplit } = require('./diagrams/comparisonProsConsSplitLayout');
@@ -9684,6 +9685,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutBulletListCards(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonTableLayout(layoutSchema?.layout_id)) {
     next = layoutComparisonTable(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonSideBySideLayout(layoutSchema?.layout_id) || /^comparison_side_by_side/i.test(layoutSchema?.preview?.mode)) {
+    next = layoutComparisonSideBySide(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonProsConsLayout(layoutSchema?.layout_id)) {
     next = layoutComparisonProsCons(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonBeforeAfterLayout(layoutSchema?.layout_id)) {
