@@ -239,6 +239,42 @@ const {
   isLogoWallMasonryLayout,
   layoutLogoWallMasonry,
 } = require('./diagrams/logoWallMasonryLayout');
+const {
+  isGridThreeImagesTextLayout,
+  layoutGridThreeImagesText,
+} = require('./diagrams/gridThreeImagesText');
+const {
+  isGridThreeImagesTextAsymmetricLayout,
+  layoutGridThreeImagesTextAsymmetric,
+} = require('./diagrams/gridThreeImagesTextAsymmetric');
+const {
+  isGridImagesTextCardsLayout,
+  layoutGridImagesTextCards,
+} = require('./diagrams/gridImagesTextCards');
+const {
+  isGridImagesTextMosaicLayout,
+  layoutGridImagesTextMosaic,
+} = require('./diagrams/gridImagesTextMosaic');
+const {
+  isGridInsightsChartLayout,
+  layoutGridInsightsChart,
+} = require('./diagrams/gridInsightsChart');
+const {
+  isGridInsightsChartSplitLayout,
+  layoutGridInsightsChartSplit,
+} = require('./diagrams/gridInsightsChartSplit');
+const {
+  isGridMetricsMobileLayout,
+  layoutGridMetricsMobile,
+} = require('./diagrams/gridMetricsMobile');
+const {
+  isGridMetricsMasonryLayout,
+  layoutGridMetricsMasonry,
+} = require('./diagrams/gridMetricsMasonry');
+const {
+  isGridMetricsAsymmetricLayout,
+  layoutGridMetricsAsymmetric,
+} = require('./diagrams/gridMetricsAsymmetric');
 const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
@@ -9813,6 +9849,24 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutLogoWall(next, layoutSchema, themeTokens, canvas);
   } else if (isLogoWallMasonryLayout(layoutSchema?.layout_id)) {
     next = layoutLogoWallMasonry(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridThreeImagesTextLayout(layoutSchema?.layout_id)) {
+    next = layoutGridThreeImagesText(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridThreeImagesTextAsymmetricLayout(layoutSchema?.layout_id)) {
+    next = layoutGridThreeImagesTextAsymmetric(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridImagesTextCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutGridImagesTextCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridImagesTextMosaicLayout(layoutSchema?.layout_id)) {
+    next = layoutGridImagesTextMosaic(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridInsightsChartLayout(layoutSchema?.layout_id)) {
+    next = layoutGridInsightsChart(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridInsightsChartSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutGridInsightsChartSplit(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridMetricsMobileLayout(layoutSchema?.layout_id)) {
+    next = layoutGridMetricsMobile(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridMetricsMasonryLayout(layoutSchema?.layout_id)) {
+    next = layoutGridMetricsMasonry(next, layoutSchema, themeTokens, canvas);
+  } else if (isGridMetricsAsymmetricLayout(layoutSchema?.layout_id)) {
+    next = layoutGridMetricsAsymmetric(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {

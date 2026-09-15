@@ -7122,8 +7122,54 @@
       "shapePolicy": "ai_decides",
       "slots": [
         {
+          "id": "BADGE",
+          "region": "cols 1-3, rows 1",
+          "role": "caption",
+          "placeholder_text": "OUR APPROACH",
+          "layer": 10,
+          "typography": {
+            "fontSize": 9,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1,
+            "letterSpacing": "1.5px"
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "HEADING",
+          "region": "cols 1-5, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Turning ideas into real impact",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "SUBHEADING",
+          "region": "cols 6-12, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 3
+        },
+        {
           "id": "IMAGE_1",
-          "region": "cols 1-4, rows 1-5",
+          "region": "cols 1-4, rows 4-5",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -7133,7 +7179,7 @@
         },
         {
           "id": "IMAGE_2",
-          "region": "cols 5-8, rows 1-5",
+          "region": "cols 5-8, rows 4-5",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -7143,7 +7189,7 @@
         },
         {
           "id": "IMAGE_3",
-          "region": "cols 9-12, rows 1-5",
+          "region": "cols 9-12, rows 4-5",
           "role": "image",
           "layer": 2,
           "fit": "cover",
@@ -7152,99 +7198,162 @@
           "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
         },
         {
-          "id": "HEADING_1",
+          "id": "NUMBER1",
           "region": "cols 1-4, rows 6",
-          "role": "heading",
-          "placeholder_text": "Feature One",
+          "role": "caption",
+          "placeholder_text": "01",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
-            "fontWeight": 700,
-            "colorRole": "text",
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
             "align": "left",
-            "lineHeight": 1.25
+            "lineHeight": 1.2
           },
           "max_lines": 1
         },
         {
-          "id": "HEADING_2",
-          "region": "cols 5-8, rows 6",
+          "id": "TITLE1",
+          "region": "cols 1-4, rows 6-7",
           "role": "heading",
-          "placeholder_text": "Feature Two",
+          "placeholder_text": "Clear strategy",
           "layer": 10,
           "typography": {
-            "fontSize": 18,
+            "fontSize": 20,
             "fontWeight": 700,
             "colorRole": "text",
             "align": "left",
-            "lineHeight": 1.25
+            "lineHeight": 1.3
           },
           "max_lines": 1
         },
         {
-          "id": "HEADING_3",
-          "region": "cols 9-12, rows 6",
-          "role": "heading",
-          "placeholder_text": "Feature Three",
-          "layer": 10,
-          "typography": {
-            "fontSize": 18,
-            "fontWeight": 700,
-            "colorRole": "text",
-            "align": "left",
-            "lineHeight": 1.25
-          },
-          "max_lines": 1
-        },
-        {
-          "id": "BODY_1",
-          "region": "cols 1-4, rows 7-9",
+          "id": "DESC1",
+          "region": "cols 1-4, rows 7-10",
           "role": "body",
           "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4
         },
         {
-          "id": "BODY_2",
-          "region": "cols 5-8, rows 7-9",
+          "id": "NUMBER2",
+          "region": "cols 5-8, rows 6",
+          "role": "caption",
+          "placeholder_text": "02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "TITLE2",
+          "region": "cols 5-8, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Thoughtful execution",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "DESC2",
+          "region": "cols 5-8, rows 7-10",
           "role": "body",
           "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4
         },
         {
-          "id": "BODY_3",
-          "region": "cols 9-12, rows 7-9",
+          "id": "NUMBER3",
+          "region": "cols 9-12, rows 6",
+          "role": "caption",
+          "placeholder_text": "03",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "TITLE3",
+          "region": "cols 9-12, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Lasting results",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "DESC3",
+          "region": "cols 9-12, rows 7-10",
           "role": "body",
           "placeholder_text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
           "layer": 10,
           "typography": {
-            "fontSize": 13,
+            "fontSize": 14,
             "fontWeight": 400,
             "colorRole": "muted",
             "align": "left",
-            "lineHeight": 1.45
+            "lineHeight": 1.5
           },
-          "max_lines": 3
+          "max_lines": 4
         }
       ],
       "preview": {
         "mode": "grid_three_images_text",
         "slots": {
+          "BADGE": {
+            "text": "OUR APPROACH",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": true
+          },
+          "HEADING": {
+            "text": "Turning ideas into real impact",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBHEADING": {
+            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
           "IMAGE_1": {
             "variant": "image"
           },
@@ -7254,37 +7363,366 @@
           "IMAGE_3": {
             "variant": "image"
           },
-          "HEADING_1": {
-            "text": "Feature One",
+          "NUMBER1": {
+            "text": "01",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE1": {
+            "text": "Clear strategy",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
-          "HEADING_2": {
-            "text": "Feature Two",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "HEADING_3": {
-            "text": "Feature Three",
-            "variant": "title",
-            "bold": true,
-            "uppercase": false
-          },
-          "BODY_1": {
+          "DESC1": {
             "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
-          "BODY_2": {
+          "NUMBER2": {
+            "text": "02",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE2": {
+            "text": "Thoughtful execution",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "DESC2": {
             "text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
-          "BODY_3": {
+          "NUMBER3": {
+            "text": "03",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE3": {
+            "text": "Lasting results",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "DESC3": {
+            "text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "Grid Three Images Text Asymmetric",
+    "contentType": "grid",
+    "variant": "grid_three_images_text_asymmetric_v1",
+    "schema": {
+      "layout_id": "grid_three_images_text_asymmetric_v1",
+      "content_type": "grid",
+      "schemaVersion": 2,
+      "grid": "12-col",
+      "shapePolicy": "ai_decides",
+      "slots": [
+        {
+          "id": "BADGE",
+          "region": "cols 1-3, rows 1",
+          "role": "caption",
+          "placeholder_text": "OUR APPROACH",
+          "layer": 10,
+          "typography": {
+            "fontSize": 9,
+            "fontWeight": 600,
+            "colorRole": "muted",
+            "align": "center",
+            "lineHeight": 1,
+            "letterSpacing": "1.5px"
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "HEADING",
+          "region": "cols 1-5, rows 2-3",
+          "role": "heading",
+          "placeholder_text": "Turning ideas into real impact",
+          "layer": 10,
+          "typography": {
+            "fontSize": 36,
+            "fontWeight": 800,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.15
+          },
+          "max_lines": 2
+        },
+        {
+          "id": "SUBHEADING",
+          "region": "cols 6-12, rows 2-3",
+          "role": "subheading",
+          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 15,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 3
+        },
+        {
+          "id": "IMAGE_1",
+          "region": "cols 1-3, rows 4-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover",
+          "imageStyle": "card",
+          "borderRadius": 12,
+          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+        },
+        {
+          "id": "IMAGE_2",
+          "region": "cols 4-9, rows 4-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover",
+          "imageStyle": "card",
+          "borderRadius": 12,
+          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+        },
+        {
+          "id": "IMAGE_3",
+          "region": "cols 10-12, rows 4-5",
+          "role": "image",
+          "layer": 2,
+          "fit": "cover",
+          "imageStyle": "card",
+          "borderRadius": 12,
+          "shadow": "0 6px 18px rgba(15, 23, 42, 0.08)"
+        },
+        {
+          "id": "NUMBER1",
+          "region": "cols 1-3, rows 6",
+          "role": "caption",
+          "placeholder_text": "01",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "TITLE1",
+          "region": "cols 1-3, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Clear strategy",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "DESC1",
+          "region": "cols 1-3, rows 7-10",
+          "role": "body",
+          "placeholder_text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "NUMBER2",
+          "region": "cols 4-9, rows 7",
+          "role": "caption",
+          "placeholder_text": "02",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "TITLE2",
+          "region": "cols 4-9, rows 7-8",
+          "role": "heading",
+          "placeholder_text": "Thoughtful execution",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "DESC2",
+          "region": "cols 4-9, rows 8-11",
+          "role": "body",
+          "placeholder_text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 4
+        },
+        {
+          "id": "NUMBER3",
+          "region": "cols 10-12, rows 6",
+          "role": "caption",
+          "placeholder_text": "03",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 600,
+            "colorRole": "accent",
+            "align": "left",
+            "lineHeight": 1.2
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "TITLE3",
+          "region": "cols 10-12, rows 6-7",
+          "role": "heading",
+          "placeholder_text": "Lasting results",
+          "layer": 10,
+          "typography": {
+            "fontSize": 20,
+            "fontWeight": 700,
+            "colorRole": "text",
+            "align": "left",
+            "lineHeight": 1.3
+          },
+          "max_lines": 1
+        },
+        {
+          "id": "DESC3",
+          "region": "cols 10-12, rows 7-10",
+          "role": "body",
+          "placeholder_text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
+          "layer": 10,
+          "typography": {
+            "fontSize": 14,
+            "fontWeight": 400,
+            "colorRole": "muted",
+            "align": "left",
+            "lineHeight": 1.5
+          },
+          "max_lines": 4
+        }
+      ],
+      "preview": {
+        "mode": "grid_three_images_text_asymmetric",
+        "slots": {
+          "BADGE": {
+            "text": "OUR APPROACH",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": true
+          },
+          "HEADING": {
+            "text": "Turning ideas into real impact",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "SUBHEADING": {
+            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "IMAGE_1": {
+            "variant": "image"
+          },
+          "IMAGE_2": {
+            "variant": "image"
+          },
+          "IMAGE_3": {
+            "variant": "image"
+          },
+          "NUMBER1": {
+            "text": "01",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE1": {
+            "text": "Clear strategy",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "DESC1": {
+            "text": "We help teams turn complex ideas into clear narratives that drive decisions and build momentum across the organization.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "NUMBER2": {
+            "text": "02",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE2": {
+            "text": "Thoughtful execution",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "DESC2": {
+            "text": "Our approach combines research, design, and storytelling so every slide earns attention and every message lands with precision.",
+            "variant": "body",
+            "bold": false,
+            "uppercase": false
+          },
+          "NUMBER3": {
+            "text": "03",
+            "variant": "caption",
+            "bold": true,
+            "uppercase": false
+          },
+          "TITLE3": {
+            "text": "Lasting results",
+            "variant": "title",
+            "bold": true,
+            "uppercase": false
+          },
+          "DESC3": {
             "text": "From first draft to final delivery, we keep copy concise, visual, and aligned to your audience and goals.",
             "variant": "body",
             "bold": false,
