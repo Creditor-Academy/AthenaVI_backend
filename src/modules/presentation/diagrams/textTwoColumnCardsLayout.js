@@ -187,6 +187,7 @@ function layoutTextTwoColumnCards(docOrElements, schema, themeTokens, canvas = {
 
 module.exports = {
   isTextTwoColumnLayout,
+  isTextTwoColumnCardsLayout: isTextTwoColumnLayout,
   textTwoColumnCardsGeom,
   layoutTextTwoColumnCards
 };

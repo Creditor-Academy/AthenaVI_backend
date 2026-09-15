@@ -10,6 +10,7 @@ const PURE_IMAGE_GRID_LAYOUTS = [
 
 const TEXT_IMAGE_GRID_LAYOUTS = new Set([
   'grid_text_image_cards_v1',
+  'grid_text_image_mosaic_v1',
   'grid_three_images_text_v1',
   'grid_images_text_cards_v1',
   'four_images_text_v1',

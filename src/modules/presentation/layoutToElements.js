@@ -227,6 +227,18 @@ const {
   isGridTextImageCardsLayout,
   layoutGridTextImageCards,
 } = require('./diagrams/gridTextImageCardsLayout');
+const {
+  isLogoPartnerGridLayout,
+  layoutLogoPartnerGrid,
+  isLogoPartnerStripLayout,
+  layoutLogoPartnerStrip,
+  isLogoWallLayout,
+  layoutLogoWall,
+} = require('./diagrams/logoPartnerLayouts');
+const {
+  isLogoWallMasonryLayout,
+  layoutLogoWallMasonry,
+} = require('./diagrams/logoWallMasonryLayout');
 const { isTimelineHorizontalLayout, layoutTimelineHorizontal } = require('./diagrams/timelineHorizontal');
 const { isTimelineVerticalLayout, layoutTimelineVertical } = require('./diagrams/timelineVertical');
 const { isTimelineVerticalCardsLayout, layoutTimelineVerticalCards } = require('./diagrams/timelineVerticalCards');
@@ -9793,6 +9805,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutGridSixImages(next, layoutSchema, themeTokens, canvas);
   } else if (isGridTextImageCardsLayout(layoutSchema?.layout_id)) {
     next = layoutGridTextImageCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isLogoPartnerGridLayout(layoutSchema?.layout_id)) {
+    next = layoutLogoPartnerGrid(next, layoutSchema, themeTokens, canvas);
+  } else if (isLogoPartnerStripLayout(layoutSchema?.layout_id)) {
+    next = layoutLogoPartnerStrip(next, layoutSchema, themeTokens, canvas);
+  } else if (isLogoWallLayout(layoutSchema?.layout_id)) {
+    next = layoutLogoWall(next, layoutSchema, themeTokens, canvas);
+  } else if (isLogoWallMasonryLayout(layoutSchema?.layout_id)) {
+    next = layoutLogoWallMasonry(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaCardsLayout(layoutSchema?.layout_id)) {
     next = layoutPricingFourParaCards(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingFourParaLayout(layoutSchema?.layout_id)) {
