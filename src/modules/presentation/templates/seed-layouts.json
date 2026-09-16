@@ -8696,24 +8696,24 @@
       "slots": [
         {
           "id": "FEATURE_1_TITLE",
-          "region": "cols 1-6, rows 1-2",
+          "region": "cols 1-7, rows 1-2",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 24,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
             "lineHeight": 1.15
           },
-          "max_lines": 2
+          "max_lines": 1
         },
         {
           "id": "FEATURE_1_BODY",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 1-7, rows 2-3",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Full-featured desktop workspace with powerful tools and analytics.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -8726,7 +8726,7 @@
         },
         {
           "id": "LAPTOP_FRAME_1",
-          "region": "cols 1-6, rows 3-6",
+          "region": "cols 1-7, rows 3-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -8739,31 +8739,31 @@
         },
         {
           "id": "DEVICE_L_1",
-          "region": "cols 1-6, rows 3-6",
+          "region": "cols 1-7, rows 3-10",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "FEATURE_2_TITLE",
-          "region": "cols 1-6, rows 6-7",
+          "region": "cols 8-12, rows 1-2",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 24,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
             "lineHeight": 1.15
           },
-          "max_lines": 2
+          "max_lines": 1
         },
         {
           "id": "FEATURE_2_BODY",
-          "region": "cols 1-6, rows 7-8",
+          "region": "cols 8-12, rows 2-3",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Stay productive on the go with real-time updates and notifications.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -8775,28 +8775,8 @@
           "max_lines": 2
         },
         {
-          "id": "LAPTOP_FRAME_2",
-          "region": "cols 1-6, rows 8-10",
-          "role": "decoration",
-          "layer": 1,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "laptopFrame",
-            "suggestedBehind": "deviceFrame",
-            "pairsWithSlotId": "DEVICE_L_2"
-          }
-        },
-        {
-          "id": "DEVICE_L_2",
-          "region": "cols 1-6, rows 8-10",
-          "role": "image",
-          "layer": 2,
-          "fit": "cover"
-        },
-        {
           "id": "PHONE_FRAME",
-          "region": "cols 7-12, rows 1-10",
+          "region": "cols 8-12, rows 3-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -8809,7 +8789,7 @@
         },
         {
           "id": "DEVICE_R",
-          "region": "cols 7-12, rows 2-9",
+          "region": "cols 8-12, rows 3-10",
           "role": "image",
           "layer": 2,
           "fit": "cover"
@@ -8825,7 +8805,7 @@
             "uppercase": false
           },
           "FEATURE_1_BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "text": "Full-featured desktop workspace with powerful tools and analytics.",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -8840,13 +8820,10 @@
             "uppercase": false
           },
           "FEATURE_2_BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "text": "Stay productive on the go with real-time updates and notifications.",
             "variant": "body",
             "bold": false,
             "uppercase": false
-          },
-          "DEVICE_L_2": {
-            "variant": "image"
           },
           "DEVICE_R": {
             "variant": "image"
@@ -9263,12 +9240,12 @@
       "slots": [
         {
           "id": "FEATURE_1_TITLE",
-          "region": "cols 1-6, rows 1-2",
+          "region": "cols 1-7, rows 1-2",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 24,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -9278,9 +9255,9 @@
         },
         {
           "id": "FEATURE_1_BODY",
-          "region": "cols 1-6, rows 2-3",
+          "region": "cols 1-7, rows 2-3",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Full-featured desktop workspace with powerful tools and analytics.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -9293,7 +9270,7 @@
         },
         {
           "id": "LAPTOP_FRAME_1",
-          "region": "cols 1-6, rows 3-6",
+          "region": "cols 1-7, rows 3-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -9306,19 +9283,19 @@
         },
         {
           "id": "DEVICE_L_1",
-          "region": "cols 1-6, rows 3-6",
+          "region": "cols 1-7, rows 3-10",
           "role": "image",
           "layer": 2,
           "fit": "cover"
         },
         {
           "id": "FEATURE_2_TITLE",
-          "region": "cols 1-6, rows 6-7",
+          "region": "cols 8-12, rows 1-2",
           "role": "heading",
           "placeholder_text": "Describe this feature",
           "layer": 10,
           "typography": {
-            "fontSize": 20,
+            "fontSize": 24,
             "fontWeight": 800,
             "colorRole": "text",
             "align": "left",
@@ -9328,9 +9305,9 @@
         },
         {
           "id": "FEATURE_2_BODY",
-          "region": "cols 1-6, rows 7-8",
+          "region": "cols 8-12, rows 2-3",
           "role": "body",
-          "placeholder_text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+          "placeholder_text": "Stay productive on the go with real-time updates and notifications.",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -9342,28 +9319,8 @@
           "max_lines": 2
         },
         {
-          "id": "LAPTOP_FRAME_2",
-          "region": "cols 1-6, rows 8-10",
-          "role": "decoration",
-          "layer": 1,
-          "aiOnly": true,
-          "shapeHint": {
-            "aiOnly": true,
-            "kind": "laptopFrame",
-            "suggestedBehind": "deviceFrame",
-            "pairsWithSlotId": "DEVICE_L_2"
-          }
-        },
-        {
-          "id": "DEVICE_L_2",
-          "region": "cols 1-6, rows 8-10",
-          "role": "image",
-          "layer": 2,
-          "fit": "cover"
-        },
-        {
           "id": "PHONE_FRAME",
-          "region": "cols 7-12, rows 1-10",
+          "region": "cols 8-12, rows 3-10",
           "role": "decoration",
           "layer": 1,
           "aiOnly": true,
@@ -9376,7 +9333,7 @@
         },
         {
           "id": "DEVICE_R",
-          "region": "cols 7-12, rows 2-9",
+          "region": "cols 8-12, rows 3-10",
           "role": "image",
           "layer": 2,
           "fit": "cover"
@@ -9393,7 +9350,7 @@
             "uppercase": false
           },
           "FEATURE_1_BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "text": "Full-featured desktop workspace with powerful tools and analytics.",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -9408,13 +9365,10 @@
             "uppercase": false
           },
           "FEATURE_2_BODY": {
-            "text": "Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.",
+            "text": "Stay productive on the go with real-time updates and notifications.",
             "variant": "body",
             "bold": false,
             "uppercase": false
-          },
-          "DEVICE_L_2": {
-            "variant": "image"
           },
           "DEVICE_R": {
             "variant": "image"
