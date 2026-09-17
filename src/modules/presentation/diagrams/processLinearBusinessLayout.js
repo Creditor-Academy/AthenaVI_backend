@@ -55,13 +55,10 @@ const PROCESS_LINEAR_DEFAULT_COLORS = [
 ];
 
 function isProcessLinearBusinessLayout(layoutId) {
-  const s = String(layoutId || '').toLowerCase();
+  const s = String(layoutId || '').toLowerCase().trim();
   return (
     s === 'process_linear_business_v1' ||
-    s === 'process_linear_business' ||
-    s === 'process_linear_v1' ||
-    s === 'process_linner_horti_v1' ||
-    s === 'process_linear_horizontal_v2'
+    s === 'process_linear_business'
   );
 }
 
