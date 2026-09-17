@@ -432,10 +432,100 @@ const layoutMetricThree = (elements, schema, palette = {}, canvas = {}) => {
   return [...chrome, ...next]
 }
 
+/**
+ * Polished SVG Preview for Metric Three thumbnail in slide picker.
+ * CommonJS port — exact 1000x560 slide canvas matching rendered slide layout.
+ */
+function metricThreePreviewSvg(previewHints, theme) {
+  previewHints = previewHints || {}
+  theme = theme || {}
+  var slots = previewHints.slots || {}
+  var stats = previewHints.stats || []
+
+  var headingText = (slots.HEADING && slots.HEADING.text) || previewHints.heading || MTH_DEFAULTS.HEADING
+  var m1v = (slots.METRIC1_VALUE && slots.METRIC1_VALUE.text) || (slots.STAT_1_VALUE && slots.STAT_1_VALUE.text) || (stats[0] && stats[0].value) || MTH_DEFAULTS.METRIC1_VALUE
+  var m1l = (slots.METRIC1_LABEL && slots.METRIC1_LABEL.text) || (slots.STAT_1_LABEL && slots.STAT_1_LABEL.text) || (stats[0] && stats[0].label) || MTH_DEFAULTS.METRIC1_LABEL
+  var m2v = (slots.METRIC2_VALUE && slots.METRIC2_VALUE.text) || (slots.STAT_2_VALUE && slots.STAT_2_VALUE.text) || (stats[1] && stats[1].value) || MTH_DEFAULTS.METRIC2_VALUE
+  var m2l = (slots.METRIC2_LABEL && slots.METRIC2_LABEL.text) || (slots.STAT_2_LABEL && slots.STAT_2_LABEL.text) || (stats[1] && stats[1].label) || MTH_DEFAULTS.METRIC2_LABEL
+  var m3v = (slots.METRIC3_VALUE && slots.METRIC3_VALUE.text) || (slots.STAT_3_VALUE && slots.STAT_3_VALUE.text) || (stats[2] && stats[2].value) || MTH_DEFAULTS.METRIC3_VALUE
+  var m3l = (slots.METRIC3_LABEL && slots.METRIC3_LABEL.text) || (slots.STAT_3_LABEL && slots.STAT_3_LABEL.text) || (stats[2] && stats[2].label) || MTH_DEFAULTS.METRIC3_LABEL
+
+  var c1 = MTH_COLORS.metric1
+  var c2 = MTH_COLORS.metric2
+  var c3 = MTH_COLORS.metric3
+
+  var lines = []
+  lines.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">')
+  lines.push('  <defs>')
+  lines.push('    <linearGradient id="mthU1" x1="0%" y1="0%" x2="100%" y2="0%">')
+  lines.push('      <stop offset="0%" stop-color="' + c1 + '" stop-opacity="0.25"/>')
+  lines.push('      <stop offset="50%" stop-color="' + c1 + '" stop-opacity="1"/>')
+  lines.push('      <stop offset="100%" stop-color="' + c1 + '" stop-opacity="0.25"/>')
+  lines.push('    </linearGradient>')
+  lines.push('    <linearGradient id="mthU2" x1="0%" y1="0%" x2="100%" y2="0%">')
+  lines.push('      <stop offset="0%" stop-color="' + c2 + '" stop-opacity="0.25"/>')
+  lines.push('      <stop offset="50%" stop-color="' + c2 + '" stop-opacity="1"/>')
+  lines.push('      <stop offset="100%" stop-color="' + c2 + '" stop-opacity="0.25"/>')
+  lines.push('    </linearGradient>')
+  lines.push('    <linearGradient id="mthU3" x1="0%" y1="0%" x2="100%" y2="0%">')
+  lines.push('      <stop offset="0%" stop-color="' + c3 + '" stop-opacity="0.25"/>')
+  lines.push('      <stop offset="50%" stop-color="' + c3 + '" stop-opacity="1"/>')
+  lines.push('      <stop offset="100%" stop-color="' + c3 + '" stop-opacity="0.25"/>')
+  lines.push('    </linearGradient>')
+  lines.push('  </defs>')
+  lines.push('  <rect width="1000" height="560" fill="#FFFFFF" rx="12"/>')
+  lines.push('  <circle cx="30" cy="500" r="80" fill="' + MTH_COLORS.decoCircles + '" opacity="0.25"/>')
+  lines.push('  <circle cx="80" cy="530" r="60" fill="' + MTH_COLORS.decoCircles + '" opacity="0.4"/>')
+  lines.push('  <rect x="' + MTH_GEOM.decoX + '" y="' + MTH_GEOM.decoY + '" width="' + MTH_GEOM.decoW + '" height="' + MTH_GEOM.decoH + '" rx="3" fill="' + MTH_COLORS.deco + '"/>')
+  lines.push('  <text x="' + MTH_GEOM.headingX + '" y="124" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + headingText + '</text>')
+  lines.push('  <rect x="' + MTH_GEOM.divider1X + '" y="' + MTH_GEOM.dividerY + '" width="1" height="' + MTH_GEOM.dividerH + '" fill="' + MTH_COLORS.divider + '"/>')
+  lines.push('  <rect x="' + MTH_GEOM.divider2X + '" y="' + MTH_GEOM.dividerY + '" width="1" height="' + MTH_GEOM.dividerH + '" fill="' + MTH_COLORS.divider + '"/>')
+
+  // Col 1
+  lines.push('  <circle cx="200" cy="210" r="30" fill="' + c1 + '" fill-opacity="0.15"/>')
+  lines.push('  <g transform="translate(180, 190)">')
+  lines.push('    <circle cx="13" cy="12" r="6" fill="none" stroke="' + c1 + '" stroke-width="2.5"/>')
+  lines.push('    <circle cx="27" cy="12" r="6" fill="none" stroke="' + c1 + '" stroke-width="2.5"/>')
+  lines.push('    <path d="M7 27 Q10 24 13 24 Q16 24 20 24 Q24 24 27 24 Q30 24 33 27 L33 34 L7 34 Z" fill="none" stroke="' + c1 + '" stroke-width="2.5" stroke-linejoin="round"/>')
+  lines.push('  </g>')
+  lines.push('  <text x="200" y="325" text-anchor="middle" fill="#1E293B" font-size="68" font-weight="900" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m1v + '</text>')
+  lines.push('  <text x="200" y="377" text-anchor="middle" fill="#64748B" font-size="17" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m1l + '</text>')
+  lines.push('  <rect x="150" y="400" width="100" height="5" rx="2.5" fill="url(#mthU1)"/>')
+
+  // Col 2
+  lines.push('  <circle cx="500" cy="210" r="30" fill="' + c2 + '" fill-opacity="0.15"/>')
+  lines.push('  <g transform="translate(480, 190)">')
+  lines.push('    <path d="M7 28 L14 14 L21 21 L33 9" fill="none" stroke="' + c2 + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
+  lines.push('    <polyline points="26,9 33,9 33,16" fill="none" stroke="' + c2 + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>')
+  lines.push('  </g>')
+  lines.push('  <text x="500" y="325" text-anchor="middle" fill="#1E293B" font-size="68" font-weight="900" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m2v + '</text>')
+  lines.push('  <text x="500" y="377" text-anchor="middle" fill="#64748B" font-size="17" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m2l + '</text>')
+  lines.push('  <rect x="450" y="400" width="100" height="5" rx="2.5" fill="url(#mthU2)"/>')
+
+  // Col 3
+  lines.push('  <circle cx="800" cy="210" r="30" fill="' + c3 + '" fill-opacity="0.15"/>')
+  lines.push('  <g transform="translate(780, 190)">')
+  lines.push('    <circle cx="10" cy="10" r="5" fill="none" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <circle cx="24" cy="10" r="5" fill="none" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <circle cx="30" cy="24" r="5" fill="none" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <circle cx="17" cy="27" r="5" fill="none" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <path d="M13 13 L15 22" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <path d="M21 13 L19 22" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('    <path d="M25 19 L22 23" stroke="' + c3 + '" stroke-width="2"/>')
+  lines.push('  </g>')
+  lines.push('  <text x="800" y="325" text-anchor="middle" fill="#1E293B" font-size="68" font-weight="900" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m3v + '</text>')
+  lines.push('  <text x="800" y="377" text-anchor="middle" fill="#64748B" font-size="17" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif">' + m3l + '</text>')
+  lines.push('  <rect x="750" y="400" width="100" height="5" rx="2.5" fill="url(#mthU3)"/>')
+
+  lines.push('</svg>')
+  return lines.join('\n')
+}
 
 module.exports = {
   isMetricThreeLayout: isMetricThreeLayout,
   layoutMetricThree: layoutMetricThree,
+  metricThreePreviewSvg: metricThreePreviewSvg,
   MTH_GEOM: MTH_GEOM,
   MTH_DEFAULTS: MTH_DEFAULTS,
+  MTH_COLORS: MTH_COLORS,
 };
