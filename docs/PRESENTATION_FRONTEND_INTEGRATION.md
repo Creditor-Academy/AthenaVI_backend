@@ -299,7 +299,8 @@ This is the Canva model, and it has two tiers:
 
 | Step | Call |
 |------|------|
-| Card grid | `GET .../presentations` or `GET .../library?category=presentation` — use `thumbnailUrl` for the **card** only |
+| Card grid | `GET .../presentations` or `GET .../library?category=presentation` — use `thumbnailUrl` for the **card** only; show `assignee` avatar when present |
+| Filters (TEAM) | `assignedTo=me` \| `assigneeId=` \| `unassigned=true` on list/library; assign via `PATCH .../projects/:id/assignee` (OWNER/ADMIN) — does not change edit ACL |
 | Modal open | `GET .../presentations/:id/preview?offset=0&limit=8` |
 | Remaining slides | Same URL with `offset=nextOffset`, in the background, until `nextOffset` is `null` |
 | Re-open / revalidate | Same URL + `If-None-Match: <ETag>` (304 = unchanged, no body) |

@@ -41,10 +41,12 @@ const createPresentation = asyncHandler(async (req, res) => {
 
 const listPresentations = asyncHandler(async (req, res) => {
   const { workspaceId } = req.params;
-  const { folderId } = req.query;
+  const { folderId, assignedTo, assigneeId, unassigned } = req.query;
   const presentations = await presentationService.listPresentations({
     workspaceId,
     folderId,
+    userId: req.user.id,
+    assignmentQuery: { assignedTo, assigneeId, unassigned },
   });
   return successResponse(
     req,

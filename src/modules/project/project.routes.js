@@ -5,6 +5,9 @@ const videoTemplateController = require('./videoTemplate.controller');
 const projectValidations = require('../validations/project.validations');
 const videoTemplateValidations = require('../validations/videoTemplate.validations');
 const validate = require('../../middlewares/validate.middleware');
+const { requireWorkspaceRole } = require('../../middlewares/requireWorkspaceRole');
+
+const ownerOrAdmin = ['OWNER', 'ADMIN'];
 
 router.get('/', validate(projectValidations.listProjectsSchema), projectController.listProjects);
 
@@ -22,6 +25,13 @@ router.patch(
   '/:projectId/data',
   validate(projectValidations.saveProjectDataSchema),
   projectController.saveProjectData
+);
+
+router.patch(
+  '/:projectId/assignee',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(projectValidations.setProjectAssigneeSchema),
+  projectController.setProjectAssignee
 );
 
 router.post(

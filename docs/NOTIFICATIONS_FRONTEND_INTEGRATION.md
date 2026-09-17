@@ -117,6 +117,7 @@ async function saveNotificationToggle(
 |-----------|-----------|----------------|
 | Push Notifications | `pushNotifications` | Master switch for all in-app inbox notifications |
 | Comments and Mentions | `commentsAndMentions` | `PROJECT_COMMENT_ADDED`, `PROJECT_COMMENT_MENTION`, `PRESENTATION_COMMENT_ADDED`, `PRESENTATION_COMMENT_MENTION` (requires push on) |
+| (granular) Workspace team | `workspaceTeamAlerts` | Includes `PROJECT_ASSIGNED` / `PROJECT_UNASSIGNED` when a TEAM owner/admin assigns a video or PPT |
 | Weekly Digest Email | `weeklyDigestEmail` | Weekly summary email (server job; opt-in only) |
 | Product Emails | `productEmails` | Superadmin product broadcast emails (opt-in only) |
 
@@ -150,6 +151,13 @@ GET /api/user/inbox?unreadOnly=true
 - `DELETE /api/user/inbox/:notificationId`
 
 Open deep links from `metadata.actionUrl` (project comments link to the editor project URL; presentation comments link to the presentation editor and carry `slideId` + `commentId` in `metadata` so you can scroll to the thread).
+
+**Project assignment** (`PROJECT_ASSIGNED` / `PROJECT_UNASSIGNED`, category `collaboration`, preference `workspaceTeamAlerts`):
+
+- Metadata includes `projectId`, `projectName`, `projectType` (`VIDEO` \| `PRESENTATION`), `assignedByName`.
+- VIDEO deep link defaults to `/workspaces/:workspaceId/projects/:projectId`.
+- PRESENTATION sets `actionUrl` to `/workspaces/:workspaceId/presentations/:projectId` (and `presentationId`).
+- Reassignment upserts the same inbox row (`referenceId` = project id) and resets `readAt`.
 
 ---
 

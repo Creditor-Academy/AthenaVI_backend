@@ -28,6 +28,9 @@ const {
 const storageAccounting = require('../storage/storageAccounting.service');
 const videoTemplateService = require('./videoTemplate.service');
 const presentationShareService = require('../presentationShare/presentationShare.service');
+const workspaceDao = require('../workspace/workspace.dao');
+const inboxService = require('../inbox/inbox.service');
+const { buildAssignmentWhere, isAssignmentUnchanged } = require('./project.assignment');
 
 function buildDefaultProjectData() {
   return {
@@ -286,14 +289,115 @@ const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, temp
   return saveProjectData(workspaceId, projectId, userId, nextData);
 };
 
-const listProjects = async (workspaceId, folderId, type) => {
+const listProjects = async (workspaceId, folderId, type, options = {}) => {
   if (folderId) {
     await assertFolderInWorkspace(folderId, workspaceId);
   }
 
-  const projects = await projectDao.listProjects({ workspaceId, folderId, type });
+  const assignmentWhere =
+    options.assignmentWhere ||
+    buildAssignmentWhere(options.assignmentQuery || {}, options.userId);
+
+  const projects = await projectDao.listProjects({
+    workspaceId,
+    folderId,
+    type,
+    assignmentWhere,
+  });
   const withCovers = await attachProjectCoverThumbnails(projects);
   return enrichProjects(withCovers, { includeData: false });
+};
+
+/**
+ * Assign / reassign / unassign a project in a TEAM workspace (OWNER/ADMIN only at route).
+ * @param {string} workspaceId
+ * @param {string} projectId
+ * @param {string} actorId
+ * @param {string | null} assigneeId
+ * @param {{ type?: string } | null} [workspace] optional preloaded workspace from middleware
+ */
+const setProjectAssignee = async (
+  workspaceId,
+  projectId,
+  actorId,
+  assigneeId,
+  workspace = null
+) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  const ws =
+    workspace ||
+    (await workspaceDao.findWorkspaceById(workspaceId));
+  if (!ws) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+  if (ws.type !== 'TEAM') {
+    throw new AppError(messages.PROJECT_ASSIGN_TEAM_ONLY, 400);
+  }
+
+  const nextAssigneeId = assigneeId || null;
+
+  if (nextAssigneeId) {
+    const member = await workspaceDao.findWorkspaceMember(workspaceId, nextAssigneeId);
+    if (!member) {
+      throw new AppError(messages.PROJECT_ASSIGNEE_NOT_MEMBER, 400);
+    }
+  }
+
+  if (isAssignmentUnchanged(project, nextAssigneeId)) {
+    return enrichProject(project, { includeData: false });
+  }
+
+  const previousAssigneeId = project.assignedToId || null;
+
+  const updateData =
+    nextAssigneeId === null
+      ? {
+          assignedToId: null,
+          assignedById: null,
+          assignedAt: null,
+        }
+      : {
+          assignedToId: nextAssigneeId,
+          assignedById: actorId,
+          assignedAt: new Date(),
+        };
+
+  const updated = await projectDao.updateProject(projectId, updateData);
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { id: true, name: true, email: true },
+  });
+
+  const notifyCtx = {
+    project: updated,
+    workspace: ws,
+    actor,
+    previousAssigneeId,
+  };
+
+  if (nextAssigneeId && nextAssigneeId !== actorId) {
+    inboxService
+      .notifyProjectAssigned(notifyCtx)
+      .catch((error) => console.error('Project assigned notification failed:', error));
+  }
+
+  if (
+    previousAssigneeId &&
+    previousAssigneeId !== nextAssigneeId &&
+    previousAssigneeId !== actorId
+  ) {
+    inboxService
+      .notifyProjectUnassigned({
+        ...notifyCtx,
+        unassignedUserId: previousAssigneeId,
+        reassignedToId: nextAssigneeId,
+      })
+      .catch((error) => console.error('Project unassigned notification failed:', error));
+  }
+
+  return enrichProject(updated, { includeData: false });
 };
 
 async function resolveVideoCoverPersistUrl(data) {
@@ -640,6 +744,7 @@ module.exports = {
   saveProjectData,
   moveProjectToFolder,
   deleteProject,
+  setProjectAssignee,
   buildDefaultProjectData,
   appendSceneFromVideoTemplate,
 };

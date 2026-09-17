@@ -33,9 +33,11 @@ Insufficient credits → **402**. Rate limits on generate/regenerate may return 
 | **Path** | `/api/workspaces/:workspaceId/presentations` |
 | **Auth** | Bearer + member |
 
-**Query (optional):** `folderId`
+**Query (optional):** `folderId`, and mutually exclusive assignment filters `assignedTo=me` \| `assigneeId=<uuid>` \| `unassigned=true`
 
-**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` use the deck cover captured from the live preview when one exists (see [deck cover capture](#deck-cover-capture)); otherwise they fall back to an image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
+**Response (200)** – `data.presentations`: summary cards (`type: PRESENTATION`), ordered by `lastModifiedAt` desc. Includes `deckId`, `deckStatus`, `slideCount`, `aspectRatio`, `locale`, `partial`, plus the usual project list fields (`owner`, `assignee`, `assignedBy`, `assignedAt`, `folder`, `storageBytes`, …). `thumbnail` / `thumbnailUrl` use the deck cover captured from the live preview when one exists (see [deck cover capture](#deck-cover-capture)); otherwise they fall back to an image extracted from the first slide. Full deck/slides: get-by-id. Dashboard click modal: [`GET .../preview`](#deck-preview-my-work--dashboard-modal).
+
+Assignment uses the shared project endpoint: `PATCH /api/workspaces/:workspaceId/projects/:presentationId/assignee` (OWNER/ADMIN, TEAM only). See [WORKSPACE_API.md](WORKSPACE_API.md#assign-project-team-only).
 
 ---
 
@@ -164,10 +166,10 @@ Elements may include **gradient** shape fills and rich text (`fontWeight`, `lett
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId` |
 | **Status** | **200** |
 
-**Response `data`:** `{ project, deck, slides, id, title, status, themeTokens, aspectRatio, locale, folderId }`
+**Response `data`:** `{ project, deck, slides, id, title, status, themeTokens, aspectRatio, locale, folderId, assignee, assignedBy, assignedAt, assignedToId, assignedById }`
 
-- Nested: `project`, `deck`, `slides` (canonical)
-- **Flat FE compatibility fields** (same payload): `id` (= project id), `title` (= project.name), `status` / `themeTokens` / `aspectRatio` / `locale` / `folderId` mirrored from deck/project
+- Nested: `project`, `deck`, `slides` (canonical). `project` includes hydrated `owner` / `assignee` / `assignedBy` (no editor `data` blob).
+- **Flat FE compatibility fields** (same payload): `id` (= project id), `title` (= project.name), `status` / `themeTokens` / `aspectRatio` / `locale` / `folderId` mirrored from deck/project, plus assignment fields (`assignee`, `assignedBy`, `assignedAt`)
 - `deck`: themeTokens, outline, status, aspectRatio, locale, promptBundleVersion, generationMetrics, partial, creditsChargedSoFar, …
 - slides: ordered slide rows (`content`, `layoutId`, `imageRef`, **`elements`** freeform canvas doc, status, **`progressStatus`** (`null` \| `TODO` \| `IN_PROGRESS` \| `COMPLETED`), manuallyEdited, …). Each slide also includes helper `title` ← `content.title` and `description` ← `content.bullets` when present.
 - `imageRef.status`: `ready` \| `failed` \| `skipped`. On `failed`, `imageRef.error` explains the provider/upload error; slide content can still be `READY`.

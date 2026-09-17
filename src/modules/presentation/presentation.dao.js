@@ -64,12 +64,13 @@ async function findDeckByProjectId(projectId) {
 /**
  * List PRESENTATION projects for a workspace (summary cards for FE library).
  */
-async function listPresentations({ workspaceId, folderId }) {
+async function listPresentations({ workspaceId, folderId, assignmentWhere = {} }) {
   return prisma.project.findMany({
     where: {
       workspaceId,
       type: 'PRESENTATION',
       ...(folderId ? { folderId } : {}),
+      ...assignmentWhere,
     },
     select: {
       id: true,
@@ -78,6 +79,9 @@ async function listPresentations({ workspaceId, folderId }) {
       folderId: true,
       createdBy: true,
       updatedBy: true,
+      assignedToId: true,
+      assignedById: true,
+      assignedAt: true,
       type: true,
       thumbnail: true,
       duration: true,

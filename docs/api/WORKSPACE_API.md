@@ -31,6 +31,11 @@ FE tabs for workspace content. **Images** here means **Image Gen chats** (not `/
 | `category` | no | Omit for tab counts. One of `video` \| `presentation` \| `image` to list items. |
 | `folderId` | no | Filter video / presentation / **image chats** to one folder |
 | `take` / `skip` | no | Pagination for `category=image` (1–100 / ≥0) |
+| `assignedTo` | no | `me` — filter video/presentation to current user’s assignee (mutually exclusive with `assigneeId` / `unassigned`) |
+| `assigneeId` | no | Filter video/presentation to that user uuid |
+| `unassigned` | no | `true` — only projects with no assignee |
+
+Assignment filters apply to **video** and **presentation** lists and to those tab **counts**. They are ignored for `category=image`.
 
 **Without `category` (200)** – tab badges:
 
@@ -730,6 +735,7 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 
 - `folderId` – filter projects inside one folder
 - `type` – `VIDEO` \| `PRESENTATION` (omit = both). Prefer workspace **library** for FE tabs: [Workspace library](#workspace-library-videos--ppt--images).
+- **Assignment filters** (mutually exclusive): `assignedTo=me` \| `assigneeId=<user-uuid>` \| `unassigned=true`
 
 **Response (200)** – `data.projects`: array ordered by `lastModifiedAt` desc. List responses **omit** `data` (editor JSON); use get-by-id for full editor state.
 
@@ -741,6 +747,47 @@ Each project includes:
 | `lastModifiedAt` | `updatedAt` of the project row. |
 | `lastModifiedBy` | User who last saved metadata or editor state (`updatedBy`). System-only rehydration on load does not change `lastModifiedBy`. |
 | `storageBytes` | Denormalized footprint: editor JSON size + referenced workspace `Asset.size` values + HeyGen/render/cache S3 sizes for this project. |
+| `assignee` | Current TEAM assignee user summary, or `null` if unassigned. |
+| `assignedBy` | User who last assigned, or `null`. |
+| `assignedAt` | When assignment was set, or `null`. |
+| `assignedToId` / `assignedById` | Raw user ids (same as nested summaries). |
+
+---
+
+### Assign project (TEAM only)
+
+Workflow metadata — does **not** change who can open or edit the project. Applies to both **VIDEO** and **PRESENTATION** projects (`presentationId` === `projectId`). Use the same endpoint for PPT.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/assignee` |
+| **Auth** | Bearer |
+| **Role** | OWNER or ADMIN |
+| **Workspace** | `TEAM` only (**400** on PRIVATE) |
+
+**Request body**
+
+```json
+{ "assigneeId": "user-uuid" }
+```
+
+or unassign:
+
+```json
+{ "assigneeId": null }
+```
+
+Picker source: `GET /api/workspaces/:id/members` → use `members[].user.id` (not membership row `id`).
+
+**Rules**
+
+- Assignee must be a current member of this workspace (**400** otherwise). Self-assign allowed.
+- Idempotent: same assignee as current → **200**, no `assignedAt` bump, no inbox write.
+- On success, new assignee gets inbox `PROJECT_ASSIGNED`; previous assignee gets `PROJECT_UNASSIGNED` when reassigned/cleared (skipped if actor === target).
+- Leaving the workspace clears that user’s assignments on projects in the same transaction.
+
+**Response (200)** – `data.project`: summary (no editor `data`) with hydrated `assignee` / `assignedBy` / `assignedAt`.
 
 ---
 

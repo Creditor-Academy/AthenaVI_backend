@@ -3,6 +3,7 @@ const projectService = require('../project/project.service');
 const presentationService = require('../presentation/presentation.service');
 const imageGenService = require('../imageGen/imageGen.service');
 const workspaceLibraryDao = require('./workspaceLibrary.dao');
+const { buildAssignmentWhere } = require('../project/project.assignment');
 
 const CATEGORIES = Object.freeze({
   video: {
@@ -36,13 +37,20 @@ function withKind(kind, item) {
   return { ...item, kind, category: kind };
 }
 
+function assignmentQueryFrom(query = {}) {
+  const { assignedTo, assigneeId, unassigned } = query;
+  return { assignedTo, assigneeId, unassigned };
+}
+
 async function getLibrarySummary({ userId, workspace, query = {} }) {
   const isPrivate = workspace.type === 'PRIVATE';
+  const assignmentWhere = buildAssignmentWhere(assignmentQueryFrom(query), userId);
   const counts = await workspaceLibraryDao.countByCategory({
     workspaceId: workspace.id,
     userId,
     isPrivate,
     folderId: query.folderId,
+    assignmentWhere,
   });
 
   return {
@@ -57,9 +65,13 @@ async function getLibrarySummary({ userId, workspace, query = {} }) {
 async function listLibraryCategory({ userId, workspace, category, query = {} }) {
   const meta = assertCategory(category);
   const { folderId, take, skip } = query;
+  const assignmentQuery = assignmentQueryFrom(query);
 
   if (meta.id === 'video') {
-    const projects = await projectService.listProjects(workspace.id, folderId, 'VIDEO');
+    const projects = await projectService.listProjects(workspace.id, folderId, 'VIDEO', {
+      userId,
+      assignmentQuery,
+    });
     return {
       category: meta.id,
       items: projects.map((p) => withKind('video', p)),
@@ -70,6 +82,8 @@ async function listLibraryCategory({ userId, workspace, category, query = {} }) 
     const presentations = await presentationService.listPresentations({
       workspaceId: workspace.id,
       folderId,
+      userId,
+      assignmentQuery,
     });
     return {
       category: meta.id,
@@ -77,6 +91,7 @@ async function listLibraryCategory({ userId, workspace, category, query = {} }) 
     };
   }
 
+  // Image Gen ignores assignment filters (different model).
   const threads = await imageGenService.listThreads({
     userId,
     workspace,

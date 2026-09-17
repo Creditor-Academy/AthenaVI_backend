@@ -5,8 +5,11 @@ const messages = require('../../shared/utils/messages');
 
 const listProjects = asyncHandler(async (req, res) => {
   const { workspaceId } = req.params;
-  const { folderId, type } = req.query;
-  const projects = await projectService.listProjects(workspaceId, folderId, type);
+  const { folderId, type, assignedTo, assigneeId, unassigned } = req.query;
+  const projects = await projectService.listProjects(workspaceId, folderId, type, {
+    userId: req.user.id,
+    assignmentQuery: { assignedTo, assigneeId, unassigned },
+  });
 
   return successResponse(req, res, { projects }, 200, messages.PROJECTS_FETCHED);
 });
@@ -97,6 +100,19 @@ const deleteProject = asyncHandler(async (req, res) => {
   return successResponse(req, res, {}, 200, messages.PROJECT_DELETED);
 });
 
+const setProjectAssignee = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId } = req.params;
+  const project = await projectService.setProjectAssignee(
+    workspaceId,
+    projectId,
+    req.user.id,
+    req.body.assigneeId ?? null,
+    req.workspace || null
+  );
+
+  return successResponse(req, res, { project }, 200, messages.PROJECT_ASSIGNEE_UPDATED);
+});
+
 module.exports = {
   listProjects,
   createProject,
@@ -105,4 +121,5 @@ module.exports = {
   saveProjectData,
   moveProjectToFolder,
   deleteProject,
+  setProjectAssignee,
 };

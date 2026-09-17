@@ -2,9 +2,11 @@ $kind: http-request
 description: >
   Workspace content tabs. Omit category for { categories: [{ id, label, count }] }.
   category=video|presentation|image returns { category, items } (images = Image Gen, not assets).
+  Optional assignment filters (video/presentation + counts): assignedTo=me | assigneeId | unassigned=true.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/library"
 method: GET
 queryParams:
   category: video
   folderId: "{{folderId}}"
+  assignedTo: me
 order: 2500

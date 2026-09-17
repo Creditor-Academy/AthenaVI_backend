@@ -15,6 +15,10 @@ const {
   AUDIO_PLAYBACK_RATE_MAX,
   normalizeAudioSettings,
 } = require('../../shared/utils/audioSettings');
+const {
+  assignmentListQueryJoi,
+  withAssignmentOxor,
+} = require('../project/project.assignment');
 
 const uuidParam = Joi.string().uuid().required();
 
@@ -407,16 +411,30 @@ const listProjectsSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
   }),
-  query: Joi.object({
-    folderId: Joi.string().uuid().optional(),
-    type: Joi.string().valid('VIDEO', 'PRESENTATION').optional(),
-  }),
+  query: withAssignmentOxor(
+    Joi.object({
+      folderId: Joi.string().uuid().optional(),
+      type: Joi.string().valid('VIDEO', 'PRESENTATION').optional(),
+      ...assignmentListQueryJoi(Joi),
+    }),
+    Joi
+  ),
 });
 
 const projectByIdSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
     projectId: uuidParam,
+  }),
+});
+
+const setProjectAssigneeSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: uuidParam,
+    projectId: uuidParam,
+  }),
+  body: Joi.object({
+    assigneeId: Joi.string().uuid().allow(null).required(),
   }),
 });
 
@@ -470,6 +488,7 @@ module.exports = {
   createProjectSchema,
   listProjectsSchema,
   projectByIdSchema,
+  setProjectAssigneeSchema,
   updateProjectSchema,
   saveProjectDataSchema,
   moveProjectFolderSchema,

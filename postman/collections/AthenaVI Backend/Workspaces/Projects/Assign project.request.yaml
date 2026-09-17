@@ -1,0 +1,16 @@
+$kind: http-request
+description: >
+  TEAM only. OWNER/ADMIN assign or unassign a VIDEO or PRESENTATION project.
+  Body assigneeId = workspace member user.id (from GET .../members), or null to unassign.
+  Does not change who can open/edit the project.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/assignee"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "assigneeId": "{{userId}}"
+    }
+order: 6500

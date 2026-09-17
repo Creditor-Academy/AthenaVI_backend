@@ -1,8 +1,9 @@
 $kind: http-request
-description: Summary cards only (no `data`). Includes owner, lastModifiedAt/By, storageBytes. Optional folderId and type=VIDEO|PRESENTATION.
+description: Summary cards only (no `data`). Includes owner, assignee, lastModifiedAt/By, storageBytes. Optional folderId, type=VIDEO|PRESENTATION, and mutually exclusive assignment filters assignedTo=me | assigneeId | unassigned=true.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects?folderId={{folderId}}&type=VIDEO"
 method: GET
 queryParams:
   folderId: "{{folderId}}"
   type: VIDEO
+  assignedTo: me
 order: 3000

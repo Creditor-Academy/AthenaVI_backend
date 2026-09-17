@@ -15,6 +15,7 @@ const {
   serializeNotification,
   CATEGORIES,
 } = require('./inbox.notificationTypes');
+const { buildProjectAssignmentMetadata } = require('../project/project.assignment');
 
 function buildInvitationActionUrl(token) {
   return `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
@@ -818,6 +819,69 @@ async function notifyPresentationComment({
   }
 }
 
+/**
+ * Notify the new assignee that a project was assigned to them.
+ * referenceId = projectId so reassignment upserts the same inbox row.
+ */
+async function notifyProjectAssigned({ project, workspace, actor }) {
+  const assigneeId = project.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project.name || 'a project';
+  const workspaceName = workspace?.name || 'workspace';
+  const kind = project.type === 'PRESENTATION' ? 'presentation' : 'video';
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'PROJECT_ASSIGNED',
+    referenceId: project.id,
+    workspaceId: project.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${projectName}`,
+    message: `You were assigned the ${kind} "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildProjectAssignmentMetadata({ project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned (or reassigned away).
+ */
+async function notifyProjectUnassigned({
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project.name || 'a project';
+  const workspaceName = workspace?.name || 'workspace';
+  const kind = project.type === 'PRESENTATION' ? 'presentation' : 'video';
+
+  const message = reassignedToId
+    ? `${actorName} reassigned the ${kind} "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from the ${kind} "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'PROJECT_UNASSIGNED',
+    referenceId: project.id,
+    workspaceId: project.workspaceId || workspace?.id,
+    title: `Unassigned from ${projectName}`,
+    message,
+    metadata: {
+      ...buildProjectAssignmentMetadata({ project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -941,6 +1005,8 @@ module.exports = {
   notifyCreditsWorkspaceRevoke,
   notifyProjectComment,
   notifyPresentationComment,
+  notifyProjectAssigned,
+  notifyProjectUnassigned,
   listInbox,
   getUnreadCount,
   getNotification,

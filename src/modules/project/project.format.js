@@ -4,6 +4,8 @@ const { toJsonNumber } = require('../../shared/utils/byteSize');
 const USER_FIELD_MAP = [
   { sourceField: 'createdBy', targetField: 'owner' },
   { sourceField: 'updatedBy', targetField: 'lastModifiedBy' },
+  { sourceField: 'assignedToId', targetField: 'assignee' },
+  { sourceField: 'assignedById', targetField: 'assignedBy' },
 ];
 
 function baseProjectFields(project) {
@@ -18,6 +20,9 @@ function baseProjectFields(project) {
     folderId: project.folderId,
     createdBy: project.createdBy,
     updatedBy: project.updatedBy ?? null,
+    assignedToId: project.assignedToId ?? null,
+    assignedById: project.assignedById ?? null,
+    assignedAt: project.assignedAt ?? null,
     thumbnail: project.thumbnail,
     thumbnailUrl: project.thumbnailUrl || project.thumbnail,
     duration: project.duration,

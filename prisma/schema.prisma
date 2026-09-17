@@ -68,6 +68,8 @@ enum InboxNotificationType {
   PRESENTATION_GENERATION_FAILED
   PRESENTATION_COMMENT_ADDED
   PRESENTATION_COMMENT_MENTION
+  PROJECT_ASSIGNED
+  PROJECT_UNASSIGNED
 }
 
 enum EarlyAccessRequestStatus {
@@ -162,6 +164,8 @@ model User {
   productEmailBroadcastRecipients ProductEmailBroadcastRecipient[]
   presentationShareLinks  PresentationShareLink[]  @relation("PresentationShareCreatedBy")
   presentationShareAudits PresentationShareAudit[] @relation("PresentationShareAuditActor")
+  assignedProjects        Project[]                @relation("ProjectAssignee")
+  projectsAssignedByMe    Project[]                @relation("ProjectAssignedBy")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -468,11 +472,18 @@ model Project {
   status        String  @default("draft") // draft | rendering | completed
   storageBytes  BigInt  @default(0)
 
+  /// TEAM workflow assignee (not ACL). Null = unassigned.
+  assignedToId String?   @map("assigned_to_id")
+  assignedById String?   @map("assigned_by_id")
+  assignedAt   DateTime? @map("assigned_at")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   folder            Folder             @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  assignedTo        User?              @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy        User?              @relation("ProjectAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
   heygenResponses    HeygenResponse[]
   speechGenerations  SpeechGeneration[]
   projectRenders     ProjectRender[]
@@ -484,6 +495,8 @@ model Project {
 
   @@index([updatedBy])
   @@index([type])
+  @@index([assignedToId])
+  @@index([workspaceId, assignedToId])
 }
 
 model ProjectComment {

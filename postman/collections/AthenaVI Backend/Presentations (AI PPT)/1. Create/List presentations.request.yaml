@@ -1,7 +1,8 @@
 $kind: http-request
-description: List PRESENTATION projects (summary cards). Optional folderId.
+description: List PRESENTATION projects (summary cards). Optional folderId and assignment filters assignedTo=me | assigneeId | unassigned=true.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations?folderId={{folderId}}"
 method: GET
 queryParams:
   folderId: "{{folderId}}"
+  assignedTo: me
 order: 500

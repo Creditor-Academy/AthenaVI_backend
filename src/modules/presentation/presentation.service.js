@@ -22,6 +22,7 @@ const {
 const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
 const { enrichSlidesForClient } = require('./elementContent.normalize');
 const { enrichProjects } = require('../project/project.format');
+const { buildAssignmentWhere } = require('../project/project.assignment');
 const projectDao = require('../project/project.dao');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const {
@@ -60,6 +61,11 @@ function withFlatPresentationFields({ project, deck, slides }) {
     aspectRatio: d.aspectRatio,
     locale: d.locale,
     folderId: proj.folderId,
+    assignedToId: proj.assignedToId ?? null,
+    assignedById: proj.assignedById ?? null,
+    assignedAt: proj.assignedAt ?? null,
+    assignee: proj.assignee ?? null,
+    assignedBy: proj.assignedBy ?? null,
     generationPrompt: extractGenerationPrompt(d),
   };
 }
@@ -72,12 +78,18 @@ async function assertFolderInWorkspace(folderId, workspaceId) {
   return folder;
 }
 
-async function listPresentations({ workspaceId, folderId }) {
+async function listPresentations({ workspaceId, folderId, assignmentQuery, userId }) {
   if (folderId) {
     await assertFolderInWorkspace(folderId, workspaceId);
   }
 
-  const rows = await presentationDao.listPresentations({ workspaceId, folderId });
+  const assignmentWhere = buildAssignmentWhere(assignmentQuery || {}, userId);
+
+  const rows = await presentationDao.listPresentations({
+    workspaceId,
+    folderId,
+    assignmentWhere,
+  });
   const enriched = await enrichProjects(rows, { includeData: false });
 
   return Promise.all(
@@ -517,6 +529,9 @@ async function getPresentation(workspaceId, presentationId) {
   });
 
   const proj = fullProject || project;
+  const [enrichedProject] = await enrichProjects([proj].filter(Boolean), {
+    includeData: false,
+  });
   const deckPayload = {
     id: deck.id,
     projectId: deck.projectId,
@@ -535,7 +550,7 @@ async function getPresentation(workspaceId, presentationId) {
   const slides = enrichSlidesForClient(await attachPresignedMediaToSlides(deck.slides || []));
 
   const firstSlide = slides[0] || null;
-  if (firstSlide && !proj?.thumbnail) {
+  if (firstSlide && !enrichedProject?.thumbnail) {
     const extracted = extractSlideCover(firstSlide);
     const cover = await toCoverUrls(extracted);
     if (cover.persistUrl) {
@@ -544,7 +559,7 @@ async function getPresentation(workspaceId, presentationId) {
   }
 
   return withFlatPresentationFields({
-    project: proj,
+    project: enrichedProject || proj,
     deck: deckPayload,
     slides,
   });

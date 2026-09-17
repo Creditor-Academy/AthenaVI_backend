@@ -7,6 +7,9 @@ const projectListSelect = {
   folderId: true,
   createdBy: true,
   updatedBy: true,
+  assignedToId: true,
+  assignedById: true,
+  assignedAt: true,
   type: true,
   thumbnail: true,
   duration: true,
@@ -25,12 +28,13 @@ const findFolderById = async (folderId) => {
   });
 };
 
-const listProjects = async ({ workspaceId, folderId, type }) => {
+const listProjects = async ({ workspaceId, folderId, type, assignmentWhere = {} }) => {
   return prisma.project.findMany({
     where: {
       workspaceId,
       ...(folderId ? { folderId } : {}),
       ...(type ? { type } : {}),
+      ...assignmentWhere,
     },
     select: projectListSelect,
     orderBy: { updatedAt: 'desc' },
@@ -89,6 +93,30 @@ const deleteProject = async (projectId) => {
   });
 };
 
+/**
+ * Clear assignment fields when a workspace member leaves.
+ * - If they were assignee: clear assignee + assignedBy + assignedAt
+ * - If they were only assignedBy: clear assignedById only
+ */
+const clearAssignmentsForUser = async (workspaceId, userId, tx = prisma) => {
+  await tx.project.updateMany({
+    where: { workspaceId, assignedToId: userId },
+    data: {
+      assignedToId: null,
+      assignedById: null,
+      assignedAt: null,
+    },
+  });
+  await tx.project.updateMany({
+    where: {
+      workspaceId,
+      assignedById: userId,
+      NOT: { assignedToId: userId },
+    },
+    data: { assignedById: null },
+  });
+};
+
 const findCoverSourcesByIds = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) return [];
   return prisma.project.findMany({
@@ -143,6 +171,7 @@ module.exports = {
   createProject,
   updateProject,
   deleteProject,
+  clearAssignmentsForUser,
   findAssetsByIds,
   findCoverSourcesByIds,
   transaction,

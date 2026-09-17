@@ -96,15 +96,20 @@ sequenceDiagram
 | Action | Method | Path |
 |--------|--------|------|
 | Create project | `POST` | `/api/workspaces/:workspaceId/projects` |
-| List projects | `GET` | `/api/workspaces/:workspaceId/projects?folderId=` |
+| List projects | `GET` | `/api/workspaces/:workspaceId/projects?folderId=&assignedTo=me` |
 | Get project (editor load) | `GET` | `/api/workspaces/:workspaceId/projects/:projectId` |
 | Update metadata | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId` |
+| **Assign / unassign** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/assignee` (OWNER/ADMIN, TEAM) |
 | **Save editor state** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/data` |
 | Move folder | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` |
 | Delete project | `DELETE` | `/api/workspaces/:workspaceId/projects/:projectId` |
 | List video templates | `GET` | `/api/workspaces/:workspaceId/video-templates?type=VIDEO_SCENE\|VIDEO_PACK` |
 | Get video template | `GET` | `/api/workspaces/:workspaceId/video-templates/:templateId` |
 | Append scene from template | `POST` | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` |
+
+### TEAM assignment (workflow, not ACL)
+
+On TEAM workspaces, OWNER/ADMIN can assign a project to any member. List/detail cards include `assignee`, `assignedBy`, `assignedAt` (or `null`). Filters: `assignedTo=me`, `assigneeId=<uuid>`, `unassigned=true` (mutually exclusive). Assignment does **not** restrict who can open or edit. New projects stay unassigned. Picker: `GET .../members` → `user.id`.
 
 ### Create project (wizard)
 

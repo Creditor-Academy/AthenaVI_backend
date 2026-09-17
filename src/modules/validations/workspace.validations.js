@@ -1,4 +1,8 @@
 const Joi = require('joi');
+const {
+  assignmentListQueryJoi,
+  withAssignmentOxor,
+} = require('../project/project.assignment');
 
 const createWorkspaceSchema = Joi.object({
   body: Joi.object({
@@ -16,13 +20,17 @@ const listWorkspaceLibrarySchema = Joi.object({
   params: Joi.object({
     workspaceId: Joi.string().uuid().required(),
   }),
-  query: Joi.object({
-    category: Joi.string().valid('video', 'presentation', 'image').optional(),
-    folderId: Joi.string().uuid().optional(),
-    take: Joi.number().integer().min(1).max(100).optional(),
-    skip: Joi.number().integer().min(0).optional(),
-    mode: Joi.string().valid('image').optional(),
-  }),
+  query: withAssignmentOxor(
+    Joi.object({
+      category: Joi.string().valid('video', 'presentation', 'image').optional(),
+      folderId: Joi.string().uuid().optional(),
+      take: Joi.number().integer().min(1).max(100).optional(),
+      skip: Joi.number().integer().min(0).optional(),
+      mode: Joi.string().valid('image').optional(),
+      ...assignmentListQueryJoi(Joi),
+    }),
+    Joi
+  ),
 });
 
 const renameWorkspaceSchema = Joi.object({

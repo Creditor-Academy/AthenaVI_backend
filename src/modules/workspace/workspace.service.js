@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { sendEmail } = require('../../shared/notification/email.service');
 const buildInvitationEmail = require('../../shared/templates/invitation.template');
 const inboxService = require('../inbox/inbox.service');
+const projectDao = require('../project/project.dao');
 
 const INVITATION_EXPIRY_DAYS = 7;
 const MAX_WORKSPACE_NAME_LENGTH = 255;
@@ -345,7 +346,12 @@ async function removeMember(workspaceId, requesterId, memberId) {
     }
   }
 
-  await workspaceDao.deleteMember(memberId);
+  await workspaceDao.transaction(async (tx) => {
+    await projectDao.clearAssignmentsForUser(workspaceId, targetMember.userId, tx);
+    await tx.workspaceMember.delete({
+      where: { id: memberId },
+    });
+  });
 
   const workspace = await workspaceDao.findWorkspaceById(workspaceId);
   inboxService

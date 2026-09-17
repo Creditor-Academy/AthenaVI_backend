@@ -18,6 +18,10 @@ const templateIdField = Joi.string().trim().min(1);
 const densityField = Joi.string().valid('concise', 'balanced', 'detailed').default('balanced');
 const localeField = Joi.string().trim().min(2).max(16).default('en');
 const slideCountField = Joi.number().integer().min(5).max(AI_SLIDE_MAX);
+const {
+  assignmentListQueryJoi,
+  withAssignmentOxor,
+} = require('../project/project.assignment');
 
 const outlineSlideSchema = Joi.object({
   order: Joi.number().integer().min(1).required(),
@@ -158,9 +162,13 @@ const listPresentationsSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
   }),
-  query: Joi.object({
-    folderId: Joi.string().uuid().optional(),
-  }),
+  query: withAssignmentOxor(
+    Joi.object({
+      folderId: Joi.string().uuid().optional(),
+      ...assignmentListQueryJoi(Joi),
+    }),
+    Joi
+  ),
 });
 
 const presentationByIdSchema = Joi.object({
