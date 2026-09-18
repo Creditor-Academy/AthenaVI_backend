@@ -125,8 +125,7 @@ const EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS = {
   POINT_8_TITLE: 'Continuous support',
   POINT_8_DESC: 'Round-the-clock proactive monitoring and incident handling.',
 
-  DEFAULT_IMAGE:
-    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+  DEFAULT_IMAGE: null,
 };
 
 function isEightShortTextsImageLayout(layoutId) {
@@ -377,7 +376,7 @@ function layoutEightShortTextsImage(elements = [], schema = {}, palette = {}, ca
   const imgUrl =
     getPrevImage(heroSlotId, '') ||
     getPrevImage('IMAGE', '') ||
-    EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.DEFAULT_IMAGE;
+    null;
 
   pushElement({
     id: prevBySlot.get(heroSlotId)?.id || newId('hero-img'),
