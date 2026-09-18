@@ -16,6 +16,7 @@ const {
   CATEGORIES,
 } = require('./inbox.notificationTypes');
 const { buildProjectAssignmentMetadata } = require('../project/project.assignment');
+const { buildSlideAssignmentMetadata } = require('../presentation/slideAssignment');
 
 function buildInvitationActionUrl(token) {
   return `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
@@ -882,6 +883,70 @@ async function notifyProjectUnassigned({
   });
 }
 
+/**
+ * Notify the new assignee that a slide was assigned to them.
+ * referenceId = slideId so reassignment upserts the same inbox row.
+ */
+async function notifySlideAssigned({ slide, project, workspace, actor }) {
+  const assigneeId = slide.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const slideLabel = slide.order != null ? `Slide ${slide.order + 1}` : 'a slide';
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'SLIDE_ASSIGNED',
+    referenceId: slide.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${slideLabel} in ${projectName}`,
+    message: `You were assigned ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildSlideAssignmentMetadata({ slide, project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned from a slide (or reassigned away).
+ */
+async function notifySlideUnassigned({
+  slide,
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const slideLabel = slide.order != null ? `Slide ${slide.order + 1}` : 'a slide';
+
+  const message = reassignedToId
+    ? `${actorName} reassigned ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'SLIDE_UNASSIGNED',
+    referenceId: slide.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `Unassigned from ${slideLabel} of ${projectName}`,
+    message,
+    metadata: {
+      ...buildSlideAssignmentMetadata({ slide, project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -1007,6 +1072,8 @@ module.exports = {
   notifyPresentationComment,
   notifyProjectAssigned,
   notifyProjectUnassigned,
+  notifySlideAssigned,
+  notifySlideUnassigned,
   listInbox,
   getUnreadCount,
   getNotification,

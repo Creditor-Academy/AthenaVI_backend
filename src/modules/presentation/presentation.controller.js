@@ -203,6 +203,19 @@ const patchSlide = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_UPDATED);
 });
 
+const setSlideAssignee = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, slideId } = req.params;
+  const data = await presentationService.setSlideAssignee({
+    workspaceId,
+    presentationId,
+    slideId,
+    actorId: req.user.id,
+    assigneeId: req.body.assigneeId ?? null,
+    workspace: req.workspace || null,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_ASSIGNEE_UPDATED);
+});
+
 const addSlide = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const data = await presentationService.addSlide({
@@ -511,6 +524,7 @@ module.exports = {
   startGenerate,
   getStatus,
   patchSlide,
+  setSlideAssignee,
   addSlide,
   deleteSlide,
   duplicateSlide,

@@ -4,6 +4,7 @@ const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const validate = require('../../middlewares/validate.middleware');
 const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
+const { requireWorkspaceRole } = require('../../middlewares/requireWorkspaceRole');
 const presentationValidations = require('../validations/presentation.validations');
 const presentationController = require('./presentation.controller');
 const presentationShareRoutes = require('../presentationShare/presentationShare.routes');
@@ -12,6 +13,8 @@ const presentationShareValidations = require('../validations/presentationShare.v
 const presentationCommentRoutes = require('../presentationComment/presentationComment.routes');
 
 const router = express.Router({ mergeParams: true });
+
+const ownerOrAdmin = ['OWNER', 'ADMIN'];
 
 const uploadOutlineDocument = multer({
   storage: multer.memoryStorage(),
@@ -256,6 +259,15 @@ router.patch(
   '/:presentationId/slides/:slideId',
   validate(presentationValidations.patchSlideSchema),
   presentationController.patchSlide
+);
+
+// Dedicated route (OWNER/ADMIN only) — kept separate from the generic slide PATCH
+// above so this permission gate can't be bypassed via the unrestricted content patch.
+router.patch(
+  '/:presentationId/slides/:slideId/assignee',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(presentationValidations.setSlideAssigneeSchema),
+  presentationController.setSlideAssignee
 );
 
 router.post(

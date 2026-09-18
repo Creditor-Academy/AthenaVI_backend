@@ -208,6 +208,32 @@ async function deleteSlideById(slideId) {
   });
 }
 
+/**
+ * Clear slide assignment fields when a workspace member leaves.
+ * Mirrors project.dao.clearAssignmentsForUser; Slide has no direct workspaceId
+ * column, so scoping goes through deck -> project.
+ * - If they were assignee: clear assignee + assignedBy + assignedAt
+ * - If they were only assignedBy: clear assignedById only
+ */
+async function clearSlideAssignmentsForUser(workspaceId, userId, tx = prisma) {
+  await tx.slide.updateMany({
+    where: { assignedToId: userId, deck: { project: { workspaceId } } },
+    data: {
+      assignedToId: null,
+      assignedById: null,
+      assignedAt: null,
+    },
+  });
+  await tx.slide.updateMany({
+    where: {
+      assignedById: userId,
+      NOT: { assignedToId: userId },
+      deck: { project: { workspaceId } },
+    },
+    data: { assignedById: null },
+  });
+}
+
 async function deleteSlidesByDeckId(deckId) {
   return prisma.slide.deleteMany({
     where: { deckId },
@@ -550,6 +576,7 @@ module.exports = {
   updateSlide,
   findSlideById,
   deleteSlideById,
+  clearSlideAssignmentsForUser,
   deleteSlidesByDeckId,
   shiftSlideOrders,
   resequenceSlideOrders,

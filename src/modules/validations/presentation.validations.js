@@ -362,6 +362,17 @@ const slideContentSchema = Joi.object({
     .optional(),
 }).unknown(true);
 
+const setSlideAssigneeSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+    slideId: slideIdParam,
+  }),
+  body: Joi.object({
+    assigneeId: Joi.string().uuid().allow(null).required(),
+  }),
+});
+
 const patchSlideSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -1130,6 +1141,7 @@ module.exports = {
   setThemeSchema,
   generateDeckSchema,
   patchSlideSchema,
+  setSlideAssigneeSchema,
   addSlideSchema,
   slideByIdSchema,
   reorderSlidesSchema,

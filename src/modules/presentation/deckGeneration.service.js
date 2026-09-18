@@ -76,6 +76,11 @@ const {
 const stockService = require('../stock/stock.service');
 const s3Service = require('../s3/s3.service');
 const inboxService = require('../inbox/inbox.service');
+const workspaceDao = require('../workspace/workspace.dao');
+const {
+  attachSlideAssignees,
+  isSlideAssignmentUnchanged,
+} = require('./slideAssignment');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
 const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
 const graphicsService = require('../graphics/graphics.service');
@@ -5984,6 +5989,105 @@ async function patchSlide({ workspaceId, presentationId, slideId, patch }) {
   return { slide: enrichSlideForClient(updated) };
 }
 
+/**
+ * Assign / reassign / unassign one slide in a TEAM workspace (OWNER/ADMIN only at route).
+ * Mirrors project.service.setProjectAssignee, scoped to a single Slide row.
+ * @param {{ workspaceId: string, presentationId: string, slideId: string, actorId: string, assigneeId: string | null, workspace?: object | null }} args
+ */
+async function setSlideAssignee({
+  workspaceId,
+  presentationId,
+  slideId,
+  actorId,
+  assigneeId,
+  workspace = null,
+}) {
+  const { deck, project } = await loadPresentationDeck(presentationId, {
+    requireWorkspaceId: workspaceId,
+  });
+  const slide = await presentationDao.findSlideById(slideId);
+  if (!slide || slide.deckId !== deck.id) {
+    throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+  }
+
+  const ws = workspace || (await workspaceDao.findWorkspaceById(workspaceId));
+  if (!ws) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+  if (ws.type !== 'TEAM') {
+    throw new AppError(messages.PRESENTATION_SLIDE_ASSIGN_TEAM_ONLY, 400);
+  }
+
+  const nextAssigneeId = assigneeId || null;
+
+  if (nextAssigneeId) {
+    const member = await workspaceDao.findWorkspaceMember(workspaceId, nextAssigneeId);
+    if (!member) {
+      throw new AppError(messages.PRESENTATION_SLIDE_ASSIGNEE_NOT_MEMBER, 400);
+    }
+  }
+
+  const { enrichSlideForClient } = require('./elementContent.normalize');
+
+  if (isSlideAssignmentUnchanged(slide, nextAssigneeId)) {
+    const [hydrated] = await attachSlideAssignees([enrichSlideForClient(slide)]);
+    return { slide: hydrated };
+  }
+
+  const previousAssigneeId = slide.assignedToId || null;
+
+  const updateData =
+    nextAssigneeId === null
+      ? {
+          assignedToId: null,
+          assignedById: null,
+          assignedAt: null,
+        }
+      : {
+          assignedToId: nextAssigneeId,
+          assignedById: actorId,
+          assignedAt: new Date(),
+        };
+
+  const updated = await presentationDao.updateSlide(slideId, updateData);
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { id: true, name: true, email: true },
+  });
+
+  const notifyCtx = {
+    slide: updated,
+    project,
+    workspace: ws,
+    actor,
+    previousAssigneeId,
+  };
+
+  if (nextAssigneeId && nextAssigneeId !== actorId) {
+    inboxService
+      .notifySlideAssigned(notifyCtx)
+      .catch((error) => console.error('Slide assigned notification failed:', error));
+  }
+
+  if (
+    previousAssigneeId &&
+    previousAssigneeId !== nextAssigneeId &&
+    previousAssigneeId !== actorId
+  ) {
+    inboxService
+      .notifySlideUnassigned({
+        ...notifyCtx,
+        unassignedUserId: previousAssigneeId,
+        reassignedToId: nextAssigneeId,
+      })
+      .catch((error) => console.error('Slide unassigned notification failed:', error));
+  }
+
+  const [hydrated] = await attachSlideAssignees([enrichSlideForClient(updated)]);
+  return { slide: hydrated };
+}
+
 module.exports = {
   withTimeout,
   generateOutline,
@@ -5995,6 +6099,7 @@ module.exports = {
   getStatus,
   regenerateSlide,
   patchSlide,
+  setSlideAssignee,
   loadPresentationDeck,
   PPT_SLIDE_CONCURRENCY,
   CONTENT_TIMEOUT_MS,

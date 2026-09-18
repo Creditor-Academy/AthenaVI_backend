@@ -70,6 +70,8 @@ enum InboxNotificationType {
   PRESENTATION_COMMENT_MENTION
   PROJECT_ASSIGNED
   PROJECT_UNASSIGNED
+  SLIDE_ASSIGNED
+  SLIDE_UNASSIGNED
 }
 
 enum EarlyAccessRequestStatus {
@@ -166,6 +168,8 @@ model User {
   presentationShareAudits PresentationShareAudit[] @relation("PresentationShareAuditActor")
   assignedProjects        Project[]                @relation("ProjectAssignee")
   projectsAssignedByMe    Project[]                @relation("ProjectAssignedBy")
+  assignedSlides          Slide[]                  @relation("SlideAssignee")
+  slidesAssignedByMe      Slide[]                  @relation("SlideAssignedBy")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -931,11 +935,20 @@ model Slide {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  deck     Deck                  @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  jobs     SlideGenerationJob[]
-  comments PresentationComment[]
+  /// TEAM workflow assignee (not ACL). Null = unassigned. Mirrors Project's assignee model,
+  /// scoped to one slide instead of the whole deck.
+  assignedToId String?   @map("assigned_to_id")
+  assignedById String?   @map("assigned_by_id")
+  assignedAt   DateTime? @map("assigned_at")
+
+  deck       Deck                  @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  jobs       SlideGenerationJob[]
+  comments   PresentationComment[]
+  assignedTo User?                 @relation("SlideAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy User?                 @relation("SlideAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@index([deckId, order])
+  @@index([assignedToId])
   @@map("slides")
 }
 

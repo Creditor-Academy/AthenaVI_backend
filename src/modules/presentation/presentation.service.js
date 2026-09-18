@@ -23,6 +23,7 @@ const { CANVAS_BY_ASPECT } = require('./generationFlow.service');
 const { enrichSlidesForClient } = require('./elementContent.normalize');
 const { enrichProjects } = require('../project/project.format');
 const { buildAssignmentWhere } = require('../project/project.assignment');
+const { attachSlideAssignees } = require('./slideAssignment');
 const projectDao = require('../project/project.dao');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const {
@@ -547,7 +548,9 @@ async function getPresentation(workspaceId, presentationId) {
     createdAt: deck.createdAt,
     updatedAt: deck.updatedAt,
   };
-  const slides = enrichSlidesForClient(await attachPresignedMediaToSlides(deck.slides || []));
+  const slides = await attachSlideAssignees(
+    enrichSlidesForClient(await attachPresignedMediaToSlides(deck.slides || []))
+  );
 
   const firstSlide = slides[0] || null;
   if (firstSlide && !enrichedProject?.thumbnail) {
@@ -573,7 +576,9 @@ async function getSlide({ workspaceId, presentationId, slideId }) {
   if (!slide) {
     throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
   }
-  const [signed] = enrichSlidesForClient(await attachPresignedMediaToSlides([slide]));
+  const [signed] = await attachSlideAssignees(
+    enrichSlidesForClient(await attachPresignedMediaToSlides([slide]))
+  );
   return { slide: signed };
 }
 
@@ -814,6 +819,8 @@ module.exports = {
   },
   patchSlide: async (...args) =>
     presignPresentationPayload(await deckGeneration.patchSlide(...args)),
+  setSlideAssignee: async (...args) =>
+    presignPresentationPayload(await deckGeneration.setSlideAssignee(...args)),
   queueExport: exportService.queueExport,
   getExport: exportService.getExport,
   listThemes: themeService.listThemes,

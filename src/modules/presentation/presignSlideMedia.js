@@ -95,7 +95,10 @@ async function attachPresignedMediaToSlides(slides) {
 }
 
 /**
- * Presign any `slide` / `slides` fields on a service payload.
+ * Presign any `slide` / `slides` fields on a service payload, and hydrate their
+ * assignee/assignedBy user summaries. This is the one choke point every slide-
+ * returning service method flows through, so assignee never appears to reset
+ * to unassigned after an unrelated edit (content patch, reorder, add element, …).
  * @param {object} data
  */
 async function presignPresentationPayload(data) {
@@ -107,9 +110,13 @@ async function presignPresentationPayload(data) {
       const match = out.slide.elements.elements.find((e) => e.id === out.element.id);
       if (match) out.element = match;
     }
+    const { attachSlideAssignees } = require('./slideAssignment');
+    [out.slide] = await attachSlideAssignees([out.slide]);
   }
   if (Array.isArray(out.slides)) {
     out.slides = await attachPresignedMediaToSlides(out.slides);
+    const { attachSlideAssignees } = require('./slideAssignment');
+    out.slides = await attachSlideAssignees(out.slides);
   }
   return out;
 }
