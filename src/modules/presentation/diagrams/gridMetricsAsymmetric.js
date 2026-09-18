@@ -70,9 +70,11 @@ const GMAS_GEOM = {
   bottomCenterRadius: 14,
   bottomCenterPadding: 20,
   
-  // Bottom center label text
-  bottomCenterLabelY: 355,
-  bottomCenterLabelH: 70,
+  // Bottom center label text (confined to visible grey portion to the left of phone mockup)
+  bottomCenterLabelX: 358,
+  bottomCenterLabelY: 336,
+  bottomCenterLabelW: 106,
+  bottomCenterLabelH: 88,
   
   // Phone mockup (center-right)
   phoneX: 490,
@@ -294,7 +296,7 @@ const gridMetricsAsymmetricOverlay = (gx, gy, gw, gh) => {
     topCenterValue: box(g.topCenterX + 10, g.topCenterValueY, g.topCenterW - 20, g.topCenterValueH),
     topRightLabel: box(g.topRightX + g.topRightPadding, g.topRightLabelY, g.topRightW - g.topRightPadding * 2, g.topRightLabelH),
     bottomLeftValue: box(g.bottomLeftX + g.bottomLeftPadding, g.bottomLeftValueY, g.bottomLeftW - g.bottomLeftPadding * 2, g.bottomLeftValueH),
-    bottomCenterLabel: box(g.bottomCenterX + g.bottomCenterPadding, g.bottomCenterLabelY, g.bottomCenterW - g.bottomCenterPadding * 2, g.bottomCenterLabelH),
+    bottomCenterLabel: box(g.bottomCenterLabelX, g.bottomCenterLabelY, g.bottomCenterLabelW, g.bottomCenterLabelH),
     bottomRightTitle: box(g.bottomRightX + g.bottomRightPadding, g.bottomRightTitleY, g.bottomRightW - g.bottomRightPadding * 2, g.bottomRightTitleH),
     bottomRightDesc: box(g.bottomRightX + g.bottomRightPadding, g.bottomRightDescY, g.bottomRightW - g.bottomRightPadding * 2, g.bottomRightDescH),
   }
@@ -446,7 +448,7 @@ const layoutGridMetricsAsymmetric = (elements, schema, palette = {}, canvas = {}
     
     // Bottom center label
     placeText('BOTTOM_CENTER_LABEL', overlay.bottomCenterLabel, {
-      align: 'left', verticalAlign: 'top', fontSize: 13, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.5, wrap: 'wrap',
+      align: 'left', verticalAlign: 'center', fontSize: 13, fontWeight: 400, color: '#64748B', clipToSlot: true, lineHeight: 1.35, wrap: 'wrap',
     }, 'stat_label'),
     
     // Phone image
