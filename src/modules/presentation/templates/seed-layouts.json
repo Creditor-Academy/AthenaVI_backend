@@ -16960,7 +16960,7 @@
         }
       ],
       "preview": {
-        "mode": "stat_vertical",
+        "mode": "metric_three_vertical_v1",
         "slots": {
           "HEADING": {
             "text": "Key metrics",
@@ -18400,7 +18400,7 @@
             "fontSize": 28,
             "fontWeight": 800,
             "colorRole": "text",
-            "align": "left",
+            "align": "center",
             "lineHeight": 1.15
           },
           "max_lines": 2
@@ -19276,7 +19276,7 @@
         }
       ],
       "preview": {
-        "mode": "stat_six_para",
+        "mode": "metric_six_cards_v1",
         "dataVariant": "cards",
         "slots": {
           "BODY": {
@@ -19479,7 +19479,7 @@
         }
       ],
       "preview": {
-        "mode": "stat_vertical",
+        "mode": "metric_three_vertical_cards_v1",
         "dataVariant": "cards",
         "slots": {
           "HEADING": {
