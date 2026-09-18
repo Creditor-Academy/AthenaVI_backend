@@ -25,11 +25,24 @@ const TLR_PALETTE = ['#1B3A5C', '#E0B025', '#E07A1A', '#2A9B8F', '#D23A3A']
 const ROAD_D = 'M 72 508 C 210 498 318 448 368 392 C 422 328 318 288 278 238 C 236 186 430 168 568 176 C 730 186 808 128 918 96'
 
 const PINS = [
-  { x: 168, y: 500, side: 'right' },
-  { x: 408, y: 372, side: 'right' },
-  { x: 270, y: 236, side: 'left' },
-  { x: 648, y: 178, side: 'right' },
-  { x: 900, y: 100, side: 'left' },
+  { x: 168, y: 500 },
+  { x: 408, y: 372 },
+  { x: 270, y: 236 },
+  { x: 648, y: 178 },
+  { x: 900, y: 100 },
+]
+
+const MILESTONE_SLOTS = [
+  // 1: Kickoff (#1B3A5C) — placed directly above pin 1, clear of bottom and rising road
+  { x: 80, y: 370, w: 175, align: 'left' },
+  // 2: Scope (#E0B025) — placed to right of pin 2 in large open space
+  { x: 440, y: 315, w: 185, align: 'left' },
+  // 3: Build (#E07A1A) — placed to left of hairpin turn
+  { x: 35, y: 175, w: 190, align: 'right' },
+  // 4: Launch (#2A9B8F) — placed to left and above pin 4, well above road
+  { x: 420, y: 75, w: 185, align: 'right' },
+  // 5: Scale (#D23A3A) — placed to left and above pin 5, well above road
+  { x: 665, y: 20, w: 190, align: 'right' },
 ]
 
 const LOREM = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.'
@@ -186,14 +199,10 @@ function timelineRoadmapOverlay(gx, gy, gw, gh) {
   const details = []
   const aligns = []
   for (let i = 0; i < g.n; i += 1) {
-    const pin = PINS[i]
-    const tw = g.textW
-    const left = pin.side === 'left'
-    const tx = left ? pin.x - 18 - tw : pin.x + 22
-    const ty = pin.y - (left ? 58 : 52)
-    labels.push(box(tx, ty, tw, 18))
-    details.push(box(tx, ty + 20, tw, 42))
-    aligns.push(left ? 'right' : 'left')
+    const slot = MILESTONE_SLOTS[i] || { x: 100, y: 100, w: 180, align: 'left' }
+    labels.push(box(slot.x, slot.y, slot.w, 18))
+    details.push(box(slot.x, slot.y + 20, slot.w, 42))
+    aligns.push(slot.align)
   }
   return {
     kicker: box(g.kickerX, g.kickerY, g.kickerW, g.kickerH),

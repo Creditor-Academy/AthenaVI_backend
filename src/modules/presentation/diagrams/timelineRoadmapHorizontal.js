@@ -7,19 +7,19 @@ const TLRH_GEOM = {
   viewW: 1000,
   viewH: 560,
   headingX: 40,
-  headingY: 16,
+  headingY: 14,
   headingW: 920,
-  headingH: 48,
+  headingH: 38,
   n: 6,
-  padX: 60,
-  midY: 310,
-  amp: 95,
+  padX: 88,
+  midY: 300,
+  amp: 85,
   roadW: 48,
-  pinW: 46,
-  pinH: 62,
-  textW: 150,
-  labelH: 30,
-  detailH: 95,
+  pinW: 44,
+  pinH: 58,
+  textW: 154,
+  labelH: 22,
+  detailH: 68,
 }
 
 const TLRH_PALETTE = ['#9B3044', '#7CB342', '#E07A1A', '#C62828', '#2E7D6F', '#7A2D3A']
@@ -159,17 +159,20 @@ function timelineRoadmapHorizontalOverlay(gx, gy, gw, gh) {
   const details = []
   for (let i = 0; i < g.n; i += 1) {
     const x = pinX(i)
-    const y = roadYAt(i)
     const peak = isPeak(i)
     const tx = x - g.textW / 2
     if (peak) {
-      // Label above pin, detail text BELOW road (way more spacing to avoid overlap)
-      labels.push(box(tx, y - g.pinH - g.labelH + 4, g.textW, g.labelH))
-      details.push(box(tx, y + g.roadW / 2 + 70, g.textW, g.detailH))
+      // Peak milestone: Year label on top, detail paragraph directly below, above the pin
+      const labelY = 62
+      const detailY = 88
+      labels.push(box(tx, labelY, g.textW, g.labelH))
+      details.push(box(tx, detailY, g.textW, g.detailH))
     } else {
-      // Label below pin, detail text ABOVE road (way more spacing to avoid overlap)
-      labels.push(box(tx, y + g.pinH - 6, g.textW, g.labelH))
-      details.push(box(tx, y - g.roadW / 2 - 70 - g.detailH, g.textW, g.detailH))
+      // Trough milestone: Pin points up into road, Year label below pin, detail paragraph directly below
+      const labelY = 442
+      const detailY = 468
+      labels.push(box(tx, labelY, g.textW, g.labelH))
+      details.push(box(tx, detailY, g.textW, g.detailH))
     }
   }
   return {
@@ -257,7 +260,7 @@ function layoutTimelineRoadmapHorizontalElements(elements, schema, palette = {},
       align: 'center', verticalAlign: 'center', fontSize: 18, fontWeight: 800, color: accent, clipToSlot: true, lineHeight: 1.05,
     }, 'caption'))
     next.push(placeText(`milestone_${n}_detail`, overlay.details[i], {
-      align: 'center', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#4B5563', clipToSlot: true, lineHeight: 1.4, wrap: 'wrap',
+      align: 'center', verticalAlign: 'top', fontSize: 10, fontWeight: 400, color: '#4B5563', clipToSlot: false, lineHeight: 1.35, wrap: 'wrap',
     }, 'body'))
   }
 

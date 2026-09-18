@@ -21,8 +21,9 @@ const TPH_GEOM = {
   chevronW: 90,
   chevronH: 46,
   textW: 140,
-  titleH: 24,
-  descH: 50,  // Increased for better text fit
+  titleH: 40,
+  titleGap: 8,
+  descH: 48,
   dotR: 5,
 }
 
@@ -237,7 +238,7 @@ function timelineProcessHorizontalOverlay(gx, gy, gw, gh) {
     titles.push(box(tx, g.botLineY + 16, g.textW, g.titleH))
     
     // Description below title (gray text)
-    descs.push(box(tx, g.botLineY + 16 + g.titleH + 4, g.textW, g.descH))
+    descs.push(box(tx, g.botLineY + 16 + g.titleH + (g.titleGap || 8), g.textW, g.descH))
   }
   
   return {
@@ -330,11 +331,11 @@ function layoutTimelineProcessHorizontalElements(elements, schema, palette = {},
     }, 'caption'))
     
     next.push(placeText(`step_${n}_title`, overlay.titles[i], {
-      align: 'center', verticalAlign: 'top', fontSize: 16, fontWeight: 700, color: color, clipToSlot: true, lineHeight: 1.2,
+      align: 'center', verticalAlign: 'top', fontSize: 15, fontWeight: 700, color: color, clipToSlot: false, lineHeight: 1.2, wrap: 'wrap',
     }, 'heading'))
     
     next.push(placeText(`step_${n}_desc`, overlay.descs[i], {
-      align: 'center', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#6B7280', clipToSlot: true, lineHeight: 1.3,
+      align: 'center', verticalAlign: 'top', fontSize: 11, fontWeight: 400, color: '#6B7280', clipToSlot: false, lineHeight: 1.35, wrap: 'wrap',
     }, 'body'))
   }
 
