@@ -309,6 +309,18 @@ const { isMetricSingleLayout, layoutMetricSingle } = require('./diagrams/metricS
 const { isMetricTwoLayout, layoutMetricTwo } = require('./diagrams/metricTwo');
 const { isMetricSingleSplitLayout, layoutMetricSingleSplit } = require('./diagrams/metricSingleSplit');
 const { isMetricThreeLayout, layoutMetricThree } = require('./diagrams/metricThree');
+const { isMetricFourLayout, layoutMetricFour } = require('./diagrams/metricFour');
+const { isMetricFourCardsLayout, layoutMetricFourCards } = require('./diagrams/metricFourCards');
+const { isMetricFiveLayout, layoutMetricFive } = require('./diagrams/metricFive');
+const { isMetricFiveCardsLayout, layoutMetricFiveCards } = require('./diagrams/metricFiveCards');
+const { isMetricSixCardsLayout, layoutMetricSixCards } = require('./diagrams/metricSixCards');
+const { isMetricSixParaLayout, layoutMetricSixPara } = require('./diagrams/metricSixPara');
+const {
+  isMetricThreeVerticalLayout,
+  isMetricThreeVerticalCardsLayout,
+  layoutMetricThreeVertical,
+  layoutMetricThreeVerticalCards,
+} = require('./diagrams/metricThreeVertical');
 const { isMetricTwoSplitLayout, layoutMetricTwoSplit } = require('./diagrams/metricTwoSplit');
 const {
   QUOTE_GRID_N,
@@ -9824,6 +9836,22 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutMetricSingleSplit(next, layoutSchema, themeTokens, canvas);
   } else if (isMetricThreeLayout(layoutSchema?.layout_id)) {
     next = layoutMetricThree(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricFourLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricFour(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricFourCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricFourCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricFiveLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricFive(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricFiveCardsLayout(layoutSchema?.layout_id)) {
+    next = layoutMetricFiveCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricSixCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutMetricSixCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricSixParaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutMetricSixPara(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricThreeVerticalCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutMetricThreeVerticalCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isMetricThreeVerticalLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutMetricThreeVertical(next, layoutSchema, themeTokens, canvas);
   } else if (isMetricTwoSplitLayout(layoutSchema?.layout_id)) {
     next = layoutMetricTwoSplit(next, layoutSchema, themeTokens, canvas);
   } else if (isPricingComparisonCardsLayout(layoutSchema?.layout_id)) {
