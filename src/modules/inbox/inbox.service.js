@@ -17,6 +17,7 @@ const {
 } = require('./inbox.notificationTypes');
 const { buildProjectAssignmentMetadata } = require('../project/project.assignment');
 const { buildSlideAssignmentMetadata } = require('../presentation/slideAssignment');
+const { buildSceneAssignmentMetadata } = require('../project/sceneAssignment');
 
 function buildInvitationActionUrl(token) {
   return `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
@@ -947,6 +948,70 @@ async function notifySlideUnassigned({
   });
 }
 
+/**
+ * Notify the new assignee that a video scene was assigned to them.
+ * referenceId = sceneId so reassignment upserts the same inbox row.
+ */
+async function notifySceneAssigned({ scene, project, workspace, actor }) {
+  const assigneeId = scene.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a video';
+  const workspaceName = workspace?.name || 'workspace';
+  const sceneLabel = scene.name || (scene.order != null ? `Scene ${scene.order + 1}` : 'a scene');
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'SCENE_ASSIGNED',
+    referenceId: scene.sceneId || scene.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${sceneLabel} in ${projectName}`,
+    message: `You were assigned ${sceneLabel} of "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildSceneAssignmentMetadata({ scene, project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned from a scene (or reassigned away).
+ */
+async function notifySceneUnassigned({
+  scene,
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a video';
+  const workspaceName = workspace?.name || 'workspace';
+  const sceneLabel = scene.name || (scene.order != null ? `Scene ${scene.order + 1}` : 'a scene');
+
+  const message = reassignedToId
+    ? `${actorName} reassigned ${sceneLabel} of "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from ${sceneLabel} of "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'SCENE_UNASSIGNED',
+    referenceId: scene.sceneId || scene.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `Unassigned from ${sceneLabel} of ${projectName}`,
+    message,
+    metadata: {
+      ...buildSceneAssignmentMetadata({ scene, project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
+}
+
 function buildUnreadByCategory(unreadRows) {
   const byCategory = {
     [CATEGORIES.VIDEOS]: 0,
@@ -1074,6 +1139,8 @@ module.exports = {
   notifyProjectUnassigned,
   notifySlideAssigned,
   notifySlideUnassigned,
+  notifySceneAssigned,
+  notifySceneUnassigned,
   listInbox,
   getUnreadCount,
   getNotification,

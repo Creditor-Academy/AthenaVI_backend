@@ -113,6 +113,20 @@ const setProjectAssignee = asyncHandler(async (req, res) => {
   return successResponse(req, res, { project }, 200, messages.PROJECT_ASSIGNEE_UPDATED);
 });
 
+const setSceneAssignee = asyncHandler(async (req, res) => {
+  const { workspaceId, projectId, sceneId } = req.params;
+  const data = await projectService.setSceneAssignee(
+    workspaceId,
+    projectId,
+    sceneId,
+    req.user.id,
+    req.body.assigneeId ?? null,
+    req.workspace || null
+  );
+
+  return successResponse(req, res, data, 200, messages.VIDEO_SCENE_ASSIGNEE_UPDATED);
+});
+
 module.exports = {
   listProjects,
   createProject,
@@ -122,4 +136,5 @@ module.exports = {
   moveProjectToFolder,
   deleteProject,
   setProjectAssignee,
+  setSceneAssignee,
 };

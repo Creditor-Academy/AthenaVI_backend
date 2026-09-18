@@ -1,5 +1,6 @@
 const { attachUsers } = require('../../shared/utils/attachUsers');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
+const { attachSceneAssignees } = require('./sceneAssignment');
 
 const USER_FIELD_MAP = [
   { sourceField: 'createdBy', targetField: 'owner' },
@@ -49,7 +50,18 @@ async function enrichProjects(projects, { includeData = false } = {}) {
   const formatted = projects.map((project) =>
     includeData ? formatProjectDetail(project) : formatProjectSummary(project)
   );
-  return attachUsers(formatted, USER_FIELD_MAP);
+  const withUsers = await attachUsers(formatted, USER_FIELD_MAP);
+  if (!includeData) return withUsers;
+
+  // VIDEO scenes carry their own assignee — hydrate scene.assignee/assignedBy the
+  // same way the project-level assignee/owner fields were just hydrated above.
+  return Promise.all(
+    withUsers.map(async (project) => {
+      if (!Array.isArray(project.data?.scenes)) return project;
+      const scenes = await attachSceneAssignees(project.data.scenes);
+      return { ...project, data: { ...project.data, scenes } };
+    })
+  );
 }
 
 async function enrichProject(project, { includeData = true } = {}) {

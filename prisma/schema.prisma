@@ -72,6 +72,8 @@ enum InboxNotificationType {
   PROJECT_UNASSIGNED
   SLIDE_ASSIGNED
   SLIDE_UNASSIGNED
+  SCENE_ASSIGNED
+  SCENE_UNASSIGNED
 }
 
 enum EarlyAccessRequestStatus {

@@ -34,6 +34,13 @@ router.patch(
   projectController.setProjectAssignee
 );
 
+router.patch(
+  '/:projectId/scenes/:sceneId/assignee',
+  requireWorkspaceRole(ownerOrAdmin),
+  validate(projectValidations.setSceneAssigneeSchema),
+  projectController.setSceneAssignee
+);
+
 router.post(
   '/:projectId/scenes/from-template',
   validate(videoTemplateValidations.appendSceneFromTemplateSchema),

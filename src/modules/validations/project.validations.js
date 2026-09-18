@@ -438,6 +438,18 @@ const setProjectAssigneeSchema = Joi.object({
   }),
 });
 
+const setSceneAssigneeSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: uuidParam,
+    projectId: uuidParam,
+    // Scene ids are client-generated (`scene_<id>`), not UUIDs.
+    sceneId: Joi.string().trim().min(1).required(),
+  }),
+  body: Joi.object({
+    assigneeId: Joi.string().uuid().allow(null).required(),
+  }),
+});
+
 const updateProjectSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
@@ -489,6 +501,7 @@ module.exports = {
   listProjectsSchema,
   projectByIdSchema,
   setProjectAssigneeSchema,
+  setSceneAssigneeSchema,
   updateProjectSchema,
   saveProjectDataSchema,
   moveProjectFolderSchema,

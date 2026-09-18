@@ -31,6 +31,11 @@ const presentationShareService = require('../presentationShare/presentationShare
 const workspaceDao = require('../workspace/workspace.dao');
 const inboxService = require('../inbox/inbox.service');
 const { buildAssignmentWhere, isAssignmentUnchanged } = require('./project.assignment');
+const {
+  sceneKey,
+  attachSceneAssignees,
+  isSceneAssignmentUnchanged,
+} = require('./sceneAssignment');
 
 function buildDefaultProjectData() {
   return {
@@ -287,6 +292,111 @@ const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, temp
   });
 
   return saveProjectData(workspaceId, projectId, userId, nextData);
+};
+
+/**
+ * Assign / reassign / unassign one scene in a TEAM workspace (OWNER/ADMIN only at route).
+ * Mirrors setProjectAssignee, but a scene isn't a DB row — it's an object inside
+ * Project.data.scenes[] (JSON) keyed by sceneId/id — so this is a light, targeted
+ * read-clone-splice-write on that array rather than a Prisma column update, and it
+ * deliberately skips the full saveProjectData pipeline (no re-normalize, no HeyGen/
+ * speech rehydration, no storage recalculation — assignment isn't a content edit).
+ */
+const setSceneAssignee = async (
+  workspaceId,
+  projectId,
+  sceneId,
+  actorId,
+  assigneeId,
+  workspace = null
+) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  if (project.type !== 'VIDEO') {
+    throw new AppError(messages.VIDEO_SCENE_ASSIGN_NOT_FOR_PRESENTATION, 400);
+  }
+
+  const ws = workspace || (await workspaceDao.findWorkspaceById(workspaceId));
+  if (!ws) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+  if (ws.type !== 'TEAM') {
+    throw new AppError(messages.VIDEO_SCENE_ASSIGN_TEAM_ONLY, 400);
+  }
+
+  const nextAssigneeId = assigneeId || null;
+
+  if (nextAssigneeId) {
+    const member = await workspaceDao.findWorkspaceMember(workspaceId, nextAssigneeId);
+    if (!member) {
+      throw new AppError(messages.VIDEO_SCENE_ASSIGNEE_NOT_MEMBER, 400);
+    }
+  }
+
+  const currentData =
+    project.data && typeof project.data === 'object' ? project.data : buildDefaultProjectData();
+  const scenes = Array.isArray(currentData.scenes) ? [...currentData.scenes] : [];
+  const index = scenes.findIndex((s) => sceneKey(s) === sceneId);
+  if (index === -1) {
+    throw new AppError(messages.VIDEO_SCENE_NOT_FOUND, 404);
+  }
+  const scene = scenes[index];
+
+  if (isSceneAssignmentUnchanged(scene, nextAssigneeId)) {
+    const [hydrated] = await attachSceneAssignees([scene]);
+    return { scene: hydrated };
+  }
+
+  const previousAssigneeId = scene.assignedToId || null;
+
+  const updatedScene =
+    nextAssigneeId === null
+      ? { ...scene, assignedToId: null, assignedById: null, assignedAt: null }
+      : {
+          ...scene,
+          assignedToId: nextAssigneeId,
+          assignedById: actorId,
+          assignedAt: new Date().toISOString(),
+        };
+  scenes[index] = updatedScene;
+
+  await projectDao.updateProject(projectId, { data: { ...currentData, scenes } });
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { id: true, name: true, email: true },
+  });
+
+  const notifyCtx = {
+    scene: updatedScene,
+    project,
+    workspace: ws,
+    actor,
+    previousAssigneeId,
+  };
+
+  if (nextAssigneeId && nextAssigneeId !== actorId) {
+    inboxService
+      .notifySceneAssigned(notifyCtx)
+      .catch((error) => console.error('Scene assigned notification failed:', error));
+  }
+
+  if (
+    previousAssigneeId &&
+    previousAssigneeId !== nextAssigneeId &&
+    previousAssigneeId !== actorId
+  ) {
+    inboxService
+      .notifySceneUnassigned({
+        ...notifyCtx,
+        unassignedUserId: previousAssigneeId,
+        reassignedToId: nextAssigneeId,
+      })
+      .catch((error) => console.error('Scene unassigned notification failed:', error));
+  }
+
+  const [hydrated] = await attachSceneAssignees([updatedScene]);
+  return { scene: hydrated };
 };
 
 const listProjects = async (workspaceId, folderId, type, options = {}) => {
@@ -745,6 +855,7 @@ module.exports = {
   moveProjectToFolder,
   deleteProject,
   setProjectAssignee,
+  setSceneAssignee,
   buildDefaultProjectData,
   appendSceneFromVideoTemplate,
 };

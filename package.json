@@ -27,7 +27,7 @@
     "seed:presentation-deck-packs": "dotenv -e .env.development -- node scripts/seed-presentation-deck-packs.js",
     "seed:video-templates": "dotenv -e .env.development -- node scripts/seed-video-templates.js",
     "fonts:refresh-catalog": "dotenv -e .env.development -- node scripts/refresh-font-catalog.js",
-    "test": "node --test src/modules/presentation/deckRender.service.test.js src/modules/presentationShare/presentationShare.presence.smoke.test.js src/modules/project/project.assignment.test.js src/modules/presentation/slideAssignment.test.js"
+    "test": "node --test src/modules/presentation/deckRender.service.test.js src/modules/presentationShare/presentationShare.presence.smoke.test.js src/modules/project/project.assignment.test.js src/modules/presentation/slideAssignment.test.js src/modules/project/sceneAssignment.test.js"
   },
   "keywords": [],
   "author": "",
