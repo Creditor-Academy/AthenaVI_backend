@@ -166,6 +166,7 @@ const { isTeamFeaturedLeadLayout, layoutTeamFeaturedLead } = require('./diagrams
 const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamOrgSimpleLayout');
 const { isSectionDividerNumberedCircleLayout, layoutSectionDividerNumberedCircle } = require('./diagrams/sectionDividerNumberedCircleLayout');
 const { isSectionDividerCenteredLayout, layoutSectionDividerCentered } = require('./diagrams/sectionDividerCenteredLayout');
+const { isSectionWithImageLayout, layoutSectionWithImage } = require('./diagrams/sectionWithImageLayout');
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
@@ -3427,7 +3428,8 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isTimelineRoadmapLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || ''))) ||
       (isTimelineRoadmapHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || ''))) ||
       (isSectionDividerNumberedCircleLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
-      (isSectionDividerCenteredLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER')
+      (isSectionDividerCenteredLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
+      (isSectionWithImageLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'EYEBROW')
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -9770,6 +9772,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutSectionDividerNumberedCircle(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerCenteredLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerCentered(next, layoutSchema, themeTokens, canvas);
+  } else if (isSectionWithImageLayout(layoutSchema?.layout_id)) {
+    next = layoutSectionWithImage(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
   } else if (isBulletListCardsLayout(layoutSchema?.layout_id)) {
