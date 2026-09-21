@@ -167,6 +167,7 @@ const { isTeamOrgSimpleLayout, layoutTeamOrgSimple } = require('./diagrams/teamO
 const { isSectionDividerNumberedCircleLayout, layoutSectionDividerNumberedCircle } = require('./diagrams/sectionDividerNumberedCircleLayout');
 const { isSectionDividerCenteredLayout, layoutSectionDividerCentered } = require('./diagrams/sectionDividerCenteredLayout');
 const { isSectionWithImageLayout, layoutSectionWithImage } = require('./diagrams/sectionWithImageLayout');
+const { isParaLandscapeImageBottomLayout, layoutParaLandscapeImageBottom } = require('./diagrams/paraLandscapeImageBottom');
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
@@ -9774,6 +9775,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutSectionDividerCentered(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionWithImageLayout(layoutSchema?.layout_id)) {
     next = layoutSectionWithImage(next, layoutSchema, themeTokens, canvas);
+  } else if (isParaLandscapeImageBottomLayout(layoutSchema?.layout_id)) {
+    next = layoutParaLandscapeImageBottom(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
   } else if (isBulletListCardsLayout(layoutSchema?.layout_id)) {
