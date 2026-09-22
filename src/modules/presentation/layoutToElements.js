@@ -171,6 +171,20 @@ const { isParaLandscapeImageBottomLayout, layoutParaLandscapeImageBottom } = req
 const { isParaLandscapeImageTopLayout, layoutParaLandscapeImageTop } = require('./diagrams/paraLandscapeImageTop');
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
+const { isBulletListDenseLayout, layoutBulletListDense } = require('./diagrams/bulletListDenseLayout');
+const { isBulletListNumberedLayout, layoutBulletListNumbered } = require('./diagrams/bulletListNumberedLayout');
+const {
+  isBulletListNumberedVerticalLayout,
+  layoutBulletListNumberedVertical,
+} = require('./diagrams/bulletListNumberedVerticalLayout');
+const { isBulletListTwoColumnLayout, layoutBulletListTwoColumn } = require('./diagrams/bulletListTwoColumnLayout');
+const { isBulletListSplitLayout, layoutBulletListSplit } = require('./diagrams/bulletListSplitLayout');
+const { isTextOnlyCenteredLayout, layoutTextOnlyCentered } = require('./diagrams/textOnlyCenteredLayout');
+const {
+  isSectionDividerSplitDiagonalLayout,
+  layoutSectionDividerSplitDiagonal,
+} = require('./diagrams/sectionDividerSplitDiagonalLayout');
+const { isSectionDividerSplitLayout, layoutSectionDividerSplit } = require('./diagrams/sectionDividerSplitLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
 const { isComparisonSideBySideLayout, layoutComparisonSideBySide } = require('./diagrams/comparisonSideBySideLayout');
 const { isComparisonProsConsLayout, layoutComparisonProsCons } = require('./diagrams/comparisonProsConsLayout');
@@ -3431,7 +3445,15 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isTimelineRoadmapHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || ''))) ||
       (isSectionDividerNumberedCircleLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
       (isSectionDividerCenteredLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
-      (isSectionWithImageLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'EYEBROW')
+      (isSectionWithImageLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'EYEBROW') ||
+      (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListNumberedLayout(layoutSchema?.layout_id) && (/^(HEADING|TITLE_\d+|ITEM_\d+|HEX_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListNumberedVerticalLayout(layoutSchema?.layout_id) && (/^(HEADING|TITLE_\d+|ITEM_\d+|ROW_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListTwoColumnLayout(layoutSchema?.layout_id) && (/^(HEADING|LEFT_\d+|RIGHT_\d+|CHROME|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListSplitLayout(layoutSchema?.layout_id) && (/^(HEADING|LEFT_TITLE|RIGHT_TITLE|LEFT_\d+|RIGHT_\d+|CARD_LEFT|CARD_RIGHT|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTextOnlyCenteredLayout(layoutSchema?.layout_id) && (/^(HEADING|BODY|BADGE|CHROME)$/i.test(String(el.slotId || '')))) ||
+      (isSectionDividerSplitDiagonalLayout(layoutSchema?.layout_id) && (/^(HEADING|BODY|EYEBROW|LABEL|SECTION_NUMBER|CHROME)$/i.test(String(el.slotId || '')))) ||
+      (isSectionDividerSplitLayout(layoutSchema?.layout_id) && (/^(HEADING|BODY|CHROME)$/i.test(String(el.slotId || ''))))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
     if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
@@ -9782,6 +9804,22 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutParaLandscapeImageTop(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
+  } else if (isSectionDividerSplitDiagonalLayout(layoutSchema?.layout_id)) {
+    next = layoutSectionDividerSplitDiagonal(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isSectionDividerSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutSectionDividerSplit(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListNumberedVerticalLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListNumberedVertical(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListNumberedLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListNumbered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListDenseLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListDense(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListTwoColumnLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListTwoColumn(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListSplitLayout(layoutSchema?.layout_id)) {
+    next = layoutBulletListSplit(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTextOnlyCenteredLayout(layoutSchema?.layout_id)) {
+    next = layoutTextOnlyCentered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isBulletListCardsLayout(layoutSchema?.layout_id)) {
     next = layoutBulletListCards(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonTableLayout(layoutSchema?.layout_id)) {
