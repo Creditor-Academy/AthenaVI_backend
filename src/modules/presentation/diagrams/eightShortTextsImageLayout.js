@@ -1,403 +1,325 @@
 /**
- * Eight Short Texts Image Layout Engine (Backend Server-Side Compiler)
+ * Eight Short Texts Image — tall photo + 8 numbered points.
  * Layout IDs: eight_short_texts_image_v1, eight_short_texts_image_right_v1
- *
- * Modern executive 8-point capability grid (2 cols x 4 rows)
- * alongside a right-hand featured hero showcase container.
- * Total elements: 28 (3 header + 8 card SVGs + 8 titles + 8 descriptions + 1 image) <= 50 limit
  */
 
 const EIGHT_SHORT_TEXTS_IMAGE_GEOM = {
   viewW: 1000,
   viewH: 560,
-
-  // Header Area (Default: on Right)
-  badgeX: 408,
-  badgeY: 20,
-  badgeW: 180,
-  badgeH: 22,
-
-  headingX: 408,
-  headingY: 46,
-  headingW: 548,
-  headingH: 34,
-
-  subtitleX: 408,
-  subtitleY: 82,
-  subtitleW: 548,
-  subtitleH: 22,
-
-  // Grid (Default: on Right for eight_short_texts_image_v1)
-  gridStartX: 408,
-  gridStartY: 118,
-  cardW: 266,
-  cardH: 94,
+  badgeX: 404,
+  badgeY: 22,
+  badgeW: 220,
+  badgeH: 18,
+  headingX: 404,
+  headingY: 44,
+  headingW: 560,
+  headingH: 32,
+  subtitleX: 404,
+  subtitleY: 78,
+  subtitleW: 560,
+  subtitleH: 20,
+  gridStartX: 404,
+  gridStartY: 108,
+  cardW: 272,
+  cardH: 100,
   colGap: 16,
-  rowGap: 12,
-  cardRadius: 12,
-
-  // Image (Default: on Left for eight_short_texts_image_v1)
-  imageX: 44,
-  imageY: 118,
-  imageW: 342,
-  imageH: 412,
-  imageRadius: 16,
-};
+  rowGap: 8,
+  imageX: 28,
+  imageY: 28,
+  imageW: 352,
+  imageH: 504,
+  imageRadius: 18,
+}
 
 function resolveEightShortTextsGeom(isRight = false) {
   if (isRight) {
     return {
-      viewW: 1000,
-      viewH: 560,
-      badgeX: 44,
-      badgeY: 20,
-      badgeW: 180,
-      badgeH: 22,
-      headingX: 44,
-      headingY: 46,
-      headingW: 552,
-      headingH: 34,
-      subtitleX: 44,
-      subtitleY: 82,
-      subtitleW: 552,
-      subtitleH: 22,
-      gridStartX: 44,
-      gridStartY: 118,
-      cardW: 266,
-      cardH: 94,
-      colGap: 16,
-      rowGap: 12,
-      cardRadius: 12,
-      imageX: 614,
-      imageY: 118,
-      imageW: 342,
-      imageH: 412,
-      imageRadius: 16,
-    };
+      ...EIGHT_SHORT_TEXTS_IMAGE_GEOM,
+      badgeX: 28,
+      headingX: 28,
+      subtitleX: 28,
+      gridStartX: 28,
+      imageX: 620,
+    }
   }
-
-  return EIGHT_SHORT_TEXTS_IMAGE_GEOM;
+  return EIGHT_SHORT_TEXTS_IMAGE_GEOM
 }
 
 function isEightShortTextsRightVariant(layoutId, schema = {}) {
-  const id = String(layoutId || schema?.layout_id || schema?.layoutId || '').toLowerCase();
-  const variant = String(schema?.preview?.gridVariant || schema?.gridVariant || '').toLowerCase();
-  return id.includes('right') || variant === 'right';
+  const id = String(layoutId || schema?.layout_id || schema?.layoutId || '').toLowerCase()
+  const variant = String(schema?.preview?.gridVariant || schema?.gridVariant || '').toLowerCase()
+  return id.includes('right') || variant === 'right'
 }
 
-const EIGHT_SHORT_TEXTS_IMAGE_PALETTE = {
-  primary: '#2563EB',
-  accent: '#7C3AED',
-  bgCard: '#FFFFFF',
-  border: '#E2E8F0',
-  textDark: '#0F172A',
-  textMuted: '#64748B',
-  badgeBg: '#EFF6FF',
-  badgeText: '#2563EB',
-};
+const EIGHT_SHORT_TEXTS_IMAGE_PALETTE = { primary: '#148A80', accent: '#148A80' }
 
 const EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS = {
   BADGE: 'CORE CAPABILITIES',
   HEADING: 'Eight key points',
   SUBTITLE: 'Strategic operational framework and execution architecture',
-
-  POINT_1_TITLE: 'Strategic planning',
-  POINT_1_DESC: 'Comprehensive roadmapping and KPI alignment across initiatives.',
-
-  POINT_2_TITLE: 'Resource optimization',
-  POINT_2_DESC: 'Maximizing team throughput and capital deployment efficiency.',
-
-  POINT_3_TITLE: 'Rapid deployment',
-  POINT_3_DESC: 'Automated CI/CD pipelines delivering zero-downtime updates.',
-
-  POINT_4_TITLE: 'Enterprise security',
-  POINT_4_DESC: 'End-to-end encryption with granular compliance enforcement.',
-
-  POINT_5_TITLE: 'Global telemetry',
-  POINT_5_DESC: 'Real-time observability and predictive fault detection network.',
-
-  POINT_6_TITLE: 'Data analytics',
-  POINT_6_DESC: 'Transforming high-frequency telemetry into business insights.',
-
-  POINT_7_TITLE: 'Automated workflow',
-  POINT_7_DESC: 'Autonomous orchestration replacing manual operational toil.',
-
-  POINT_8_TITLE: 'Continuous support',
-  POINT_8_DESC: 'Round-the-clock proactive monitoring and incident handling.',
-
-  DEFAULT_IMAGE: null,
-};
+  POINT_1_TITLE: 'Strategic Vision',
+  POINT_1_DESC: 'Clear milestones aligned with long-term company objectives.',
+  POINT_2_TITLE: 'Scalable Engine',
+  POINT_2_DESC: 'High-concurrency infrastructure engineered for rapid growth.',
+  POINT_3_TITLE: 'Automated Pipelines',
+  POINT_3_DESC: 'Continuous integration driving frictionless deployment.',
+  POINT_4_TITLE: 'Data Intelligence',
+  POINT_4_DESC: 'Actionable real-time telemetry across distributed nodes.',
+  POINT_5_TITLE: 'Enterprise Security',
+  POINT_5_DESC: 'End-to-end encryption with granular compliance protocols.',
+  POINT_6_TITLE: 'Customer Centricity',
+  POINT_6_DESC: 'Intuitive user journeys backed by proactive feedback loops.',
+  POINT_7_TITLE: 'Operational Agility',
+  POINT_7_DESC: 'Rapid iteration cycles with resilient cross-functional teams.',
+  POINT_8_TITLE: 'Global Reliability',
+  POINT_8_DESC: '99.99% multi-region uptime with disaster recovery failover.',
+}
 
 function isEightShortTextsImageLayout(layoutId) {
-  const id = String(layoutId || '').trim().toLowerCase();
+  const id = String(layoutId || '').toLowerCase()
   return (
     id === 'eight_short_texts_image_v1' ||
     id === 'eight_short_texts_image_right_v1' ||
     id === 'eight_short_texts'
-  );
+  )
 }
 
-function buildPointCardSvg(num, titleColor, accentColor, width, height) {
-  const numStr = String(num).padStart(2, '0');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
-    <defs>
-      <filter id="csh-${num}" x="-5%" y="-5%" width="110%" height="120%" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.04" />
-      </filter>
-    </defs>
-    <!-- Card Container -->
-    <rect width="${width}" height="${height}" rx="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5" filter="url(#csh-${num})" />
-    <!-- Left Accent Pill -->
-    <rect x="1" y="16" width="3" height="${height - 32}" rx="1.5" fill="${accentColor}" />
-    <!-- Number Tag Badge -->
-    <rect x="14" y="16" width="34" height="34" rx="8" fill="${accentColor}" fill-opacity="0.12" />
-    <text x="31" y="38" text-anchor="middle" fill="${accentColor}" font-size="13" font-weight="800" font-family="Inter, system-ui, sans-serif">${numStr}</text>
-  </svg>`;
+function buildPointCardSvg(w, h) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="100%" height="100%">
+    <rect width="${w}" height="${h}" fill="#FBFBFA" pointer-events="all" />
+    <rect x="0" y="${h - 1}" width="${w}" height="1" fill="currentColor" fill-opacity="0.16" />
+  </svg>`
 }
 
-function layoutEightShortTextsImage(elements = [], schema = {}, palette = {}, canvas = {}) {
-  const isRight = isEightShortTextsRightVariant(schema?.layout_id || schema?.id || schema?.layoutId, schema);
-  const g = resolveEightShortTextsGeom(isRight);
-  const canvasW = canvas.width || 1000;
-  const canvasH = canvas.height || 560;
-  const scaleX = canvasW / g.viewW;
-  const scaleY = canvasH / g.viewH;
+function resolveStoredColor(el, fallback) {
+  const fill = el?.content?.fill
+  if (typeof fill === 'string' && fill && fill !== 'none' && fill !== 'transparent') return fill
+  if (fill && typeof fill === 'object' && fill.color) return fill.color
+  return fallback
+}
 
-  const prevBySlot = new Map();
-  for (const el of elements) {
-    if (el?.slotId) {
-      prevBySlot.set(String(el.slotId).toUpperCase(), el);
-    }
+function layoutEightShortTextsImage(docOrElements, schema = {}, palette = {}, canvas = {}) {
+  const elements = Array.isArray(docOrElements) ? docOrElements : (docOrElements?.elements || [])
+  const isRight = isEightShortTextsRightVariant(schema?.layout_id || schema?.id || schema?.layoutId, schema)
+  const g = resolveEightShortTextsGeom(isRight)
+  const canvasW = canvas?.width || docOrElements?.canvas?.width || 1000
+  const canvasH = canvas?.height || docOrElements?.canvas?.height || 560
+  const scaleX = canvasW / g.viewW
+  const scaleY = canvasH / g.viewH
+  const pal = palette?.primary ? palette : (palette?.palette || palette || {})
+  const accent = pal.primary || pal.accent || EIGHT_SHORT_TEXTS_IMAGE_PALETTE.primary
+
+  const prevBySlot = new Map()
+  elements.forEach((el) => {
+    const sid = String(el.slotId || '').toUpperCase()
+    if (sid) prevBySlot.set(sid, el)
+  })
+
+  const getPrevText = (slotId, fallback) => {
+    const prev = prevBySlot.get(slotId)
+    const txt = prev?.content?.text || prev?.text
+    if (txt && String(txt).trim()) return String(txt).trim()
+    return fallback
   }
 
-  const getPrevText = (slotId, fallback = '') => {
-    const el = prevBySlot.get(String(slotId).toUpperCase());
-    if (typeof el?.content?.text === 'string' && el.content.text.trim()) {
-      return el.content.text;
+  const newElements = []
+  const pushText = (config) => {
+    const placement = {
+      x: Math.round(config.x),
+      y: Math.round(config.y),
+      width: Math.max(1, Math.round(config.width)),
+      height: Math.max(1, Math.round(config.height)),
+      rotation: 0,
+      opacity: 1,
     }
-    if (typeof el?.content === 'string' && el.content.trim()) {
-      return el.content;
+    newElements.push({
+      id: config.id,
+      type: 'text',
+      slotId: config.slotId,
+      role: config.role || 'body',
+      layer: 10,
+      placement,
+      rect: { ...placement },
+      content: {
+        text: config.text,
+        fontSize: config.fontSize,
+        fontWeight: config.fontWeight || 500,
+        color: config.color,
+        align: 'left',
+        lineHeight: config.lineHeight || 1.2,
+        letterSpacing: config.letterSpacing || 'normal',
+        clipToSlot: true,
+        maxLines: config.maxLines || 2,
+      },
+    })
+  }
+  const pushGraphic = (config) => {
+    const placement = {
+      x: Math.round(config.x),
+      y: Math.round(config.y),
+      width: Math.max(1, Math.round(config.width)),
+      height: Math.max(1, Math.round(config.height)),
+      rotation: 0,
+      opacity: 1,
     }
-    return fallback;
-  };
-
-  const getPrevImage = (slotId, fallback = '') => {
-    const el = prevBySlot.get(String(slotId).toUpperCase());
-    if (el?.content?.url) return el.content.url;
-    if (el?.content?.src) return el.content.src;
-    return fallback;
-  };
-
-  const primaryColor = palette?.primary || EIGHT_SHORT_TEXTS_IMAGE_PALETTE.primary;
-  const accentColor = palette?.accent || EIGHT_SHORT_TEXTS_IMAGE_PALETTE.accent;
-  const textColor = palette?.text || EIGHT_SHORT_TEXTS_IMAGE_PALETTE.textDark;
-  const mutedColor = palette?.muted || EIGHT_SHORT_TEXTS_IMAGE_PALETTE.textMuted;
-
-  const newElements = [];
-  let seq = 0;
-  const newId = (p) => `est-${p}-${Date.now()}-${++seq}`;
-
-  const pushElement = (el) => {
-    if (!el.placement && el.rect) {
-      el.placement = {
-        x: el.rect.x,
-        y: el.rect.y,
-        width: el.rect.width,
-        height: el.rect.height,
-        rotation: 0,
-        opacity: 1,
-      };
-    }
-    newElements.push(el);
-  };
-
-  // 1. Tag Badge
-  pushElement({
-    id: prevBySlot.get('TAG_BADGE')?.id || newId('badge'),
-    type: 'text',
-    slotId: 'TAG_BADGE',
-    layer: 10,
-    rect: {
-      x: g.badgeX * scaleX,
-      y: g.badgeY * scaleY,
-      width: g.badgeW * scaleX,
-      height: g.badgeH * scaleY,
-    },
-    content: {
-      text: getPrevText('TAG_BADGE', EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.BADGE),
-      fontSize: 11,
-      fontWeight: 700,
-      color: primaryColor,
-      letterSpacing: '0.08em',
-      clipToSlot: false,
-    },
-  });
-
-  // 2. Heading
-  pushElement({
-    id: prevBySlot.get('HEADING')?.id || newId('heading'),
-    type: 'text',
-    slotId: 'HEADING',
-    layer: 10,
-    rect: {
-      x: g.headingX * scaleX,
-      y: g.headingY * scaleY,
-      width: g.headingW * scaleX,
-      height: g.headingH * scaleY,
-    },
-    content: {
-      text:
-        getPrevText('HEADING', '') ||
-        getPrevText('TITLE', '') ||
-        getPrevText('MAIN_TITLE', '') ||
-        EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.HEADING,
-      fontSize: 26,
-      fontWeight: 800,
-      color: textColor,
-      clipToSlot: false,
-    },
-  });
-
-  // 3. Subtitle
-  pushElement({
-    id: prevBySlot.get('SUBTITLE')?.id || newId('subtitle'),
-    type: 'text',
-    slotId: 'SUBTITLE',
-    layer: 10,
-    rect: {
-      x: g.subtitleX * scaleX,
-      y: g.subtitleY * scaleY,
-      width: g.subtitleW * scaleX,
-      height: g.subtitleH * scaleY,
-    },
-    content: {
-      text:
-        getPrevText('SUBTITLE', '') ||
-        getPrevText('DESCRIPTION', '') ||
-        getPrevText('BODY', '') ||
-        EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.SUBTITLE,
-      fontSize: 13,
-      fontWeight: 500,
-      color: mutedColor,
-      clipToSlot: false,
-    },
-  });
-
-  // 4. 8 Point Cards
-  for (let i = 1; i <= 8; i += 1) {
-    const colIdx = (i - 1) % 2;
-    const rowIdx = Math.floor((i - 1) / 2);
-
-    const cardX = g.gridStartX + colIdx * (g.cardW + g.colGap);
-    const cardY = g.gridStartY + rowIdx * (g.cardH + g.rowGap);
-
-    const cardSlotId = `POINT_${i}_CARD`;
-    const titleSlotId = `POINT_${i}_TITLE`;
-    const legacyLabelSlotId = `POINT_${i}_LABEL`;
-    const descSlotId = `POINT_${i}_DESC`;
-
-    const activeColor = i % 2 === 1 ? primaryColor : accentColor;
-
-    // Card SVG
-    const cardSvg = buildPointCardSvg(i, textColor, activeColor, g.cardW, g.cardH);
-    pushElement({
-      id: prevBySlot.get(cardSlotId)?.id || newId(`est-c${i}-bg`),
+    newElements.push({
+      id: config.id,
       type: 'graphic',
+      slotId: config.slotId,
+      role: 'decoration',
+      layer: config.layer || 2,
+      placement,
+      rect: { ...placement },
+      content: {
+        svg: config.svg,
+        preserveAspectRatio: 'none',
+        colorMode: 'recolorable',
+        fill: config.fill,
+        stroke: config.fill,
+      },
+    })
+  }
+
+  pushText({
+    id: prevBySlot.get('TAG_BADGE')?.id || 'est_badge',
+    slotId: 'TAG_BADGE',
+    role: 'caption',
+    text: String(getPrevText('TAG_BADGE', EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.BADGE)).toUpperCase(),
+    x: g.badgeX * scaleX,
+    y: g.badgeY * scaleY,
+    width: g.badgeW * scaleX,
+    height: g.badgeH * scaleY,
+    fontSize: 11,
+    fontWeight: 700,
+    color: accent,
+    letterSpacing: '0.16em',
+    maxLines: 1,
+  })
+  pushText({
+    id: prevBySlot.get('HEADING')?.id || 'est_heading',
+    slotId: 'HEADING',
+    role: 'heading',
+    text: getPrevText('HEADING', '') || getPrevText('TITLE', '') || EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.HEADING,
+    x: g.headingX * scaleX,
+    y: g.headingY * scaleY,
+    width: g.headingW * scaleX,
+    height: g.headingH * scaleY,
+    fontSize: 24,
+    fontWeight: 700,
+    color: '#111827',
+    maxLines: 1,
+  })
+  pushText({
+    id: prevBySlot.get('SUBTITLE')?.id || 'est_sub',
+    slotId: 'SUBTITLE',
+    role: 'subheading',
+    text: getPrevText('SUBTITLE', EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS.SUBTITLE),
+    x: g.subtitleX * scaleX,
+    y: g.subtitleY * scaleY,
+    width: g.subtitleW * scaleX,
+    height: g.subtitleH * scaleY,
+    fontSize: 13,
+    fontWeight: 400,
+    color: '#6B7280',
+    maxLines: 1,
+  })
+
+  for (let i = 1; i <= 8; i += 1) {
+    const colIdx = (i - 1) % 2
+    const rowIdx = Math.floor((i - 1) / 2)
+    const cardX = g.gridStartX + colIdx * (g.cardW + g.colGap)
+    const cardY = g.gridStartY + rowIdx * (g.cardH + g.rowGap)
+    const numStr = String(i).padStart(2, '0')
+    const cardSlotId = `POINT_${i}_CARD`
+    const prevCard = prevBySlot.get(cardSlotId)
+    const rowColor = resolveStoredColor(prevCard, accent)
+
+    pushGraphic({
+      id: prevCard?.id || `est_c${i}`,
       slotId: cardSlotId,
       layer: 2,
-      rect: {
-        x: cardX * scaleX,
-        y: cardY * scaleY,
-        width: g.cardW * scaleX,
-        height: g.cardH * scaleY,
-      },
-      content: {
-        svg: cardSvg,
-        format: 'svg',
-        color: activeColor,
-        fill: activeColor,
-      },
-    });
-
-    // Point Title
-    const titleText =
-      getPrevText(titleSlotId, '') ||
-      getPrevText(legacyLabelSlotId, '') ||
-      EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS[`POINT_${i}_TITLE`];
-
-    pushElement({
-      id: prevBySlot.get(titleSlotId)?.id || prevBySlot.get(legacyLabelSlotId)?.id || newId(`est-c${i}-title`),
-      type: 'text',
-      slotId: titleSlotId,
-      layer: 10,
-      rect: {
-        x: (cardX + 56) * scaleX,
-        y: (cardY + 14) * scaleY,
-        width: (g.cardW - 68) * scaleX,
-        height: 22 * scaleY,
-      },
-      content: {
-        text: titleText,
-        fontSize: 14,
-        fontWeight: 700,
-        color: textColor,
-        clipToSlot: false,
-      },
-    });
-
-    // Point Description
-    const descText =
-      getPrevText(descSlotId, '') ||
-      EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS[`POINT_${i}_DESC`];
-
-    pushElement({
-      id: prevBySlot.get(descSlotId)?.id || newId(`est-c${i}-desc`),
-      type: 'text',
-      slotId: descSlotId,
-      layer: 10,
-      rect: {
-        x: (cardX + 56) * scaleX,
-        y: (cardY + 38) * scaleY,
-        width: (g.cardW - 68) * scaleX,
-        height: 44 * scaleY,
-      },
-      content: {
-        text: descText,
-        fontSize: 11.5,
-        fontWeight: 400,
-        color: mutedColor,
-        clipToSlot: false,
-      },
-    });
+      x: cardX * scaleX,
+      y: cardY * scaleY,
+      width: g.cardW * scaleX,
+      height: g.cardH * scaleY,
+      fill: rowColor,
+      svg: buildPointCardSvg(g.cardW, g.cardH),
+    })
+    pushText({
+      id: `est_n${i}`,
+      slotId: `POINT_${i}_NUM`,
+      role: 'caption',
+      text: numStr,
+      x: (cardX + 4) * scaleX,
+      y: (cardY + 14) * scaleY,
+      width: 36 * scaleX,
+      height: 22 * scaleY,
+      fontSize: 13,
+      fontWeight: 700,
+      color: rowColor,
+      maxLines: 1,
+    })
+    pushText({
+      id: prevBySlot.get(`POINT_${i}_TITLE`)?.id || `est_t${i}`,
+      slotId: `POINT_${i}_TITLE`,
+      role: 'heading',
+      text:
+        getPrevText(`POINT_${i}_TITLE`, '') ||
+        getPrevText(`POINT_${i}_LABEL`, '') ||
+        EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS[`POINT_${i}_TITLE`],
+      x: (cardX + 42) * scaleX,
+      y: (cardY + 12) * scaleY,
+      width: (g.cardW - 50) * scaleX,
+      height: 22 * scaleY,
+      fontSize: 14,
+      fontWeight: 700,
+      color: '#111827',
+      maxLines: 1,
+    })
+    pushText({
+      id: prevBySlot.get(`POINT_${i}_DESC`)?.id || `est_d${i}`,
+      slotId: `POINT_${i}_DESC`,
+      role: 'body',
+      text: getPrevText(`POINT_${i}_DESC`, EIGHT_SHORT_TEXTS_IMAGE_DEFAULTS[`POINT_${i}_DESC`]),
+      x: (cardX + 42) * scaleX,
+      y: (cardY + 36) * scaleY,
+      width: (g.cardW - 50) * scaleX,
+      height: 52 * scaleY,
+      fontSize: 12,
+      fontWeight: 400,
+      color: '#6B7280',
+      lineHeight: 1.35,
+      maxLines: 2,
+    })
   }
 
-  // 5. Featured Hero Image Container (Right Showcase)
-  const heroSlotId = 'HERO_IMAGE';
-  const imgUrl =
-    getPrevImage(heroSlotId, '') ||
-    getPrevImage('IMAGE', '') ||
-    null;
-
-  pushElement({
-    id: prevBySlot.get(heroSlotId)?.id || newId('hero-img'),
+  const prevImage = prevBySlot.get('HERO_IMAGE') || prevBySlot.get('IMAGE_1')
+  const imageUrl = prevImage?.content?.url || prevImage?.content?.src || null
+  const imgPlace = {
+    x: Math.round(g.imageX * scaleX),
+    y: Math.round(g.imageY * scaleY),
+    width: Math.max(1, Math.round(g.imageW * scaleX)),
+    height: Math.max(1, Math.round(g.imageH * scaleY)),
+    rotation: 0,
+    opacity: 1,
+  }
+  newElements.push({
+    id: prevImage?.id || 'est_hero',
     type: 'image',
-    slotId: heroSlotId,
-    layer: 3,
-    rect: {
-      x: g.imageX * scaleX,
-      y: g.imageY * scaleY,
-      width: g.imageW * scaleX,
-      height: g.imageH * scaleY,
-    },
+    slotId: 'HERO_IMAGE',
+    role: 'image',
+    layer: 4,
+    placement: imgPlace,
+    rect: { ...imgPlace },
     content: {
-      url: imgUrl,
-      src: imgUrl,
+      ...(imageUrl ? { url: imageUrl, src: imageUrl } : {}),
       fit: 'cover',
-      borderRadius: g.imageRadius * scaleX,
+      borderRadius: Math.round(g.imageRadius * Math.min(scaleX, scaleY)),
     },
-  });
+  })
 
-  return newElements;
+  if (Array.isArray(docOrElements)) return newElements
+  return { ...docOrElements, elements: newElements }
 }
 
 module.exports = {
@@ -409,4 +331,4 @@ module.exports = {
   resolveEightShortTextsGeom,
   buildPointCardSvg,
   layoutEightShortTextsImage,
-};
+}

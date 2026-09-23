@@ -185,6 +185,90 @@ const {
   layoutSectionDividerSplitDiagonal,
 } = require('./diagrams/sectionDividerSplitDiagonalLayout');
 const { isSectionDividerSplitLayout, layoutSectionDividerSplit } = require('./diagrams/sectionDividerSplitLayout');
+const {
+  isTitleFullbleedOverlayLayout,
+  layoutTitleFullbleedOverlay,
+} = require('./diagrams/titleFullbleedOverlayLayout');
+const {
+  isWideImageStatementOverlayLayout,
+  layoutWideImageStatementOverlay,
+} = require('./diagrams/wideImageStatementOverlayLayout');
+const {
+  isParaTitleLeftImageBoxedLayout,
+  layoutParaTitleLeftImageBoxed,
+} = require('./diagrams/paraTitleLeftImageBoxedLayout');
+const {
+  isParaTitleRightImageBoxedLayout,
+  layoutParaTitleRightImageBoxed,
+} = require('./diagrams/paraTitleRightImageBoxedLayout');
+const {
+  isParaTitleLeftImageOverlayLayout,
+  layoutParaTitleLeftImageOverlay,
+} = require('./diagrams/paraTitleLeftImageOverlayLayout');
+const {
+  isParaTitleRightImageOverlayLayout,
+  layoutParaTitleRightImageOverlay,
+} = require('./diagrams/paraTitleRightImageOverlayLayout');
+const {
+  isParaLandscapeImageLayout,
+  layoutParaLandscapeImage,
+} = require('./diagrams/paraLandscapeImageLayout');
+const {
+  isParaSplit5050Layout,
+  layoutParaSplit5050,
+} = require('./diagrams/paraSplit5050Layout');
+const {
+  isTwoParaRightImageLayout,
+  layoutTwoParaRightImage,
+} = require('./diagrams/twoParaRightImageLayout');
+const {
+  isTwoParaRightImageBottomLayout,
+  layoutTwoParaRightImageBottom,
+} = require('./diagrams/twoParaRightImageBottomLayout');
+const {
+  isThreeParaImageLayout,
+  layoutThreeParaImage,
+} = require('./diagrams/threeParaImageLayout');
+const {
+  isFourParaImageLayout,
+  layoutFourParaImage,
+} = require('./diagrams/fourParaImageLayout');
+const {
+  isFourParaImageGridLayout,
+  layoutFourParaImageGrid,
+} = require('./diagrams/fourParaImageGridLayout');
+const {
+  isParaTwoImagesLayout,
+  layoutParaTwoImages,
+} = require('./diagrams/paraTwoImagesLayout');
+const {
+  isParaThreeImagesLayout,
+  layoutParaThreeImages,
+} = require('./diagrams/paraThreeImagesLayout');
+const {
+  isParaThreeImagesHorizontalLayout,
+  layoutParaThreeImagesHorizontal,
+} = require('./diagrams/paraThreeImagesHorizontalLayout');
+const {
+  isParaThreeImagesStaggeredLayout,
+  layoutParaThreeImagesStaggered,
+} = require('./diagrams/paraThreeImagesStaggeredLayout');
+const {
+  isThreeCardsImageTextLayout,
+  layoutThreeCardsImageText,
+} = require('./diagrams/threeCardsImageTextLayout');
+const {
+  isTwoCardsImageTextLayout,
+  layoutTwoCardsImageText,
+} = require('./diagrams/twoCardsImageTextLayout');
+const {
+  isTwoLargeImageCardsLayout,
+  layoutTwoLargeImageCards,
+} = require('./diagrams/twoLargeImageCardsLayout');
+const {
+  isTitleFullbleedLayout,
+  layoutTitleFullbleed,
+} = require('./diagrams/titleFullbleedLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
 const { isComparisonSideBySideLayout, layoutComparisonSideBySide } = require('./diagrams/comparisonSideBySideLayout');
 const { isComparisonProsConsLayout, layoutComparisonProsCons } = require('./diagrams/comparisonProsConsLayout');
@@ -3199,6 +3283,11 @@ function hasOverlappingTextPlacements(elementsDoc) {
 function layoutRequiresOverlayScrim(layoutSchema) {
   if (!layoutSchema || typeof layoutSchema !== 'object') return false;
   const layoutId = String(layoutSchema.layout_id || '');
+  if (isTitleFullbleedOverlayLayout(layoutId, layoutSchema)) return false;
+  if (isTitleFullbleedLayout(layoutId, layoutSchema)) return false;
+  if (isWideImageStatementOverlayLayout(layoutId, layoutSchema)) return false;
+  if (isParaTitleLeftImageOverlayLayout(layoutId, layoutSchema)) return false;
+  if (isParaTitleRightImageOverlayLayout(layoutId, layoutSchema)) return false;
   const slots = Array.isArray(layoutSchema.slots) ? layoutSchema.slots : [];
   if (
     slots.some(
@@ -3445,7 +3534,28 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isTimelineRoadmapHorizontalLayout(layoutSchema?.layout_id) && /^milestone_\d+_label$/i.test(String(el.slotId || ''))) ||
       (isSectionDividerNumberedCircleLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
       (isSectionDividerCenteredLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
-      (isSectionWithImageLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'EYEBROW') ||
+      (isTitleFullbleedOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_CARD)$/i.test(String(el.slotId || '')))) ||
+      (isWideImageStatementOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(STATEMENT|SUBHEADLINE|OVERLAY_SCRIM|BACKGROUND_IMAGE)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleLeftImageBoxedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleRightImageBoxedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleLeftImageOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleRightImageOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaLandscapeImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaSplit5050Layout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG|TEXT_HALF_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isThreeParaImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_[123]|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isFourParaImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BULLET_[1-4]|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isFourParaImageGridLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BULLET_[1-4]|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTwoImagesLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_[12]|IMAGE_[12]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaThreeImagesLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY|IMAGE_[123]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaThreeImagesHorizontalLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY|IMAGE_[123]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaThreeImagesStaggeredLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY|IMAGE_[123]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isThreeCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CARD_[123]_(TITLE|BODY)|IMAGE_[123]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(EYEBROW|COL_[12]_(IMAGE|TITLE|BODY)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoLargeImageCardsLayout(layoutSchema?.layout_id, layoutSchema) && (/^(CARD_[12]_(TITLE|BODY)|IMAGE_[12]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
+      (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
       (isBulletListNumberedLayout(layoutSchema?.layout_id) && (/^(HEADING|TITLE_\d+|ITEM_\d+|HEX_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
       (isBulletListNumberedVerticalLayout(layoutSchema?.layout_id) && (/^(HEADING|TITLE_\d+|ITEM_\d+|ROW_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -9802,6 +9912,48 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutParaLandscapeImageBottom(next, layoutSchema, themeTokens, canvas);
   } else if (isParaLandscapeImageTopLayout(layoutSchema?.layout_id)) {
     next = layoutParaLandscapeImageTop(next, layoutSchema, themeTokens, canvas);
+  } else if (isTitleFullbleedOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTitleFullbleedOverlay(next, layoutSchema, themeTokens, canvas);
+  } else if (isWideImageStatementOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutWideImageStatementOverlay(next, layoutSchema, themeTokens, canvas);
+  } else if (isParaTitleLeftImageBoxedLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleLeftImageBoxed(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleRightImageBoxedLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleRightImageBoxed(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleLeftImageOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleLeftImageOverlay(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleRightImageOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleRightImageOverlay(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaLandscapeImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaLandscapeImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaSplit5050Layout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaSplit5050(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoParaRightImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoParaRightImageBottom(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isThreeParaImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutThreeParaImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFourParaImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFourParaImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFourParaImageGridLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFourParaImageGrid(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTwoImagesLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTwoImages(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaThreeImagesLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaThreeImages(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaThreeImagesHorizontalLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaThreeImagesHorizontal(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaThreeImagesStaggeredLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaThreeImagesStaggered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isThreeCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutThreeCardsImageText(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoCardsImageText(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoLargeImageCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoLargeImageCards(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTitleFullbleed(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerSplitDiagonalLayout(layoutSchema?.layout_id)) {
@@ -9945,7 +10097,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   } else if (isTableTwoSameHeaderLayout(layoutSchema?.layout_id)) {
     next = layoutTableTwoSameHeader(next, layoutSchema, themeTokens, canvas);
   } else if (isEightShortTextsImageLayout(layoutSchema?.layout_id)) {
-    next = layoutEightShortTextsImage(next, layoutSchema, themeTokens, canvas);
+    const laid = layoutEightShortTextsImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+    next = Array.isArray(laid) ? { ...next, elements: laid } : laid;
   } else if (isIntroThreeParaIconsLayout(layoutSchema?.layout_id)) {
     next = layoutIntroThreeParaIcons(next, layoutSchema, themeTokens, canvas);
   } else if (isGridBentoThreeLayout(layoutSchema?.layout_id)) {
