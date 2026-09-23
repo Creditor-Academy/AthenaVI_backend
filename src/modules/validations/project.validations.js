@@ -414,7 +414,7 @@ const listProjectsSchema = Joi.object({
   query: withAssignmentOxor(
     Joi.object({
       folderId: Joi.string().uuid().optional(),
-      type: Joi.string().valid('VIDEO', 'PRESENTATION').optional(),
+      type: Joi.string().valid('VIDEO', 'PRESENTATION', 'CANVAS').optional(),
       ...assignmentListQueryJoi(Joi),
     }),
     Joi

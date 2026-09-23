@@ -22,7 +22,7 @@ const listWorkspaceLibrarySchema = Joi.object({
   }),
   query: withAssignmentOxor(
     Joi.object({
-      category: Joi.string().valid('video', 'presentation', 'image').optional(),
+      category: Joi.string().valid('video', 'presentation', 'canvas', 'image').optional(),
       folderId: Joi.string().uuid().optional(),
       take: Joi.number().integer().min(1).max(100).optional(),
       skip: Joi.number().integer().min(0).optional(),

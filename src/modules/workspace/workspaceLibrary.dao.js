@@ -19,19 +19,22 @@ async function countByCategory({
     ...assignmentWhere,
   };
 
-  const [video, presentation, image] = await Promise.all([
+  const [video, presentation, canvas, image] = await Promise.all([
     prisma.project.count({
       where: { ...projectWhere, type: 'VIDEO' },
     }),
     prisma.project.count({
       where: { ...projectWhere, type: 'PRESENTATION' },
     }),
+    prisma.project.count({
+      where: { ...projectWhere, type: 'CANVAS' },
+    }),
     prisma.imageGenThread.count({
       where: imageWhere,
     }),
   ]);
 
-  return { video, presentation, image };
+  return { video, presentation, canvas, image };
 }
 
 module.exports = {

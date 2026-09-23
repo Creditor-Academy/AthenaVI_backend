@@ -87,6 +87,7 @@ enum EarlyAccessRequestStatus {
 enum ProjectType {
   VIDEO
   PRESENTATION
+  CANVAS
 }
 
 enum PresentationShareRole {

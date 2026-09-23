@@ -24,6 +24,7 @@ const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
 const folderRoutes = require('../folder/folder.routes');
 const projectRoutes = require('../project/project.routes');
+const canvasRoutes = require('../canvas/canvas.routes');
 const heygenVideoRoutes = require('../video/heygenVideo.routes');
 const renderRoutes = require('../render/render.routes');
 const renderController = require('../render/render.controller');
@@ -168,6 +169,12 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   projectRoutes
+);
+router.use(
+  '/:workspaceId/canvases',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  canvasRoutes
 );
 
 // workspace routes

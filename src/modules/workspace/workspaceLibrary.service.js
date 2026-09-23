@@ -1,6 +1,7 @@
 const AppError = require('../../shared/utils/AppError');
 const projectService = require('../project/project.service');
 const presentationService = require('../presentation/presentation.service');
+const canvasService = require('../canvas/canvas.service');
 const imageGenService = require('../imageGen/imageGen.service');
 const workspaceLibraryDao = require('./workspaceLibrary.dao');
 const { buildAssignmentWhere } = require('../project/project.assignment');
@@ -16,6 +17,11 @@ const CATEGORIES = Object.freeze({
     label: 'Presentations',
     projectType: 'PRESENTATION',
   },
+  canvas: {
+    id: 'canvas',
+    label: 'Canvases',
+    projectType: 'CANVAS',
+  },
   image: {
     id: 'image',
     label: 'Images',
@@ -25,7 +31,7 @@ const CATEGORIES = Object.freeze({
 function assertCategory(category) {
   if (!category || !CATEGORIES[category]) {
     throw new AppError(
-      'category must be one of: video, presentation, image',
+      'category must be one of: video, presentation, canvas, image',
       400
     );
   }
@@ -57,6 +63,7 @@ async function getLibrarySummary({ userId, workspace, query = {} }) {
     categories: [
       { ...CATEGORIES.video, count: counts.video },
       { ...CATEGORIES.presentation, count: counts.presentation },
+      { ...CATEGORIES.canvas, count: counts.canvas },
       { ...CATEGORIES.image, count: counts.image },
     ],
   };
@@ -88,6 +95,14 @@ async function listLibraryCategory({ userId, workspace, category, query = {} }) 
     return {
       category: meta.id,
       items: presentations.map((p) => withKind('presentation', p)),
+    };
+  }
+
+  if (meta.id === 'canvas') {
+    const canvases = await canvasService.listCanvases(workspace.id, folderId);
+    return {
+      category: meta.id,
+      items: canvases.map((c) => withKind('canvas', c)),
     };
   }
 
