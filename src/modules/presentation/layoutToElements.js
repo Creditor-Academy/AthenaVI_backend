@@ -194,6 +194,38 @@ const {
   layoutWideImageStatementOverlay,
 } = require('./diagrams/wideImageStatementOverlayLayout');
 const {
+  isParaTitleLeftImageBoxedLayout,
+  layoutParaTitleLeftImageBoxed,
+} = require('./diagrams/paraTitleLeftImageBoxedLayout');
+const {
+  isParaTitleRightImageBoxedLayout,
+  layoutParaTitleRightImageBoxed,
+} = require('./diagrams/paraTitleRightImageBoxedLayout');
+const {
+  isParaTitleLeftImageOverlayLayout,
+  layoutParaTitleLeftImageOverlay,
+} = require('./diagrams/paraTitleLeftImageOverlayLayout');
+const {
+  isParaTitleRightImageOverlayLayout,
+  layoutParaTitleRightImageOverlay,
+} = require('./diagrams/paraTitleRightImageOverlayLayout');
+const {
+  isParaLandscapeImageLayout,
+  layoutParaLandscapeImage,
+} = require('./diagrams/paraLandscapeImageLayout');
+const {
+  isParaSplit5050Layout,
+  layoutParaSplit5050,
+} = require('./diagrams/paraSplit5050Layout');
+const {
+  isTwoParaRightImageLayout,
+  layoutTwoParaRightImage,
+} = require('./diagrams/twoParaRightImageLayout');
+const {
+  isTwoParaRightImageBottomLayout,
+  layoutTwoParaRightImageBottom,
+} = require('./diagrams/twoParaRightImageBottomLayout');
+const {
   isTitleFullbleedLayout,
   layoutTitleFullbleed,
 } = require('./diagrams/titleFullbleedLayout');
@@ -3214,6 +3246,8 @@ function layoutRequiresOverlayScrim(layoutSchema) {
   if (isTitleFullbleedOverlayLayout(layoutId, layoutSchema)) return false;
   if (isTitleFullbleedLayout(layoutId, layoutSchema)) return false;
   if (isWideImageStatementOverlayLayout(layoutId, layoutSchema)) return false;
+  if (isParaTitleLeftImageOverlayLayout(layoutId, layoutSchema)) return false;
+  if (isParaTitleRightImageOverlayLayout(layoutId, layoutSchema)) return false;
   const slots = Array.isArray(layoutSchema.slots) ? layoutSchema.slots : [];
   if (
     slots.some(
@@ -3462,6 +3496,14 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isSectionDividerCenteredLayout(layoutSchema?.layout_id) && String(el.slotId || '').toUpperCase() === 'SECTION_NUMBER') ||
       (isTitleFullbleedOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_CARD)$/i.test(String(el.slotId || '')))) ||
       (isWideImageStatementOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(STATEMENT|SUBHEADLINE|OVERLAY_SCRIM|BACKGROUND_IMAGE)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleLeftImageBoxedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleRightImageBoxedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleLeftImageOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaTitleRightImageOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaLandscapeImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaSplit5050Layout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG|TEXT_HALF_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
       (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -9824,6 +9866,22 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTitleFullbleedOverlay(next, layoutSchema, themeTokens, canvas);
   } else if (isWideImageStatementOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutWideImageStatementOverlay(next, layoutSchema, themeTokens, canvas);
+  } else if (isParaTitleLeftImageBoxedLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleLeftImageBoxed(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleRightImageBoxedLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleRightImageBoxed(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleLeftImageOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleLeftImageOverlay(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaTitleRightImageOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaTitleRightImageOverlay(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaLandscapeImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaLandscapeImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaSplit5050Layout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaSplit5050(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoParaRightImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTwoParaRightImageBottom(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTitleFullbleed(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
