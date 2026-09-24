@@ -320,6 +320,8 @@ const {
 } = require('./diagrams/titleFullbleedLayout');
 const { isComparisonTableLayout, layoutComparisonTable } = require('./diagrams/comparisonTableLayout');
 const { isComparisonSideBySideLayout, layoutComparisonSideBySide } = require('./diagrams/comparisonSideBySideLayout');
+const { isComparisonSideBySideCardsLayout, layoutComparisonSideBySideCards } = require('./diagrams/comparisonSideBySideCardsLayout');
+const { isComparisonSideBySideCenterlineLayout, layoutComparisonSideBySideCenterline } = require('./diagrams/comparisonSideBySideCenterlineLayout');
 const { isComparisonProsConsLayout, layoutComparisonProsCons } = require('./diagrams/comparisonProsConsLayout');
 const { isComparisonBeforeAfterLayout, layoutComparisonBeforeAfter } = require('./diagrams/comparisonBeforeAfterLayout');
 const { isComparisonProsConsSplitLayout, layoutComparisonProsConsSplit } = require('./diagrams/comparisonProsConsSplitLayout');
@@ -3617,6 +3619,9 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isFullBgImageOverlaySideLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BACKGROUND_IMAGE|OVERLAY_SCRIM|MAIN_TITLE|SUBTITLE|BODY)$/i.test(String(el.slotId || '')))) ||
       (isSectionDividerBandLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BAND)$/i.test(String(el.slotId || '')))) ||
       (isSectionDividerBandFullLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BAND)$/i.test(String(el.slotId || '')))) ||
+      (isComparisonSideBySideLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isComparisonSideBySideCardsLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isComparisonSideBySideCenterlineLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
       (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -10065,8 +10070,12 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutBulletListCards(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonTableLayout(layoutSchema?.layout_id)) {
     next = layoutComparisonTable(next, layoutSchema, themeTokens, canvas);
-  } else if (isComparisonSideBySideLayout(layoutSchema?.layout_id) || /^comparison_side_by_side/i.test(layoutSchema?.preview?.mode)) {
-    next = layoutComparisonSideBySide(next, layoutSchema, themeTokens, canvas);
+  } else if (isComparisonSideBySideLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutComparisonSideBySide(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isComparisonSideBySideCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutComparisonSideBySideCards(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isComparisonSideBySideCenterlineLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutComparisonSideBySideCenterline(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isComparisonProsConsLayout(layoutSchema?.layout_id)) {
     next = layoutComparisonProsCons(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonBeforeAfterLayout(layoutSchema?.layout_id)) {
