@@ -166,16 +166,6 @@ async function getSharedGeneration(req, res, next) {
   }
 }
 
-async function publicTweak(req, res, next) {
-  try {
-    const { token } = req.params;
-    const { tweakType } = req.body;
-    const result = await imageGenService.publicTweakGeneration({ token, tweakType });
-    res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
-}
 
 module.exports = {
   listModels,
@@ -195,6 +185,5 @@ module.exports = {
   listGenerations,
   getGeneration,
   getSharedGeneration,
-  publicTweak,
   download,
 };
