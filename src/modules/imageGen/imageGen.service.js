@@ -487,13 +487,40 @@ async function runPipeline({
     fit: mode === 'infographic' ? 'contain' : 'cover',
   });
   const revisedPrompt = generated.revised_prompt || null;
-
   const generationId = uuidv4();
   const assetName = resolveAssetFilename({
     name,
     prompt,
     mode,
   });
+
+  const resolvedRootId = rootId || parentId || generationId;
+  const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
+  const chargeFeature =
+    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : model.feature;
+  const chargeAmount =
+    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
+
+  // CHARGE UPFRONT to prevent race condition exploit
+  const charge = await imageGenCredit.chargeFlat({
+    workspaceId: workspace.id,
+    userId,
+    feature: chargeFeature,
+    idempotencyKey: `imageGen:${generationId}:${action}`,
+    amountAc: chargeAmount,
+    metadata: {
+      generationId,
+      mode,
+      modelId: model.id,
+      formatId: format?.id || null,
+      action,
+      contextId: liveContextId,
+      threadId: threadId || null,
+      archetype: infographicSpec?.archetype || null,
+    },
+  });
+
+  const charged = charge?.pricing?.athenaCredits ?? chargeAmount;
 
   const asset = await persistWorkspaceAsset({
     userId,
@@ -515,13 +542,6 @@ async function runPipeline({
       archetype: infographicSpec?.archetype || null,
     },
   });
-
-  const resolvedRootId = rootId || parentId || generationId;
-  const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
-  const chargeFeature =
-    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : model.feature;
-  const chargeAmount =
-    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
 
   const requestPayload = {
     mode,
@@ -567,39 +587,12 @@ async function runPipeline({
     openaiSize,
     exportWidth: cropped.width,
     exportHeight: cropped.height,
-    creditsCharged: 0,
+    creditsCharged: charged,
     status: 'SUCCEEDED',
   });
 
   if (contextResult.pinContextId) {
     await contextService.pinIfNeeded(contextResult.pinContextId);
-  }
-
-  const charge = await imageGenCredit.chargeFlat({
-    workspaceId: workspace.id,
-    userId,
-    feature: chargeFeature,
-    idempotencyKey: `imageGen:${generationId}:${action}`,
-    amountAc: chargeAmount,
-    metadata: {
-      generationId,
-      mode,
-      modelId: model.id,
-      formatId: format?.id || null,
-      action,
-      contextId: liveContextId,
-      threadId: threadId || null,
-      archetype: infographicSpec?.archetype || null,
-    },
-  });
-
-  const charged = charge?.pricing?.athenaCredits ?? chargeAmount;
-  if (charged > 0) {
-    await prisma.imageGeneration.update({
-      where: { id: generationId },
-      data: { creditsCharged: charged },
-    });
-    row.creditsCharged = charged;
   }
 
   return {
@@ -1009,44 +1002,7 @@ async function tweak({ userId, workspace, generationId, instruction, editMode = 
   return withThreadPayload(result, updated, workspace.id);
 }
 
-async function publicTweakGeneration({ token, tweakType }) {
-  const prisma = require('../../shared/config/prismaClient');
-  const parent = requireStudioGeneration(
-    await imageGenDao.findGlobalById(token)
-  );
 
-  const hasTweak = await imageGenDao.hasPublicTweak(parent.id);
-  if (hasTweak) {
-    throw new AppError('This image has already been tweaked publicly. Join Athena to generate more!', 403);
-  }
-
-  // Pre-defined tweak mapping
-  const tweaks = {
-    'cyberpunk': 'Make the image heavily cyberpunk themed with neon lights and futuristic elements.',
-    'sketch': 'Convert the image into a detailed, beautiful pencil sketch or drawing.',
-    'upscale': 'Make this image 4k, highly detailed, photorealistic, and exceptionally high quality.',
-    'text': 'Add an elegant glowing text overlay that says "ATHENA" in the center of the image.'
-  };
-
-  const instruction = tweaks[tweakType] || 'Make it look better and highly detailed.';
-
-  const result = await runTweakOnParent({
-    userId: parent.userId,
-    workspace: { id: parent.workspaceId },
-    parent,
-    instruction,
-    editPrompt: instruction,
-    threadId: parent.threadId || null,
-  });
-
-  // Mark this generation as a public tweak so it blocks further tweaks
-  await prisma.imageGeneration.update({
-    where: { id: result.generation.id },
-    data: { action: 'public_tweak' }
-  });
-
-  return result;
-}
 
 async function sendThreadMessage({
   userId,
@@ -1268,7 +1224,7 @@ module.exports = {
   generate,
   regenerate,
   tweak,
-  publicTweakGeneration,
+
   sendThreadMessage,
   listThreads,
   getThread,
