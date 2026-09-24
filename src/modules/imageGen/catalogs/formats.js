@@ -71,6 +71,40 @@ const FORMATS = Object.freeze([
     ],
     infographicSafeZone: 'Keep title and all labels inside padded margins; no edge clipping.',
   },
+  {
+    id: 'landscape-16-9',
+    name: 'Widescreen (16:9)',
+    category: 'generic',
+    width: 1792,
+    height: 1024,
+    openaiSizeGpt: '1792x1024',
+    openaiSizeDalle: '1792x1024',
+    geminiAspectRatio: '16:9',
+    safeZone: 'Keep focal content in the center.',
+    composeRules: [...FULL_BLEED_COMMON, 'Widescreen 16:9 cinematic framing.'],
+    infographicCompose: [
+      ...INFOGRAPHIC_COMPOSE_COMMON,
+      'Widescreen 16:9 canvas; use wide horizontal timeline or side-by-side comparison panels.',
+    ],
+    infographicSafeZone: 'Keep title and all labels inside padded margins.',
+  },
+  {
+    id: 'portrait-9-16',
+    name: 'Vertical (9:16)',
+    category: 'generic',
+    width: 1024,
+    height: 1792,
+    openaiSizeGpt: '1024x1792',
+    openaiSizeDalle: '1024x1792',
+    geminiAspectRatio: '9:16',
+    safeZone: 'Keep focal content in the center.',
+    composeRules: [...FULL_BLEED_COMMON, 'Vertical 9:16 framing for mobile.'],
+    infographicCompose: [
+      ...INFOGRAPHIC_COMPOSE_COMMON,
+      'Vertical 9:16 canvas; use vertical scrolling structure or stacked panels.',
+    ],
+    infographicSafeZone: 'Keep title and all labels inside padded margins.',
+  }
 ]);
 
 const FORMAT_BY_ID = Object.freeze(Object.fromEntries(FORMATS.map((f) => [f.id, f])));

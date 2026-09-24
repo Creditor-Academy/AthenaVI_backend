@@ -249,4 +249,8 @@ router.get(
   imageGenController.download
 );
 
+// Public share route (unauthenticated)
+router.get('/public/share/:token', imageGenController.getSharedGeneration);
+router.post('/public/share/:token/tweak', imageGenController.publicTweak);
+
 module.exports = router;

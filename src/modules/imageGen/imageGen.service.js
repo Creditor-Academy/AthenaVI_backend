@@ -1009,6 +1009,45 @@ async function tweak({ userId, workspace, generationId, instruction, editMode = 
   return withThreadPayload(result, updated, workspace.id);
 }
 
+async function publicTweakGeneration({ token, tweakType }) {
+  const prisma = require('../../shared/config/prismaClient');
+  const parent = requireStudioGeneration(
+    await imageGenDao.findGlobalById(token)
+  );
+
+  const hasTweak = await imageGenDao.hasPublicTweak(parent.id);
+  if (hasTweak) {
+    throw new AppError('This image has already been tweaked publicly. Join Athena to generate more!', 403);
+  }
+
+  // Pre-defined tweak mapping
+  const tweaks = {
+    'cyberpunk': 'Make the image heavily cyberpunk themed with neon lights and futuristic elements.',
+    'sketch': 'Convert the image into a detailed, beautiful pencil sketch or drawing.',
+    'upscale': 'Make this image 4k, highly detailed, photorealistic, and exceptionally high quality.',
+    'text': 'Add an elegant glowing text overlay that says "ATHENA" in the center of the image.'
+  };
+
+  const instruction = tweaks[tweakType] || 'Make it look better and highly detailed.';
+
+  const result = await runTweakOnParent({
+    userId: parent.userId,
+    workspace: { id: parent.workspaceId },
+    parent,
+    instruction,
+    editPrompt: instruction,
+    threadId: parent.threadId || null,
+  });
+
+  // Mark this generation as a public tweak so it blocks further tweaks
+  await prisma.imageGeneration.update({
+    where: { id: result.generation.id },
+    data: { action: 'public_tweak' }
+  });
+
+  return result;
+}
+
 async function sendThreadMessage({
   userId,
   workspace,
@@ -1198,6 +1237,28 @@ async function downloadGeneration({ req, res, workspace, generationId, format })
   });
 }
 
+/**
+ * Fetch a generation safely without workspace context for public sharing
+ */
+async function getSharedGeneration(token) {
+  // Token is just the generationId UUID
+  const row = await imageGenDao.findGlobalById(token);
+  if (!row) {
+    throw new AppError('Shared generation not found or is no longer available.', 404);
+  }
+
+  const creatorName = (row.user && row.user.name) ? row.user.name : 'Unknown';
+
+  return {
+    id: row.id,
+    prompt: row.prompt,
+    mode: row.mode,
+    url: row.asset?.url,
+    createdAt: row.createdAt,
+    version: row.version,
+    creatorName
+  };
+}
 module.exports = {
   listModels,
   listFormats,
@@ -1207,6 +1268,7 @@ module.exports = {
   generate,
   regenerate,
   tweak,
+  publicTweakGeneration,
   sendThreadMessage,
   listThreads,
   getThread,
@@ -1214,6 +1276,7 @@ module.exports = {
   moveThread,
   deleteThread,
   getGeneration,
+  getSharedGeneration,
   listGenerations,
   downloadGeneration,
   serializeThread,

@@ -156,6 +156,27 @@ const download = asyncHandler(async (req, res) => {
   });
 });
 
+async function getSharedGeneration(req, res, next) {
+  try {
+    const { token } = req.params;
+    const result = await imageGenService.getSharedGeneration(token);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function publicTweak(req, res, next) {
+  try {
+    const { token } = req.params;
+    const { tweakType } = req.body;
+    const result = await imageGenService.publicTweakGeneration({ token, tweakType });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   listModels,
   listFormats,
@@ -173,5 +194,7 @@ module.exports = {
   deleteThread,
   listGenerations,
   getGeneration,
+  getSharedGeneration,
+  publicTweak,
   download,
 };
