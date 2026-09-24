@@ -170,6 +170,7 @@ const { isSectionWithImageLayout, layoutSectionWithImage } = require('./diagrams
 const { isParaLandscapeImageBottomLayout, layoutParaLandscapeImageBottom } = require('./diagrams/paraLandscapeImageBottom');
 const { isParaLandscapeImageTopLayout, layoutParaLandscapeImageTop } = require('./diagrams/paraLandscapeImageTop');
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
+const { isSectionDividerBandFullLayout, layoutSectionDividerBandFull } = require('./diagrams/sectionDividerBandFullLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
 const { isBulletListDenseLayout, layoutBulletListDense } = require('./diagrams/bulletListDenseLayout');
 const { isBulletListNumberedLayout, layoutBulletListNumbered } = require('./diagrams/bulletListNumberedLayout');
@@ -301,6 +302,18 @@ const {
   isLargeImageLayout,
   layoutLargeImage,
 } = require('./diagrams/largeImageLayout');
+const {
+  isFullBgImageOverlayLayout,
+  layoutFullBgImageOverlay,
+} = require('./diagrams/fullBgImageOverlayLayout');
+const {
+  isFullBgImageOverlayBottomLayout,
+  layoutFullBgImageOverlayBottom,
+} = require('./diagrams/fullBgImageOverlayBottomLayout');
+const {
+  isFullBgImageOverlaySideLayout,
+  layoutFullBgImageOverlaySide,
+} = require('./diagrams/fullBgImageOverlaySideLayout');
 const {
   isTitleFullbleedLayout,
   layoutTitleFullbleed,
@@ -3599,6 +3612,11 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isHeadlineRightTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADLINE|BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isSectionDividerSplitImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isLargeImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HERO_IMAGE|CAPTION|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isFullBgImageOverlayLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BACKGROUND_IMAGE|OVERLAY_SCRIM|MAIN_TITLE|SUBTITLE|BODY)$/i.test(String(el.slotId || '')))) ||
+      (isFullBgImageOverlayBottomLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BACKGROUND_IMAGE|OVERLAY_SCRIM|MAIN_TITLE|SUBTITLE|BODY)$/i.test(String(el.slotId || '')))) ||
+      (isFullBgImageOverlaySideLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BACKGROUND_IMAGE|OVERLAY_SCRIM|MAIN_TITLE|SUBTITLE|BODY)$/i.test(String(el.slotId || '')))) ||
+      (isSectionDividerBandLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BAND)$/i.test(String(el.slotId || '')))) ||
+      (isSectionDividerBandFullLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BAND)$/i.test(String(el.slotId || '')))) ||
       (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
       (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -10015,10 +10033,18 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutSectionDividerSplitImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isLargeImageLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutLargeImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFullBgImageOverlayLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFullBgImageOverlay(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFullBgImageOverlayBottomLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFullBgImageOverlayBottom(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFullBgImageOverlaySideLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFullBgImageOverlaySide(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTitleFullbleed(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
-    next = layoutSectionDividerBand(next, layoutSchema, themeTokens, canvas);
+    next = layoutSectionDividerBand(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isSectionDividerBandFullLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutSectionDividerBandFull(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isSectionDividerSplitDiagonalLayout(layoutSchema?.layout_id)) {
     next = layoutSectionDividerSplitDiagonal(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isSectionDividerSplitLayout(layoutSchema?.layout_id)) {

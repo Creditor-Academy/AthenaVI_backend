@@ -1,41 +1,41 @@
-﻿/**
- * Section Divider Band
- * Layout ID: section_divider_band_v1
+/**
+ * Section Divider Band Full
+ * Layout ID: section_divider_band_full_v1
  *
- * Horizontal chapter band with a centered heading.
- * Twin `section_divider_band_full_v1` has its own full-bleed engine.
+ * Full-bleed chapter field with a large centered heading.
+ * Distinct from Section Divider Band (mid-slide ribbon on white).
  */
 
-function isSectionDividerBandLayout(layoutId, schema) {
+function isSectionDividerBandFullLayout(layoutId, schema) {
   const id = String(layoutId || schema?.layout_id || schema?.layoutId || '').toLowerCase()
-  if (id.includes('_full')) return false
-  return id === 'section_divider_band_v1' || id === 'section_divider_band'
+  return id === 'section_divider_band_full_v1' || id === 'section_divider_band_full'
 }
 
-const SECTION_DIVIDER_BAND_DEFAULTS = {
+const SECTION_DIVIDER_BAND_FULL_DEFAULTS = {
   HEADING: 'Section break',
 }
 
 const GEOM = {
   viewW: 1920,
   viewH: 1080,
-  bandY: 390,
-  bandH: 300,
+  barX: 860,
+  barY: 430,
+  barW: 200,
+  barH: 6,
   headX: 160,
-  headY: 430,
+  headY: 470,
   headW: 1600,
   headH: 220,
 }
 
-function buildSectionDividerBandChromeSvg() {
-  const { bandY, bandH } = GEOM
+function buildSectionDividerBandFullChromeSvg() {
+  const { barX, barY, barW, barH } = GEOM
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" preserveAspectRatio="none">
-    <rect width="1920" height="1080" fill="currentColor" opacity="0.04" />
-    <circle cx="1760" cy="140" r="160" fill="currentColor" opacity="0.07" />
-    <circle cx="160" cy="940" r="140" fill="currentColor" opacity="0.06" />
-    <rect x="0" y="${bandY}" width="1920" height="${bandH}" fill="currentColor" />
-    <rect x="0" y="${bandY}" width="1920" height="8" fill="#FFFFFF" opacity="0.18" />
-    <rect x="0" y="${bandY + bandH - 8}" width="1920" height="8" fill="#000000" opacity="0.12" />
+    <rect width="1920" height="1080" fill="currentColor" />
+    <circle cx="160" cy="140" r="220" fill="#FFFFFF" opacity="0.08" />
+    <circle cx="1760" cy="940" r="260" fill="#FFFFFF" opacity="0.07" />
+    <circle cx="1760" cy="940" r="140" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.16" />
+    <rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="${barH / 2}" fill="#FFFFFF" fill-opacity="0.92" />
   </svg>`
 }
 
@@ -70,14 +70,14 @@ function buildElements({ canvasW, canvasH, heading, accent, prev = {} }) {
   const scale = Math.min(sx, sy)
   return [
     {
-      id: prev.BAND?.id || prev.IMAGE_CARD_BG?.id || 'slot-BAND',
+      id: prev.BAND?.id || 'slot-BAND',
       slotId: 'BAND',
       type: 'graphic',
       role: 'decoration',
       layer: 2,
       placement: { x: 0, y: 0, width: canvasW, height: canvasH, rotation: 0, opacity: 1 },
       content: {
-        svg: buildSectionDividerBandChromeSvg(),
+        svg: buildSectionDividerBandFullChromeSvg(),
         preserveAspectRatio: 'none',
         colorMode: 'recolorable',
         fill: accent,
@@ -100,12 +100,12 @@ function buildElements({ canvasW, canvasH, heading, accent, prev = {} }) {
       },
       content: {
         text: heading,
-        fontSize: Math.round(40 * scale),
+        fontSize: Math.round(44 * scale),
         fontWeight: 800,
         color: '#FFFFFF',
         align: 'center',
         verticalAlign: 'center',
-        lineHeight: 1.15,
+        lineHeight: 1.12,
         clipToSlot: true,
         maxLines: 2,
       },
@@ -113,7 +113,7 @@ function buildElements({ canvasW, canvasH, heading, accent, prev = {} }) {
   ]
 }
 
-function layoutSectionDividerBand(docOrElements, schema = {}, palette = {}, canvas = {}) {
+function layoutSectionDividerBandFull(docOrElements, schema = {}, palette = {}, canvas = {}) {
   const elements = Array.isArray(docOrElements) ? docOrElements : (docOrElements?.elements || [])
   const canvasW = canvas?.width || docOrElements?.canvas?.width || 1920
   const canvasH = canvas?.height || docOrElements?.canvas?.height || 1080
@@ -123,15 +123,15 @@ function layoutSectionDividerBand(docOrElements, schema = {}, palette = {}, canv
   const out = buildElements({
     canvasW,
     canvasH,
-    heading: textOf(headingEl, SECTION_DIVIDER_BAND_DEFAULTS.HEADING),
+    heading: textOf(headingEl, SECTION_DIVIDER_BAND_FULL_DEFAULTS.HEADING),
     accent: resolveStoredColor(bandEl, accent),
-    prev: { BAND: bandEl, IMAGE_CARD_BG: bandEl, HEADING: headingEl },
+    prev: { BAND: bandEl, HEADING: headingEl },
   })
   if (Array.isArray(docOrElements)) return out
   return { ...docOrElements, elements: out }
 }
 
-function buildSectionDividerBandCanvasElements({ schema, options = {} } = {}) {
+function buildSectionDividerBandFullCanvasElements({ schema, options = {} } = {}) {
   const canvasW = options.canvas?.width || 1920
   const canvasH = options.canvas?.height || 1080
   const content = options.content || {}
@@ -140,15 +140,15 @@ function buildSectionDividerBandCanvasElements({ schema, options = {} } = {}) {
   return buildElements({
     canvasW,
     canvasH,
-    heading: String(bySlot.HEADING || content.heading || content.title || SECTION_DIVIDER_BAND_DEFAULTS.HEADING).trim(),
+    heading: String(bySlot.HEADING || content.heading || content.title || SECTION_DIVIDER_BAND_FULL_DEFAULTS.HEADING).trim(),
     accent,
   })
 }
 
 module.exports = {
-  isSectionDividerBandLayout,
-  layoutSectionDividerBand,
-  buildSectionDividerBandCanvasElements,
-  buildSectionDividerBandChromeSvg,
-  SECTION_DIVIDER_BAND_DEFAULTS,
+  isSectionDividerBandFullLayout,
+  layoutSectionDividerBandFull,
+  buildSectionDividerBandFullCanvasElements,
+  buildSectionDividerBandFullChromeSvg,
+  SECTION_DIVIDER_BAND_FULL_DEFAULTS,
 };
