@@ -266,6 +266,42 @@ const {
   layoutTwoLargeImageCards,
 } = require('./diagrams/twoLargeImageCardsLayout');
 const {
+  isFourImagesTextLayout,
+  layoutFourImagesText,
+} = require('./diagrams/fourImagesTextLayout');
+const {
+  isFourImagesTextMosaicLayout,
+  layoutFourImagesTextMosaic,
+} = require('./diagrams/fourImagesTextMosaicLayout');
+const {
+  isHeadlineCenteredLayout,
+  layoutHeadlineCentered,
+} = require('./diagrams/headlineCenteredLayout');
+const {
+  isTitleStatementSplitLayout,
+  layoutTitleStatementSplit,
+} = require('./diagrams/titleStatementSplitLayout');
+const {
+  isTitleStatementLayout,
+  layoutTitleStatement,
+} = require('./diagrams/titleStatementLayout');
+const {
+  isIntroFourParaLayout,
+  layoutIntroFourPara,
+} = require('./diagrams/introFourParaLayout');
+const {
+  isHeadlineRightTextLayout,
+  layoutHeadlineRightText,
+} = require('./diagrams/headlineRightTextLayout');
+const {
+  isSectionDividerSplitImageLayout,
+  layoutSectionDividerSplitImage,
+} = require('./diagrams/sectionDividerSplitImageLayout');
+const {
+  isLargeImageLayout,
+  layoutLargeImage,
+} = require('./diagrams/largeImageLayout');
+const {
   isTitleFullbleedLayout,
   layoutTitleFullbleed,
 } = require('./diagrams/titleFullbleedLayout');
@@ -3554,6 +3590,15 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isThreeCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CARD_[123]_(TITLE|BODY)|IMAGE_[123]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTwoCardsImageTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(EYEBROW|COL_[12]_(IMAGE|TITLE|BODY)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTwoLargeImageCardsLayout(layoutSchema?.layout_id, layoutSchema) && (/^(CARD_[12]_(TITLE|BODY)|IMAGE_[12]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isFourImagesTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|IMAGE_[1234](_LABEL)?|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isFourImagesTextMosaicLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|IMAGE_[1234](_LABEL)?|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isHeadlineCenteredLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADLINE|BODY|IMAGE_CARD_BG|DIVIDER)$/i.test(String(el.slotId || '')))) ||
+      (isTitleStatementSplitLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADLINE|BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isTitleStatementLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADLINE|BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isIntroFourParaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(INTRO|ITEM_[1-4]|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isHeadlineRightTextLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADLINE|BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isSectionDividerSplitImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isLargeImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HERO_IMAGE|CAPTION|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
       (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -9952,6 +9997,24 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutTwoCardsImageText(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTwoLargeImageCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTwoLargeImageCards(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFourImagesTextLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFourImagesText(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isFourImagesTextMosaicLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutFourImagesTextMosaic(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isHeadlineCenteredLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutHeadlineCentered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTitleStatementSplitLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTitleStatementSplit(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTitleStatementLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTitleStatement(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isIntroFourParaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutIntroFourPara(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isHeadlineRightTextLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutHeadlineRightText(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isSectionDividerSplitImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutSectionDividerSplitImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isLargeImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutLargeImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTitleFullbleed(next, layoutSchema, themeTokens, canvas);
   } else if (isSectionDividerBandLayout(layoutSchema?.layout_id)) {
