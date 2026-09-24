@@ -172,6 +172,7 @@ const { isParaLandscapeImageTopLayout, layoutParaLandscapeImageTop } = require('
 const { isSectionDividerBandLayout, layoutSectionDividerBand } = require('./diagrams/sectionDividerBandLayout');
 const { isSectionDividerBandFullLayout, layoutSectionDividerBandFull } = require('./diagrams/sectionDividerBandFullLayout');
 const { isBulletListCardsLayout, layoutBulletListCards } = require('./diagrams/bulletListCardsLayout');
+const { isBulletListGridLayout, layoutBulletListGrid } = require('./diagrams/bulletListGridLayout');
 const { isBulletListDenseLayout, layoutBulletListDense } = require('./diagrams/bulletListDenseLayout');
 const { isBulletListNumberedLayout, layoutBulletListNumbered } = require('./diagrams/bulletListNumberedLayout');
 const {
@@ -3622,6 +3623,8 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isComparisonSideBySideLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isComparisonSideBySideCardsLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isComparisonSideBySideCenterlineLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|LEFT_TITLE|LEFT_BODY|RIGHT_TITLE|RIGHT_BODY|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListCardsLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CARD_[1-4]_(TITLE|BODY|BG)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isBulletListGridLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CARD_[1-4]_(TITLE|BODY|BG)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isTitleFullbleedLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MAIN_TITLE|SUBTITLE|OVERLAY_SCRIM)$/i.test(String(el.slotId || '')))) ||
       (isEightShortTextsImageLayout(layoutSchema?.layout_id) && (/^(HEADING|SUBTITLE|TAG_BADGE|POINT_\d+_(TITLE|DESC|CARD|NUM)|HERO_IMAGE)$/i.test(String(el.slotId || '')))) ||
       (isBulletListDenseLayout(layoutSchema?.layout_id) && (/^(HEADING|ITEM_\d+|NUMBER_\d+|BAR_\d+|SLIDE_BG)$/i.test(String(el.slotId || '')))) ||
@@ -10066,8 +10069,10 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutBulletListSplit(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTextOnlyCenteredLayout(layoutSchema?.layout_id)) {
     next = layoutTextOnlyCentered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
-  } else if (isBulletListCardsLayout(layoutSchema?.layout_id)) {
-    next = layoutBulletListCards(next, layoutSchema, themeTokens, canvas);
+  } else if (isBulletListCardsLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutBulletListCards(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isBulletListGridLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutBulletListGrid(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isComparisonTableLayout(layoutSchema?.layout_id)) {
     next = layoutComparisonTable(next, layoutSchema, themeTokens, canvas);
   } else if (isComparisonSideBySideLayout(layoutSchema?.layout_id, layoutSchema)) {

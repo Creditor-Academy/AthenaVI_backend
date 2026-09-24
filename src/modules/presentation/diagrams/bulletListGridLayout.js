@@ -1,18 +1,17 @@
 /**
- * Bullet List Cards
- * Layout ID: bullet_list_cards_v1
+ * Bullet List Grid
+ * Layout ID: bullet_list_grid_v1
  *
- * Four equal point cards under a heading. Twin `bullet_list_grid_v1`
- * has its own staggered-column engine.
+ * Four full-height staggered columns with large index marks.
+ * Distinct from Bullet List Cards (equal card row).
  */
 
-function isBulletListCardsLayout(layoutId, schema) {
+function isBulletListGridLayout(layoutId, schema) {
   const id = String(layoutId || schema?.layout_id || schema?.layoutId || '').toLowerCase()
-  if (id.includes('_grid')) return false
-  return id === 'bullet_list_cards_v1' || id === 'bullet_list_cards'
+  return id === 'bullet_list_grid_v1' || id === 'bullet_list_grid'
 }
 
-const BULLET_LIST_CARDS_DEFAULTS = {
+const BULLET_LIST_GRID_DEFAULTS = {
   HEADING: 'Key points',
   CARD_1_TITLE: 'Point one',
   CARD_2_TITLE: 'Point two',
@@ -25,43 +24,43 @@ const GEOM = {
   viewW: 1920,
   viewH: 1080,
   headX: 80,
-  headY: 48,
+  headY: 28,
   headW: 1760,
-  headH: 100,
-  cardY: 176,
-  cardW: 419,
-  cardH: 820,
-  cardGap: 28,
-  cardXs: [80, 527, 974, 1421],
-  barH: 8,
-  titlePad: 36,
-  titleY: 268,
+  headH: 72,
+  colW: 480,
+  colXs: [0, 480, 960, 1440],
+  padX: 48,
+  titleW: 384,
   titleH: 96,
-  bodyY: 384,
-  bodyH: 560,
+  bodyH: 280,
 }
 
-function cardChrome(x, y, w, h, barH, n) {
-  const rx = 24
-  const cx = x + w / 2
-  return `
-    <rect x="${x + 10}" y="${y + 14}" width="${w}" height="${h}" rx="${rx}" fill="currentColor" opacity="0.08" />
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#FFFFFF" />
-    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="currentColor" stroke-width="2" opacity="0.14" />
-    <path d="M ${x} ${y + barH} L ${x + w} ${y + barH} L ${x + w} ${y + rx} Q ${x + w} ${y} ${x + w - rx} ${y} L ${x + rx} ${y} Q ${x} ${y} ${x} ${y + rx} Z" fill="currentColor" />
-    <circle cx="${cx}" cy="${y + 56}" r="22" fill="currentColor" opacity="0.12" />
-    <text x="${cx}" y="${y + 63}" text-anchor="middle" fill="currentColor" font-size="16" font-weight="800" font-family="system-ui, sans-serif">${n}</text>
-  `
+function colTitleY(i) {
+  return i % 2 === 0 ? 560 : 300
 }
 
-function buildBulletListCardsChromeSvg() {
-  const { cardY, cardW, cardH, cardXs, barH } = GEOM
-  const cards = cardXs.map((x, i) => cardChrome(x, cardY, cardW, cardH, barH, String(i + 1).padStart(2, '0'))).join('')
+function colNumY(i) {
+  return i % 2 === 0 ? 430 : 232
+}
+
+function buildBulletListGridChromeSvg() {
+  const fills = GEOM.colXs.map((x, i) => {
+    const opacity = i % 2 === 0 ? 0.08 : 0.03
+    return `<rect x="${x}" y="0" width="${GEOM.colW}" height="1080" fill="currentColor" opacity="${opacity}" />`
+  }).join('')
+  const nums = GEOM.colXs.map((x, i) =>
+    `<text x="${x + 40}" y="${colNumY(i)}" fill="currentColor" fill-opacity="0.22" font-size="110" font-weight="800" font-family="system-ui, sans-serif">${String(i + 1).padStart(2, '0')}</text>`
+  ).join('')
+  const rules = [480, 960, 1440].map((x) =>
+    `<rect x="${x}" y="110" width="2" height="930" fill="currentColor" opacity="0.12" />`
+  ).join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" preserveAspectRatio="none">
     <rect width="1920" height="1080" fill="#FFFFFF" />
-    <rect width="1920" height="1080" fill="currentColor" opacity="0.04" />
-    <circle cx="1760" cy="80" r="160" fill="currentColor" opacity="0.06" />
-    ${cards}
+    ${fills}
+    <rect x="0" y="0" width="1920" height="110" fill="#FFFFFF" />
+    <rect x="0" y="108" width="1920" height="2" fill="currentColor" opacity="0.12" />
+    ${rules}
+    ${nums}
   </svg>`
 }
 
@@ -125,7 +124,6 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
   const sx = canvasW / GEOM.viewW
   const sy = canvasH / GEOM.viewH
   const scale = Math.min(sx, sy)
-  const titleW = GEOM.cardW - GEOM.titlePad * 2
   const out = [
     {
       id: prev.IMAGE_CARD_BG?.id || prev.CARD_1_BG?.id || 'slot-IMAGE_CARD_BG',
@@ -135,7 +133,7 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
       layer: 2,
       placement: { x: 0, y: 0, width: canvasW, height: canvasH, rotation: 0, opacity: 1 },
       content: {
-        svg: buildBulletListCardsChromeSvg(),
+        svg: buildBulletListGridChromeSvg(),
         preserveAspectRatio: 'none',
         colorMode: 'recolorable',
         fill: accent,
@@ -150,11 +148,11 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
       w: GEOM.headW,
       h: GEOM.headH,
       text: heading,
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: 800,
       color: textColor,
       lineHeight: 1.15,
-      maxLines: 2,
+      maxLines: 1,
       sx,
       sy,
       scale,
@@ -162,18 +160,19 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
       align: 'left',
     }),
   ]
-  GEOM.cardXs.forEach((cardX, i) => {
+  GEOM.colXs.forEach((colX, i) => {
     const n = i + 1
-    const tx = cardX + GEOM.titlePad
+    const tx = colX + GEOM.padX
+    const titleY = colTitleY(i)
     out.push(textEl({
       slotId: `CARD_${n}_TITLE`,
       prev: prev[`CARD_${n}_TITLE`],
       x: tx,
-      y: GEOM.titleY,
-      w: titleW,
+      y: titleY,
+      w: GEOM.titleW,
       h: GEOM.titleH,
       text: titles[i],
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: 800,
       color: textColor,
       lineHeight: 1.2,
@@ -188,15 +187,15 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
       slotId: `CARD_${n}_BODY`,
       prev: prev[`CARD_${n}_BODY`],
       x: tx,
-      y: GEOM.bodyY,
-      w: titleW,
+      y: titleY + GEOM.titleH + 8,
+      w: GEOM.titleW,
       h: GEOM.bodyH,
       text: bodies[i],
       fontSize: 15,
       fontWeight: 400,
       color: mutedColor,
       lineHeight: 1.45,
-      maxLines: 10,
+      maxLines: 6,
       sx,
       sy,
       scale,
@@ -207,15 +206,15 @@ function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, text
   return out
 }
 
-function layoutBulletListCards(docOrElements, schema = {}, palette = {}, canvas = {}) {
+function layoutBulletListGrid(docOrElements, schema = {}, palette = {}, canvas = {}) {
   const elements = Array.isArray(docOrElements) ? docOrElements : (docOrElements?.elements || [])
   const canvasW = canvas?.width || docOrElements?.canvas?.width || 1920
   const canvasH = canvas?.height || docOrElements?.canvas?.height || 1080
   const { accent, textColor, mutedColor } = paletteColors(palette)
   const headingEl = findEl(elements, ['HEADING', 'HEADLINE', 'TITLE'])
   const chromeEl = findEl(elements, ['IMAGE_CARD_BG', 'CARD_1_BG'])
-  const titles = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_TITLE`]), BULLET_LIST_CARDS_DEFAULTS[`CARD_${n}_TITLE`]))
-  const bodies = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_BODY`]), BULLET_LIST_CARDS_DEFAULTS.BODY))
+  const titles = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_TITLE`]), BULLET_LIST_GRID_DEFAULTS[`CARD_${n}_TITLE`]))
+  const bodies = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_BODY`]), BULLET_LIST_GRID_DEFAULTS.BODY))
   const prev = { IMAGE_CARD_BG: chromeEl, CARD_1_BG: chromeEl, HEADING: headingEl }
   ;[1, 2, 3, 4].forEach((n) => {
     prev[`CARD_${n}_TITLE`] = findEl(elements, [`CARD_${n}_TITLE`])
@@ -224,7 +223,7 @@ function layoutBulletListCards(docOrElements, schema = {}, palette = {}, canvas 
   const out = buildElements({
     canvasW,
     canvasH,
-    heading: textOf(headingEl, BULLET_LIST_CARDS_DEFAULTS.HEADING),
+    heading: textOf(headingEl, BULLET_LIST_GRID_DEFAULTS.HEADING),
     titles,
     bodies,
     accent: resolveStoredColor(chromeEl, accent),
@@ -236,7 +235,7 @@ function layoutBulletListCards(docOrElements, schema = {}, palette = {}, canvas 
   return { ...docOrElements, elements: out }
 }
 
-function buildBulletListCardsCanvasElements({ schema, options = {} } = {}) {
+function buildBulletListGridCanvasElements({ schema, options = {} } = {}) {
   const canvasW = options.canvas?.width || 1920
   const canvasH = options.canvas?.height || 1080
   const content = options.content || {}
@@ -245,36 +244,37 @@ function buildBulletListCardsCanvasElements({ schema, options = {} } = {}) {
   return buildElements({
     canvasW,
     canvasH,
-    heading: String(bySlot.HEADING || content.heading || content.title || BULLET_LIST_CARDS_DEFAULTS.HEADING).trim(),
-    titles: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_TITLE`] || content[`card${n}Title`] || BULLET_LIST_CARDS_DEFAULTS[`CARD_${n}_TITLE`]).trim()),
-    bodies: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_BODY`] || content[`card${n}Body`] || BULLET_LIST_CARDS_DEFAULTS.BODY).trim()),
+    heading: String(bySlot.HEADING || content.heading || content.title || BULLET_LIST_GRID_DEFAULTS.HEADING).trim(),
+    titles: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_TITLE`] || content[`card${n}Title`] || BULLET_LIST_GRID_DEFAULTS[`CARD_${n}_TITLE`]).trim()),
+    bodies: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_BODY`] || content[`card${n}Body`] || BULLET_LIST_GRID_DEFAULTS.BODY).trim()),
     accent,
     textColor,
     mutedColor,
   })
 }
 
-function bulletListCardsPreviewSvg() {
-  const chrome = buildBulletListCardsChromeSvg()
+function bulletListGridPreviewSvg() {
+  const chrome = buildBulletListGridChromeSvg()
     .replace(/currentColor/g, '#6366F1')
     .replace(/^<svg[^>]*>/, '')
     .replace(/<\/svg>\s*$/, '')
   const titles = ['Point one', 'Point two', 'Point three', 'Point four']
-  const titleNodes = GEOM.cardXs.map((x, i) =>
-    `<text x="${x + 36}" y="330" fill="#0F172A" font-size="24" font-weight="800" font-family="system-ui, sans-serif">${titles[i]}</text>
-     <text x="${x + 36}" y="400" fill="#64748B" font-size="16" font-family="system-ui, sans-serif">A short, scannable point.</text>`
-  ).join('')
+  const nodes = GEOM.colXs.map((x, i) => {
+    const y = colTitleY(i) + 36
+    return `<text x="${x + 48}" y="${y}" fill="#0F172A" font-size="26" font-weight="800" font-family="system-ui, sans-serif">${titles[i]}</text>
+      <text x="${x + 48}" y="${y + 48}" fill="#64748B" font-size="16" font-family="system-ui, sans-serif">A short, scannable point.</text>`
+  }).join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
     ${chrome}
-    <text x="80" y="112" fill="#0F172A" font-size="40" font-weight="800" font-family="system-ui, sans-serif">Key points</text>
-    ${titleNodes}
+    <text x="80" y="78" fill="#0F172A" font-size="32" font-weight="800" font-family="system-ui, sans-serif">Key points</text>
+    ${nodes}
   </svg>`
 }
 
 module.exports = {
-  isBulletListCardsLayout,
-  layoutBulletListCards,
-  buildBulletListCardsCanvasElements,
-  buildBulletListCardsChromeSvg,
-  BULLET_LIST_CARDS_DEFAULTS,
+  isBulletListGridLayout,
+  layoutBulletListGrid,
+  buildBulletListGridCanvasElements,
+  buildBulletListGridChromeSvg,
+  BULLET_LIST_GRID_DEFAULTS,
 };
