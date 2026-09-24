@@ -45,7 +45,7 @@ const MODELS = Object.freeze([
   },
   {
     id: 'gemini-3-pro-image',
-    name: 'Gemini 3 Pro Image (Nano Banana Pro)',
+    name: 'Nano Banana Pro',
     description:
       'Google model with the best in-image text and diagrams. Strongest choice for infographic legibility.',
     provider: 'gemini',
@@ -59,7 +59,7 @@ const MODELS = Object.freeze([
   },
   {
     id: 'gemini-3.1-flash-image',
-    name: 'Gemini 3.1 Flash Image (Nano Banana 2)',
+    name: 'Nano Banana 2',
     description:
       'Balanced Google model — fast, good text rendering, strong with reference images.',
     provider: 'gemini',
@@ -73,7 +73,7 @@ const MODELS = Object.freeze([
   },
   {
     id: 'gemini-3.1-flash-lite-image',
-    name: 'Gemini 3.1 Flash Lite Image (Nano Banana 2 Lite)',
+    name: 'Nano Banana 2 Lite',
     description:
       'Fastest and cheapest Google model. Renders at 1K only, so best for drafts and high volume.',
     provider: 'gemini',

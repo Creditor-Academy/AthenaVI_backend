@@ -1,57 +1,20 @@
 const STYLES = Object.freeze([
-  {
-    id: 'cinematic',
-    name: 'Cinematic',
-    promptSuffix:
-      'Cinematic lighting, dramatic atmosphere, shallow depth of field, film still aesthetic.',
-  },
-  {
-    id: 'photoreal',
-    name: 'Photoreal',
-    promptSuffix: 'Photorealistic, natural lighting, high detail, DSLR photography look.',
-  },
-  {
-    id: 'flat_illustration',
-    name: 'Flat illustration',
-    promptSuffix:
-      'Flat vector illustration, clean shapes, limited palette, modern graphic style.',
-  },
-  {
-    id: '3d_render',
-    name: '3D render',
-    promptSuffix: 'Polished 3D render, soft studio lighting, subtle reflections.',
-  },
-  {
-    id: 'watercolor',
-    name: 'Watercolor',
-    promptSuffix: 'Watercolor painting, soft washes, paper texture, artistic brush strokes.',
-  },
-  {
-    id: 'corporate',
-    name: 'Corporate',
-    promptSuffix:
-      'Clean corporate visual, professional, polished, brand-safe, modern office aesthetic.',
-  },
-  {
-    id: 'playful',
-    name: 'Playful',
-    promptSuffix: 'Playful, colorful, friendly, energetic design with soft rounded shapes.',
-  },
-  {
-    id: 'dark_moody',
-    name: 'Dark / moody',
-    promptSuffix: 'Dark moody atmosphere, low-key lighting, rich contrast, dramatic tones.',
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    promptSuffix: 'Minimalist composition, generous negative space, restrained color palette.',
-  },
-  {
-    id: 'neon',
-    name: 'Neon',
-    promptSuffix: 'Neon accents, glowing edges, night-city vibe, high contrast.',
-  },
+  { id: 'scene', name: 'Scene', promptSuffix: 'Scenic, wide angle, immersive environment, detailed background.' },
+  { id: 'photo', name: 'Photo', promptSuffix: 'Realistic photography, 35mm lens, highly detailed, photoreal.' },
+  { id: 'still-life', name: 'Still life', promptSuffix: 'Still life photography, studio lighting, detailed macro.' },
+  { id: 'spot-color', name: 'Spot Color', promptSuffix: 'Black and white with a single vibrant spot color accent.' },
+  { id: 'illustration', name: 'Illustration', promptSuffix: 'Colorful digital illustration, playful design, clean lines.' },
+  { id: 'flat-line', name: 'Flat Line Art', promptSuffix: 'Minimalist flat line art, simple vector style, monochrome or limited palette.' },
+  { id: 'modern-art', name: 'Modern Art', promptSuffix: 'Abstract modern art, bold shapes, contemporary aesthetic.' },
+  { id: 'isometric', name: 'Isometric', promptSuffix: 'Isometric 3D perspective, clean shapes, playful and structured.' },
+  { id: 'gouache', name: 'Gouache Paint', promptSuffix: 'Gouache painting, rich opaque colors, painterly brush strokes.' },
+  { id: 'bold-poster', name: 'Bold Poster', promptSuffix: 'Bold poster design, striking contrast, graphic design aesthetic.' },
+  { id: 'watercolor', name: 'Watercolor', promptSuffix: 'Watercolor painting, soft washes, artistic.' },
+  { id: 'bauhaus', name: 'Bauhaus', promptSuffix: 'Bauhaus style, geometric shapes, primary colors, minimalist graphic design.' },
+  { id: '3d', name: '3D', promptSuffix: '3D render, soft studio lighting, playful 3D shapes, smooth materials.' },
+  { id: 'neon-glow', name: 'Neon Glow', promptSuffix: 'Neon lighting, glowing accents, synthwave style, dark background.' },
+  { id: 'cinematic', name: 'Cinematic', promptSuffix: 'Cinematic lighting, dramatic atmosphere, shallow depth of field, film still aesthetic.' },
+  { id: 'mesh', name: 'Mesh', promptSuffix: 'Abstract 3D mesh, flowing digital lines, futuristic tech aesthetic.' },
 ]);
 
 const STYLE_BY_ID = Object.freeze(
