@@ -57,7 +57,7 @@ Workspace → Folder → Image chat
 
 | Rule | Behavior |
 |------|----------|
-| Mode | `image` only. `infographic` / `social` → **400** |
+| Mode | `image` (Mode 1), `infographic` (Mode 2), `social` (Mode 3). Anything else → **400**. See [Part 13](#part-13--social-mode-mode-3) for social |
 | Auth | `Authorization: Bearer <accessToken>` on all routes |
 | Workspace access | `checkWorkspaceAccess` (PRIVATE = owner; TEAM = any member) |
 | Folder | `folderId` **required** on generate — chat lives in that folder |
@@ -95,8 +95,11 @@ Mounted at **`/api/image-gen`** from `src/app.js` (not under `/api/workspaces`).
 | `imageGenExport.service.js` | PNG / JPG / PDF download stream |
 | `imageGenFilename.js` | Display name from prompt / client `name` |
 | `socialCrop.service.js` | Sharp resize to format (name is legacy; used for all formats) |
-| `catalogs/models.js` | Model catalog + credit estimate |
-| `catalogs/formats.js` | square / landscape / portrait |
+| `catalogs/models.js` | Model catalog, provider groups, per-mode defaults, credit estimate |
+| `catalogs/formats.js` | square / landscape / portrait + seven social destinations (mode-scoped) |
+| `social.service.js` | SocialPostSpec build / patch / copy clamp / render prompt / edit routing |
+| `prompts/socialSpec.prompt.js` / `socialRender.prompt.js` / `socialChat.prompt.js` | Social spec LLM, image prompt (safe area + crop band), edit router |
+| `validations/socialSpec.validations.js` | Joi SocialPostSpec |
 | `catalogs/styles.js` | Vibe presets → prompt suffixes |
 | `prompts/imageStyle.prompt.js` | Prompt + style wrap |
 | `prompts/contextEnrichment.prompt.js` | Append context block + ref index hints |
@@ -182,14 +185,16 @@ Assets link back via `stockMetadata.generationId` (+ mode, model, format, action
 
 | `id` | Provider | Model under the hood | Default AC | Notes |
 |------|----------|----------------------|------------|--------|
-| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Default for `image`; recommended |
-| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `infographic` |
+| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `image`; recommended |
+| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Standard quality |
 | `dall-e-3` | openai | `gpt-image-1` (high) | **12** | Compat alias (DALL·E 3 retired) |
-| `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K |
+| `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K. Default for `infographic` and `social` |
 | `gemini-3.1-flash-image` | gemini | `gemini-3.1-flash-image` | **8** | Nano Banana 2; balanced; ≤4K |
 | `gemini-3.1-flash-lite-image` | gemini | `gemini-3.1-flash-lite-image` | **4** | Nano Banana 2 Lite; **1K only** |
 
-Each model lists `provider`, `maxImageSize` (Gemini only), `modes: ["image","infographic"]`, `supportsEdit: true`, `creditEstimate`.
+Each model lists `provider`, `quality`, `maxImageSize` (Gemini only), `modes: ["image","infographic","social"]`, `recommended`, `supportsEdit: true`, `creditEstimate`.
+
+The response also carries `providers` (OpenAI and Gemini, three `modelIds` each, high quality first, plus `defaultModelId`), `defaults` per mode (`image` → OpenAI `gpt-image-1-hd` with `recommendedProvider: "openai"`; `infographic` and `social` → Gemini `gemini-3-pro-image`), and `defaultProviderModel`. The frontend picker shows providers first, then the chosen provider's three models. Generate without `modelId` falls back to `defaultModelIdForMode(mode)`.
 
 **Provider routing.** `imageGen.service` never calls a vendor SDK directly; it calls
 `generateForModel` / `editForModel` in `shared/services/ai/imageProvider.service.js`, which
@@ -207,7 +212,7 @@ the parent generation's provider.
 | `landscape` | 1536×1024 | `1536x1024` |
 | `portrait` | 1024×1536 | `1024x1536` |
 
-Category is `generic` only. Formats include `composeRules` / `safeZone` used when wrapping prompts (full-bleed guidance).
+Generic formats (`category: "generic"`) accept modes `image` and `infographic`. The seven social destinations (`category: "social"`) accept only `social`; see Part 13. Formats include `composeRules` / `safeZone` used when wrapping prompts (full-bleed guidance).
 
 ### 5.3 Styles — `GET /api/image-gen/styles`
 
@@ -324,6 +329,8 @@ Also: `GET /api/image-gen/workspaces/:workspaceId/threads?folderId=`
 | `image_gen_gpt_image_hd` | 12 | `IMAGE_GEN_GPT_IMAGE_HD_AC` |
 | `image_gen_dall_e_3` | 12 | `IMAGE_GEN_DALL_E_3_AC` |
 | `image_gen_tweak` | same as model | (charged via tweak path; label “AI image tweak”) |
+| `image_gen_infographic` | selected model AC | `IMAGE_GEN_INFOGRAPHIC_AC` (label “AI infographic”) |
+| `image_gen_social` | selected model AC | `IMAGE_GEN_SOCIAL_AC` (label “AI social post”) |
 
 Context create = **0 AC**. Estimate: `GET .../estimate?modelId=&mode=image&tweak=`.
 
@@ -705,6 +712,50 @@ If step 2 fails text quality badly, escalate Option C earlier (or reduce to “i
 - [ ] Answer open decisions §11.7  
 - [ ] Approve phase plan §11.6  
 - [ ] Assign owner for P0 spike eval set  
+
+---
+
+## Part 13 — Social mode (Mode 3)
+
+**Flow:** the user picks Mode 3, picks one destination, types a free-text prompt (same as infographic, no structured headline/CTA fields), picks provider → model (default Gemini `gemini-3-pro-image`), and generates one asset at the exact destination size.
+
+### 13.1 Destinations (`catalogs/formats.js`)
+
+| `formatId` | Size | OpenAI render | Gemini render | Copy limits (headline / supporting / CTA) | Notes |
+|------------|------|---------------|---------------|-------------------------------------------|-------|
+| `youtube-thumbnail` | 1280×720 | 1536x1024 | 16:9 | 40 / 0 / 0 | Headline only; big face or subject; readable when small |
+| `instagram-post` | 1080×1350 | 1024x1536 | 4:5 | 60 / 110 / 24 | Feed crop keeps the center |
+| `facebook-post` | 940×788 | 1024x1024 | 5:4 | 60 / 100 / 24 | |
+| `facebook-cover` | 851×315 | 1536x1024 | 21:9 | 50 / 80 / 0 | Profile photo overlaps bottom-left |
+| `youtube-banner` | 2560×1440 | 1536x1024 | 16:9 | 40 / 60 / 0 | `safeArea` 1546×423 center box visible on all devices |
+| `twitter-post` | 1600×900 | 1536x1024 | 16:9 | 60 / 90 / 24 | |
+| `linkedin-banner` | 1584×396 | 1536x1024 | 21:9 | 50 / 80 / 0 | Profile photo overlaps bottom-left |
+
+Validation: `formatId` is required for `social` and must be a social id; social ids in other modes → 400. Output is cropped `cover` to exact pixels. The render prompt names the centered band that survives the crop (for example the middle 38% of the height for `linkedin-banner` on OpenAI), and states the `safeArea` box in percentages.
+
+### 13.2 Pipeline
+
+```
+moderate prompt
+  → spec LLM (IMAGE_GEN_SPEC_MODEL) → SocialPostSpec
+      { headline, supportingText?, cta?, visualSubject, composition?, visualStyle?, palette?, constraints }
+  → Joi validate (+1 corrective retry → 400 IMAGE_GEN_SOCIAL_SPEC_INVALID)
+  → clampCopy: truncate at a word to destination limits; drop fields with limit 0; warnings
+  → buildSocialRenderPrompt (exact copy, compose rules, safe zone/area, crop band, style, palette)
+  → generateForModel (OpenAI size / Gemini aspectRatio) → cover crop → Asset + generation + thread
+  → charge image_gen_social (= selected model AC, or IMAGE_GEN_SOCIAL_AC)
+```
+
+Stored: `request.socialSpec`, `request.warnings`, `request.renderPromptPreview`; `generation.socialSpec` and `generation.platform` in responses; `platform` in charge metadata, asset `stockMetadata`, and thread payloads.
+
+### 13.3 Thread lifecycle
+
+- A thread is sticky to `mode=social` **and** its `formatId`. Regenerate with a different `formatId` → 400 `IMAGE_GEN_SOCIAL_FORMAT_LOCKED`.
+- Regenerate: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` rebuilds the spec; otherwise the stored spec is re-rendered (for example after a model change).
+- Chat / tweak: `socialService.classifyEdit` routes copy/layout instructions to a **spec patch** (visual style and palette are preserved, then re-clamped) and pure visual instructions to a **pixel edit** (`request.pixelEdited: true`, spec kept). `editMode` overrides.
+- Pixel edits first pad the stored post to the provider canvas ratio (`padToAspect`: blurred extension, original centred), so the final `cover` crop lands exactly on the original area. The edit prompt repeats the existing copy and tells the model to keep it unchanged.
+
+Tests: `src/modules/imageGen/social.service.test.js` (catalog, validation, clamp, prompts, pricing) and `imageGen.social.flow.test.js` (generate / regenerate / chat through the real service with DB, S3, credits, and providers stubbed), both in `npm test`.
 
 ---
 

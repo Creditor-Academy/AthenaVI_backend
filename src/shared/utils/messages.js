@@ -350,7 +350,10 @@ module.exports = {
   IMAGE_GEN_FETCHED: 'Image generation fetched',
   IMAGE_GEN_LIST_FETCHED: 'Image generations fetched',
   IMAGE_GEN_SPEC_INVALID: 'Infographic specification was invalid after generation',
-  IMAGE_GEN_MODE_INVALID: 'Invalid mode. Supported modes: image, infographic',
+  IMAGE_GEN_MODE_INVALID: 'Invalid mode. Supported modes: image, infographic, social',
+  IMAGE_GEN_SOCIAL_SPEC_INVALID: 'Social post specification was invalid after generation',
+  IMAGE_GEN_SOCIAL_FORMAT_LOCKED:
+    'This chat is locked to one social destination. Start a new generate for another size.',
   IMAGE_GEN_MODE_MISMATCH: 'This chat is locked to a different generation mode',
   IMAGE_GEN_CONTEXT_CREATED: 'Image generation context created',
   IMAGE_GEN_CONTEXT_FETCHED: 'Image generation context fetched',

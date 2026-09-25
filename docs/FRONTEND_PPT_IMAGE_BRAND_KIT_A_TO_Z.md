@@ -5,7 +5,7 @@ This document is the **single source** for frontend engineers integrating three 
 
 1. **Brand Kit** — Canva-style workspace branding (colors, fonts, logos, photos, voice)
 2. **Presentations (AI PPT)** — create / outline / generate / canvas edit / export, including **deck packs** and Brand Kit apply
-3. **Image Gen** — AI image studio (general image) with regenerate / tweak / download
+3. **Image Gen** — AI image studio (general image, infographic, social post) with regenerate / tweak / download
 
 Everything needed for integration is **in this file**: auth, roles, envelopes, request/response shapes, flows, credits, caps, seeded catalogs, superadmin template CRUD, and UI checklists. Do not rely on other docs to ship these three features.
 
@@ -951,7 +951,7 @@ GET    .../export/:exportId
 
 # Part 3 — Image Gen (AI image studio)
 
-OpenAI-only workspace image studio for **general images**. Results save as workspace **Assets** (`source: "ai_gen"`) and are downloadable as PNG / JPG / JPEG / PDF. Infographic and social modes are not offered.
+Workspace image studio (OpenAI + Gemini) with three modes: **Mode 1 `image`** (general images), **Mode 2 `infographic`**, and **Mode 3 `social`** (seven social media destinations at exact pixel sizes). Results save as workspace **Assets** (`source: "ai_gen"`) and are downloadable as PNG / JPG / JPEG / PDF. Full contract: [`IMAGE_GEN_API.md`](api/IMAGE_GEN_API.md).
 
 ## 3.1 Base path & auth
 
@@ -962,37 +962,60 @@ OpenAI-only workspace image studio for **general images**. Results save as works
 - Bearer on all routes  
 - Workspace routes: workspace access (PRIVATE = owner; TEAM = any member)  
 - Credits charged **on success only**; downloads free  
-- Generate is **synchronous** — use a long client timeout (30–90s)  
+- Generate is **synchronous** — use a long client timeout (30–90s for `image`, **≥ 120s** for `infographic` and `social`)  
 
 ## 3.2 Mental model
 
 ```
-Workspace → Folder → Image chat
-  → model + format + style
-  → Generate (sync, folderId required) → saved chat + Asset
+Workspace → Folder → Image / Infographic / Social chat
+  → pick mode (1 image | 2 infographic | 3 social)
+      → Mode 3: pick one of seven destinations (formatId)
+  → pick provider (OpenAI | Gemini) → pick one of its 3 models
+  → format + style → Generate (sync, folderId required) → saved chat + Asset
   → Folder card: View | Download | Open chat
   → Chat send → latest hop (charges)
 ```
 
-Versions share `rootId` / `parentId` / `threadId`. `mode` is `image` only.
+Versions share `rootId` / `parentId` / `threadId`. A chat is sticky to its mode, and a social chat to its destination.
 
 ## 3.3 Catalogs (load once)
 
 ### Models — `GET /api/image-gen/models`
 
-`data.models[]`: `id`, `name`, `description`, `modes` (`["image"]`), `recommended`, `supportsEdit`, `creditEstimate`.
+`data.models[]`: `id`, `name`, `description`, `provider`, `quality`, `modes` (`["image","infographic","social"]`), `recommended`, `supportsEdit`, `maxImageSize`, `creditEstimate`.  
+`data.providers[]`: `{ id, name, defaultModelId, modelIds }` for `openai` and `gemini`, three models each.  
+`data.defaults[mode]`: `{ provider, modelId, recommendedProvider }`.
 
-| id | Notes |
-|----|--------|
-| `gpt-image-1` | Default (medium) |
-| `gpt-image-1-hd` | HD (higher AC) |
-| `dall-e-3` | Compat alias → GPT Image HD |
+**Picker:** show the two provider cards first. Clicking one lists its three models. Preselect `defaults[mode]`.
+
+| Mode | Default provider | Default model | Badge |
+|------|------------------|---------------|-------|
+| `image` | OpenAI | `gpt-image-1-hd` | **Recommended** on OpenAI |
+| `infographic` | Gemini | `gemini-3-pro-image` | none |
+| `social` | Gemini | `gemini-3-pro-image` | none |
+
+| Provider | Models (display order) |
+|----------|------------------------|
+| OpenAI | `gpt-image-1-hd` (HD), `gpt-image-1` (standard), `dall-e-3` (alias → HD) |
+| Gemini | `gemini-3-pro-image` (Pro), `gemini-3.1-flash-image` (Flash), `gemini-3.1-flash-lite-image` (Flash Lite, 1K only) |
 
 ### Formats — `GET /api/image-gen/formats`
 
-`data.formats[]`: `id`, `name`, `category` (`generic`), `width`, `height`, `safeZone`.
+`data.formats[]`: `id`, `name`, `category` (`generic` \| `social`), `platform`, `modes`, `width`, `height`, `aspectRatio`, `safeZone`, `safeArea`.
 
-**Generic:** `square`, `landscape`, `portrait`. Default when omitted: **`square`**.
+**Generic** (Modes 1 and 2): `square`, `landscape`, `portrait`. Default when omitted: `square` for `image`, `landscape` for `infographic`.
+
+**Social** (Mode 3 only, `formatId` required):
+
+| `formatId` | Size |
+|------------|------|
+| `youtube-thumbnail` | 1280×720 |
+| `instagram-post` | 1080×1350 (4:5) |
+| `facebook-post` | 940×788 |
+| `facebook-cover` | 851×315 |
+| `youtube-banner` | 2560×1440 |
+| `twitter-post` | 1600×900 |
+| `linkedin-banner` | 1584×396 |
 
 ### Styles — `GET /api/image-gen/styles`
 
@@ -1000,11 +1023,11 @@ Versions share `rootId` / `parentId` / `threadId`. `mode` is `image` only.
 
 ## 3.4 Credit estimate
 
-`GET /api/image-gen/workspaces/:workspaceId/estimate?modelId=&mode=image&tweak=`
+`GET /api/image-gen/workspaces/:workspaceId/estimate?modelId=&mode=&tweak=`
 
-`mode`: `image` only. `tweak`: `true` / `false`.
+`mode`: `image` \| `infographic` \| `social`. `tweak`: `true` / `false`.
 
-Response: `{ athenaCredits, breakdown }`.
+Response: `{ athenaCredits, breakdown }`. `breakdown.feature` is `image_gen_infographic` / `image_gen_social` in Modes 2 and 3.
 
 ### Default AC (do not hard-code; prefer estimate)
 
@@ -1013,8 +1036,12 @@ Response: `{ athenaCredits, breakdown }`.
 | `image_gen_gpt_image` | 6 |
 | `image_gen_gpt_image_hd` | 12 |
 | `image_gen_dall_e_3` | 12 (alias → HD quality) |
+| `image_gen_gemini_pro_image` | 12 |
+| `image_gen_gemini_flash_image` | 8 |
+| `image_gen_gemini_flash_lite_image` | 4 |
+| `image_gen_infographic` / `image_gen_social` | selected model's AC |
 
-Requires server `OPENAI_API_KEY`. Rate limits return **429**.
+Requires server `OPENAI_API_KEY`; Gemini models also need `GEMINI_API_KEY` (**503** without it). Rate limits return **429**.
 
 ## 3.4b Context bundles
 
@@ -1035,7 +1062,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 {
   "mode": "image",
   "folderId": "folder-uuid",
-  "modelId": "gpt-image-1",
+  "modelId": "gpt-image-1-hd",
   "formatId": "square",
   "style": "cinematic",
   "prompt": "Product launch visual for Athena VI",
@@ -1045,12 +1072,25 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 }
 ```
 
+Social post (Mode 3):
+
+```json
+{
+  "mode": "social",
+  "folderId": "folder-uuid",
+  "formatId": "instagram-post",
+  "prompt": "Launch post for our spring course, bold and friendly",
+  "modelId": "gemini-3-pro-image"
+}
+```
+
 | Field | Rules |
 |-------|--------|
-| `mode` | `image` only (default `image`) |
+| `mode` | `image` \| `infographic` \| `social` (default `image`) |
 | `folderId` | **Required.** Folder that owns the saved chat. |
-| `modelId` | Optional. Default `gpt-image-1`. |
-| `formatId` | Optional `square` / `landscape` / `portrait`. Default `square`. |
+| `modelId` | Optional. Default from `defaults[mode]` (`gpt-image-1-hd` for image, `gemini-3-pro-image` otherwise). |
+| `formatId` | Modes 1–2: optional `square` / `landscape` / `portrait`. Mode 3: **required**, one of the seven social ids. Wrong-mode ids → **400**. |
+| `styleHint` | Optional free-text look (infographic and social) |
 | `prompt` | **Required**. Max **16,000** chars. |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
@@ -1060,7 +1100,7 @@ Pass `contextId` on generate/regenerate. See [`IMAGE_GEN_API.md`](api/IMAGE_GEN_
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats, thread, actions }` — `actions` is `{ viewUrl, downloadPath, threadId }` for View / Download / Open chat.
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`.
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`, `infographicSpec`, or, in social mode, `socialSpec` (server-written `headline` / `supportingText` / `cta`) and `platform`. Copy trimmed to a destination's limits is noted in `generation.request.warnings`.
 
 ## 3.6 List / get generations
 
@@ -1069,29 +1109,31 @@ GET /api/image-gen/workspaces/:workspaceId/generations?take=&skip=
 GET /api/image-gen/workspaces/:workspaceId/generations/:generationId
 ```
 
-List is always `mode=image`. Get of a non-image row → **404**. PRIVATE workspaces only return the current user’s generations.
+Omit `mode` to list every studio mode, or pass `mode=image|infographic|social`. PRIVATE workspaces only return the current user’s generations.
 
 ## 3.7 Regenerate
 
 `POST .../generations/:generationId/regenerate` → **201**
 
-Body fields optional — omitted fields reuse parent request. Parent must be `mode=image` (**400** otherwise). Creates new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+Body fields optional — omitted fields reuse parent request. Mode stays the parent's (a different `mode` → **400**). Creates new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
+
+Social: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` rewrites the on-image copy; `modelId` alone re-renders the same copy. A different `formatId` → **400** (start a new generate for another destination).
 
 ## 3.8 Tweak
 
 `POST .../generations/:generationId/tweak` → **201**
 
 ```json
-{ "instruction": "Make the background darker and move the logo left" }
+{ "instruction": "Make the background darker and move the logo left", "editMode": "pixel" }
 ```
 
-Uses OpenAI image edit on the parent PNG. Parent must be `mode=image`. Charges model AC. `instruction` max **4,000** chars.
+Image mode: pixel edit of the parent PNG on the parent's provider. Infographic and social: copy/layout instructions patch the spec and re-render; visual-only instructions pixel-edit (`request.pixelEdited: true`). `editMode: "spec" | "pixel"` overrides. Social pixel edits keep the exact destination size and the existing copy. Charges model AC (mode AC in Modes 2–3). `instruction` max **4,000** chars.
 
 ## 3.9 Download
 
 `GET .../generations/:generationId/download?format=png|jpg|jpeg|pdf`
 
-Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.** Non-image rows → **404**.
+Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.** Rows outside the three studio modes → **404**.
 
 | format | Content-Type |
 |--------|----------------|
@@ -1117,9 +1159,13 @@ GET /api/assets/:workspaceId?source=ai_gen
 
 Optional `formatId` (`square`/`landscape`/`portrait`), `style`, required `prompt` → generate → preview / download.
 
+### A2 — Social post
+
+Mode 3 → pick a destination card (Generate stays disabled until one is picked) → free-text `prompt` (+ optional `styleHint`, `brandPalette`) → generate → exact-size asset. Another destination = a new generate and a new chat.
+
 ### B — Iterate
 
-Regenerate (edited params) or Tweak (`instruction` modal). Parent must be image.
+Regenerate (edited params) or Tweak (`instruction` modal). Mode (and, for social, destination) stays the parent's.
 
 ### C — Brand Kit optional polish
 
@@ -1127,9 +1173,10 @@ When user has a default Brand Kit, prefill `brandPalette` from kit colors and su
 
 ## 3.12 Image Gen UI checklist
 
-- [ ] Load `/models`, `/formats`, `/styles` once
-- [ ] Model picker (default `gpt-image-1`)
-- [ ] Formats: square / landscape / portrait
+- [ ] Load `/models`, `/formats`, `/styles`, `/archetypes` once
+- [ ] Mode toggle: image / infographic / social
+- [ ] Provider → model picker from `providers` + `defaults[mode]` (OpenAI Recommended in Mode 1; Gemini Pro in Modes 2–3)
+- [ ] Formats: square / landscape / portrait (Modes 1–2); seven destination cards (Mode 3, required)
 - [ ] Estimate on model change
 - [ ] Generate with required prompt, long timeout + loading state
 - [ ] Preview; Regenerate; Tweak modal; Download menu
@@ -1144,6 +1191,7 @@ When user has a default Brand Kit, prefill `brandPalette` from kit colors and su
 GET  /api/image-gen/models
 GET  /api/image-gen/formats
 GET  /api/image-gen/styles
+GET  /api/image-gen/archetypes
 GET  /api/image-gen/workspaces/:workspaceId/estimate
 POST /api/image-gen/workspaces/:workspaceId/generate
 GET  /api/image-gen/workspaces/:workspaceId/threads

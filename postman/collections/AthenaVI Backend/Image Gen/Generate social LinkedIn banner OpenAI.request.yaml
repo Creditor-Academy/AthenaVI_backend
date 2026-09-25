@@ -5,12 +5,12 @@ body:
   type: json
   data: |-
     {
-      "mode": "infographic",
+      "mode": "social",
       "folderId": "{{folderId}}",
-      "formatId": "landscape",
-      "archetypeHint": "process",
+      "formatId": "linkedin-banner",
+      "modelId": "gpt-image-1-hd",
       "styleHint": "minimal, clean corporate",
-      "prompt": "Explain a 4-step customer onboarding funnel: Sign up, Verify email, Complete profile, First project. Use placeholder metrics if needed."
+      "prompt": "LinkedIn profile banner for an instructional designer who builds AI-powered training videos"
     }
 scripts:
   - type: afterResponse
@@ -30,4 +30,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3065
+order: 3120

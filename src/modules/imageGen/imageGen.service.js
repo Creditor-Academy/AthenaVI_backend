@@ -12,10 +12,19 @@ const threadDao = require('./imageGen.thread.dao');
 const messageDao = require('./imageGen.message.dao');
 const rateLimit = require('./imageGenRateLimit.service');
 const contextService = require('./imageGen.context.service');
-const { listModels, resolveModel, estimateCredits, defaultModelIdForMode } = require('./catalogs/models');
+const {
+  listModels,
+  modelCatalog,
+  resolveModel,
+  estimateCredits,
+  defaultModelIdForMode,
+  modeAc,
+} = require('./catalogs/models');
 const {
   listFormats,
   resolveFormat,
+  isFormatForMode,
+  defaultFormatIdForMode,
   openaiSizeForFormat,
   geminiImageConfigForFormat,
 } = require('./catalogs/formats');
@@ -23,21 +32,31 @@ const { listStyles, resolveStyle } = require('./catalogs/styles');
 const { listArchetypes } = require('./catalogs/archetypes');
 const { buildImagePrompt } = require('./prompts/imageStyle.prompt');
 const { buildChatEditInstruction } = require('./prompts/chatEdit.prompt');
-const { cropToFormat } = require('./socialCrop.service');
+const { cropToFormat, padToAspect } = require('./socialCrop.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
 const { resolveAssetFilename } = require('./imageGenFilename');
-const {
-  IMAGE_GEN_FEATURE,
-  getInfographicAc,
-} = require('../../shared/config/imageGenCreditPricing');
+const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
 const infographicService = require('./infographic.service');
+const socialService = require('./social.service');
 
-const STUDIO_MODES = Object.freeze(['image', 'infographic']);
+const STUDIO_MODES = Object.freeze(['image', 'infographic', 'social']);
+
+/** Spec-first modes route chat edits through a spec patch or a pixel edit. */
+const SPEC_MODES = Object.freeze(['infographic', 'social']);
+
+function normalizeMode(value) {
+  return STUDIO_MODES.includes(value) ? value : 'image';
+}
+
+function platformFor(formatId) {
+  return resolveFormat(formatId)?.platform || null;
+}
 
 function serializeGeneration(row) {
   if (!row) return row;
   const request = row.request && typeof row.request === 'object' ? row.request : {};
   const infographicSpec = request.infographicSpec || null;
+  const socialSpec = request.socialSpec || null;
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -58,6 +77,8 @@ function serializeGeneration(row) {
     contextPreview: request.contextPreview || null,
     infographicSpec,
     archetype: infographicSpec?.archetype || request.archetypeHint || null,
+    socialSpec,
+    platform: platformFor(row.formatId),
     s3Key: row.s3Key,
     url: row.url,
     openaiSize: row.openaiSize,
@@ -81,6 +102,8 @@ function serializeHead(generation) {
     action: generation.action,
     mode: generation.mode || null,
     archetype: request.infographicSpec?.archetype || request.archetypeHint || null,
+    formatId: generation.formatId || null,
+    platform: platformFor(generation.formatId),
     createdAt: generation.createdAt,
     asset: generation.asset || null,
   };
@@ -123,6 +146,7 @@ function serializeThread(row, { includeMessages = false } = {}) {
     title: row.title,
     mode,
     archetype,
+    platform: platformFor(row.formatId),
     rootGenerationId: row.rootGenerationId,
     headGenerationId: row.headGenerationId,
     contextId: row.contextId || null,
@@ -181,15 +205,22 @@ async function assertFolderInWorkspace(folderId, workspaceId) {
   return folder;
 }
 
-function resolveRequestFormat(formatId) {
-  if (formatId) {
-    const format = resolveFormat(formatId);
-    if (!format) {
-      throw new AppError('Invalid formatId', 400);
-    }
-    return format;
+/**
+ * Resolve the canvas for a mode. Social has no default: a destination is required.
+ */
+function resolveRequestFormat(formatId, mode = 'image') {
+  const id = formatId || defaultFormatIdForMode(mode);
+  if (!id) {
+    throw new AppError('formatId is required for social mode', 400);
   }
-  return resolveFormat('square');
+  const format = resolveFormat(id);
+  if (!format) {
+    throw new AppError('Invalid formatId', 400);
+  }
+  if (!isFormatForMode(format, mode)) {
+    throw new AppError(`formatId "${format.id}" is not available in ${mode} mode`, 400);
+  }
+  return format;
 }
 
 /**
@@ -389,9 +420,11 @@ async function runPipeline({
   threadId = null,
   infographicSpec: providedSpec = null,
   infographicWarnings: providedWarnings = null,
+  socialSpec: providedSocialSpec = null,
+  socialWarnings: providedSocialWarnings = null,
   skipSpecBuild = false,
 }) {
-  const mode = modeInput === 'infographic' ? 'infographic' : 'image';
+  const mode = normalizeMode(modeInput);
   if (!prompt || !String(prompt).trim()) {
     throw new AppError('prompt is required', 400);
   }
@@ -406,10 +439,7 @@ async function runPipeline({
     throw new AppError('Invalid style', 400);
   }
 
-  const format =
-    mode === 'infographic'
-      ? resolveRequestFormat(formatId || 'landscape')
-      : resolveRequestFormat(formatId || null);
+  const format = resolveRequestFormat(formatId, mode);
   const pricing = estimateCredits({ modelId: model.id, mode, isTweak: false });
 
   await rateLimitFn(userId, workspace.id);
@@ -427,12 +457,36 @@ async function runPipeline({
   const referenceBuffers = contextResult.referenceImageBuffers || [];
   const useRefs = referenceBuffers.length > 0;
 
+  const sizing = providerSizingFor(model, format);
+
   let enrichedPrompt;
   let infographicSpec = providedSpec || null;
   let infographicWarnings = Array.isArray(providedWarnings) ? [...providedWarnings] : [];
+  let socialSpec = providedSocialSpec || null;
+  let socialWarnings = Array.isArray(providedSocialWarnings) ? [...providedSocialWarnings] : [];
   let renderPromptPreview = null;
 
-  if (mode === 'infographic') {
+  if (mode === 'social') {
+    if (!skipSpecBuild || !socialSpec) {
+      const built = await socialService.buildSpec({
+        prompt: String(prompt).trim(),
+        contextText: contextResult.enrichmentBlock || '',
+        styleHint: infographicService.mergeStyleHint({ styleHint, style: styleId, styleId }),
+        brandPalette,
+        format,
+      });
+      socialSpec = built.spec;
+      socialWarnings = [...socialWarnings, ...(built.warnings || [])];
+    }
+
+    enrichedPrompt = socialService.buildRenderPrompt({
+      spec: socialSpec,
+      format,
+      sizing,
+      hasReferences: useRefs,
+    });
+    renderPromptPreview = String(enrichedPrompt).slice(0, 500);
+  } else if (mode === 'infographic') {
     if (!skipSpecBuild || !infographicSpec) {
       const built = await infographicService.buildSpec({
         prompt: String(prompt).trim(),
@@ -473,7 +527,7 @@ async function runPipeline({
     );
   }
 
-  const { size: requestedSize, aspectRatio } = providerSizingFor(model, format);
+  const { size: requestedSize, aspectRatio } = sizing;
   const generated = await generateForModel({
     model,
     prompt: enrichedPrompt,
@@ -496,10 +550,8 @@ async function runPipeline({
 
   const resolvedRootId = rootId || parentId || generationId;
   const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
-  const chargeFeature =
-    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : model.feature;
-  const chargeAmount =
-    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
+  const chargeFeature = pricing.breakdown.feature || model.feature;
+  const chargeAmount = pricing.athenaCredits;
 
   // CHARGE UPFRONT to prevent race condition exploit
   const charge = await imageGenCredit.chargeFlat({
@@ -517,6 +569,7 @@ async function runPipeline({
       contextId: liveContextId,
       threadId: threadId || null,
       archetype: infographicSpec?.archetype || null,
+      platform: format.platform || null,
     },
   });
 
@@ -540,6 +593,7 @@ async function runPipeline({
       contextId: contextResult.contextId || null,
       threadId: threadId || null,
       archetype: infographicSpec?.archetype || null,
+      platform: format.platform || null,
     },
   });
 
@@ -560,6 +614,13 @@ async function runPipeline({
       ? {
           infographicSpec,
           warnings: infographicWarnings,
+          renderPromptPreview,
+        }
+      : {}),
+    ...(mode === 'social'
+      ? {
+          socialSpec,
+          warnings: socialWarnings,
           renderPromptPreview,
         }
       : {}),
@@ -615,15 +676,13 @@ async function runTweakOnParent({
     throw new AppError('instruction is required', 400);
   }
 
-  const mode = parent.mode === 'infographic' ? 'infographic' : 'image';
-  const model =
-    resolveModel(parent.modelId) ||
-    resolveModel(mode === 'infographic' ? 'gpt-image-1-hd' : 'gpt-image-1');
+  const mode = normalizeMode(parent.mode);
+  const model = resolveModel(parent.modelId) || resolveModel(defaultModelIdForMode(mode));
   const format = parent.formatId
     ? resolveFormat(parent.formatId)
-    : resolveRequestFormat(mode === 'infographic' ? 'landscape' : null);
+    : resolveRequestFormat(null, mode);
   const pricing = estimateCredits({
-    modelId: model.supportsEdit ? model.id : model.id,
+    modelId: model.id,
     mode,
     isTweak: true,
   });
@@ -631,9 +690,17 @@ async function runTweakOnParent({
   await rateLimit.assertRegenerateAllowed(userId, workspace.id);
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
-  const sourceBuffer = await getObjectBuffer(parent.s3Key);
-  const { size: openaiSize, aspectRatio } = providerSizingFor(model, format);
-  const editInstruction = String(editPrompt || instruction).trim();
+  const sizing = providerSizingFor(model, format);
+  const { size: openaiSize, aspectRatio } = sizing;
+  let sourceBuffer = await getObjectBuffer(parent.s3Key);
+  let editInstruction = String(editPrompt || instruction).trim();
+  if (mode === 'social') {
+    sourceBuffer = await padToAspect(sourceBuffer, socialService.providerAspectFor(sizing));
+    editInstruction = socialService.buildPixelEditInstruction({
+      instruction: editInstruction,
+      spec: parent.request?.socialSpec || null,
+    });
+  }
   const edited = await editForModel({
     model,
     imageBuffer: sourceBuffer,
@@ -668,14 +735,13 @@ async function runTweakOnParent({
       action: 'tweak',
       parentId: parent.id,
       threadId: threadId || parent.threadId || null,
+      platform: format?.platform || null,
     },
   });
 
   const prev = parent.request || {};
-  const chargeFeature =
-    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : IMAGE_GEN_FEATURE.TWEAK;
-  const chargeAmount =
-    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
+  const chargeFeature = pricing.breakdown.feature || IMAGE_GEN_FEATURE.TWEAK;
+  const chargeAmount = modeAc(mode, model.id);
 
   const requestPayload = {
     mode,
@@ -692,6 +758,14 @@ async function runTweakOnParent({
     ...(mode === 'infographic'
       ? {
           infographicSpec: prev.infographicSpec || null,
+          pixelEdited: true,
+          warnings: prev.warnings || [],
+        }
+      : {}),
+    ...(mode === 'social'
+      ? {
+          socialSpec: prev.socialSpec || null,
+          styleHint: prev.styleHint || null,
           pixelEdited: true,
           warnings: prev.warnings || [],
         }
@@ -737,7 +811,7 @@ async function runTweakOnParent({
       modelId: model.id,
       mode,
       threadId: threadId || parent.threadId || null,
-      pixelEdited: mode === 'infographic',
+      pixelEdited: SPEC_MODES.includes(mode),
     },
   });
 
@@ -759,10 +833,10 @@ async function runTweakOnParent({
 }
 
 async function generate({ userId, workspace, body }) {
-  const mode = body.mode === 'infographic' ? 'infographic' : 'image';
-  if (!STUDIO_MODES.includes(mode)) {
+  if (body.mode && !STUDIO_MODES.includes(body.mode)) {
     throw new AppError(messages.IMAGE_GEN_MODE_INVALID, 400);
   }
+  const mode = normalizeMode(body.mode);
   await assertFolderInWorkspace(body.folderId, workspace.id);
 
   const styleHint = infographicService.mergeStyleHint({
@@ -776,9 +850,7 @@ async function generate({ userId, workspace, body }) {
     workspace,
     mode,
     modelId: defaultModelIdForMode(mode, body.modelId),
-    formatId:
-      body.formatId ||
-      (mode === 'infographic' ? 'landscape' : undefined),
+    formatId: body.formatId || null,
     styleId: body.style || body.styleId,
     styleHint,
     archetypeHint: body.archetypeHint || null,
@@ -818,21 +890,44 @@ function shouldRebuildInfographicSpec(body = {}, prev = {}) {
   return false;
 }
 
+function sameColors(a, b) {
+  const left = Array.isArray(a) ? a : [];
+  const right = Array.isArray(b) ? b : [];
+  return left.length === right.length && left.every((c, i) => c === right[i]);
+}
+
+/** Copy/look inputs rebuild the social spec; model-only changes re-render it. */
+function shouldRebuildSocialSpec(body = {}, prev = {}) {
+  if (body.prompt !== undefined && body.prompt !== prev.prompt) return true;
+  if (body.styleHint !== undefined && body.styleHint !== prev.styleHint) return true;
+  if (body.style !== undefined || body.styleId !== undefined) {
+    const nextStyle = body.style || body.styleId;
+    if (nextStyle !== prev.styleId) return true;
+  }
+  if (body.brandPalette !== undefined && !sameColors(body.brandPalette, prev.brandPalette)) {
+    return true;
+  }
+  if (body.contextId !== undefined && body.contextId !== prev.contextId) return true;
+  return false;
+}
+
 async function regenerate({ userId, workspace, generationId, body = {} }) {
   const parent = requireStudioGeneration(
     await imageGenDao.findById(generationId, workspace.id)
   );
 
   const prev = parent.request || {};
-  const mode =
-    body.mode === 'infographic' || body.mode === 'image'
-      ? body.mode
-      : parent.mode === 'infographic'
-        ? 'infographic'
-        : 'image';
+  const mode = normalizeMode(parent.mode);
 
   if (body.mode && body.mode !== parent.mode) {
     throw new AppError(messages.IMAGE_GEN_MODE_MISMATCH, 400);
+  }
+  if (
+    mode === 'social' &&
+    body.formatId &&
+    body.formatId !== (parent.formatId || prev.formatId)
+  ) {
+    throw new AppError(messages.IMAGE_GEN_SOCIAL_FORMAT_LOCKED, 400);
   }
 
   const inheritedContextId =
@@ -853,6 +948,8 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
   const rebuildSpec =
     mode === 'infographic' &&
     (shouldRebuildInfographicSpec(body, prev) || !prev.infographicSpec);
+  const rebuildSocialSpec =
+    mode === 'social' && (shouldRebuildSocialSpec(body, prev) || !prev.socialSpec);
 
   const result = await runPipeline({
     userId,
@@ -864,9 +961,9 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
       prev.modelId ||
       defaultModelIdForMode(mode),
     formatId:
-      body.formatId !== undefined
+      body.formatId !== undefined && body.formatId !== null && body.formatId !== ''
         ? body.formatId
-        : parent.formatId || prev.formatId || (mode === 'infographic' ? 'landscape' : null),
+        : parent.formatId || prev.formatId || null,
     styleId:
       body.style !== undefined || body.styleId !== undefined
         ? body.style || body.styleId
@@ -888,8 +985,12 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
     parentSnapshot: prev.contextSnapshot || null,
     threadId: thread.id,
     infographicSpec: rebuildSpec ? null : prev.infographicSpec || null,
-    infographicWarnings: prev.warnings || null,
-    skipSpecBuild: mode === 'infographic' && !rebuildSpec && Boolean(prev.infographicSpec),
+    infographicWarnings: mode === 'infographic' ? prev.warnings || null : null,
+    socialSpec: rebuildSocialSpec ? null : prev.socialSpec || null,
+    socialWarnings: mode === 'social' && !rebuildSocialSpec ? prev.warnings || null : null,
+    skipSpecBuild:
+      (mode === 'infographic' && !rebuildSpec && Boolean(prev.infographicSpec)) ||
+      (mode === 'social' && !rebuildSocialSpec && Boolean(prev.socialSpec)),
   });
 
   await attachHopMessages({
@@ -952,34 +1053,90 @@ async function runInfographicSpecEdit({
   });
 }
 
+async function runSocialSpecEdit({
+  userId,
+  workspace,
+  parent,
+  instruction,
+  threadId,
+}) {
+  const prev = parent.request || {};
+  const existingSpec = prev.socialSpec;
+  if (!existingSpec) {
+    throw new AppError(messages.IMAGE_GEN_SOCIAL_SPEC_INVALID, 400);
+  }
+
+  const format = resolveRequestFormat(parent.formatId || prev.formatId, 'social');
+
+  const patched = await socialService.patchSpec({
+    spec: existingSpec,
+    instruction,
+    format,
+  });
+
+  return runPipeline({
+    userId,
+    workspace,
+    mode: 'social',
+    modelId: parent.modelId || defaultModelIdForMode('social'),
+    formatId: format.id,
+    styleId: parent.styleId || prev.styleId,
+    styleHint: prev.styleHint || null,
+    prompt: parent.prompt,
+    brandPalette: prev.brandPalette,
+    name: prev.name,
+    action: 'tweak',
+    parentId: parent.id,
+    rootId: parent.rootId || parent.id,
+    rateLimitFn: rateLimit.assertRegenerateAllowed,
+    contextId: parent.contextId || prev.contextId || null,
+    parentSnapshot: prev.contextSnapshot || null,
+    threadId,
+    socialSpec: patched.spec,
+    socialWarnings: patched.warnings,
+    skipSpecBuild: true,
+  });
+}
+
+/**
+ * Spec-first modes (infographic, social): patch the spec and re-render, or pixel-edit.
+ * Returns null for image mode so callers keep their own edit composition.
+ */
+async function runSpecModeEdit({ userId, workspace, parent, instruction, editMode, threadId }) {
+  if (!SPEC_MODES.includes(parent.mode)) return null;
+
+  const specService = parent.mode === 'social' ? socialService : infographicService;
+  const route = await specService.classifyEdit({ instruction, editMode });
+  if (route === 'spec') {
+    const runSpecEdit =
+      parent.mode === 'social' ? runSocialSpecEdit : runInfographicSpecEdit;
+    return runSpecEdit({ userId, workspace, parent, instruction, threadId });
+  }
+  return runTweakOnParent({
+    userId,
+    workspace,
+    parent,
+    instruction,
+    editPrompt: instruction,
+    threadId,
+  });
+}
+
 async function tweak({ userId, workspace, generationId, instruction, editMode = null }) {
   const parent = requireStudioGeneration(
     await imageGenDao.findById(generationId, workspace.id)
   );
   const thread = await ensureThreadForParent({ parent, workspace, userId });
 
-  let result;
-  if (parent.mode === 'infographic') {
-    const route = await infographicService.classifyEdit({ instruction, editMode });
-    if (route === 'spec') {
-      result = await runInfographicSpecEdit({
-        userId,
-        workspace,
-        parent,
-        instruction,
-        threadId: thread.id,
-      });
-    } else {
-      result = await runTweakOnParent({
-        userId,
-        workspace,
-        parent,
-        instruction,
-        editPrompt: instruction,
-        threadId: thread.id,
-      });
-    }
-  } else {
+  let result = await runSpecModeEdit({
+    userId,
+    workspace,
+    parent,
+    instruction,
+    editMode,
+    threadId: thread.id,
+  });
+  if (!result) {
     result = await runTweakOnParent({
       userId,
       workspace,
@@ -1034,31 +1191,15 @@ async function sendThreadMessage({
   }
 
   // Sticky thread mode: stay on the parent's mode
-  let result;
-  if (parent.mode === 'infographic') {
-    const route = await infographicService.classifyEdit({
-      instruction: String(content).trim(),
-      editMode,
-    });
-    if (route === 'spec') {
-      result = await runInfographicSpecEdit({
-        userId,
-        workspace,
-        parent,
-        instruction: String(content).trim(),
-        threadId: thread.id,
-      });
-    } else {
-      result = await runTweakOnParent({
-        userId,
-        workspace,
-        parent,
-        instruction: String(content).trim(),
-        editPrompt: String(content).trim(),
-        threadId: thread.id,
-      });
-    }
-  } else {
+  let result = await runSpecModeEdit({
+    userId,
+    workspace,
+    parent,
+    instruction: String(content).trim(),
+    editMode,
+    threadId: thread.id,
+  });
+  if (!result) {
     const priorRows = await messageDao.listUserMessages(thread.id, { take: 12 });
     const priorUserTurns = [...priorRows].reverse().map((row) => row.content);
     let editPrompt = buildChatEditInstruction({
@@ -1152,8 +1293,7 @@ async function getGeneration({ workspace, generationId }) {
 }
 
 async function listGenerations({ userId, workspace, query = {} }) {
-  const modeFilter =
-    query.mode === 'image' || query.mode === 'infographic' ? query.mode : undefined;
+  const modeFilter = STUDIO_MODES.includes(query.mode) ? query.mode : undefined;
   const rows = await imageGenDao.listGenerations({
     workspaceId: workspace.id,
     userId,
@@ -1163,7 +1303,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
     mode: modeFilter,
     threadId: query.threadId,
   });
-  // When mode omitted, return both studio modes (filter out any legacy unknown modes)
+  // When mode omitted, return every studio mode (filter out any legacy unknown modes)
   const filtered = modeFilter
     ? rows
     : rows.filter((row) => STUDIO_MODES.includes(row.mode));
@@ -1171,10 +1311,10 @@ async function listGenerations({ userId, workspace, query = {} }) {
 }
 
 function creditEstimate({ modelId, mode, tweak }) {
-  const resolvedMode = mode === 'infographic' ? 'infographic' : 'image';
   if (mode && !STUDIO_MODES.includes(mode)) {
     throw new AppError(messages.IMAGE_GEN_MODE_INVALID, 400);
   }
+  const resolvedMode = normalizeMode(mode);
   return estimateCredits({
     modelId,
     mode: resolvedMode,
@@ -1217,6 +1357,7 @@ async function getSharedGeneration(token) {
 }
 module.exports = {
   listModels,
+  modelCatalog,
   listFormats,
   listStyles,
   listArchetypes,

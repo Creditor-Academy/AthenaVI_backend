@@ -1,17 +1,26 @@
 $kind: collection
 description: |-
-  AI Image Gen (OpenAI): models/formats/styles/archetypes catalogs, context bundles,
-  generate into a folder chat (`mode: image` or `infographic`), thread messages
+  AI Image Gen (OpenAI + Gemini): models/formats/styles/archetypes catalogs, context bundles,
+  generate into a folder chat (`mode: image`, `infographic`, or `social`), thread messages
   (spec-patch or pixel tweak), regenerate, download (png/jpg/pdf).
 
-  Requires `OPENAI_API_KEY` and `folderId` on generate. Charges workspace credits on
-  success (context create, open chat, and downloads are free).
+  Requires `OPENAI_API_KEY` (plus `GEMINI_API_KEY` for Gemini models) and `folderId` on generate.
+  Charges workspace credits on success (context create, open chat, and downloads are free).
 
-  Modes: `image` (default format square) and `infographic` (default format landscape,
-  default model gpt-image-1-hd, spec-first pipeline). Formats: square, landscape, portrait.
+  Modes:
+  - `image`: default format square, default model gpt-image-1-hd (OpenAI, Recommended).
+  - `infographic`: default format landscape, default model gemini-3-pro-image, spec-first pipeline.
+  - `social`: `formatId` required (youtube-thumbnail, instagram-post, facebook-post, facebook-cover,
+    youtube-banner, twitter-post, linkedin-banner), default model gemini-3-pro-image, exact-size output.
+  `GET /models` returns `providers` (OpenAI, Gemini; 3 models each) and per-mode `defaults`.
+
+  Social walkthrough: run any "Generate social …" request (one per destination), then
+  "Send thread message social copy edit" (spec patch, same destination),
+  "Send thread message social visual edit" / "Tweak social pixel" (pixel edit, exact size kept),
+  and "Regenerate social model only" (re-renders the stored copy; changing `formatId` returns 400).
 
   After generate/create-context, test scripts save `generationId` / `imageGenThreadId` / `imageGenContextId`.
-  Allow ~120s client timeout for infographic generate (spec LLM + image).
+  Allow ~120s client timeout for infographic and social generate (spec LLM + image).
 auth:
   - id: image-gen-bearer-auth
     type: bearer

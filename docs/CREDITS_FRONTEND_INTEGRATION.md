@@ -110,11 +110,13 @@ flowchart TB
 | Brand kit logo variants (apply) | `brand_kit_logo_variants` | `POST .../brand-kits/:id/suggest/logo-variants` with `applyRoles` | Workspace-scoped* |
 | Brand kit logo mockup | `brand_kit_logo_mockup` | `POST .../brand-kits/:id/mockups/generate` | Workspace-scoped* (first 2 per kit free) |
 | Brand guideline deck | `brand_kit_guideline_generate` | `POST .../brand-kits/:id/guidelines/generate` | Workspace-scoped* |
-| AI image (studio) | `image_gen_gpt_image` / `image_gen_gpt_image_hd` | `POST /api/image-gen/workspaces/:workspaceId/generate` | Workspace-scoped* |
+| AI image (studio) | `image_gen_gpt_image` / `image_gen_gpt_image_hd` / `image_gen_dall_e_3` / `image_gen_gemini_*` | `POST /api/image-gen/workspaces/:workspaceId/generate` (`mode: image`) | Workspace-scoped* |
+| AI infographic | `image_gen_infographic` | same route, `mode: infographic` | Workspace-scoped* |
+| AI social post | `image_gen_social` | same route, `mode: social` | Workspace-scoped* |
 
 \*Workspace-scoped = personal pool if `PRIVATE`, workspace pool if `TEAM`.
 
-**Image Gen:** default generate (`gpt-image-1` + `square`) is **6 AC**. HD is **12 AC**. User-started Tweak / Regenerate still bill. Always call `GET .../image-gen/.../estimate`.
+**Image Gen:** the Mode 1 default (`gpt-image-1-hd` + `square`) is **12 AC**. Standard `gpt-image-1` is **6 AC**. Gemini is 12 / 8 / 4 AC (Pro / Flash / Flash Lite). Infographic and social posts charge the selected model's AC (default `gemini-3-pro-image`, **12 AC**) unless the server sets `IMAGE_GEN_INFOGRAPHIC_AC` / `IMAGE_GEN_SOCIAL_AC`. User-started Tweak / Regenerate still bill. Always call `GET .../image-gen/.../estimate?mode=&modelId=`. Credit history labels: “AI infographic”, “AI social post”.
 
 **Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge. Logo mockups: first **2 successful** generates per brand kit are free.
 

@@ -5,12 +5,12 @@ body:
   type: json
   data: |-
     {
-      "mode": "infographic",
+      "mode": "social",
       "folderId": "{{folderId}}",
-      "formatId": "landscape",
-      "archetypeHint": "process",
-      "styleHint": "minimal, clean corporate",
-      "prompt": "Explain a 4-step customer onboarding funnel: Sign up, Verify email, Complete profile, First project. Use placeholder metrics if needed."
+      "formatId": "instagram-post",
+      "modelId": "gemini-3-pro-image",
+      "brandPalette": ["#0B1F3A", "#3DDC97"],
+      "prompt": "Announce our spring cohort for the AI video course, starting April 12, with early-bird pricing"
     }
 scripts:
   - type: afterResponse
@@ -30,4 +30,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3065
+order: 3110

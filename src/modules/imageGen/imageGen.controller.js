@@ -4,8 +4,8 @@ const messages = require('../../shared/utils/messages');
 const imageGenService = require('./imageGen.service');
 
 const listModels = asyncHandler(async (req, res) => {
-  const models = imageGenService.listModels();
-  return successResponse(req, res, { models }, 200, messages.IMAGE_GEN_MODELS_FETCHED);
+  const catalog = imageGenService.modelCatalog();
+  return successResponse(req, res, catalog, 200, messages.IMAGE_GEN_MODELS_FETCHED);
 });
 
 const listFormats = asyncHandler(async (req, res) => {
