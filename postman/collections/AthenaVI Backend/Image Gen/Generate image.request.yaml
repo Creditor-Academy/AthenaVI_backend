@@ -7,7 +7,7 @@ body:
     {
       "mode": "image",
       "folderId": "{{folderId}}",
-      "modelId": "gpt-image-1",
+      "modelId": "gpt-image-1-hd",
       "formatId": "square",
       "style": "cinematic",
       "prompt": "A serene mountain lake at dawn with mist over the water"

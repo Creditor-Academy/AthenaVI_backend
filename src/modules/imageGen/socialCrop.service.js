@@ -61,6 +61,44 @@ async function cropToFormat(buffer, format, options = {}) {
 }
 
 /**
+ * Centre the image on a canvas of the given width/height ratio, filling the margin
+ * with a blurred stretch of itself. A later centred `cover` crop back to the source
+ * ratio recovers exactly the original area.
+ *
+ * @param {Buffer} buffer
+ * @param {number|null} aspect
+ * @returns {Promise<Buffer>}
+ */
+async function padToAspect(buffer, aspect) {
+  const meta = await sharp(buffer).metadata();
+  const width = meta.width;
+  const height = meta.height;
+  if (!aspect || !width || !height) return buffer;
+
+  const source = width / height;
+  if (Math.abs(source - aspect) / aspect <= 0.01) return buffer;
+
+  const canvasW = source > aspect ? width : Math.round(height * aspect);
+  const canvasH = source > aspect ? Math.round(width / aspect) : height;
+
+  const background = await sharp(buffer)
+    .resize(canvasW, canvasH, { fit: 'cover', position: 'centre' })
+    .blur(40)
+    .toBuffer();
+
+  return sharp(background)
+    .composite([
+      {
+        input: buffer,
+        left: Math.round((canvasW - width) / 2),
+        top: Math.round((canvasH - height) / 2),
+      },
+    ])
+    .png()
+    .toBuffer();
+}
+
+/**
  * Convert PNG buffer to JPEG.
  * @param {Buffer} buffer
  * @param {number} [quality=90]
@@ -71,5 +109,6 @@ async function toJpeg(buffer, quality = 90) {
 
 module.exports = {
   cropToFormat,
+  padToAspect,
   toJpeg,
 };

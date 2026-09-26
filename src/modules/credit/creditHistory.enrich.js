@@ -22,6 +22,7 @@ const FEATURE_LABELS = Object.freeze({
   [IMAGE_GEN_FEATURE.DALL_E_3]: 'AI image generation (DALL·E 3)',
   [IMAGE_GEN_FEATURE.TWEAK]: 'AI image tweak',
   [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 'AI infographic',
+  [IMAGE_GEN_FEATURE.SOCIAL]: 'AI social post',
   [BRAND_KIT_FEATURE.SUGGEST_COLORS]: 'Brand kit color suggestion',
   [BRAND_KIT_FEATURE.SUGGEST_FONTS]: 'Brand kit font suggestion',
   [BRAND_KIT_FEATURE.SUGGEST_VOICE]: 'Brand kit voice suggestion',

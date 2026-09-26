@@ -11,6 +11,7 @@ const IMAGE_GEN_FEATURE = Object.freeze({
   GEMINI_FLASH_LITE_IMAGE: 'image_gen_gemini_flash_lite_image',
   TWEAK: 'image_gen_tweak',
   INFOGRAPHIC: 'image_gen_infographic',
+  SOCIAL: 'image_gen_social',
 });
 
 const FLAT_AC = Object.freeze({
@@ -24,6 +25,8 @@ const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.GEMINI_FLASH_LITE_IMAGE]: 4,
   // Placeholder until ~20% margin pass; prefer getInfographicAc(modelId) which uses model AC
   [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 12,
+  // Placeholder until ~20% margin pass; prefer getSocialAc(modelId) which uses model AC
+  [IMAGE_GEN_FEATURE.SOCIAL]: 12,
 });
 
 const MODEL_FEATURE = Object.freeze({
@@ -43,6 +46,7 @@ const FLAT_ENV_KEYS = Object.freeze({
   [IMAGE_GEN_FEATURE.GEMINI_FLASH_IMAGE]: 'IMAGE_GEN_GEMINI_FLASH_AC',
   [IMAGE_GEN_FEATURE.GEMINI_FLASH_LITE_IMAGE]: 'IMAGE_GEN_GEMINI_FLASH_LITE_AC',
   [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 'IMAGE_GEN_INFOGRAPHIC_AC',
+  [IMAGE_GEN_FEATURE.SOCIAL]: 'IMAGE_GEN_SOCIAL_AC',
 });
 
 function envNumber(name, fallback) {
@@ -70,13 +74,24 @@ function getModelAc(modelId) {
  * - If IMAGE_GEN_INFOGRAPHIC_AC is set, use that override.
  * - Else use getModelAc(modelId) so dogfood spend tracks the chosen model.
  */
-function getInfographicAc(modelId) {
-  const envKey = FLAT_ENV_KEYS[IMAGE_GEN_FEATURE.INFOGRAPHIC];
-  const raw = process.env[envKey];
+function modeFlatAc(feature, modelId) {
+  const raw = process.env[FLAT_ENV_KEYS[feature]];
   if (raw != null && String(raw).trim() !== '') {
-    return getFlatAc(IMAGE_GEN_FEATURE.INFOGRAPHIC);
+    return getFlatAc(feature);
   }
-  return getModelAc(modelId || 'gpt-image-1-hd');
+  return getModelAc(modelId || 'gemini-3-pro-image');
+}
+
+function getInfographicAc(modelId) {
+  return modeFlatAc(IMAGE_GEN_FEATURE.INFOGRAPHIC, modelId);
+}
+
+/**
+ * Social flat charge. Same rule as infographic: IMAGE_GEN_SOCIAL_AC override,
+ * else the chosen model's AC.
+ */
+function getSocialAc(modelId) {
+  return modeFlatAc(IMAGE_GEN_FEATURE.SOCIAL, modelId);
 }
 
 module.exports = {
@@ -85,4 +100,5 @@ module.exports = {
   getFlatAc,
   getModelAc,
   getInfographicAc,
+  getSocialAc,
 };

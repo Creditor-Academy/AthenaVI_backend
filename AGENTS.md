@@ -300,7 +300,7 @@ Run unit tests with:
 npm test
 ```
 
-Today that runs `node --test` on `src/modules/presentation/deckRender.service.test.js` (speakerNotes) and `src/modules/presentationShare/presentationShare.presence.smoke.test.js` (presenter lock). Add more `*.test.js` files under `src/` and extend the `test` script as needed.
+Today that runs `node --test` on `src/modules/presentation/deckRender.service.test.js` (speakerNotes), `src/modules/presentationShare/presentationShare.presence.smoke.test.js` (presenter lock), the project/slide/scene assignment tests, and Image Gen social mode (`src/modules/imageGen/social.service.test.js` for catalogs/validation/prompts/pricing, `src/modules/imageGen/imageGen.social.flow.test.js` for generate/regenerate/chat through the real service with DB, S3, credits, and providers stubbed). Add more `*.test.js` files under `src/` and extend the `test` script as needed.
 
 ---
 

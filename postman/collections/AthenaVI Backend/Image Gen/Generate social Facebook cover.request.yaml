@@ -5,12 +5,11 @@ body:
   type: json
   data: |-
     {
-      "mode": "infographic",
+      "mode": "social",
       "folderId": "{{folderId}}",
-      "formatId": "landscape",
-      "archetypeHint": "process",
-      "styleHint": "minimal, clean corporate",
-      "prompt": "Explain a 4-step customer onboarding funnel: Sign up, Verify email, Complete profile, First project. Use placeholder metrics if needed."
+      "formatId": "facebook-cover",
+      "modelId": "gemini-3.1-flash-image",
+      "prompt": "Facebook page cover for Athena VI, an AI studio for course creators"
     }
 scripts:
   - type: afterResponse
@@ -30,4 +29,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3065
+order: 3140
