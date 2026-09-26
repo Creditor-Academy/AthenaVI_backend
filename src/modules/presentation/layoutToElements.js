@@ -224,6 +224,66 @@ const {
   layoutTwoParaRightImage,
 } = require('./diagrams/twoParaRightImageLayout');
 const {
+  isContactLeftImageLayout,
+  layoutContactLeftImage,
+} = require('./diagrams/contactLeftImageLayout');
+const {
+  isContactRightImageLayout,
+  layoutContactRightImage,
+} = require('./diagrams/contactRightImageLayout');
+const {
+  isContactImageBottomLayout,
+  layoutContactImageBottom,
+} = require('./diagrams/contactImageBottomLayout');
+const {
+  isTeamSpeakerBioLayout,
+  layoutTeamSpeakerBio,
+} = require('./diagrams/teamSpeakerBioLayout');
+const {
+  isSpeakerBioImageRightLayout,
+  layoutSpeakerBioImageRight,
+} = require('./diagrams/speakerBioImageRightLayout');
+const {
+  isSpeakerBioCenteredLayout,
+  layoutSpeakerBioCentered,
+} = require('./diagrams/speakerBioCenteredLayout');
+const {
+  isCenteredTextCtaLayout,
+  layoutCenteredTextCta,
+} = require('./diagrams/centeredTextCtaLayout');
+const {
+  isClosingThankYouLayout,
+  layoutClosingThankYou,
+} = require('./diagrams/closingThankYouLayout');
+const {
+  isMinimalTextCtaLayout,
+  layoutMinimalTextCta,
+} = require('./diagrams/minimalTextCtaLayout');
+const {
+  isClosingContactCtaLayout,
+  layoutClosingContactCta,
+} = require('./diagrams/closingContactCtaLayout');
+const {
+  isContactCardCtaLayout,
+  layoutContactCardCta,
+} = require('./diagrams/contactCardCtaLayout');
+const {
+  isContactSplitCtaLayout,
+  layoutContactSplitCta,
+} = require('./diagrams/contactSplitCtaLayout');
+const {
+  isParaImageCtaLayout,
+  layoutParaImageCta,
+} = require('./diagrams/paraImageCtaLayout');
+const {
+  isImageParaCtaLayout,
+  layoutImageParaCta,
+} = require('./diagrams/imageParaCtaLayout');
+const {
+  isOverlayImageCtaLayout,
+  layoutOverlayImageCta,
+} = require('./diagrams/overlayImageCtaLayout');
+const {
   isTwoParaRightImageBottomLayout,
   layoutTwoParaRightImageBottom,
 } = require('./diagrams/twoParaRightImageBottomLayout');
@@ -3595,6 +3655,21 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isParaLandscapeImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isParaSplit5050Layout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BODY|HERO_IMAGE|IMAGE_CARD_BG|TEXT_HALF_BG)$/i.test(String(el.slotId || '')))) ||
       (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isContactLeftImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CONTACT_IMAGE|IMAGE_CARD_BG|CONTACT_(ADDRESS|PHONE|EMAIL)(_LABEL)?)$/i.test(String(el.slotId || '')))) ||
+      (isContactRightImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CONTACT_IMAGE|IMAGE_CARD_BG|CONTACT_(ADDRESS|PHONE|EMAIL)(_LABEL)?)$/i.test(String(el.slotId || '')))) ||
+      (isContactImageBottomLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CONTACT_IMAGE|IMAGE_CARD_BG|CONTACT_(ADDRESS|PHONE|EMAIL))$/i.test(String(el.slotId || '')))) ||
+      (isTeamSpeakerBioLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MEMBER_1_(IMAGE|NAME|ROLE|BIO)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isSpeakerBioImageRightLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MEMBER_1_(IMAGE|NAME|ROLE|BIO)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isSpeakerBioCenteredLayout(layoutSchema?.layout_id, layoutSchema) && (/^(MEMBER_1_(IMAGE|NAME|ROLE|BIO)|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isCenteredTextCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|SUBTITLE|CTA|CTA_BG|CONTACT|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isClosingThankYouLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|SUBTITLE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isMinimalTextCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CTA|CTA_BG|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isClosingContactCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CONTACT|CTA|CTA_BG|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isContactCardCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CONTACT_(ADDRESS|PHONE|EMAIL)|CTA|CTA_BG|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isContactSplitCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|CTA_HEADING|CONTACT_(ADDRESS|PHONE|EMAIL)|CTA|CTA_BG|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isParaImageCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY|CTA|CTA_BG|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isImageParaCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY|CTA|CTA_BG|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
+      (isOverlayImageCtaLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BACKGROUND_IMAGE|OVERLAY_SCRIM|HEADING|BODY|CTA|CTA_BG)$/i.test(String(el.slotId || '')))) ||
       (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_1|BODY_2|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isThreeParaImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(BODY_[123]|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
       (isFourParaImageLayout(layoutSchema?.layout_id, layoutSchema) && (/^(HEADING|BULLET_[1-4]|HERO_IMAGE|IMAGE_CARD_BG)$/i.test(String(el.slotId || '')))) ||
@@ -10001,6 +10076,36 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutParaSplit5050(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTwoParaRightImageLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTwoParaRightImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isContactLeftImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutContactLeftImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isContactRightImageLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutContactRightImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isContactImageBottomLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutContactImageBottom(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isTeamSpeakerBioLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutTeamSpeakerBio(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isSpeakerBioImageRightLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutSpeakerBioImageRight(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isSpeakerBioCenteredLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutSpeakerBioCentered(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isCenteredTextCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutCenteredTextCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isClosingThankYouLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutClosingThankYou(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isMinimalTextCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutMinimalTextCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isClosingContactCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutClosingContactCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isContactCardCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutContactCardCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isContactSplitCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutContactSplitCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isParaImageCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutParaImageCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isImageParaCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutImageParaCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+  } else if (isOverlayImageCtaLayout(layoutSchema?.layout_id, layoutSchema)) {
+    next = layoutOverlayImageCta(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isTwoParaRightImageBottomLayout(layoutSchema?.layout_id, layoutSchema)) {
     next = layoutTwoParaRightImageBottom(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
   } else if (isThreeParaImageLayout(layoutSchema?.layout_id, layoutSchema)) {
