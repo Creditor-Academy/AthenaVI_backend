@@ -1025,9 +1025,9 @@ Versions share `rootId` / `parentId` / `threadId`. A chat is sticky to its mode,
 
 `GET /api/image-gen/workspaces/:workspaceId/estimate?modelId=&mode=&tweak=`
 
-`mode`: `image` \| `infographic` \| `social`. `tweak`: `true` / `false`.
+`mode`: `image` \| `infographic` \| `social` \| `printable`. `tweak`: `true` / `false`.
 
-Response: `{ athenaCredits, breakdown }`. `breakdown.feature` is `image_gen_infographic` / `image_gen_social` in Modes 2 and 3.
+Response: `{ athenaCredits, breakdown }`. `breakdown.feature` is `image_gen_infographic` / `image_gen_social` / `image_gen_printable` in Modes 2, 3, and 4.
 
 ### Default AC (do not hard-code; prefer estimate)
 
@@ -1039,7 +1039,7 @@ Response: `{ athenaCredits, breakdown }`. `breakdown.feature` is `image_gen_info
 | `image_gen_gemini_pro_image` | 12 |
 | `image_gen_gemini_flash_image` | 8 |
 | `image_gen_gemini_flash_lite_image` | 4 |
-| `image_gen_infographic` / `image_gen_social` | selected model's AC |
+| `image_gen_infographic` / `image_gen_social` / `image_gen_printable` | selected model's AC |
 
 Requires server `OPENAI_API_KEY`; Gemini models also need `GEMINI_API_KEY` (**503** without it). Rate limits return **429**.
 
@@ -1084,13 +1084,25 @@ Social post (Mode 3):
 }
 ```
 
+Printable (Mode 4):
+
+```json
+{
+  "mode": "printable",
+  "folderId": "folder-uuid",
+  "formatId": "poster-a4-portrait",
+  "prompt": "Poster for the Athena Learning Summit, 14-15 November 2026 at Bengaluru International Centre. Register at athenavi.com/summit",
+  "modelId": "gemini-3-pro-image"
+}
+```
+
 | Field | Rules |
 |-------|--------|
-| `mode` | `image` \| `infographic` \| `social` (default `image`) |
+| `mode` | `image` \| `infographic` \| `social` \| `printable` (default `image`) |
 | `folderId` | **Required.** Folder that owns the saved chat. |
 | `modelId` | Optional. Default from `defaults[mode]` (`gpt-image-1-hd` for image, `gemini-3-pro-image` otherwise). |
-| `formatId` | Modes 1–2: optional `square` / `landscape` / `portrait`. Mode 3: **required**, one of the seven social ids. Wrong-mode ids → **400**. |
-| `styleHint` | Optional free-text look (infographic and social) |
+| `formatId` | Modes 1–2: optional `square` / `landscape` / `portrait`. Mode 3: **required**, one of the seven social ids. Mode 4: **required**, one of `poster-a4-portrait`, `poster-a4-landscape`, `poster-a3-portrait`, `poster-a3-landscape`, `poster-a2-portrait`, `poster-a2-landscape`, `business-card`, `invitation-a6-portrait`. Wrong-mode ids → **400**. |
+| `styleHint` | Optional free-text look (infographic, social, and printable) |
 | `prompt` | **Required**. Max **16,000** chars. |
 | `style` / `styleId` | Optional from `/styles` |
 | `name` | Optional display filename. If omitted, derived from the prompt (kebab-case) |
@@ -1100,7 +1112,7 @@ Social post (Mode 3):
 **Response `data`:**  
 `{ generation, asset, creditsCharged, downloadFormats, thread, actions }` — `actions` is `{ viewUrl, downloadPath, threadId }` for View / Download / Open chat.
 
-Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`, `infographicSpec`, or, in social mode, `socialSpec` (server-written `headline` / `supportingText` / `cta`) and `platform`. Copy trimmed to a destination's limits is noted in `generation.request.warnings`.
+Master file is always **PNG** on S3. Preview `data.asset.url` / `data.generation.url`. Generation may include `contextId` / `contextPreview`, `infographicSpec`, or, in social mode, `socialSpec` (server-written `headline` / `supportingText` / `cta`) and `platform`. Copy trimmed to a destination's limits is noted in `generation.request.warnings`. Printable generations add `printSpec` (`headline` / `subheadline` / `details[]` / `cta`) and `print` (`kind`, `orientation`, `widthMm`, `heightMm`, `widthIn`, `heightIn`, `dpi`, `bleedMm`, `safeMm`, `bleedWidth`, `bleedHeight`, `bleedAvailable`); the asset is the trim size at that DPI.
 
 ## 3.6 List / get generations
 
@@ -1109,7 +1121,7 @@ GET /api/image-gen/workspaces/:workspaceId/generations?take=&skip=
 GET /api/image-gen/workspaces/:workspaceId/generations/:generationId
 ```
 
-Omit `mode` to list every studio mode, or pass `mode=image|infographic|social`. PRIVATE workspaces only return the current user’s generations.
+Omit `mode` to list every studio mode, or pass `mode=image|infographic|social|printable`. PRIVATE workspaces only return the current user’s generations.
 
 ## 3.7 Regenerate
 
@@ -1117,7 +1129,7 @@ Omit `mode` to list every studio mode, or pass `mode=image|infographic|social`. 
 
 Body fields optional — omitted fields reuse parent request. Mode stays the parent's (a different `mode` → **400**). Creates new generation + asset (`action: "regenerate"`), linked via `parentId` / `rootId`. Charges again.
 
-Social: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` rewrites the on-image copy; `modelId` alone re-renders the same copy. A different `formatId` → **400** (start a new generate for another destination).
+Social: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` rewrites the on-image copy; `modelId` alone re-renders the same copy. A different `formatId` → **400** (start a new generate for another destination). Printable follows the same rules and is locked to its print size.
 
 ## 3.8 Tweak
 
@@ -1127,19 +1139,21 @@ Social: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` re
 { "instruction": "Make the background darker and move the logo left", "editMode": "pixel" }
 ```
 
-Image mode: pixel edit of the parent PNG on the parent's provider. Infographic and social: copy/layout instructions patch the spec and re-render; visual-only instructions pixel-edit (`request.pixelEdited: true`). `editMode: "spec" | "pixel"` overrides. Social pixel edits keep the exact destination size and the existing copy. Charges model AC (mode AC in Modes 2–3). `instruction` max **4,000** chars.
+Image mode: pixel edit of the parent PNG on the parent's provider. Infographic, social, and printable: copy/layout instructions patch the spec and re-render; visual-only instructions pixel-edit (`request.pixelEdited: true`). `editMode: "spec" | "pixel"` overrides. Social and printable pixel edits keep the exact size and the existing copy (printables keep their bleed). Charges model AC (mode AC in Modes 2–4). `instruction` max **4,000** chars.
 
 ## 3.9 Download
 
-`GET .../generations/:generationId/download?format=png|jpg|jpeg|pdf`
+`GET .../generations/:generationId/download?format=png|jpg|jpeg|pdf[&bleed=true]`
 
-Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.** Rows outside the three studio modes → **404**.
+Returns file attachment (`Content-Disposition: attachment`). Filename is `asset.name` (prompt-derived kebab-case unless the client sent `name`). **No credit charge.** Rows outside the four studio modes → **404**.
 
 | format | Content-Type |
 |--------|----------------|
 | `png` | `image/png` |
 | `jpg` / `jpeg` | `image/jpeg` |
 | `pdf` | `application/pdf` (single page) |
+
+Printables: PNG / JPG carry the format DPI; `pdf` is the physical trim size (A4 = 210×297 mm); `pdf&bleed=true` adds the bleed, crop marks, and TrimBox/BleedBox (filename `…_bleed.pdf`). `bleed=true` with another format or mode → **400**.
 
 Use blob download with filename from `Content-Disposition` (prompt-derived kebab-case unless generate `name` was sent).
 
@@ -1163,9 +1177,13 @@ Optional `formatId` (`square`/`landscape`/`portrait`), `style`, required `prompt
 
 Mode 3 → pick a destination card (Generate stays disabled until one is picked) → free-text `prompt` (+ optional `styleHint`, `brandPalette`) → generate → exact-size asset. Another destination = a new generate and a new chat.
 
+### A3 — Printable
+
+Mode 4 → pick a size (Posters A4 / A3 / A2 with a portrait/landscape toggle, Business card, Invitation; Generate disabled until picked) → free-text `prompt` that includes every date, venue, name, and contact detail to print → generate → trim-size asset at print DPI. Download menu adds **PDF for print** (`format=pdf&bleed=true`).
+
 ### B — Iterate
 
-Regenerate (edited params) or Tweak (`instruction` modal). Mode (and, for social, destination) stays the parent's.
+Regenerate (edited params) or Tweak (`instruction` modal). Mode (and, for social and printable, the size) stays the parent's.
 
 ### C — Brand Kit optional polish
 
@@ -1174,9 +1192,10 @@ When user has a default Brand Kit, prefill `brandPalette` from kit colors and su
 ## 3.12 Image Gen UI checklist
 
 - [ ] Load `/models`, `/formats`, `/styles`, `/archetypes` once
-- [ ] Mode toggle: image / infographic / social
-- [ ] Provider → model picker from `providers` + `defaults[mode]` (OpenAI Recommended in Mode 1; Gemini Pro in Modes 2–3)
-- [ ] Formats: square / landscape / portrait (Modes 1–2); seven destination cards (Mode 3, required)
+- [ ] Mode toggle: image / infographic / social / printable
+- [ ] Provider → model picker from `providers` + `defaults[mode]` (OpenAI Recommended in Mode 1; Gemini Pro in Modes 2–4)
+- [ ] Formats: square / landscape / portrait (Modes 1–2); seven destination cards (Mode 3, required); eight print sizes (Mode 4, required)
+- [ ] Printable download: "PDF for print" (`bleed=true`) when `generation.print.bleedAvailable`
 - [ ] Estimate on model change
 - [ ] Generate with required prompt, long timeout + loading state
 - [ ] Preview; Regenerate; Tweak modal; Download menu

@@ -12,6 +12,7 @@ const IMAGE_GEN_FEATURE = Object.freeze({
   TWEAK: 'image_gen_tweak',
   INFOGRAPHIC: 'image_gen_infographic',
   SOCIAL: 'image_gen_social',
+  PRINTABLE: 'image_gen_printable',
 });
 
 const FLAT_AC = Object.freeze({
@@ -27,6 +28,8 @@ const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 12,
   // Placeholder until ~20% margin pass; prefer getSocialAc(modelId) which uses model AC
   [IMAGE_GEN_FEATURE.SOCIAL]: 12,
+  // Placeholder until ~20% margin pass; prefer getPrintableAc(modelId) which uses model AC
+  [IMAGE_GEN_FEATURE.PRINTABLE]: 12,
 });
 
 const MODEL_FEATURE = Object.freeze({
@@ -47,6 +50,7 @@ const FLAT_ENV_KEYS = Object.freeze({
   [IMAGE_GEN_FEATURE.GEMINI_FLASH_LITE_IMAGE]: 'IMAGE_GEN_GEMINI_FLASH_LITE_AC',
   [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 'IMAGE_GEN_INFOGRAPHIC_AC',
   [IMAGE_GEN_FEATURE.SOCIAL]: 'IMAGE_GEN_SOCIAL_AC',
+  [IMAGE_GEN_FEATURE.PRINTABLE]: 'IMAGE_GEN_PRINTABLE_AC',
 });
 
 function envNumber(name, fallback) {
@@ -94,6 +98,11 @@ function getSocialAc(modelId) {
   return modeFlatAc(IMAGE_GEN_FEATURE.SOCIAL, modelId);
 }
 
+/** Printable flat charge: IMAGE_GEN_PRINTABLE_AC override, else the chosen model's AC. */
+function getPrintableAc(modelId) {
+  return modeFlatAc(IMAGE_GEN_FEATURE.PRINTABLE, modelId);
+}
+
 module.exports = {
   IMAGE_GEN_FEATURE,
   MODEL_FEATURE,
@@ -101,4 +110,5 @@ module.exports = {
   getModelAc,
   getInfographicAc,
   getSocialAc,
+  getPrintableAc,
 };

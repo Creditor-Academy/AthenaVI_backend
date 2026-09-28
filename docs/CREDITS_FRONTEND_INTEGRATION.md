@@ -113,10 +113,11 @@ flowchart TB
 | AI image (studio) | `image_gen_gpt_image` / `image_gen_gpt_image_hd` / `image_gen_dall_e_3` / `image_gen_gemini_*` | `POST /api/image-gen/workspaces/:workspaceId/generate` (`mode: image`) | Workspace-scoped* |
 | AI infographic | `image_gen_infographic` | same route, `mode: infographic` | Workspace-scoped* |
 | AI social post | `image_gen_social` | same route, `mode: social` | Workspace-scoped* |
+| AI printable | `image_gen_printable` | same route, `mode: printable` | Workspace-scoped* |
 
 \*Workspace-scoped = personal pool if `PRIVATE`, workspace pool if `TEAM`.
 
-**Image Gen:** the Mode 1 default (`gpt-image-1-hd` + `square`) is **12 AC**. Standard `gpt-image-1` is **6 AC**. Gemini is 12 / 8 / 4 AC (Pro / Flash / Flash Lite). Infographic and social posts charge the selected model's AC (default `gemini-3-pro-image`, **12 AC**) unless the server sets `IMAGE_GEN_INFOGRAPHIC_AC` / `IMAGE_GEN_SOCIAL_AC`. User-started Tweak / Regenerate still bill. Always call `GET .../image-gen/.../estimate?mode=&modelId=`. Credit history labels: “AI infographic”, “AI social post”.
+**Image Gen:** the Mode 1 default (`gpt-image-1-hd` + `square`) is **12 AC**. Standard `gpt-image-1` is **6 AC**. Gemini is 12 / 8 / 4 AC (Pro / Flash / Flash Lite). Infographics, social posts, and printables charge the selected model's AC (default `gemini-3-pro-image`, **12 AC**) unless the server sets `IMAGE_GEN_INFOGRAPHIC_AC` / `IMAGE_GEN_SOCIAL_AC` / `IMAGE_GEN_PRINTABLE_AC`. User-started Tweak / Regenerate still bill. Downloads, including the bleed PDF, are free. Always call `GET .../image-gen/.../estimate?mode=&modelId=`. Credit history labels: “AI infographic”, “AI social post”, “AI printable”.
 
 **Brand Kit preview (free):** `POST .../suggest/logo-variants` without `applyRoles` returns base64 previews only — no credit charge. Logo mockups: first **2 successful** generates per brand kit are free.
 

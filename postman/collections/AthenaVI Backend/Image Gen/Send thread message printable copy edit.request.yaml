@@ -1,0 +1,25 @@
+$kind: http-request
+name: Send thread message printable copy edit
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}/messages"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "content": "Change the date to 21-22 November 2026 and add the line \"Early bird ends 31 October\"",
+      "editMode": "spec"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+      }
+    language: text/javascript
+order: 3430

@@ -3,9 +3,10 @@ const {
   getModelAc,
   getInfographicAc,
   getSocialAc,
+  getPrintableAc,
 } = require('../../../shared/config/imageGenCreditPricing');
 
-const ALL_MODES = Object.freeze(['image', 'infographic', 'social']);
+const ALL_MODES = Object.freeze(['image', 'infographic', 'social', 'printable']);
 
 const MODELS = Object.freeze([
   {
@@ -115,6 +116,7 @@ const MODE_DEFAULTS = Object.freeze({
   image: { provider: 'openai', modelId: 'gpt-image-1-hd', recommendedProvider: 'openai' },
   infographic: { provider: 'gemini', modelId: 'gemini-3-pro-image', recommendedProvider: null },
   social: { provider: 'gemini', modelId: 'gemini-3-pro-image', recommendedProvider: null },
+  printable: { provider: 'gemini', modelId: 'gemini-3-pro-image', recommendedProvider: null },
 });
 
 function creditEstimateFor(model) {
@@ -175,12 +177,14 @@ function resolveModel(modelId) {
 function modeAc(mode, modelId) {
   if (mode === 'infographic') return getInfographicAc(modelId);
   if (mode === 'social') return getSocialAc(modelId);
+  if (mode === 'printable') return getPrintableAc(modelId);
   return getModelAc(modelId);
 }
 
 function modeFeature(mode) {
   if (mode === 'infographic') return IMAGE_GEN_FEATURE.INFOGRAPHIC;
   if (mode === 'social') return IMAGE_GEN_FEATURE.SOCIAL;
+  if (mode === 'printable') return IMAGE_GEN_FEATURE.PRINTABLE;
   return undefined;
 }
 

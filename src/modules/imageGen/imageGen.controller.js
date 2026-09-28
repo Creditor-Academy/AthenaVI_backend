@@ -153,6 +153,7 @@ const download = asyncHandler(async (req, res) => {
     workspace: req.workspace,
     generationId: req.params.generationId,
     format: req.query.format || 'png',
+    bleed: req.query.bleed === true || req.query.bleed === 'true',
   });
 });
 

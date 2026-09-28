@@ -1,6 +1,7 @@
 /**
  * Image Gen format catalog.
- * Generic formats serve `image` + `infographic`; social destinations serve `social` only.
+ * Generic formats serve `image` + `infographic`; social destinations serve `social` only;
+ * print sizes serve `printable` only.
  * openaiSizeGpt / openaiSizeDalle = nearest API size; target WxH for sharp crop.
  * geminiAspectRatio = native Gemini ratio closest to the target shape.
  */
@@ -9,6 +10,9 @@ const { resolveImageSize } = require('../../../shared/services/ai/geminiImage.se
 
 const GENERIC_MODES = Object.freeze(['image', 'infographic']);
 const SOCIAL_MODES = Object.freeze(['social']);
+const PRINT_MODES = Object.freeze(['printable']);
+
+const MM_PER_INCH = 25.4;
 
 const FULL_BLEED_COMMON = [
   'FULL-BLEED edge-to-edge: fill the entire canvas.',
@@ -28,6 +32,14 @@ const SOCIAL_COMPOSE_COMMON = [
   'Typography must be large, bold, and legible at small phone sizes; high contrast between text and background.',
   'Use at most three text elements (headline, optional supporting line, optional call to action).',
   'Never place text or logos against the canvas edges.',
+];
+
+const PRINT_COMPOSE_COMMON = [
+  'Flat, print-ready graphic design artwork that fills the entire canvas edge to edge.',
+  'This is the artwork file itself: NOT a photo or mockup of a printed poster, card, or invitation, no hands, tables, frames, walls, or perspective.',
+  'Do not draw crop marks, trim lines, borders, or registration marks.',
+  'Background color or imagery must continue all the way to every canvas edge (it extends into the print bleed).',
+  'Clear typographic hierarchy with type sizes that are legible at the physical print size.',
 ];
 
 const GENERIC_FORMATS = [
@@ -269,11 +281,150 @@ const SOCIAL_FORMATS = [
   },
 ].map((f) => ({ ...f, category: 'social', modes: SOCIAL_MODES }));
 
-const FORMATS = Object.freeze([...GENERIC_FORMATS, ...SOCIAL_FORMATS]);
+function mmToPx(mm, dpi) {
+  return Math.round((mm / MM_PER_INCH) * dpi);
+}
+
+const POSTER_LIMITS = Object.freeze({ headline: 60, subheadline: 120, details: 4, detailLine: 80, cta: 40 });
+
+const PRINT_SPECS = [
+  { id: 'poster-a4', name: 'A4 poster', kind: 'poster', widthMm: 210, heightMm: 297, dpi: 300 },
+  { id: 'poster-a3', name: 'A3 poster', kind: 'poster', widthMm: 297, heightMm: 420, dpi: 150 },
+  { id: 'poster-a2', name: 'A2 poster', kind: 'poster', widthMm: 420, heightMm: 594, dpi: 150 },
+];
+
+function posterFormat(spec, orientation) {
+  const landscape = orientation === 'landscape';
+  const widthMm = landscape ? spec.heightMm : spec.widthMm;
+  const heightMm = landscape ? spec.widthMm : spec.heightMm;
+  return {
+    id: `${spec.id}-${orientation}`,
+    name: `${spec.name} (${orientation})`,
+    kind: spec.kind,
+    widthMm,
+    heightMm,
+    dpi: spec.dpi,
+    bleedMm: 3,
+    safeMm: 5,
+    orientation,
+    aspectRatio: landscape ? '√2:1' : '1:√2',
+    openaiSizeGpt: landscape ? '1536x1024' : '1024x1536',
+    openaiSizeDalle: landscape ? '1792x1024' : '1024x1792',
+    geminiAspectRatio: landscape ? '4:3' : '3:4',
+    safeZone:
+      'Keep all text and logos at least 5 mm inside the trim edge; background art runs to every edge.',
+    printCompose: [
+      landscape
+        ? 'Landscape poster: strong left-to-right hierarchy, headline large enough to read from a few meters away.'
+        : 'Portrait poster: headline in the upper third, supporting details below, readable from a few meters away.',
+    ],
+    textLimits: POSTER_LIMITS,
+  };
+}
+
+/**
+ * Print sizes: trim dimensions in mm (business card in inches), rendered with bleed.
+ * `width`/`height` are trim pixels at `dpi`; `bleedMm` is added on every side of the render.
+ */
+const PRINT_FORMATS = [
+  ...PRINT_SPECS.flatMap((spec) => [posterFormat(spec, 'portrait'), posterFormat(spec, 'landscape')]),
+  {
+    id: 'business-card',
+    name: 'Business card (3.5 x 2 in)',
+    kind: 'business_card',
+    widthMm: 3.5 * MM_PER_INCH,
+    heightMm: 2 * MM_PER_INCH,
+    widthIn: 3.5,
+    heightIn: 2,
+    dpi: 300,
+    bleedMm: 0.125 * MM_PER_INCH,
+    safeMm: 0.125 * MM_PER_INCH,
+    orientation: 'landscape',
+    aspectRatio: '7:4',
+    openaiSizeGpt: '1536x1024',
+    openaiSizeDalle: '1792x1024',
+    geminiAspectRatio: '16:9',
+    safeZone:
+      'Keep name, title, contact lines, and logo at least 1/8 in inside the trim edge.',
+    printCompose: [
+      'Front of a professional business card: name most prominent, title/company second, contact lines small but legible.',
+      'Generous whitespace; no photos of people unless the prompt asks for one.',
+    ],
+    textLimits: { headline: 40, subheadline: 60, details: 4, detailLine: 48, cta: 0 },
+  },
+  {
+    id: 'invitation-a6-portrait',
+    name: 'Invitation (105 x 148 mm, portrait)',
+    kind: 'invitation',
+    widthMm: 105,
+    heightMm: 148,
+    dpi: 300,
+    bleedMm: 3,
+    safeMm: 5,
+    orientation: 'portrait',
+    aspectRatio: '1:√2',
+    openaiSizeGpt: '1024x1536',
+    openaiSizeDalle: '1024x1792',
+    geminiAspectRatio: '3:4',
+    safeZone: 'Keep all text at least 5 mm inside the trim edge.',
+    printCompose: [
+      'Elegant invitation card: event title prominent, host line, then date, time, venue, and RSVP details in a clear block.',
+    ],
+    textLimits: { headline: 60, subheadline: 100, details: 5, detailLine: 70, cta: 40 },
+  },
+].map((f) => ({
+  ...f,
+  category: 'print',
+  platform: null,
+  modes: PRINT_MODES,
+  width: mmToPx(f.widthMm, f.dpi),
+  height: mmToPx(f.heightMm, f.dpi),
+  safeArea: null,
+}));
+
+const FORMATS = Object.freeze([...GENERIC_FORMATS, ...SOCIAL_FORMATS, ...PRINT_FORMATS]);
 
 const FORMAT_BY_ID = Object.freeze(Object.fromEntries(FORMATS.map((f) => [f.id, f])));
 
 const SOCIAL_FORMAT_IDS = Object.freeze(SOCIAL_FORMATS.map((f) => f.id));
+const PRINT_FORMAT_IDS = Object.freeze(PRINT_FORMATS.map((f) => f.id));
+
+/**
+ * Render canvas for a print format: trim plus bleed on every side, in pixels.
+ * `offsetX`/`offsetY` locate the trim box inside the bleed canvas.
+ */
+function bleedCanvasFor(format) {
+  if (!format || format.category !== 'print') return null;
+  const bleedPx = mmToPx(format.bleedMm, format.dpi);
+  const safePx = mmToPx(format.safeMm, format.dpi);
+  return {
+    width: format.width + bleedPx * 2,
+    height: format.height + bleedPx * 2,
+    offsetX: bleedPx,
+    offsetY: bleedPx,
+    bleedPx,
+    safePx,
+    dpi: format.dpi,
+  };
+}
+
+function printInfo(format) {
+  if (!format || format.category !== 'print') return null;
+  const canvas = bleedCanvasFor(format);
+  return {
+    kind: format.kind,
+    orientation: format.orientation,
+    widthMm: Math.round(format.widthMm * 100) / 100,
+    heightMm: Math.round(format.heightMm * 100) / 100,
+    widthIn: format.widthIn || null,
+    heightIn: format.heightIn || null,
+    dpi: format.dpi,
+    bleedMm: Math.round(format.bleedMm * 100) / 100,
+    safeMm: Math.round(format.safeMm * 100) / 100,
+    bleedWidth: canvas.width,
+    bleedHeight: canvas.height,
+  };
+}
 
 const DEFAULT_FORMAT_BY_MODE = Object.freeze({
   image: 'square',
@@ -292,6 +443,7 @@ function listFormats() {
     aspectRatio: f.aspectRatio,
     safeZone: f.safeZone,
     safeArea: f.safeArea || null,
+    print: printInfo(f),
   }));
 }
 
@@ -324,9 +476,13 @@ function openaiSizeForFormat(format, providerModel) {
  * @param {{ maxImageSize?: string }} [model]
  */
 function geminiImageConfigForFormat(format, model = {}) {
+  const requested =
+    format && format.category === 'print'
+      ? process.env.IMAGE_GEN_PRINT_GEMINI_IMAGE_SIZE || '2K'
+      : undefined;
   return {
     aspectRatio: (format && format.geminiAspectRatio) || '1:1',
-    imageSize: resolveImageSize(undefined, model.maxImageSize),
+    imageSize: resolveImageSize(requested, model.maxImageSize),
   };
 }
 
@@ -342,6 +498,12 @@ function composeRulesForMode(format, mode = 'image') {
   if (mode === 'social') {
     return {
       composeRules: [...SOCIAL_COMPOSE_COMMON, ...(format.socialCompose || [])],
+      safeZone: format.safeZone || '',
+    };
+  }
+  if (mode === 'printable') {
+    return {
+      composeRules: [...PRINT_COMPOSE_COMMON, ...(format.printCompose || [])],
       safeZone: format.safeZone || '',
     };
   }
@@ -361,6 +523,11 @@ module.exports = {
   FORMATS,
   FORMAT_BY_ID,
   SOCIAL_FORMAT_IDS,
+  PRINT_FORMAT_IDS,
+  MM_PER_INCH,
+  mmToPx,
+  bleedCanvasFor,
+  printInfo,
   listFormats,
   resolveFormat,
   isFormatForMode,

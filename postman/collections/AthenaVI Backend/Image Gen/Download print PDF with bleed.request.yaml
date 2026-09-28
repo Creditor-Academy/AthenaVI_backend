@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}/download?format=pdf&bleed=true"
+method: GET
+queryParams:
+  format: pdf
+  bleed: "true"
+order: 6220

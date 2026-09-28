@@ -6,6 +6,7 @@ const {
   getModelAc,
   getInfographicAc,
   getSocialAc,
+  getPrintableAc,
 } = require('../../shared/config/imageGenCreditPricing');
 const { estimateCredits } = require('./catalogs/models');
 
@@ -66,5 +67,6 @@ module.exports = {
   getModelAc,
   getInfographicAc,
   getSocialAc,
+  getPrintableAc,
   estimateCredits,
 };

@@ -2,6 +2,7 @@ const Joi = require('joi');
 const { ARCHETYPE_IDS } = require('../imageGen/catalogs/archetypes');
 const {
   SOCIAL_FORMAT_IDS,
+  PRINT_FORMAT_IDS,
   resolveFormat,
   isFormatForMode,
 } = require('../imageGen/catalogs/formats');
@@ -12,9 +13,17 @@ const IMAGE_GEN_PROMPT_MAX = 16_000;
 const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 4_000;
 const STYLE_HINT_MAX = 300;
 
-const STUDIO_MODES = ['image', 'infographic', 'social'];
+const STUDIO_MODES = ['image', 'infographic', 'social', 'printable'];
 
-/** Social requires one of its destination ids; other modes reject social ids. */
+/** Modes whose output size is a required, mode-specific destination. */
+const SIZED_MODES = ['social', 'printable'];
+
+const MODE_FORMAT_IDS = {
+  social: SOCIAL_FORMAT_IDS,
+  printable: PRINT_FORMAT_IDS,
+};
+
+/** Social and printable require one of their own ids; other modes reject those ids. */
 function assertFormatMatchesMode(value, helpers) {
   const format = resolveFormat(value.formatId);
   if (value.formatId && !format) {
@@ -22,11 +31,11 @@ function assertFormatMatchesMode(value, helpers) {
   }
   if (!value.mode || !format) return value;
   if (!isFormatForMode(format, value.mode)) {
-    return helpers.message(
-      value.mode === 'social'
-        ? `formatId must be one of: ${SOCIAL_FORMAT_IDS.join(', ')}`
-        : `formatId "${value.formatId}" is a social destination; use mode "social"`
-    );
+    if (MODE_FORMAT_IDS[value.mode]) {
+      return helpers.message(`formatId must be one of: ${MODE_FORMAT_IDS[value.mode].join(', ')}`);
+    }
+    const ownerMode = format.modes[0];
+    return helpers.message(`formatId "${value.formatId}" belongs to mode "${ownerMode}"`);
   }
   return value;
 }
@@ -52,7 +61,7 @@ const generateBody = Joi.object({
   folderId: Joi.string().uuid().required(),
   modelId: Joi.string().trim().max(64).allow('', null).optional(),
   formatId: Joi.when('mode', {
-    is: 'social',
+    is: Joi.valid(...SIZED_MODES),
     then: Joi.string().trim().max(64).required(),
     otherwise: Joi.string().trim().max(64).allow(null, '').optional(),
   }),
@@ -192,6 +201,9 @@ const downloadSchema = Joi.object({
   params: generationParams,
   query: Joi.object({
     format: Joi.string().valid('png', 'jpg', 'jpeg', 'pdf').optional(),
+    bleed: Joi.alternatives()
+      .try(Joi.boolean(), Joi.string().valid('true', 'false'))
+      .optional(),
   }),
 });
 
@@ -217,6 +229,7 @@ module.exports = {
   IMAGE_GEN_PROMPT_MAX,
   IMAGE_GEN_TWEAK_INSTRUCTION_MAX,
   STUDIO_MODES,
+  SIZED_MODES,
   generateSchema,
   regenerateSchema,
   tweakSchema,

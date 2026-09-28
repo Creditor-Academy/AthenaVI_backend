@@ -1,0 +1,32 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "printable",
+      "folderId": "{{folderId}}",
+      "formatId": "invitation-a6-portrait",
+      "styleHint": "elegant, soft floral border, cream and gold",
+      "prompt": "Invitation to the Athena VI graduation ceremony for the 2026 instructor cohort. Saturday 12 December 2026, 5 pm, The Leela Palace, Bengaluru. RSVP by 1 December to events@athenavi.com"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        const threadId = j && j.data && j.data.thread && j.data.thread.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+        if (threadId) {
+          pm.collectionVariables.set("imageGenThreadId", threadId);
+          pm.environment.set("imageGenThreadId", threadId);
+        }
+      }
+    language: text/javascript
+order: 3190

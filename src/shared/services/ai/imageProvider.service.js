@@ -18,6 +18,7 @@ async function generateForModel({
   prompt,
   size,
   aspectRatio,
+  imageSize,
   referenceBuffers = [],
 } = {}) {
   const useRefs = Array.isArray(referenceBuffers) && referenceBuffers.length > 0;
@@ -27,6 +28,7 @@ async function generateForModel({
       prompt,
       model: model.providerModel,
       aspectRatio,
+      imageSize,
       maxImageSize: model.maxImageSize,
     };
     return useRefs
@@ -45,13 +47,21 @@ async function generateForModel({
     : openaiImage.generateImage(opts);
 }
 
-async function editForModel({ model, imageBuffer, instruction, size, aspectRatio } = {}) {
+async function editForModel({
+  model,
+  imageBuffer,
+  instruction,
+  size,
+  aspectRatio,
+  imageSize,
+} = {}) {
   if (isGemini(model)) {
     return geminiImage.editImage({
       imageBuffer,
       instruction,
       model: model.providerModel,
       aspectRatio,
+      imageSize,
       maxImageSize: model.maxImageSize,
     });
   }

@@ -1,4 +1,5 @@
 const sharp = require('sharp');
+const { bleedCanvasFor } = require('./catalogs/formats');
 
 const CONTAIN_BACKGROUND = { r: 250, g: 250, b: 252, alpha: 1 };
 
@@ -99,16 +100,54 @@ async function padToAspect(buffer, aspect) {
 }
 
 /**
+ * Cover-crop to the bleed canvas of a print format, then cut the trim box out of it.
+ * Both PNGs carry the format DPI.
+ *
+ * @param {Buffer} buffer
+ * @param {object} format print format (width/height are trim px)
+ * @returns {Promise<{ trim: { buffer: Buffer, width: number, height: number, fit: string },
+ *   bleed: { buffer: Buffer, width: number, height: number } }>}
+ */
+async function cropToPrint(buffer, format) {
+  const canvas = bleedCanvasFor(format);
+  const density = canvas.dpi;
+  const bleedRaw = await sharp(buffer)
+    .resize(canvas.width, canvas.height, { fit: 'cover', position: 'centre' })
+    .png()
+    .toBuffer();
+  const bleedBuffer = await sharp(bleedRaw).withMetadata({ density }).png().toBuffer();
+  const trimBuffer = await sharp(bleedRaw)
+    .extract({
+      left: canvas.offsetX,
+      top: canvas.offsetY,
+      width: format.width,
+      height: format.height,
+    })
+    .withMetadata({ density })
+    .png()
+    .toBuffer();
+
+  return {
+    trim: { buffer: trimBuffer, width: format.width, height: format.height, fit: 'cover' },
+    bleed: { buffer: bleedBuffer, width: canvas.width, height: canvas.height },
+  };
+}
+
+/**
  * Convert PNG buffer to JPEG.
  * @param {Buffer} buffer
  * @param {number} [quality=90]
+ * @param {{ density?: number }} [options] DPI to stamp (print formats)
  */
-async function toJpeg(buffer, quality = 90) {
-  return sharp(buffer).jpeg({ quality, mozjpeg: true }).toBuffer();
+async function toJpeg(buffer, quality = 90, options = {}) {
+  let pipeline = sharp(buffer).flatten({ background: '#ffffff' });
+  if (options.density) pipeline = pipeline.withMetadata({ density: options.density });
+  return pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
 }
 
 module.exports = {
   cropToFormat,
+  cropToPrint,
   padToAspect,
   toJpeg,
 };
