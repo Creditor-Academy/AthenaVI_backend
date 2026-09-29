@@ -11,6 +11,7 @@ const deckGeneration = require('./deckGeneration.service');
 const exportService = require('./export.service');
 const slideEditorRaw = require('./slideEditor.service');
 const { layoutSlotsToElements, blankCanvas, injectBrandLogo, rebindContentToElements } = require('./layoutToElements');
+const { compileSlide } = require('./slideCompiler.service');
 const brandKitService = require('../brandKit/brandKit.service');
 const templateMediaService = require('../templates/templateMedia.service');
 const deckPackGalleryService = require('./deckPackGallery.service');
@@ -303,14 +304,15 @@ async function createPresentation({
   }
 
   if (mode === 'template' && template) {
-    let elementsDoc = layoutSlotsToElements(
-      template.schema,
-      { title: displayName },
-      null,
+    const compiled = await compileSlide({
+      layoutSchema: template.schema,
+      content: { title: displayName },
+      imageRef: null,
       canvasSize,
-      { themeTokens: resolvedTokens }
-    );
-    elementsDoc = injectBrandLogo(elementsDoc, logo, {
+      themeTokens: resolvedTokens,
+      skipContentRepair: true,
+    });
+    let elementsDoc = injectBrandLogo(compiled.elementsDoc, logo, {
       contentType: template.contentType || template.schema?.content_type,
     });
     const slide = await presentationDao.createOneSlide({
@@ -318,7 +320,7 @@ async function createPresentation({
       order: 1,
       contentType: template.contentType || template.schema?.content_type || null,
       layoutId: template.schema?.layout_id || template.id,
-      content: { title: displayName },
+      content: compiled.content,
       imageRef: null,
       elements: elementsDoc,
       status: 'READY',

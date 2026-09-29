@@ -3,6 +3,7 @@ const messages = require('../../shared/utils/messages');
 const presentationDao = require('./presentation.dao');
 const { loadPresentationDeck } = require('./deckGeneration.service');
 const { layoutSlotsToElements, blankCanvas, newElementId } = require('./layoutToElements');
+const { compileSlide } = require('./slideCompiler.service');
 const {
   DECK_SLIDE_MAX,
   MAX_ELEMENTS_PER_SLIDE,
@@ -111,17 +112,27 @@ async function addSlide({
 
   const slideContent = content && typeof content === 'object' ? content : {};
   const canvasSize = canvasSizeForDeck(deck);
-  const elementsDoc = layoutSchema
-    ? layoutSlotsToElements(layoutSchema, slideContent, null, canvasSize, {
-        themeTokens: deck.themeTokens || null,
-        designTokens: slideContent.designTokens || null,
-        applyShapes: false,
-      })
-    : blankCanvas({
+  let elementsDoc;
+  let savedContent = slideContent;
+  if (layoutSchema) {
+    const compiled = await compileSlide({
+      layoutSchema,
+      content: slideContent,
+      imageRef: null,
+      canvasSize,
+      themeTokens: deck.themeTokens || null,
+      designTokens: slideContent.designTokens || null,
+      context: { deckId: deck.id },
+    });
+    elementsDoc = compiled.elementsDoc;
+    savedContent = compiled.content;
+  } else {
+    elementsDoc = blankCanvas({
         withDefaultText: true,
         width: canvasSize.width,
         height: canvasSize.height,
       });
+  }
 
   await presentationDao.shiftSlideOrders(deck.id, insertOrder, 1);
 
@@ -130,7 +141,7 @@ async function addSlide({
     order: insertOrder,
     contentType,
     layoutId: resolvedLayoutId,
-    content: slideContent,
+    content: savedContent,
     imageRef: null,
     elements: elementsDoc,
     status: 'READY',
@@ -224,22 +235,22 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
   }
 
   const content = slide.content && typeof slide.content === 'object' ? slide.content : {};
-  const elementsDoc = layoutSlotsToElements(
-    template.schema,
+  const canvasSize = canvasSizeForDeck(deck);
+  const compiled = await compileSlide({
+    layoutSchema: template.schema,
     content,
-    slide.imageRef,
-    canvasSizeForDeck(deck),
-    {
-      themeTokens: deck.themeTokens || null,
-      designTokens: content.designTokens || null,
-      applyShapes: false,
-    }
-  );
+    imageRef: slide.imageRef,
+    canvasSize,
+    themeTokens: deck.themeTokens || null,
+    designTokens: content.designTokens || null,
+    context: { slideId, deckId: deck.id },
+  });
 
   const updated = await presentationDao.updateSlide(slideId, {
     layoutId: template.schema?.layout_id || template.id,
     contentType: template.contentType || template.schema?.content_type || slide.contentType,
-    elements: elementsDoc,
+    content: compiled.content,
+    elements: compiled.elementsDoc,
     manuallyEdited: true,
     status: 'READY',
   });

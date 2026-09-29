@@ -529,11 +529,39 @@ function applyBulletLimits(items, slot, issues, path) {
   return list;
 }
 
+const { validateContentWithJoi } = require('./contentContract.schema');
+const {
+  validateContentForLayoutSoft,
+  deriveContentContract,
+} = require('@athena/contracts/contentContract.js');
+
+function validateSlideContract({ content, layoutSchema, phase = 'repaired' }) {
+  const issues = [];
+  if (!layoutSchema?.slots?.length) return { valid: true, issues };
+
+  const soft = validateContentForLayoutSoft(content, layoutSchema);
+  for (const err of soft.errors || []) {
+    issues.push({
+      ...err,
+      source: 'contract',
+      repairable: true,
+      phase,
+    });
+  }
+
+  const joi = validateContentWithJoi(content, layoutSchema);
+  for (const err of joi.errors || []) {
+    issues.push({ ...err, phase });
+  }
+
+  return { valid: issues.length === 0, issues, contract: deriveContentContract(layoutSchema) };
+}
+
 /**
  * Validate / truncate slide content against layout schema slot caps.
  * @returns {{ content: object, issues: Array<object> }}
  */
-function validateSlide({ content, layoutSchema }) {
+function validateSlide({ content, layoutSchema, includeContract = false, contractPhase = 'repaired' }) {
   const issues = [];
   const next = cloneContent(content);
   const schema = layoutSchema && typeof layoutSchema === 'object' ? layoutSchema : {};
@@ -609,11 +637,21 @@ function validateSlide({ content, layoutSchema }) {
 
   validateStructuredFields(next, schema, issues);
 
+  if (includeContract) {
+    const contractCheck = validateSlideContract({
+      content: next,
+      layoutSchema: schema,
+      phase: contractPhase,
+    });
+    issues.push(...contractCheck.issues);
+  }
+
   return { content: next, issues };
 }
 
 module.exports = {
   validateSlide,
+  validateSlideContract,
   truncateToWords,
   truncateToLines,
   countWords,

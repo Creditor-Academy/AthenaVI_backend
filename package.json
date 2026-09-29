@@ -21,6 +21,7 @@
     "test:art-direction-engine": "node scripts/test-art-direction-engine.js",
     "test:palette-gallery-fixes": "node scripts/test-palette-gallery-fixes.js",
     "test:content-contract-parity": "node --test ../packages/athena-contracts/test/content-contract-parity.test.mjs",
+    "test:content-repair-benchmarks": "node scripts/test-content-repair-benchmarks.js",
     "test:path-b-vs-layouts": "node scripts/test-path-b-vs-layouts.js",
     "test:gallery-grid-policy": "node scripts/test-gallery-grid-policy.js",
     "eval:presentation-export": "node scripts/presentation-eval/export-fidelity.js",
