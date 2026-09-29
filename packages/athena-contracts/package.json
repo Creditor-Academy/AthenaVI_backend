@@ -1,0 +1,39 @@
+{
+  "name": "@athena/contracts",
+  "version": "1.0.0",
+  "description": "Shared layout content contract, normalization, and slot text resolution",
+  "private": true,
+  "main": "contentContract.js",
+  "exports": {
+    "./contentContract.js": {
+      "import": "./esm/contentContract.js",
+      "require": "./contentContract.js",
+      "default": "./contentContract.js"
+    },
+    "./slotText.js": {
+      "import": "./esm/slotText.js",
+      "require": "./slotText.js",
+      "default": "./slotText.js"
+    },
+    "./textNormalize.js": {
+      "import": "./esm/textNormalize.js",
+      "require": "./textNormalize.js",
+      "default": "./textNormalize.js"
+    },
+    "./errors.js": {
+      "import": "./esm/errors.js",
+      "require": "./errors.js",
+      "default": "./errors.js"
+    },
+    "./slotGeometry.js": {
+      "import": "./esm/slotGeometry.js",
+      "require": "./slotGeometry.js",
+      "default": "./slotGeometry.js"
+    },
+    "./contentRepair.js": {
+      "import": "./esm/contentRepair.js",
+      "require": "./contentRepair.js",
+      "default": "./contentRepair.js"
+    }
+  }
+}
