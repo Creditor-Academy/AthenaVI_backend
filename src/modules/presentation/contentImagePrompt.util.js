@@ -333,6 +333,26 @@ function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts =
   return buildSlotImagePrompt(slotId, content, layoutSchema, opts);
 }
 
+/** Author/LLM-supplied visual brief on the slide content, if any. */
+function resolveAuthorImagePrompt(content = {}) {
+  if (!content || typeof content !== 'object') return '';
+  const candidates = [
+    content.imagePrompt,
+    content.image_prompt,
+    content.visual,
+    content.visualPrompt,
+    content.visual_prompt,
+    content.authorImagePrompt,
+    content.imageBrief && content.imageBrief.subject,
+    content.brief && content.brief.subject,
+  ];
+  for (const value of candidates) {
+    const text = String(value || '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
 function titleWordsFromBody(body, fallback) {
   const words = String(body || '')
     .trim()
@@ -352,5 +372,6 @@ module.exports = {
   resolveImagePromptAlias,
   buildSlotImagePrompt,
   deriveSlotImagePrompt,
+  resolveAuthorImagePrompt,
   titleWordsFromBody,
 };

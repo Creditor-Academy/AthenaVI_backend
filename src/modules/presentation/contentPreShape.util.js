@@ -787,4 +787,7 @@ module.exports = {
   normalizeTimelineContent,
   normalizeDiagramContent,
   normalizeDeviceContent,
+  layoutUsesPerSlotGalleryImages,
+  layoutNeedsDiagramCellsFromSchema,
+  countDiagramCellSlotsFromSchema,
 };

@@ -1,6 +1,14 @@
-const { contrastRatioCss } = require('../theme.service');
+const { contrastRatioCss, relativeLuminance } = require('../theme.service');
 
-function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroundHex } = {}) {
+function highContrastFallback(backgroundHex) {
+  const lum = relativeLuminance(backgroundHex);
+  if (lum != null && lum > 0.45) {
+    return { colorRole: 'text', color: '#0F172A' };
+  }
+  return { colorRole: 'textOnImage', color: '#FFFFFF' };
+}
+
+function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroundHex, _depth = 0 } = {}) {
   const palette = theme?.palette || {};
   const safeHeadingColor = palette.heading || palette.text || palette.body || '#18212B';
   const safeBodyColor = palette.body || palette.muted || palette.text || '#52606D';
@@ -44,12 +52,16 @@ function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroun
   if (backgroundHex) {
     const ratio = contrastRatioCss(color, backgroundHex);
     if (ratio != null && ratio < 4.5) {
+      if (_depth >= 1) {
+        return highContrastFallback(backgroundHex);
+      }
       if (colorRole === 'muted' || colorRole === 'textonimagemuted') {
         return resolveTextColor({
           theme,
           textRole: 'heading',
           backgroundMode,
           backgroundHex,
+          _depth: _depth + 1,
         });
       }
       if (colorRole === 'text' || colorRole === 'textonimage') {
@@ -58,8 +70,10 @@ function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroun
           textRole: 'body',
           backgroundMode,
           backgroundHex,
+          _depth: _depth + 1,
         });
       }
+      return highContrastFallback(backgroundHex);
     }
   }
 

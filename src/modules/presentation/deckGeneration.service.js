@@ -102,6 +102,9 @@ const {
   normalizeTimelineContent,
   normalizeDiagramContent,
   normalizeDeviceContent,
+  layoutUsesPerSlotGalleryImages,
+  layoutNeedsDiagramCellsFromSchema,
+  countDiagramCellSlotsFromSchema,
 } = require('./contentPreShape.util');
 const {
   buildSlotImagePrompt,
@@ -112,8 +115,10 @@ const {
   layoutHasChartSlot,
   withDeviceUiDirective,
   resolveImagePromptAlias,
+  resolveAuthorImagePrompt,
   titleWordsFromBody,
 } = require('./contentImagePrompt.util');
+const { isDeviceScreenSlotId } = require('./diagrams/deviceChrome.util');
 const { compileSlide } = require('./slideCompiler.service');
 
 async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, slotImageUrls }) {
@@ -3774,6 +3779,12 @@ async function processSlide(ctx, slide) {
       ok: true,
     };
   } catch (err) {
+    logger.error?.('presentation_slide_failed', {
+      slideId: slide.id,
+      order: slide.order,
+      error: err.message,
+      stack: err.stack,
+    });
     const failed = await presentationDao.updateSlide(slide.id, {
       status: 'FAILED',
       imageRef: withImageStatus({ source: 'none' }, 'failed', { error: err.message }),
