@@ -167,11 +167,35 @@ function specToSplitPanelContent(spec) {
   return { svg: splitPanelInlineSvg(false), colorMode: 'recolorable', fill: spec?.color || SPLIT_PANEL_ACCENT }
 }
 
+function xmlText(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 function agendaSplitPanelPreviewSvg() {
-  return splitPanelInlineSvg(true).replace(
-    '<svg ',
-    `<svg style="color:${SPLIT_PANEL_ACCENT}" `
-  )
+  const g = AGENDA_SPLIT_PANEL_GEOM
+  const overlay = agendaSplitPanelOverlayPlacements(0, 0, g.viewW, g.viewH)
+  const titles = ['EDIT TEXT HERE', 'EDIT TEXT HERE', 'EDIT TEXT HERE', 'EDIT TEXT HERE']
+  const bodies = [
+    'You can edit this text. Editable text',
+    'You can edit this text. Editable text',
+    'You can edit this text. Editable text',
+    'You can edit this text. Editable text',
+  ]
+  const itemMarkup = titles.map((title, i) => {
+    const t = overlay.items[i]
+    const b = overlay.itemBodies[i]
+    if (!t || !b) return ''
+    return `<text x="${t.x}" y="${t.y + t.height * 0.72}" fill="#111827" font-size="16" font-weight="800" font-family="system-ui,sans-serif">${xmlText(title)}</text>
+      <text x="${b.x}" y="${b.y + 16}" fill="#6B7280" font-size="12" font-family="system-ui,sans-serif">${xmlText(bodies[i])}</text>`
+  }).join('')
+  const heading = overlay.heading
+  const inner = splitPanelInlineSvg(true)
+    .replace(/^<svg[^>]*>/i, '')
+    .replace(/<\/svg>\s*$/i, '')
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.viewW} ${g.viewH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="color:${SPLIT_PANEL_ACCENT}"><rect width="${g.viewW}" height="${g.viewH}" fill="#ffffff"/>${inner}<text x="${heading.x + heading.width / 2}" y="${heading.y + heading.height * 0.72}" text-anchor="middle" fill="#111827" font-size="18" font-weight="800" letter-spacing="1.8" font-family="system-ui,sans-serif">TABLE OF CONTENT</text>${itemMarkup}</svg>`
 }
 
 function isAgendaSplitPanelLayout(layoutId, family, variant) {

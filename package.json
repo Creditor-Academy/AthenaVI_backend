@@ -20,6 +20,10 @@
     "test:layout-ai-selection": "node scripts/test-layout-ai-selection.js",
     "test:art-direction-engine": "node scripts/test-art-direction-engine.js",
     "test:palette-gallery-fixes": "node scripts/test-palette-gallery-fixes.js",
+    "test:content-contract-parity": "node --test packages/athena-contracts/test/content-contract-parity.test.mjs",
+    "test:content-repair": "node --test packages/athena-contracts/test/content-repair.test.mjs",
+    "sync:athena-contracts": "node scripts/sync-athena-contracts-to-frontend.js",
+    "test:content-repair-benchmarks": "node scripts/test-content-repair-benchmarks.js",
     "test:path-b-vs-layouts": "node scripts/test-path-b-vs-layouts.js",
     "test:gallery-grid-policy": "node scripts/test-gallery-grid-policy.js",
     "eval:presentation-export": "node scripts/presentation-eval/export-fidelity.js",
@@ -27,13 +31,14 @@
     "seed:presentation-deck-packs": "dotenv -e .env.development -- node scripts/seed-presentation-deck-packs.js",
     "seed:video-templates": "dotenv -e .env.development -- node scripts/seed-video-templates.js",
     "fonts:refresh-catalog": "dotenv -e .env.development -- node scripts/refresh-font-catalog.js",
-    "test": "node --test src/modules/presentation/deckRender.service.test.js src/modules/presentationShare/presentationShare.presence.smoke.test.js src/modules/project/project.assignment.test.js src/modules/presentation/slideAssignment.test.js src/modules/project/sceneAssignment.test.js"
+    "test": "node --test src/modules/presentation/deckRender.service.test.js src/modules/presentationShare/presentationShare.presence.smoke.test.js src/modules/project/project.assignment.test.js src/modules/presentation/slideAssignment.test.js src/modules/project/sceneAssignment.test.js src/modules/imageGen/social.service.test.js src/modules/imageGen/imageGen.social.flow.test.js src/modules/imageGen/print.service.test.js src/modules/imageGen/imageGen.print.flow.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@athena/contracts": "file:./packages/athena-contracts",
     "@aws-sdk/client-s3": "^3.1009.0",
     "@aws-sdk/s3-request-presigner": "^3.1009.0",
     "@google/genai": "^2.19.0",

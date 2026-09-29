@@ -7,7 +7,6 @@ body:
     {
       "mode": "infographic",
       "folderId": "{{folderId}}",
-      "modelId": "gpt-image-1-hd",
       "formatId": "landscape",
       "archetypeHint": "process",
       "styleHint": "minimal, clean corporate",
@@ -31,4 +30,4 @@ scripts:
         }
       }
     language: text/javascript
-order: 3050
+order: 3065

@@ -254,15 +254,40 @@ function agendaThreeColumnOverlayPlacements(gx, gy, gw, gh) {
   return overlay
 }
 
+function xmlText(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+const AGENDA_THREE_COLUMN_PREVIEW_COPY = [
+  { heading: 'Morning', items: ['1.1 Opening remarks', '1.2 Key topic', '1.3 Discussion'] },
+  { heading: 'Afternoon', items: ['2.1 Opening remarks', '2.2 Key topic', '2.3 Discussion'] },
+  { heading: 'Evening', items: ['3.1 Opening remarks', '3.2 Key topic', '3.3 Discussion'] },
+]
+
 function buildAgendaThreeColumnPreviewSvg(colors = {}) {
   const specs = agendaThreeColumnChromeSpecs(colors)
-  const { viewW, viewH } = AGENDA_THREE_COLUMN_GEOM
-  const parts = specs.map((spec) => {
+  const { viewW, viewH, headingY, headingH } = AGENDA_THREE_COLUMN_GEOM
+  const overlay = agendaThreeColumnOverlayPlacements(0, 0, viewW, viewH)
+  const chrome = specs.map((spec) => {
     const inner = agendaThreeColumnCardInlineSvg(spec)
     const match = inner.match(/<svg[^>]*>([\s\S]*)<\/svg>/i)
     return `<g transform="translate(${spec.x},${spec.y})">${match ? match[1] : ''}</g>`
   })
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewW} ${viewH}">${parts.join('')}</svg>`
+  const labels = overlay.columns.map((col, i) => {
+    const sample = AGENDA_THREE_COLUMN_PREVIEW_COPY[i]
+    const hx = col.heading.x + col.heading.width / 2
+    const hy = col.heading.y + col.heading.height * 0.72
+    const items = sample.items.map((item, j) => {
+      const box = col.items[j]
+      if (!box) return ''
+      return `<text x="${box.x + box.width / 2}" y="${box.y + box.height * 0.62}" text-anchor="middle" fill="#4B5563" font-size="13" font-family="system-ui,sans-serif">${xmlText(item)}</text>`
+    }).join('')
+    return `<text x="${hx}" y="${hy}" text-anchor="middle" fill="#111827" font-size="18" font-weight="800" font-family="system-ui,sans-serif">${xmlText(sample.heading)}</text>${items}`
+  })
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewW} ${viewH}"><rect width="${viewW}" height="${viewH}" fill="#ffffff"/>${chrome.join('')}<text x="${viewW / 2}" y="${headingY + headingH * 0.78}" text-anchor="middle" fill="#0F172A" font-size="34" font-weight="800" font-family="system-ui,sans-serif">Agenda</text>${labels.join('')}</svg>`
 }
 
 function agendaThreeColumnPreviewSvg(colors = {}) {
@@ -291,6 +316,12 @@ function specToThreeColumnContent(spec) {
   return { svg: agendaThreeColumnIconInlineSvg('document'), colorMode: 'fixed', fill: '#ffffff' }
 }
 
+function isAgendaThreeColumnsDefaultLayout(layoutId, schema) {
+  const id = String(layoutId || schema?.layout_id || schema?.layoutId || '')
+  if (/hero/i.test(id) || /agenda_three_cards/i.test(id)) return false
+  return /agenda_three_columns_v1/i.test(id)
+}
+
 function isAgendaThreeColumnColouredLayout(layoutId, family, variant) {
   if (family === 'three_col' && (variant === 'coloured' || variant === 'default' || !variant)) {
     return true
@@ -316,6 +347,7 @@ module.exports = {
   agendaThreeColumnOverlayPlacements,
   agendaThreeColumnPreviewSvg,
   specToThreeColumnContent,
+  isAgendaThreeColumnsDefaultLayout,
   isAgendaThreeColumnColouredLayout,
   isAgendaThreeColumnTextSlot,
 };

@@ -172,14 +172,14 @@
 | GET | `/api/graphics` | Bearer | Published SVG catalog (`q`, `category`, `type`, `page`, `limit`) |
 | POST | `/api/graphics/search` | Bearer | Intent search over published graphics |
 | GET | `/api/graphics/:id` | Bearer | One published graphic |
-| GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog |
-| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait) |
+| GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog (`models`, `providers`, per-mode `defaults`) |
+| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait + seven social destinations + eight print sizes) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
 | GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
 | POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |
 | GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
 | DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Delete unpinned context |
-| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate image (sync) → Asset + folder chat (`folderId` required) |
+| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate (sync, `mode` image \| infographic \| social \| printable) → Asset + folder chat (`folderId` required; `formatId` required for social and printable) |
 | GET | `/api/image-gen/workspaces/:workspaceId/threads` | Bearer + workspace access | List image chats (`folderId`/`take`/`skip`) |
 | GET | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Get chat + messages (free) |
 | POST | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/messages` | Bearer + workspace access | Chat send → tweak latest hop (charges) |
@@ -190,7 +190,7 @@
 | GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
 | POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |
-| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` | Bearer + workspace access | Download `png`\|`jpg`\|`jpeg`\|`pdf` |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` | Bearer + workspace access | Download `png`\|`jpg`\|`jpeg`\|`pdf`; printables: physical-size PDF, `bleed=true` for bleed + crop marks |
 | GET | `/api/credits/me` | Bearer | Personal credit balance |
 | GET | `/api/credits/me/history` | Bearer | Personal credit ledger |
 | GET | `/api/credits/me/estimate` | Bearer | Personal estimate (`voice_clone` \| `voice_design` \| `voice_preview` \| `avatar_create`) |

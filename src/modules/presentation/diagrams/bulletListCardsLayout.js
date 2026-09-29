@@ -1,231 +1,280 @@
-/** Custom shapes for bullet_list_cards_v1 and bullet_list_grid_v1 layouts */
+/**
+ * Bullet List Cards
+ * Layout ID: bullet_list_cards_v1
+ *
+ * Four equal point cards under a heading. Twin `bullet_list_grid_v1`
+ * has its own staggered-column engine.
+ */
 
-function isBulletListCardsLayout(layoutId) {
-  return /bullet_list_(cards|grid)/i.test(String(layoutId || ''))
+function isBulletListCardsLayout(layoutId, schema) {
+  const id = String(layoutId || schema?.layout_id || schema?.layoutId || '').toLowerCase()
+  if (id.includes('_grid')) return false
+  return id === 'bullet_list_cards_v1' || id === 'bullet_list_cards'
 }
 
-function bulletListCardsGeom(canvasW = 1920, canvasH = 1080, isGrid = false) {
-  const sx = canvasW / 1920
-  const sy = canvasH / 1080
-  
-  if (isGrid) {
-    const colW = canvasW / 4
-    const cards = [0, 1, 2, 3].map((i) => {
-      const cx = i * colW
-      const isDown = i % 2 === 0
-      const contentStartY = isDown ? canvasH / 2 + Math.round(50 * sy) : Math.round(150 * sy)
-      
-      const titleY = contentStartY + Math.round(200 * sy)
-      const bodyY = titleY + Math.round(120 * sy)
-      
-      return {
-        bg: { x: cx, y: 0, width: colW, height: canvasH },
-        title: { x: cx + Math.round(60 * sx), y: titleY, width: colW - Math.round(120 * sx), height: Math.round(100 * sy) },
-        body: { x: cx + Math.round(60 * sx), y: bodyY, width: colW - Math.round(120 * sx), height: Math.round(300 * sy) }
-      }
-    })
-    return {
-      canvasW,
-      canvasH,
-      headingBox: { x: -1000, y: -1000, width: 10, height: 10 }, // Hide heading for grid
-      cards
-    }
-  }
+const BULLET_LIST_CARDS_DEFAULTS = {
+  HEADING: 'Key points',
+  CARD_1_TITLE: 'Point one',
+  CARD_2_TITLE: 'Point two',
+  CARD_3_TITLE: 'Point three',
+  CARD_4_TITLE: 'Point four',
+  BODY: 'Supporting paragraph with three to four lines of scannable copy that explains the key idea without overwhelming the slide.',
+}
 
-  // Cards Variant
-  const padX = Math.round(100 * sx)
-  const padY = Math.round(100 * sy)
-  const headingH = Math.round(120 * sy)
-  const gapY = Math.round(80 * sy)
-  
-  const contentW = canvasW - padX * 2
-  const cardGap = Math.round(40 * sx)
-  const cardW = Math.round((contentW - cardGap * 3) / 4)
-  
-  const contentStartY = padY + headingH + gapY
-  const cardH = canvasH - contentStartY - padY - Math.round(50 * sy)
+const GEOM = {
+  viewW: 1920,
+  viewH: 1080,
+  headX: 80,
+  headY: 48,
+  headW: 1760,
+  headH: 100,
+  cardY: 176,
+  cardW: 419,
+  cardH: 820,
+  cardGap: 28,
+  cardXs: [80, 527, 974, 1421],
+  barH: 8,
+  titlePad: 36,
+  titleY: 268,
+  titleH: 96,
+  bodyY: 384,
+  bodyH: 560,
+}
 
-  const headingBox = {
-    x: padX,
-    y: padY,
-    width: contentW,
-    height: headingH,
-  }
+function cardChrome(x, y, w, h, barH, n) {
+  const rx = 24
+  const cx = x + w / 2
+  return `
+    <rect x="${x + 10}" y="${y + 14}" width="${w}" height="${h}" rx="${rx}" fill="currentColor" opacity="0.08" />
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#FFFFFF" />
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="currentColor" stroke-width="2" opacity="0.14" />
+    <path d="M ${x} ${y + barH} L ${x + w} ${y + barH} L ${x + w} ${y + rx} Q ${x + w} ${y} ${x + w - rx} ${y} L ${x + rx} ${y} Q ${x} ${y} ${x} ${y + rx} Z" fill="currentColor" />
+    <circle cx="${cx}" cy="${y + 56}" r="22" fill="currentColor" opacity="0.12" />
+    <text x="${cx}" y="${y + 63}" text-anchor="middle" fill="currentColor" font-size="16" font-weight="800" font-family="system-ui, sans-serif">${n}</text>
+  `
+}
 
-  const cards = [0, 1, 2, 3].map((i) => {
-    const cx = padX + i * (cardW + cardGap)
-    return {
-      bg: { x: cx, y: contentStartY, width: cardW, height: cardH },
-      title: { x: cx + Math.round(40 * sx), y: contentStartY + Math.round(180 * sy), width: cardW - Math.round(80 * sx), height: Math.round(80 * sy) },
-      body: { x: cx + Math.round(40 * sx), y: contentStartY + Math.round(260 * sy), width: cardW - Math.round(80 * sx), height: cardH - Math.round(320 * sy) }
-    }
-  })
+function buildBulletListCardsChromeSvg() {
+  const { cardY, cardW, cardH, cardXs, barH } = GEOM
+  const cards = cardXs.map((x, i) => cardChrome(x, cardY, cardW, cardH, barH, String(i + 1).padStart(2, '0'))).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%" preserveAspectRatio="none">
+    <rect width="1920" height="1080" fill="#FFFFFF" />
+    <rect width="1920" height="1080" fill="currentColor" opacity="0.04" />
+    <circle cx="1760" cy="80" r="160" fill="currentColor" opacity="0.06" />
+    ${cards}
+  </svg>`
+}
 
+function findEl(elements, ids) {
+  const set = new Set(ids)
+  return (elements || []).find((e) => set.has(String(e.slotId || '').toUpperCase()))
+}
+
+function textOf(el, fallback) {
+  const txt = el?.content?.text || el?.text
+  if (txt && String(txt).trim()) return String(txt).trim()
+  return fallback
+}
+
+function resolveStoredColor(el, fallback) {
+  const fill = el?.content?.fill
+  if (typeof fill === 'string' && fill && fill !== 'none' && fill !== 'transparent') return fill
+  if (fill && typeof fill === 'object' && fill.color) return fill.color
+  return fallback
+}
+
+function textEl({ slotId, prev, x, y, w, h, text, fontSize, fontWeight, color, lineHeight, maxLines, sx, sy, scale, role, align }) {
   return {
+    id: prev?.id || `slot-${slotId}`,
+    slotId,
+    type: 'text',
+    role,
+    layer: 10,
+    placement: {
+      x: Math.round(x * sx),
+      y: Math.round(y * sy),
+      width: Math.round(w * sx),
+      height: Math.round(h * sy),
+      rotation: 0,
+      opacity: 1,
+    },
+    content: {
+      text,
+      fontSize: Math.round(fontSize * scale),
+      fontWeight,
+      color,
+      align,
+      verticalAlign: 'top',
+      lineHeight,
+      clipToSlot: true,
+      maxLines,
+    },
+  }
+}
+
+function paletteColors(palette) {
+  const pal = palette?.primary ? palette : (palette?.palette || palette || {})
+  return {
+    accent: pal.primary || pal.accent || '#6366F1',
+    textColor: pal.text || '#0F172A',
+    mutedColor: pal.muted || pal.textMuted || '#64748B',
+  }
+}
+
+function buildElements({ canvasW, canvasH, heading, titles, bodies, accent, textColor, mutedColor, prev = {} }) {
+  const sx = canvasW / GEOM.viewW
+  const sy = canvasH / GEOM.viewH
+  const scale = Math.min(sx, sy)
+  const titleW = GEOM.cardW - GEOM.titlePad * 2
+  const out = [
+    {
+      id: prev.IMAGE_CARD_BG?.id || prev.CARD_1_BG?.id || 'slot-IMAGE_CARD_BG',
+      slotId: 'IMAGE_CARD_BG',
+      type: 'graphic',
+      role: 'decoration',
+      layer: 2,
+      placement: { x: 0, y: 0, width: canvasW, height: canvasH, rotation: 0, opacity: 1 },
+      content: {
+        svg: buildBulletListCardsChromeSvg(),
+        preserveAspectRatio: 'none',
+        colorMode: 'recolorable',
+        fill: accent,
+        stroke: accent,
+      },
+    },
+    textEl({
+      slotId: 'HEADING',
+      prev: prev.HEADING,
+      x: GEOM.headX,
+      y: GEOM.headY,
+      w: GEOM.headW,
+      h: GEOM.headH,
+      text: heading,
+      fontSize: 32,
+      fontWeight: 800,
+      color: textColor,
+      lineHeight: 1.15,
+      maxLines: 2,
+      sx,
+      sy,
+      scale,
+      role: 'heading',
+      align: 'left',
+    }),
+  ]
+  GEOM.cardXs.forEach((cardX, i) => {
+    const n = i + 1
+    const tx = cardX + GEOM.titlePad
+    out.push(textEl({
+      slotId: `CARD_${n}_TITLE`,
+      prev: prev[`CARD_${n}_TITLE`],
+      x: tx,
+      y: GEOM.titleY,
+      w: titleW,
+      h: GEOM.titleH,
+      text: titles[i],
+      fontSize: 20,
+      fontWeight: 800,
+      color: textColor,
+      lineHeight: 1.2,
+      maxLines: 2,
+      sx,
+      sy,
+      scale,
+      role: 'heading',
+      align: 'left',
+    }))
+    out.push(textEl({
+      slotId: `CARD_${n}_BODY`,
+      prev: prev[`CARD_${n}_BODY`],
+      x: tx,
+      y: GEOM.bodyY,
+      w: titleW,
+      h: GEOM.bodyH,
+      text: bodies[i],
+      fontSize: 15,
+      fontWeight: 400,
+      color: mutedColor,
+      lineHeight: 1.45,
+      maxLines: 10,
+      sx,
+      sy,
+      scale,
+      role: 'body',
+      align: 'left',
+    }))
+  })
+  return out
+}
+
+function layoutBulletListCards(docOrElements, schema = {}, palette = {}, canvas = {}) {
+  const elements = Array.isArray(docOrElements) ? docOrElements : (docOrElements?.elements || [])
+  const canvasW = canvas?.width || docOrElements?.canvas?.width || 1920
+  const canvasH = canvas?.height || docOrElements?.canvas?.height || 1080
+  const { accent, textColor, mutedColor } = paletteColors(palette)
+  const headingEl = findEl(elements, ['HEADING', 'HEADLINE', 'TITLE'])
+  const chromeEl = findEl(elements, ['IMAGE_CARD_BG', 'CARD_1_BG'])
+  const titles = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_TITLE`]), BULLET_LIST_CARDS_DEFAULTS[`CARD_${n}_TITLE`]))
+  const bodies = [1, 2, 3, 4].map((n) => textOf(findEl(elements, [`CARD_${n}_BODY`]), BULLET_LIST_CARDS_DEFAULTS.BODY))
+  const prev = { IMAGE_CARD_BG: chromeEl, CARD_1_BG: chromeEl, HEADING: headingEl }
+  ;[1, 2, 3, 4].forEach((n) => {
+    prev[`CARD_${n}_TITLE`] = findEl(elements, [`CARD_${n}_TITLE`])
+    prev[`CARD_${n}_BODY`] = findEl(elements, [`CARD_${n}_BODY`])
+  })
+  const out = buildElements({
     canvasW,
     canvasH,
-    headingBox,
-    cards
-  }
-}
-
-function renderCardSvg(w, h, idx) {
-  const r = 24
-  const CARD_COLORS = ['#bae6fd', '#bbf7d0', '#e9d5ff', '#fbcfe8']
-  const bg = CARD_COLORS[idx] || CARD_COLORS[0]
-  const numColor = '#1f2937'
-  
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 ${w + 40} ${h + 80}" width="${w + 40}" height="${h + 80}" style="overflow:visible">
-    <defs>
-      <filter id="shadow-${idx}" x="-10%" y="-10%" width="130%" height="130%">
-        <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.1"/>
-      </filter>
-    </defs>
-    <!-- Background colored panel slightly offset to right and top -->
-    <rect x="16" y="-12" width="${w}" height="${h}" rx="${r}" fill="${bg}" />
-    <!-- Main white card -->
-    <rect x="0" y="0" width="${w}" height="${h}" rx="${r}" fill="#ffffff" filter="url(#shadow-${idx})" />
-    
-    <!-- Decorative Icon (Circle + Line) -->
-    <g transform="translate(${w/2}, 60)" stroke="${bg}" stroke-width="3" fill="none">
-      <circle cx="0" cy="0" r="24" stroke-opacity="0.2" fill="${bg}" fill-opacity="0.05" />
-      <path d="M -10 -10 L 10 10 M -10 10 L 10 -10" stroke-linecap="round" />
-    </g>
-
-    <!-- Number Circle at bottom center -->
-    <circle cx="${w/2}" cy="${h}" r="32" fill="${bg}" />
-    <text x="${w/2}" y="${h + 10}" text-anchor="middle" font-size="28" font-weight="800" fill="${numColor}" font-family="system-ui, sans-serif">0${idx + 1}</text>
-  </svg>`
-}
-
-function renderGridSvg(w, h, idx) {
-  const GRID_COLORS = ['#e0f2fe', '#dcfce7', '#f3e8ff', '#fce7f3']
-  const bg = GRID_COLORS[idx] || GRID_COLORS[0]
-  const isDown = idx % 2 === 0
-  
-  // contentStartY is matching the layout logic
-  const contentStartY = isDown ? h / 2 + 50 : 150
-  
-  // Arrow points to the next column's content
-  const nextIsDown = (idx + 1) % 2 === 0
-  const arrowY = nextIsDown ? h / 2 + 100 : 200
-  
-  // Arrow on right edge (except last col)
-  const arrow = idx < 3 ? `<path d="M ${w} ${arrowY - 24} L ${w + 24} ${arrowY} L ${w} ${arrowY + 24} Z" fill="${bg}" />` : ''
-  
-  const textY = contentStartY + 140
-  
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w + 24} ${h}" width="${w + 24}" height="${h}" style="overflow:visible">
-    <rect x="0" y="0" width="${w}" height="${h}" fill="${bg}" />
-    ${arrow}
-    <text x="60" y="${textY}" font-size="160" font-weight="300" fill="rgba(31,41,55,0.4)" font-family="system-ui, sans-serif">${idx + 1}</text>
-  </svg>`
-}
-
-function layoutBulletListCards(docOrElements, schema, themeTokens, canvas = {}) {
-  let elements = Array.isArray(docOrElements) ? docOrElements : docOrElements?.elements;
-  if (!Array.isArray(elements)) return docOrElements;
-
-  const canvasW = canvas.width || 1920
-  const canvasH = canvas.height || 1080
-  const layoutId = String(schema?.layout_id || '')
-  const isGrid = /grid/i.test(layoutId)
-  
-  const g = bulletListCardsGeom(canvasW, canvasH, isGrid)
-  
-  let out = []
-
-  elements.forEach((el) => {
-    const slotId = String(el.slotId || '').toUpperCase()
-    
-    if (slotId === 'HEADING') {
-      out.push({
-        ...el,
-        layer: 10,
-        placement: { ...g.headingBox, rotation: 0, opacity: 1 },
-      })
-      return
-    }
-
-    const cardMatch = slotId.match(/^CARD_(\d+)_(BG|TITLE|BODY)$/)
-    if (cardMatch) {
-      const idx = parseInt(cardMatch[1], 10) - 1
-      const type = cardMatch[2]
-      const cardGeom = g.cards[idx]
-      
-      if (!cardGeom) return
-
-      if (type === 'BG') {
-        out.push({
-          ...el,
-          type: 'graphic',
-          layer: 2,
-          placement: { ...cardGeom.bg, rotation: 0, opacity: 1 },
-          content: {
-            svg: isGrid ? renderGridSvg(cardGeom.bg.width, cardGeom.bg.height, idx) : renderCardSvg(cardGeom.bg.width, cardGeom.bg.height, idx),
-            colorMode: 'preserve'
-          }
-        })
-      } else if (type === 'TITLE' || type === 'BODY') {
-        const isDarkBg = false // We use light neutral colors for all columns
-        const textColor = '#1f2937'
-        
-        let newEl = {
-          ...el,
-          layer: 10,
-          placement: { ...cardGeom[type.toLowerCase()], rotation: 0, opacity: 1 },
-        }
-        
-        if (newEl.type === 'shape' || newEl.type === 'text') {
-          newEl.content = {
-            ...newEl.content,
-            color: textColor,
-            colorOverride: true
-          }
-          if (type === 'TITLE' && !isGrid) {
-            newEl.content.align = 'center'
-          }
-          if (type === 'BODY' && !isGrid) {
-            newEl.content.align = 'center'
-          }
-        }
-        
-        out.push(newEl)
-      }
-      return
-    }
-
-    out.push(el)
+    heading: textOf(headingEl, BULLET_LIST_CARDS_DEFAULTS.HEADING),
+    titles,
+    bodies,
+    accent: resolveStoredColor(chromeEl, accent),
+    textColor,
+    mutedColor,
+    prev,
   })
+  if (Array.isArray(docOrElements)) return out
+  return { ...docOrElements, elements: out }
+}
 
-  // Ensure backgrounds exist even if the template dropped them
-  ;[0, 1, 2, 3].forEach(idx => {
-    const slotId = `CARD_${idx + 1}_BG`
-    if (!out.some(el => String(el.slotId || '').toUpperCase() === slotId)) {
-      const cardGeom = g.cards[idx]
-      out.unshift({
-        id: `shp-card-bg-${idx}`,
-        type: 'graphic',
-        layer: 1,
-        role: 'decoration',
-        slotId,
-        placement: { ...cardGeom.bg, rotation: 0, opacity: 1 },
-        content: {
-          svg: isGrid ? renderGridSvg(cardGeom.bg.width, cardGeom.bg.height, idx) : renderCardSvg(cardGeom.bg.width, cardGeom.bg.height, idx),
-          colorMode: 'preserve'
-        }
-      })
-    }
+function buildBulletListCardsCanvasElements({ schema, options = {} } = {}) {
+  const canvasW = options.canvas?.width || 1920
+  const canvasH = options.canvas?.height || 1080
+  const content = options.content || {}
+  const bySlot = options.contentBySlotId || {}
+  const { accent, textColor, mutedColor } = paletteColors(options.palette || {})
+  return buildElements({
+    canvasW,
+    canvasH,
+    heading: String(bySlot.HEADING || content.heading || content.title || BULLET_LIST_CARDS_DEFAULTS.HEADING).trim(),
+    titles: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_TITLE`] || content[`card${n}Title`] || BULLET_LIST_CARDS_DEFAULTS[`CARD_${n}_TITLE`]).trim()),
+    bodies: [1, 2, 3, 4].map((n) => String(bySlot[`CARD_${n}_BODY`] || content[`card${n}Body`] || BULLET_LIST_CARDS_DEFAULTS.BODY).trim()),
+    accent,
+    textColor,
+    mutedColor,
   })
+}
 
-  if (Array.isArray(docOrElements)) {
-    return out;
-  }
-  return { ...docOrElements, elements: out };
+function bulletListCardsPreviewSvg() {
+  const chrome = buildBulletListCardsChromeSvg()
+    .replace(/currentColor/g, '#6366F1')
+    .replace(/^<svg[^>]*>/, '')
+    .replace(/<\/svg>\s*$/, '')
+  const titles = ['Point one', 'Point two', 'Point three', 'Point four']
+  const titleNodes = GEOM.cardXs.map((x, i) =>
+    `<text x="${x + 36}" y="330" fill="#0F172A" font-size="24" font-weight="800" font-family="system-ui, sans-serif">${titles[i]}</text>
+     <text x="${x + 36}" y="400" fill="#64748B" font-size="16" font-family="system-ui, sans-serif">A short, scannable point.</text>`
+  ).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+    ${chrome}
+    <text x="80" y="112" fill="#0F172A" font-size="40" font-weight="800" font-family="system-ui, sans-serif">Key points</text>
+    ${titleNodes}
+  </svg>`
 }
 
 module.exports = {
   isBulletListCardsLayout,
   layoutBulletListCards,
-  bulletListCardsGeom,
+  buildBulletListCardsCanvasElements,
+  buildBulletListCardsChromeSvg,
+  BULLET_LIST_CARDS_DEFAULTS,
 };

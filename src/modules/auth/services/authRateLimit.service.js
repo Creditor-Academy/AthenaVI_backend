@@ -1,5 +1,10 @@
 const crypto = require('crypto');
-const { redisClient } = require('../../../shared/config/redis');
+const {
+  redisClient,
+  assertRedisReady,
+  isRedisReady,
+  isRedisOptional,
+} = require('../../../shared/config/redis');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 const logger = require('../../../shared/utils/logger');
@@ -87,6 +92,10 @@ async function getLimitStatus({ email, ip }) {
 }
 
 async function assertLoginAllowed({ email, ip }) {
+  if (!isRedisReady()) {
+    if (isRedisOptional()) return;
+    assertRedisReady();
+  }
   const status = await getLimitStatus({ email, ip });
 
   if (status.blocked) {
@@ -103,6 +112,7 @@ async function assertLoginAllowed({ email, ip }) {
 }
 
 async function recordLoginFailure({ email, ip }) {
+  if (!isRedisReady()) return;
   await Promise.all([
     recordFailure(acctKey(email)),
     recordFailure(ipKey(ip)),
@@ -110,6 +120,7 @@ async function recordLoginFailure({ email, ip }) {
 }
 
 async function clearLoginAttempts({ email, ip }) {
+  if (!isRedisReady()) return;
   await Promise.all([
     redisClient.del(acctKey(email)),
     redisClient.del(ipKey(ip)),

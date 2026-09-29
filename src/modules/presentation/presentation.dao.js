@@ -307,6 +307,42 @@ async function findJobByRequestHash(requestHash) {
   });
 }
 
+/** Reuses slide_generation_jobs for content-repair audit (jobType CONTENT_REPAIR, usage JSON). */
+async function recordContentRepairJob({
+  slideId,
+  phase,
+  layoutId,
+  status,
+  usage,
+  latencyMs,
+  requestHash,
+}) {
+  const data = {
+    slideId,
+    jobType: 'CONTENT_REPAIR',
+    status: status === 'WARN' ? 'SUCCEEDED' : status === 'REPAIRED' ? 'SUCCEEDED' : 'SUCCEEDED',
+    requestHash,
+    usage: {
+      ...(usage && typeof usage === 'object' ? usage : {}),
+      phase,
+      layoutId,
+      auditStatus: status,
+    },
+    latencyMs: latencyMs ?? null,
+    creditCharged: false,
+  };
+
+  return prisma.slideGenerationJob.upsert({
+    where: { requestHash },
+    create: data,
+    update: {
+      usage: data.usage,
+      latencyMs: data.latencyMs,
+      status: data.status,
+    },
+  });
+}
+
 async function findExport(exportId) {
   return prisma.deckExport.findUnique({
     where: { id: exportId },
@@ -584,6 +620,7 @@ module.exports = {
   createJob,
   updateJob,
   findJobByRequestHash,
+  recordContentRepairJob,
   findExport,
   createExport,
   updateExport,

@@ -13,6 +13,29 @@ function findById(id, workspaceId) {
   });
 }
 
+function findGlobalById(id) {
+  return prisma.imageGeneration.findUnique({
+    where: { id },
+    include: {
+      asset: true,
+      user: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+function hasPublicTweak(parentId) {
+  return prisma.imageGeneration.findFirst({
+    where: {
+      parentId,
+      action: 'public_tweak'
+    }
+  }).then(res => !!res);
+}
+
 function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode, threadId }) {
   const limit = Math.min(Math.max(Number(take) || 20, 1), 100);
   const offset = Math.max(Number(skip) || 0, 0);
@@ -51,6 +74,8 @@ function setThreadId(id, threadId) {
 module.exports = {
   createGeneration,
   findById,
+  findGlobalById,
+  hasPublicTweak,
   listGenerations,
   setThreadId,
 };

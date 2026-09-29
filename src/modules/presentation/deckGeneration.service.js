@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const path = require('path');
 const prisma = require('../../shared/config/prismaClient');
 const AppError = require('../../shared/utils/AppError');
@@ -94,1018 +94,27 @@ const brandKitService = require('../brandKit/brandKit.service');
 const fontPairingService = require('./fontPairing.service');
 const layoutCatalogPolicy = require('./layoutCatalogPolicy');
 
-/** Prefer pack/slide author image brief when present. */
-function resolveAuthorImagePrompt(content) {
-  if (!content || typeof content !== 'object') return '';
-  const direct = typeof content.imagePrompt === 'string' ? content.imagePrompt.trim() : '';
-  if (direct) return direct;
-  const hints = content.generationHints;
-  if (hints && typeof hints === 'object') {
-    const style =
-      typeof hints.imagePromptStyle === 'string' ? hints.imagePromptStyle.trim() : '';
-    if (style) return style;
-  }
-  const visual = typeof content.visual === 'string' ? content.visual.trim() : '';
-  return visual;
-}
-
-const SINGLE_SUBJECT_NEGATIVES =
-  'no triptych, no multi-panel, no split image, no collage, no diptych, no grid, no multiple cups, no comparison sheet, no split frame';
-
-const CHART_PHOTO_NEGATIVES =
-  'no charts, no graphs, no bar charts, no line charts, no pie charts, no dashboards, no axes, no data visualizations, no spreadsheet screens';
-
-/** Ban lettering so image models do not paste slide copy into pixels. */
-const TEXT_NEGATIVES =
-  'no text, no words, no letters, no captions, no typography, no watermarks, no logos, no UI chrome, no posters with headlines';
-
-const DEFAULT_TEXT_NEGATIVE_TERMS = [
-  'text',
-  'words',
-  'letters',
-  'captions',
-  'typography',
-  'watermarks',
-  'logos',
-  'posters with headlines',
-];
-
-function shortVisualPhrase(text, maxWords = 8) {
-  const raw = String(text || '').trim();
-  if (!raw) return '';
-  const beforeBreak = raw.split(/[:—–|]/)[0].trim();
-  const source = beforeBreak && beforeBreak.split(/\s+/).filter(Boolean).length >= 2 ? beforeBreak : raw;
-  const words = source.split(/\s+/).filter(Boolean);
-  if (!words.length) return '';
-  return words.slice(0, Math.max(2, maxWords)).join(' ');
-}
-
-function slideCopyCorpus(content = {}) {
-  const parts = [];
-  const push = (v) => {
-    const s = String(v || '').trim();
-    if (s) parts.push(s);
-  };
-  push(content.body);
-  push(content.summary);
-  push(content.subtitle);
-  push(content.left_body);
-  push(content.right_body);
-  for (const col of content.columns || content.cards || content.features || content.items || []) {
-    if (typeof col === 'string') push(col);
-    else if (col && typeof col === 'object') {
-      push(col.body);
-      push(col.text);
-      push(col.description);
-    }
-  }
-  for (const b of content.bullets || []) {
-    if (typeof b === 'string') push(b);
-    else if (b && typeof b === 'object') push(b.text || b.body || b.description);
-  }
-  return parts;
-}
-
-/** True when an image prompt reuses a long phrase from slide body copy. */
-function imagePromptEchoesCopy(prompt, content = {}) {
-  const p = String(prompt || '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (p.length < 36) return false;
-  const bodies = slideCopyCorpus(content);
-  for (const body of bodies) {
-    const normalized = String(body).toLowerCase().replace(/\s+/g, ' ').trim();
-    if (normalized.length < 28) continue;
-    const words = normalized.split(/\s+/).filter(Boolean);
-    if (words.length < 6) continue;
-    for (let i = 0; i <= words.length - 6; i += 1) {
-      const ngram = words.slice(i, i + 6).join(' ');
-      if (p.includes(ngram)) return true;
-    }
-  }
-  return false;
-}
-
-function appendImageNegatives(prompt, { isDevice = false, hasChart = false } = {}) {
-  let next = String(prompt || '').trim();
-  if (!next) return next;
-  const lower = next.toLowerCase();
-  if (!isDevice && !lower.includes('no text')) {
-    next = `${next}. ${TEXT_NEGATIVES}`;
-  }
-  if (!lower.includes('no collage') && !lower.includes('no triptych')) {
-    next = `${next}. ${SINGLE_SUBJECT_NEGATIVES}`;
-  }
-  if (hasChart && !lower.includes('no charts')) {
-    next = `${next}. ${CHART_PHOTO_NEGATIVES}`;
-  }
-  return next;
-}
-
 const {
-  isDeviceScreenSlotId,
-  deviceUiScreenshotDirective,
-  deviceScreenUiKind,
-} = require('./diagrams/deviceChrome.util');
-
-function withDeviceUiDirective(prompt, slotId, layoutId = '') {
-  const base = String(prompt || '').trim();
-  if (!isDeviceScreenSlotId(slotId)) return base;
-  const directive = deviceUiScreenshotDirective(slotId, layoutId);
-  const lower = base.toLowerCase();
-  const kind = deviceScreenUiKind(slotId, layoutId);
-  const already =
-    (kind === 'website' && /website|web[- ]?app|browser|desktop ui/.test(lower)) ||
-    (kind === 'mobile_app' && /mobile app|phone app|app ui|ios|android/.test(lower)) ||
-    (kind === 'watch_app' && /watch|wearable/.test(lower));
-  if (already && /no (phone|laptop|tablet|device|bezel|hardware)/.test(lower)) return base;
-  return `${base}. ${directive}`;
-}
-
-function columnEntryAt(content = {}, index) {
-  const list = content.columns || content.cards || content.features || content.items || [];
-  const col = Array.isArray(list) ? list[index] : null;
-  return col && typeof col === 'object' ? col : null;
-}
-
-/** Short visual noun phrase only — never paste paragraph body into image prompts. */
-function columnSubjectFromEntry(col) {
-  if (!col || typeof col !== 'object') return null;
-  const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
-  if (title) return shortVisualPhrase(title, 8);
-  const body = String(col.body ?? col.text ?? col.description ?? '').trim();
-  if (body) return shortVisualPhrase(body, 8);
-  return null;
-}
-
-function numberedImageSlotIndex(slotId) {
-  const id = String(slotId || '');
-  let m = id.match(/^COL_(\d+)_IMAGE$/i);
-  if (m) return Number(m[1]) - 1;
-  m = id.match(/^METRIC_IMAGE_(\d+)$/i);
-  if (m) return Number(m[1]) - 1;
-  m = id.match(/^(?:GRID_)?IMAGE_(\d+)$/i);
-  if (m) return Number(m[1]) - 1;
-  m = id.match(/^POINT_IMAGE$/i);
-  if (m) return 0;
-  return null;
-}
-
-function layoutHasChartSlot(layoutSchema) {
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  return slots.some((s) => String(s.role || '').toLowerCase() === 'chart');
-}
-
-function overallThemeSubject(content = {}, opts = {}) {
-  const visual = String(content.visual || '').trim();
-  if (visual) return shortVisualPhrase(visual, 12);
-
-  const title = String(content.title || '').trim();
-  if (title) return shortVisualPhrase(title, 10);
-
-  const summary = String(content.summary || content.subtitle || content.body || '').trim();
-  if (summary) return shortVisualPhrase(summary, 10);
-
-  const deckSummary = String(
-    opts.deckNarrative || opts.sourceText || content.deckSummary || content.overallSummary || ''
-  ).trim();
-  if (deckSummary) return shortVisualPhrase(deckSummary, 12);
-
-  return null;
-}
-
-function resolveImagePromptAlias(slotId, imagePrompts = {}) {
-  const id = String(slotId || '');
-  const direct =
-    imagePrompts[id] ||
-    imagePrompts[id.toUpperCase()] ||
-    imagePrompts[id.toLowerCase()] ||
-    null;
-  if (direct) return String(direct).trim();
-
-  // LLM often keys IMAGE_n while layout uses COL_n_IMAGE
-  const colMatch = id.match(/^COL_(\d+)_IMAGE$/i);
-  if (colMatch) {
-    const n = colMatch[1];
-    const alt =
-      imagePrompts[`IMAGE_${n}`] ||
-      imagePrompts[`image_${n}`] ||
-      imagePrompts[`IMAGE_${n}`.toLowerCase()];
-    if (alt) return String(alt).trim();
-  }
-  const imageMatch = id.match(/^IMAGE_(\d+)$/i);
-  if (imageMatch) {
-    const n = imageMatch[1];
-    const alt =
-      imagePrompts[`COL_${n}_IMAGE`] ||
-      imagePrompts[`col_${n}_image`] ||
-      imagePrompts[`COL_${n}_IMAGE`.toLowerCase()];
-    if (alt) return String(alt).trim();
-  }
-  return null;
-}
-
-function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, opts = {}) {
-  const id = String(slotId || '');
-  const imagePrompts =
-    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
-  const direct = resolveImagePromptAlias(id, imagePrompts);
-  if (direct) return direct;
-
-  const numberedIdx = numberedImageSlotIndex(id);
-  if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
-    const fromCol = columnSubjectFromEntry(columnEntryAt(content, numberedIdx));
-    if (fromCol) return fromCol;
-  }
-
-  if (/^POINT_IMAGE$/i.test(id)) {
-    const pointTitle = String(
-      content.pointHeading ||
-        content.columns?.[0]?.title ||
-        content.cards?.[0]?.title ||
-        ''
-    ).trim();
-    if (pointTitle) return shortVisualPhrase(pointTitle, 8);
-    const pointBody = String(
-      content.pointBody || content.columns?.[0]?.body || content.cards?.[0]?.body || content.summary || ''
-    ).trim();
-    if (pointBody) return shortVisualPhrase(pointBody, 8);
-  }
-
-  const deviceMatch = id.match(/^DEVICE_IMAGE_(\d+)$/i);
-  if (deviceMatch) {
-    const idx = Number(deviceMatch[1]) - 1;
-    const col = columnEntryAt(content, idx);
-    const label = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
-    const base = shortVisualPhrase(label || String(content.title || '').trim(), 8);
-    const layoutId = String(layoutSchema?.layout_id || '');
-    const kind = deviceScreenUiKind(id, layoutId);
-    const uiLabel = kind === 'website' ? 'website UI screenshot' : 'mobile app UI screenshot';
-    if (base) return `${base} — ${uiLabel}`;
-  }
-
-  if (/^(PHONE_IMAGE|WATCH_IMAGE)$/i.test(id)) {
-    const base = shortVisualPhrase(String(content.title || '').trim(), 8);
-    if (base) return `${base} — mobile app UI screenshot`;
-  }
-  if (/^(TABLET_IMAGE|LAPTOP_IMAGE)$/i.test(id)) {
-    const base = shortVisualPhrase(String(content.title || '').trim(), 8);
-    if (base) return `${base} — website UI screenshot`;
-  }
-
-  if (/^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id)) {
-    const theme = overallThemeSubject(content, opts);
-    if (theme) return theme;
-  }
-
-  if (content.title) {
-    const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-    const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
-    if (imageSlots.length > 1) {
-      const slotIndex = imageSlots.findIndex((s) => String(s.id) === id);
-      if (slotIndex >= 0) {
-        const fromCol = columnSubjectFromEntry(columnEntryAt(content, slotIndex));
-        if (fromCol) return fromCol;
-        return `${content.title} — visual ${slotIndex + 1} of ${imageSlots.length}`;
-      }
-    }
-  }
-
-  return overallThemeSubject(content, opts);
-}
-
-function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
-  const id = String(slotId || '');
-  const isDevice = isDeviceScreenSlotId(id);
-  const layoutId = String(layoutSchema?.layout_id || '').trim();
-  const imagePrompts =
-    content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
-  const llmPrompt = resolveImagePromptAlias(id, imagePrompts);
-  let subject = '';
-
-  if (llmPrompt && !imagePromptEchoesCopy(llmPrompt, content)) {
-    // Keep concrete visual briefs from the content model.
-    subject = String(llmPrompt).trim();
-  } else {
-    const numberedIdx = numberedImageSlotIndex(id);
-    if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
-      subject = columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) || '';
-    }
-    if (!subject) {
-      subject = deriveSlotImagePromptBase(id, content, layoutSchema, opts) || '';
-    }
-    if (subject && imagePromptEchoesCopy(subject, content)) {
-      const fromCol =
-        numberedIdx != null ? columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) : null;
-      subject =
-        fromCol ||
-        overallThemeSubject(content, opts) ||
-        shortVisualPhrase(content?.title || 'Slide topic', 8);
-    }
-  }
-
-  if (!subject) {
-    subject =
-      overallThemeSubject(content, opts) ||
-      shortVisualPhrase(content?.title || 'Slide topic', 8);
-  }
-
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
-  const slotIndex = Math.max(0, imageSlots.findIndex((s) => String(s.id) === id));
-  const hasChart = layoutHasChartSlot(layoutSchema);
-  const isHero = /^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id);
-  const uiKind = deviceScreenUiKind(id, layoutId);
-
-  const assembled = [
-    isDevice
-      ? `${id}${layoutId ? ` of ${layoutId}` : ''}: ${
-          uiKind === 'website'
-            ? 'flat website UI screenshot'
-            : uiKind === 'watch_app'
-              ? 'flat watch app UI screenshot'
-              : 'flat mobile app UI screenshot'
-        }`
-      : isHero
-        ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
-        : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
-    /four_images|grid_.*images|three_cards_image|grid_images_text/i.test(layoutId)
-      ? 'Gallery slot — ONE distinct visual metaphor of this card’s topic (not the card’s wording)'
-      : null,
-    hasChart && !isHero
-      ? 'Slide already has a rendered chart — photograph a related real-world subject, not a chart graphic'
-      : null,
-    isDevice
-      ? `UI screen content: ${subject}`
-      : `Single photograph, ONE subject only, no collage: ${subject}`,
-    `(variation ${slotIndex + 1})`,
-  ]
-    .filter(Boolean)
-    .join('. ');
-
-  return appendImageNegatives(withDeviceUiDirective(assembled, id, layoutId), {
-    isDevice,
-    hasChart,
-  });
-}
-
-function deriveSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = {}) {
-  return buildSlotImagePrompt(slotId, content, layoutSchema, opts);
-}
-
-function titleWordsFromBody(body, fallback) {
-  const words = String(body || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words.length >= 2) return words.slice(0, 4).join(' ');
-  return fallback;
-}
-
-function normalizeMultiColumnContent(content, layoutSchema) {
-  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
-  const slots = layoutSchema.slots;
-  const needsColumns =
-    slots.some((s) => /^(card|col|row)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^body_\d+$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^image_\d+_label$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^IMAGE_\d+$/i.test(String(s.id || ''))) ||
-    slots.some((s) => /^COL_\d+_IMAGE$/i.test(String(s.id || '')));
-  if (!needsColumns) return content;
-
-  let colsKey = Array.isArray(content.columns)
-    ? 'columns'
-    : Array.isArray(content.cards)
-      ? 'cards'
-      : Array.isArray(content.features)
-        ? 'features'
-        : null;
-
-  const next = { ...content };
-
-  if (!colsKey) {
-    const bullets = Array.isArray(content.bullets) ? content.bullets : [];
-    const items = Array.isArray(content.items) ? content.items : [];
-    const indexedSlotCount = Math.max(
-      slots.filter((s) => /^bullet_\d+$/i.test(String(s.id || ''))).length,
-      slots.filter((s) => /^body_\d+$/i.test(String(s.id || ''))).length,
-      slots.filter((s) => /^IMAGE_\d+$/i.test(String(s.id || ''))).length
-    );
-    if (items.length >= 2) {
-      next.columns = items.map((item, index) => {
-        if (typeof item === 'string') {
-          const text = item.trim();
-          const split = text.split(/[:\-—–]\s*/);
-          return {
-            title: split.length > 1 ? split[0].trim() : titleWordsFromBody(text, `Item ${index + 1}`),
-            body: split.length > 1 ? split.slice(1).join(' ').trim() : text,
-          };
-        }
-        return {
-          title: String(item.title ?? item.heading ?? item.label ?? titleWordsFromBody(item.body ?? item.text ?? '', `Item ${index + 1}`)).trim(),
-          body: String(item.body ?? item.text ?? item.description ?? '').trim(),
-        };
-      });
-      colsKey = 'columns';
-    } else if (bullets.length >= 2) {
-      next.columns = bullets.map((bullet, index) => {
-        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-        const split = text.split(/[:\-—–]\s*/);
-        const inlineTitle = split.length > 1 ? split[0].trim() : '';
-        const body = split.length > 1 ? split.slice(1).join(' ').trim() : text;
-        return {
-          title: inlineTitle || titleWordsFromBody(body, `Point ${index + 1}`),
-          body,
-        };
-      });
-      colsKey = 'columns';
-    } else if (indexedSlotCount >= 2) {
-      const summary = String(content.summary || content.body || content.subtitle || '').trim();
-      const parts = summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean);
-      if (parts.length >= 2) {
-        next.columns = Array.from({ length: indexedSlotCount }, (_, index) => {
-          const body = parts[index] || parts[index % parts.length] || summary.slice(0, 120);
-          return {
-            title: titleWordsFromBody(body, `Point ${index + 1}`),
-            body,
-          };
-        });
-        colsKey = 'columns';
-      }
-    }
-  }
-
-  if (!colsKey) return content;
-
-  next[colsKey] = [...next[colsKey]];
-  const slideTitle = String(next.title || '').trim().toLowerCase();
-  const seen = new Set();
-
-  next[colsKey] = next[colsKey].map((col, index) => {
-    if (!col || typeof col !== 'object') return col;
-    const copy = { ...col };
-    let title = String(copy.title ?? copy.heading ?? copy.label ?? '').trim();
-    const body = String(copy.body ?? copy.text ?? '').trim();
-    const titleLower = title.toLowerCase();
-
-    // Hard rule: never reuse the slide title (or duplicates) as every column heading.
-    if (!title || titleLower === slideTitle || seen.has(titleLower)) {
-      const fromBody = titleWordsFromBody(body, '');
-      const fromBodyLower = String(fromBody || '').trim().toLowerCase();
-      if (fromBody && fromBodyLower !== slideTitle && !seen.has(fromBodyLower)) {
-        title = fromBody;
-      } else {
-        title = `Aspect ${index + 1}`;
-      }
-      copy.title = title;
-      if (copy.heading != null) copy.heading = title;
-      if (copy.label != null) copy.label = title;
-    }
-    seen.add(String(copy.title ?? copy.heading ?? '').trim().toLowerCase());
-    return copy;
-  });
-
-  const imageSlots = slots.filter((s) => isMediaImageSlot(s.id, s.role, s));
-  if (imageSlots.length > 1) {
-    const imagePrompts = {
-      ...(next.imagePrompts && typeof next.imagePrompts === 'object' ? next.imagePrompts : {}),
-    };
-    const usedPrompts = new Set();
-    imageSlots.forEach((slot, index) => {
-      const slotId = String(slot.id);
-      let prompt =
-        imagePrompts[slotId] ||
-        imagePrompts[slotId.toUpperCase()] ||
-        buildSlotImagePrompt(slotId, next, layoutSchema) ||
-        '';
-      prompt = String(prompt).trim();
-      const col = next[colsKey][index];
-      const colTitle = col ? String(col.title ?? col.heading ?? '').trim() : '';
-      if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
-        prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
-        if (!prompt && colTitle) {
-          prompt = appendImageNegatives(
-            `Single photograph, ONE subject only: ${shortVisualPhrase(colTitle, 8)} (variation ${index + 1})`,
-            { hasChart: layoutHasChartSlot(layoutSchema) }
-          );
-        }
-      }
-      if (prompt && imagePromptEchoesCopy(prompt, next)) {
-        prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
-      }
-      prompt = appendImageNegatives(prompt, {
-        isDevice: isDeviceScreenSlotId(slotId),
-        hasChart: layoutHasChartSlot(layoutSchema),
-      });
-      prompt = withDeviceUiDirective(prompt, slotId, String(layoutSchema?.layout_id || ''));
-      usedPrompts.add(prompt.toLowerCase());
-      imagePrompts[slotId] = prompt;
-    });
-    next.imagePrompts = imagePrompts;
-  }
-
-  return next;
-}
-
-function listGalleryImageSlots(layoutSchema) {
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  return slots
-    .filter((s) => {
-      const id = String(s.id || '').toUpperCase();
-      const role = String(s.role || '').toLowerCase();
-      if (role !== 'image' && role !== 'background') return false;
-      if (/^IMAGE_\d+$/.test(id)) return true;
-      if (/^COL_\d+_IMAGE$/.test(id)) return true;
-      if (/^METRIC_IMAGE_\d+$/.test(id)) return true;
-      return false;
-    })
-    .sort(
-      (a, b) =>
-        Number(String(a.id).match(/\d+/)?.[0] || 0) - Number(String(b.id).match(/\d+/)?.[0] || 0)
-    );
-}
-
-function layoutUsesPerSlotGalleryImages(layoutSchema) {
-  const gallerySlots = listGalleryImageSlots(layoutSchema);
-  if (gallerySlots.length < 2) return false;
-  const slots = layoutSchema?.slots || [];
-  const hasSingleHero = slots.some((s) => {
-    const id = String(s.id || '').toUpperCase();
-    return id === 'HERO_IMAGE' || id === 'BACKGROUND_IMAGE';
-  });
-  return !hasSingleHero;
-}
-
-function normalizeGalleryImageContent(content, layoutSchema) {
-  const gallerySlots = listGalleryImageSlots(layoutSchema);
-  if (gallerySlots.length < 2 || !content || typeof content !== 'object') return content;
-
-  const needed = gallerySlots.length;
-  const next = { ...content };
-  let columns = Array.isArray(content.columns) ? [...content.columns] : [];
-
-  if (columns.length < needed) {
-    const items = Array.isArray(content.items) ? content.items : [];
-    const bullets = Array.isArray(content.bullets) ? content.bullets : [];
-    const summary = String(content.summary || content.body || content.subtitle || '').trim();
-    const parts = summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean);
-
-    if (items.length >= needed) {
-      columns = items.slice(0, needed).map((item, index) => {
-        if (typeof item === 'string') {
-          const text = item.trim();
-          const split = text.split(/[:\-—–]\s*/);
-          return {
-            title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
-            body: split.slice(1).join(' ').trim() || text,
-          };
-        }
-        return {
-          title: String(item.title ?? item.label ?? item.heading ?? `Item ${index + 1}`).trim(),
-          body: String(item.body ?? item.text ?? '').trim(),
-        };
-      });
-    } else if (bullets.length >= 2) {
-      columns = bullets.slice(0, needed).map((bullet, index) => {
-        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-        const split = text.split(/[:\-—–]\s*/);
-        return {
-          title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
-          body: split.slice(1).join(' ').trim() || text,
-        };
-      });
-    } else if (parts.length >= 2) {
-      columns = Array.from({ length: needed }, (_, index) => {
-        const body = parts[index] || parts[index % parts.length] || summary.slice(0, 100);
-        return {
-          title: titleWordsFromBody(body, `Gallery ${index + 1}`),
-          body,
-        };
-      });
-    } else {
-      const slideTitle = String(content.title || 'Topic').trim();
-      columns = Array.from({ length: needed }, (_, index) => ({
-        title: titleWordsFromBody(`${slideTitle} aspect ${index + 1}`, `Gallery ${index + 1}`),
-        body: `Visual ${index + 1} illustrating ${slideTitle}`,
-      }));
-    }
-  }
-
-  const slideTitleLower = String(next.title || '').trim().toLowerCase();
-  const seenTitles = new Set();
-  next.columns = columns.slice(0, needed).map((col, index) => {
-    const copy = col && typeof col === 'object' ? { ...col } : { title: '', body: '' };
-    let title = String(copy.title ?? copy.heading ?? copy.label ?? '').trim();
-    const body = String(copy.body ?? copy.text ?? '').trim();
-    const titleLower = title.toLowerCase();
-    if (!title || titleLower === slideTitleLower || seenTitles.has(titleLower)) {
-      const fromBody = titleWordsFromBody(body, '');
-      const fromBodyLower = String(fromBody || '').trim().toLowerCase();
-      if (fromBody && fromBodyLower !== slideTitleLower && !seenTitles.has(fromBodyLower)) {
-        title = fromBody;
-      } else {
-        title = `Gallery ${index + 1}`;
-      }
-      copy.title = title;
-      if (copy.heading != null) copy.heading = title;
-      if (copy.label != null) copy.label = title;
-    }
-    seenTitles.add(String(copy.title ?? title).trim().toLowerCase());
-    if (body) copy.body = body;
-    return copy;
-  });
-
-  const imagePrompts = {
-    ...(next.imagePrompts && typeof next.imagePrompts === 'object' ? next.imagePrompts : {}),
-  };
-  const usedPrompts = new Set();
-  gallerySlots.forEach((slot, index) => {
-    const slotId = String(slot.id);
-    const col = next.columns[index];
-    const colTitle = col ? String(col.title ?? col.heading ?? col.label ?? '').trim() : '';
-    const colBody = col ? String(col.body ?? col.text ?? col.description ?? '').trim() : '';
-    let prompt = String(
-      resolveImagePromptAlias(slotId, imagePrompts) || ''
-    ).trim();
-    if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
-      prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
-    }
-    if ((!prompt || imagePromptEchoesCopy(prompt, next)) && (colTitle || colBody)) {
-      const subject = shortVisualPhrase(colTitle || colBody, 8);
-      prompt = appendImageNegatives(
-        [
-          `${slotId}: single photograph of ONE subject for this card’s topic`,
-          `One isolated subject — ${subject}`,
-          `(variation ${index + 1})`,
-        ].join('. '),
-        { hasChart: layoutHasChartSlot(layoutSchema) }
-      );
-    }
-    if (prompt) {
-      prompt = appendImageNegatives(prompt, {
-        isDevice: isDeviceScreenSlotId(slotId),
-        hasChart: layoutHasChartSlot(layoutSchema),
-      });
-      prompt = withDeviceUiDirective(prompt, slotId, String(layoutSchema?.layout_id || ''));
-      usedPrompts.add(prompt.toLowerCase());
-      imagePrompts[slotId] = prompt;
-    }
-  });
-  next.imagePrompts = imagePrompts;
-
-  return next;
-}
-
-function normalizeTimelineContent(content, layoutSchema) {
-  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
-
-  const slots = layoutSchema.slots;
-  const layoutId = String(layoutSchema.layout_id || '');
-  const isTimeline =
-    /timeline/i.test(layoutId) || slots.some((s) => /^milestone_/i.test(String(s.id || '')));
-  if (!isTimeline) return content;
-
-  const key = Array.isArray(content.timeline)
-    ? 'timeline'
-    : Array.isArray(content.milestones)
-      ? 'milestones'
-      : Array.isArray(content.events)
-        ? 'events'
-        : 'timeline';
-
-  let items = Array.isArray(content[key]) ? [...content[key]] : [];
-  if (items.length < 2 && Array.isArray(content.bullets) && content.bullets.length) {
-    items = content.bullets.map((bullet) => {
-      const text = typeof bullet === 'string' ? bullet : String(bullet?.text ?? bullet?.label ?? '');
-      return text.trim();
-    }).filter(Boolean);
-  }
-
-  const milestoneSlots = slots.filter(
-    (s) => /^milestone_\d+$/i.test(String(s.id || '')) || /^milestone_\d+_label$/i.test(String(s.id || ''))
-  );
-  const needed = Math.max(2, milestoneSlots.length || 4);
-  const summary = String(content.summary || content.body || content.subtitle || '').trim();
-  const summaryParts = summary
-    ? summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean)
-    : [];
-
-  const normalized = items.map((item, index) => {
-    if (typeof item === 'string') {
-      const trimmed = item.trim();
-      const yearOnly = /^\d{4}$/.test(trimmed);
-      const split = trimmed.split(/[:\-—–]\s*/);
-      const label = yearOnly ? trimmed : (split[0] || trimmed).trim();
-      const inlineDetail = yearOnly ? '' : split.slice(1).join(' ').trim();
-      const detail =
-        inlineDetail ||
-        summaryParts[index % Math.max(summaryParts.length, 1)] ||
-        (summary ? summary.slice(0, 120) : `Key milestone ${index + 1}`);
-      return { label, detail };
-    }
-
-    const copy = { ...item };
-    let label = String(
-      copy.label ?? copy.date ?? copy.year ?? copy.period ?? copy.title ?? copy.name ?? ''
-    ).trim();
-    let detail = String(copy.detail ?? copy.body ?? copy.text ?? copy.description ?? copy.summary ?? '').trim();
-    if (!label) {
-      label = String(copy.value ?? copy.head ?? `Phase ${index + 1}`).trim();
-    }
-    if (!detail) {
-      detail =
-        summaryParts[index % Math.max(summaryParts.length, 1)] ||
-        (summary ? summary.slice(0, 120) : `Key development for ${label || `milestone ${index + 1}`}`);
-    }
-    return { ...copy, label, detail };
-  });
-
-  while (normalized.length < needed) {
-    const n = normalized.length + 1;
-    normalized.push({
-      label: String(2010 + n * 3),
-      detail: summaryParts[n % Math.max(summaryParts.length, 1)] || summary.slice(0, 100) || `Milestone ${n}`,
-    });
-  }
-
-  const imageSlots = slots.filter((s) => {
-    const id = String(s.id || '').toUpperCase();
-    return String(s.role || '').toLowerCase() === 'image' || /^IMAGE_\d+$/.test(id);
-  });
-
-  const next = {
-    ...content,
-    [key]: normalized,
-    timeline: key === 'timeline' ? normalized : content.timeline || normalized,
-  };
-
-  if (
-    imageSlots.length > 1 &&
-    (!Array.isArray(content.columns) || content.columns.length < imageSlots.length)
-  ) {
-    next.columns = normalized.slice(0, imageSlots.length).map((item) => ({
-      title: String(item.label ?? item.title ?? item.period ?? '').trim(),
-      body: String(item.detail ?? item.body ?? item.text ?? '').trim(),
-    }));
-  }
-
-  return next;
-}
-
-function layoutNeedsDiagramCellsFromSchema(layoutSchema) {
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  return slots.some((slot) => {
-    const id = String(slot.id || '').toLowerCase();
-    return /^q\d+_body$/i.test(id) || /^funnel_\d+_body$/i.test(id) || /^step_\d+_body$/i.test(id);
-  });
-}
-
-function countDiagramCellSlotsFromSchema(layoutSchema) {
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  const quadrantBodies = slots.filter((s) => /^q\d+_body$/i.test(String(s.id || ''))).length;
-  const funnelBodies = slots.filter((s) => /^funnel_\d+_body$/i.test(String(s.id || ''))).length;
-  const stepBodies = slots.filter((s) => /^step_\d+_body$/i.test(String(s.id || ''))).length;
-  return Math.max(quadrantBodies, funnelBodies, stepBodies, 0);
-}
-
-function schemaTitleForDiagramSlot(slots, index, kind) {
-  if (kind === 'quadrant') {
-    const slot = slots.find((s) => String(s.id).toUpperCase() === `Q${index + 1}_TITLE`);
-    return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
-  }
-  if (kind === 'funnel') {
-    const slot = slots.find((s) => String(s.id).toLowerCase() === `funnel_${index + 1}_title`);
-    return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
-  }
-  const slot = slots.find((s) => String(s.id).toLowerCase() === `step_${index + 1}_title`);
-  return slot?.placeholder_text ? String(slot.placeholder_text).trim() : '';
-}
-
-function diagramCellsSourceForKind(content, kind) {
-  if (!content || typeof content !== 'object') return null;
-  if (kind === 'quadrant') {
-    return content.quadrants || content.diagram?.cells || content.cells || content.steps || content.funnel;
-  }
-  if (kind === 'funnel') {
-    return content.funnel || content.diagram?.cells || content.cells || content.quadrants || content.steps;
-  }
-  return content.steps || content.diagram?.cells || content.cells || content.quadrants || content.funnel;
-}
-
-function countDeviceFeatureSlotsFromSchema(layoutSchema) {
-  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
-  const featureHeads = slots.filter((s) => /^FEATURE_[LR]\d+_HEADING$/i.test(String(s.id || ''))).length;
-  const sideHeads = slots.filter((s) => /^HEADING_[LR]$/i.test(String(s.id || ''))).length;
-  return Math.max(featureHeads, sideHeads, 0);
-}
-
-/**
- * Ensure device layouts get columns[] / multi-line title aligned to FEATURE_* / HEADING_L slots.
- */
-function normalizeDeviceContent(content, layoutSchema) {
-  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
-  const layoutId = String(layoutSchema.layout_id || '').toLowerCase();
-  if (!/device_|grid_device/.test(layoutId) && String(layoutSchema.content_type || '').toLowerCase() !== 'device_frames') {
-    return content;
-  }
-
-  let next = { ...content };
-  const needed = countDeviceFeatureSlotsFromSchema(layoutSchema);
-  const existingCols = Array.isArray(next.columns)
-    ? next.columns
-    : Array.isArray(next.features)
-      ? next.features
-      : Array.isArray(next.cards)
-        ? next.cards
-        : [];
-
-  if (needed > 0) {
-    const bullets = Array.isArray(next.bullets) ? next.bullets : [];
-    const items = Array.isArray(next.items) ? next.items : [];
-    const cols = [];
-    for (let i = 0; i < needed; i += 1) {
-      const col = existingCols[i];
-      if (col && typeof col === 'object') {
-        cols.push({
-          title: String(col.title ?? col.heading ?? col.label ?? '').trim(),
-          body: String(col.body ?? col.text ?? '').trim(),
-        });
-        continue;
-      }
-      if (typeof col === 'string' && col.trim()) {
-        cols.push({ title: col.trim().split(/\s+/).slice(0, 4).join(' '), body: col.trim() });
-        continue;
-      }
-      const bullet = bullets[i];
-      if (bullet) {
-        const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-        cols.push({
-          title: text.split(/\s+/).slice(0, 4).join(' ') || `Aspect ${i + 1}`,
-          body: text,
-        });
-        continue;
-      }
-      const item = items[i];
-      if (item) {
-        if (typeof item === 'string') {
-          cols.push({ title: item.split(/\s+/).slice(0, 4).join(' '), body: item.trim() });
-        } else {
-          cols.push({
-            title: String(item.title ?? item.heading ?? item.label ?? `Aspect ${i + 1}`).trim(),
-            body: String(item.body ?? item.text ?? item.detail ?? '').trim(),
-          });
-        }
-        continue;
-      }
-      cols.push({ title: '', body: '' });
-    }
-    if (cols.some((c) => c.title || c.body)) {
-      next = { ...next, columns: cols };
-    }
-  }
-
-  // Multi-cluster: merge two-line title so finalize can strip HEADING_2 safely.
-  if (/device_multi_cluster/i.test(layoutId)) {
-    const title = String(next.title || '').trim();
-    const parts = title.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-    if (parts.length < 2) {
-      const runs = Array.isArray(next.titleRuns)
-        ? next.titleRuns.map((r) => String(r?.text || '').trim()).filter(Boolean)
-        : [];
-      if (runs.length >= 2) {
-        next = { ...next, title: `${runs[0]}\n${runs.slice(1).join(' ')}` };
-      }
-    }
-  }
-
-  return next;
-}
-
-function normalizeDiagramContent(content, layoutSchema) {
-  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
-  const slots = layoutSchema.slots;
-  if (!layoutNeedsDiagramCellsFromSchema(layoutSchema)) return content;
-
-  const kind = slots.some((s) => /^q\d+_body$/i.test(String(s.id || '')))
-    ? 'quadrant'
-    : slots.some((s) => /^funnel_\d+_body$/i.test(String(s.id || '')))
-      ? 'funnel'
-      : 'step';
-
-  const existing = diagramCellsSourceForKind(content, kind);
-  const explicitType = String(content.diagram?.type || '').trim();
-  const hasValidCells =
-    Array.isArray(existing) &&
-    existing.some((cell) => {
-      const body = String(cell?.body ?? cell?.text ?? cell?.detail ?? '').trim();
-      return body && !isCatalogPlaceholderText(body);
-    });
-  if (hasValidCells) {
-    const cells = [...existing];
-    return {
-      ...content,
-      diagram: {
-        ...(content.diagram || {}),
-        type: explicitType || content.diagram?.type || kind,
-        cells,
-      },
-      cells,
-    };
-  }
-
-  const needed = Math.max(2, countDiagramCellSlotsFromSchema(layoutSchema) || 4);
-
-  const sourceCols = content.columns || content.cards || content.features || [];
-  const sourceBullets = Array.isArray(content.bullets) ? content.bullets : [];
-  const sourceItems = Array.isArray(content.items) ? content.items : [];
-  const sourceBeats = Array.isArray(content.beats) ? content.beats : [];
-  const summaryParts = String(content.summary || content.body || content.subtitle || '')
-    .split(/[.;]\s+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  const sourceCount = Math.max(
-    Array.isArray(sourceCols) ? sourceCols.filter(Boolean).length : 0,
-    sourceBullets.filter(Boolean).length,
-    sourceItems.filter(Boolean).length,
-    sourceBeats.filter(Boolean).length,
-    0
-  );
-  // Prefer matching layout slot count to real beats — do not invent filler steps from summary.
-  const cellTarget =
-    sourceCount > 0 && sourceCount < needed ? sourceCount : needed;
-
-  const cells = [];
-  for (let i = 0; i < cellTarget; i += 1) {
-    const schemaTitle = schemaTitleForDiagramSlot(slots, i, kind);
-    let title = schemaTitle;
-    let body = '';
-
-    const beat = sourceBeats[i];
-    if (beat != null) {
-      if (typeof beat === 'string') {
-        body = beat.trim();
-        title = titleWordsFromBody(body, schemaTitle || `Step ${i + 1}`);
-      } else if (typeof beat === 'object') {
-        title =
-          String(beat.label || beat.title || beat.heading || schemaTitle).trim() || schemaTitle;
-        body = String(beat.text || beat.body || beat.detail || '').trim();
-      }
-    }
-
-    const col = sourceCols[i];
-    if ((!body || !title || title === schemaTitle) && col && typeof col === 'object') {
-      title = String(col.title ?? col.heading ?? col.label ?? schemaTitle).trim() || schemaTitle;
-      body = String(col.body ?? col.text ?? '').trim() || body;
-    } else if (!body && sourceItems[i]) {
-      const item = sourceItems[i];
-      if (typeof item === 'string') {
-        body = item.trim();
-        title = titleWordsFromBody(body, schemaTitle || `Point ${i + 1}`);
-      } else {
-        title = String(item.title ?? item.heading ?? item.label ?? schemaTitle).trim();
-        body = String(item.body ?? item.text ?? item.detail ?? '').trim();
-      }
-    } else if (!body && sourceBullets[i]) {
-      const bullet = sourceBullets[i];
-      body = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-      title = titleWordsFromBody(body, schemaTitle || `Point ${i + 1}`);
-    }
-
-    if (!body && sourceCount === 0) {
-      body = summaryParts[i % Math.max(summaryParts.length, 1)] || '';
-    }
-    if (!title) title = schemaTitle || `Section ${i + 1}`;
-
-    cells.push({ title, body });
-  }
-
-  const slideTitleLower = String(content.title || '').trim().toLowerCase();
-  const seen = new Set();
-  for (let i = 0; i < cells.length; i += 1) {
-    let title = String(cells[i].title || '').trim();
-    const body = String(cells[i].body || '').trim();
-    const titleLower = title.toLowerCase();
-    if (!title || titleLower === slideTitleLower || seen.has(titleLower)) {
-      const fromBody = titleWordsFromBody(body, '');
-      const fromBodyLower = String(fromBody || '').toLowerCase();
-      title =
-        fromBody && fromBodyLower !== slideTitleLower && !seen.has(fromBodyLower)
-          ? fromBody
-          : `Section ${i + 1}`;
-      cells[i] = { ...cells[i], title };
-    }
-    seen.add(String(cells[i].title || '').trim().toLowerCase());
-  }
-
-  return {
-    ...content,
-    diagram: { ...(content.diagram || {}), type: explicitType || kind, cells },
-    cells,
-  };
-}
+  runContentPreShape,
+  normalizeMultiColumnContent,
+  normalizeGalleryImageContent,
+  normalizeChartContent,
+  normalizeTimelineContent,
+  normalizeDiagramContent,
+  normalizeDeviceContent,
+} = require('./contentPreShape.util');
+const {
+  buildSlotImagePrompt,
+  deriveSlotImagePrompt,
+  appendImageNegatives,
+  imagePromptEchoesCopy,
+  shortVisualPhrase,
+  layoutHasChartSlot,
+  withDeviceUiDirective,
+  resolveImagePromptAlias,
+  titleWordsFromBody,
+} = require('./contentImagePrompt.util');
+const { compileSlide } = require('./slideCompiler.service');
 
 async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, slotImageUrls }) {
   const slotIds = templateMediaService.listLayoutImageSlots(layoutSchema);
@@ -1184,7 +193,7 @@ async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, 
             next[slotId] = ph.url;
             seenUrls.add(ph.url);
           }
-          // Do not append ?slot= to URLs — that breaks AWS signatures and causes broken images.
+          // Do not append ?slot= to URLs â€” that breaks AWS signatures and causes broken images.
           // Prefer a duplicate valid URL over a broken one.
         } catch {
           // Keep original URL (may duplicate sibling) rather than invalidate signatures.
@@ -2138,38 +1147,6 @@ function resolveTimelinePreferredLayoutId(slide, outlineSlides, planned, layoutC
   return null;
 }
 
-function chartInsightBody(content = {}, chart = {}) {
-  const labels = Array.isArray(chart.labels) ? chart.labels : [];
-  const values = chart.series?.[0]?.values || chart.data || chart.values || [];
-  const lead = labels[0] ? String(labels[0]) : 'The leading category';
-  const topValue = values[0] != null ? String(values[0]) : '';
-  const topic = String(content.title || 'this topic').trim();
-  if (lead && topValue) {
-    return `${lead} leads ${topic.toLowerCase()} at ${topValue}, with the remaining categories spread across the chart. Use this split to highlight concentration and opportunity.`;
-  }
-  return `This chart summarizes the key quantitative story behind ${topic}. Keep the insight scannable in three to four lines.`;
-}
-
-function normalizeChartContent(content, layoutSchema) {
-  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
-  const slots = layoutSchema.slots;
-  const chartSlots = slots.filter((slot) => String(slot.role || '').toLowerCase() === 'chart');
-  if (!chartSlots.length || !content.chart || typeof content.chart !== 'object') return content;
-
-  const next = { ...content };
-  const chart = { ...next.chart };
-  chart.type = inferChartTypeFromStory(chart, next, layoutSchema);
-  next.chart = chart;
-
-  const hasBodySlot = slots.some((slot) => String(slot.role || '').toLowerCase() === 'body');
-  const analysis = analyzeChartStory(next);
-  if (hasBodySlot && chartSlots.length === 1 && analysis.needsBody && !String(next.body || '').trim()) {
-    next.body = chartInsightBody(next, chart);
-  }
-
-  return next;
-}
-
 function resolveChartPreferredLayoutId(content, layoutContentType) {
   if (String(layoutContentType || '').toLowerCase() !== 'chart') return null;
   return analyzeChartStory(content).layoutId;
@@ -2216,7 +1193,7 @@ function coerceDiagramTypeHint(diagramType, visual) {
   if (typed) return typed;
   const v = String(visual || '').toLowerCase().trim();
   if (!v) return '';
-  // Short visual cues only (e.g. "swot", "funnel diagram") — long sentences fall through to heuristics.
+  // Short visual cues only (e.g. "swot", "funnel diagram") â€” long sentences fall through to heuristics.
   if (v.length > 48) return '';
   return v;
 }
@@ -2340,7 +1317,7 @@ function resolvePreferredLayoutIdForSlide({
 }
 
 /**
- * Slide 1 only → title; slide N only → closing; never title/closing elsewhere.
+ * Slide 1 only â†’ title; slide N only â†’ closing; never title/closing elsewhere.
  */
 function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, outlineSlide = {}) {
   const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
@@ -2602,7 +1579,7 @@ function slideTextForVision(content) {
         .join('; ')
     );
   }
-  return parts.join(' — ').slice(0, 1500);
+  return parts.join(' â€” ').slice(0, 1500);
 }
 
 async function uploadPresentationImage({ workspaceId, deckId, slideId, buffer, ext, contentType }) {
@@ -2716,7 +1693,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
 
   if (slotIds.length > 1) {
     const assigned = slotIds.map((id) => slotImageUrls[id]).filter(Boolean);
-    // Same URL on every slot → clear duplicates so we regenerate/stock/placeholder per slot.
+    // Same URL on every slot â†’ clear duplicates so we regenerate/stock/placeholder per slot.
     // Keep the first assignment; clear the rest (do not wipe all).
     if (assigned.length === slotIds.length && new Set(assigned).size === 1) {
       slotIds.slice(1).forEach((id) => {
@@ -3029,7 +2006,7 @@ async function resolveSlideImage({
   if (need === 'path_b') {
     const resolvedSpec = pathBSpec || content?.pathBSpec || {};
     if (!hasUsablePathBSpec(resolvedSpec)) {
-      // Empty Path B spec → treat as diagram_template (layout path); do not charge Path B.
+      // Empty Path B spec â†’ treat as diagram_template (layout path); do not charge Path B.
       return {
         imageRef: withImageStatus(
           { source: 'none', visual_need: 'diagram_template', brief: brief || null },
@@ -3113,7 +2090,7 @@ async function resolveSlideImage({
     }
   }
 
-  // photo / illustration / default → stock then Path A (brand + existing media handled above)
+  // photo / illustration / default â†’ stock then Path A (brand + existing media handled above)
   const searchQuery =
     brief?.search_query || brief?.searchQuery || brief?.subject || content?.title || 'presentation visual';
 
@@ -3286,7 +2263,7 @@ async function resolveSlideImage({
           visionScore = vision.score;
           if (!vision.relevant) imageRef = null;
         } catch {
-          // ignore vision errors — keep image only when relevance was not evaluated
+          // ignore vision errors â€” keep image only when relevance was not evaluated
         }
       }
     }
@@ -3300,7 +2277,7 @@ async function resolveSlideImage({
         metadata: { slideId: slide.id, searchQuery },
       });
     } catch {
-      // unique race — ignore
+      // unique race â€” ignore
     }
 
     if (!duplicate) {
@@ -3537,7 +2514,7 @@ async function planDeckLayouts(ctx, slides) {
       slideOrder: slide.order,
     });
     if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
-      // Match title energy with a text/CTA close — avoid default full-bleed photo closings.
+      // Match title energy with a text/CTA close â€” avoid default full-bleed photo closings.
       preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, stubContent)
         ? 'closing_contact_cta_v1'
         : 'closing_thank_you_v1';
@@ -3567,7 +2544,7 @@ async function planDeckLayouts(ctx, slides) {
           const hit = ranked.splice(idx, 1)[0];
           ranked.unshift(hit);
         } else if (idx < 0) {
-          // Preferred injected but not ranked (hard-reject) — still surface it first for process match.
+          // Preferred injected but not ranked (hard-reject) â€” still surface it first for process match.
           ranked.unshift({ layoutId: preferredLayoutId, score: 99 });
         }
       }
@@ -3817,9 +2794,9 @@ function generationHintsFromLayout(layoutSchema) {
     const chartSlot = slots.find((s) => String(s.role || '').toLowerCase() === 'chart');
     const slotChartType = chartSlot?.chartType || chartSlot?.chart_type || null;
     hints.chartDataStyle =
-      'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) — never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
+      'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) â€” never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
     hints.chartLayoutStyle =
-      'Analyze the data story first, then pick chart.type and layout: line/area for time series; donut/pie only when values represent parts of a whole (~100% total); bar for rankings or absolute comparisons; dual-chart only for two distinct metrics. One dataset per chart slot — never duplicate identical data.';
+      'Analyze the data story first, then pick chart.type and layout: line/area for time series; donut/pie only when values represent parts of a whole (~100% total); bar for rankings or absolute comparisons; dual-chart only for two distinct metrics. One dataset per chart slot â€” never duplicate identical data.';
     if (slotChartType) {
       hints.chartType = slotChartType.includes('line') ? 'line' : slotChartType.includes('donut') ? 'donut' : 'bar';
     } else if (!/exponential|line/i.test(layoutId)) {
@@ -3827,11 +2804,11 @@ function generationHintsFromLayout(layoutSchema) {
     }
   }
   if (imageSlots.length > 1) {
-    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (≤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
+    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (â‰¤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
   }
   if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
     hints.parallelStructure =
-      'Each column/card/gallery image needs a distinct title (≤4 words) and optional body. Fill columns[] accordingly — titles map to IMAGE_n_LABEL captions.';
+      'Each column/card/gallery image needs a distinct title (â‰¤4 words) and optional body. Fill columns[] accordingly â€” titles map to IMAGE_n_LABEL captions.';
   }
   if (/diagram_|swot|matrix|funnel|process_step/i.test(layoutId) || layoutNeedsDiagramCellsFromSchema(layoutSchema)) {
     hints.parallelStructure =
@@ -3858,7 +2835,7 @@ function generationHintsFromLayout(layoutSchema) {
       hints.parallelStructure = `Fill copy for slots: ${textSlots.join(', ')}. Use columns[] in L1,L2,L3,R1,R2,R3 order for FEATURE_* layouts; columns[0]/[1] for HEADING_L/R + BODY_L/R.`;
     }
     if (deviceImageSlots.length) {
-      hints.imagePromptStyle = `Fill imagePrompts for ${deviceImageSlots.join(', ')}: unique flat UI screenshots (≤12 words), no device chrome in the image.`;
+      hints.imagePromptStyle = `Fill imagePrompts for ${deviceImageSlots.join(', ')}: unique flat UI screenshots (â‰¤12 words), no device chrome in the image.`;
     }
   }
   if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
@@ -3867,7 +2844,7 @@ function generationHintsFromLayout(layoutSchema) {
   }
   if (ct === 'title' || (layoutId.includes('title') && ct === 'title')) {
     hints.titleTone =
-      'Spoken headline (5–12 words), period OK — an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
+      'Spoken headline (5â€“12 words), period OK â€” an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
   }
   const hasEyebrow = slots.some((s) => {
     const role = String(s.role || '').toLowerCase();
@@ -3876,7 +2853,7 @@ function generationHintsFromLayout(layoutSchema) {
   });
   if (hasEyebrow) {
     hints.eyebrowFormat =
-      'Fill eyebrow/subtitle kicker as a short UPPERCASE role line (2–5 words), not a second headline.';
+      'Fill eyebrow/subtitle kicker as a short UPPERCASE role line (2â€“5 words), not a second headline.';
   }
   if (ct !== 'title' && ct !== 'closing' && ct !== 'chart' && ct !== 'device_frames') {
     hints.bodyVoice =
@@ -4266,8 +3243,8 @@ async function processSlide(ctx, slide) {
       ? policy.contentType
       : applyContentDistribution(policy.contentType, ctx);
 
-    // Path B vs process layouts: linear how-it-works → diagram_template;
-    // path_b without usable pathBSpec → diagram_template.
+    // Path B vs process layouts: linear how-it-works â†’ diagram_template;
+    // path_b without usable pathBSpec â†’ diagram_template.
     if (!blueprintLayoutIdEarly) {
       const diagramPolicy = resolveDiagramVisualPolicy({
         visualNeed,
@@ -4703,7 +3680,7 @@ async function processSlide(ctx, slide) {
         slideId: slide.id,
         error: imgErr.message,
       });
-      // Explicit failure — do not silently pretend there was no visual need
+      // Explicit failure â€” do not silently pretend there was no visual need
       imageRef = withImageStatus(
         { source: 'none', brief, visual_need: visualNeed },
         'failed',
@@ -4713,12 +3690,6 @@ async function processSlide(ctx, slide) {
 
     const layoutSchema = template?.schema || null;
     if (layoutSchema?.slots?.length) {
-      content = normalizeMultiColumnContent(content, layoutSchema);
-      content = normalizeGalleryImageContent(content, layoutSchema);
-      content = normalizeChartContent(content, layoutSchema);
-      content = normalizeTimelineContent(content, layoutSchema);
-      content = normalizeDiagramContent(content, layoutSchema);
-      content = normalizeDeviceContent(content, layoutSchema);
       try {
         content = await enrichContentSlotImageUrls({
           ctx,
@@ -4745,85 +3716,27 @@ async function processSlide(ctx, slide) {
       (packSnapshot && elementsHaveRebindRoles(packSnapshot) && packSnapshot) ||
       null;
 
-    const useFreshCompile =
-      Boolean(layoutSchema?.slots?.length) &&
-      (ctx.packBound || shouldRecompileLayout(layoutSchema, currentElements));
-
-    let elementsDoc;
     const hasBrandKit = Boolean(ctx.themeTokens?.brand?.brandKitId);
-    if (rebindBase && !useFreshCompile) {
-      elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
-        forceTextReplace: Boolean(ctx.forceTextReplace),
-        themeTokens: ctx.themeTokens || null,
-        layoutSchema,
-      });
-      elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
-    } else if (layoutSchema?.slots?.length) {
-      elementsDoc = layoutSlotsToElements(
-        layoutSchema,
-        content,
-        imageRef,
-        { width: canvasSize.width, height: canvasSize.height },
-        {
-          themeTokens: ctx.themeTokens || null,
-          designTokens,
-          applyShapes: false,
-        }
-      );
-    } else if (rebindBase) {
-      elementsDoc = rebindContentToElements(rebindBase, content, imageRef, {
-        forceTextReplace: Boolean(ctx.forceTextReplace),
-        themeTokens: ctx.themeTokens || null,
-        layoutSchema,
-      });
-      elementsDoc = applySlideDesignTokens(elementsDoc, designTokens, ctx.themeTokens || null);
-    } else {
-      elementsDoc = layoutSlotsToElements(
-        { slots: [] },
-        content,
-        imageRef,
-        { width: canvasSize.width, height: canvasSize.height },
-        {
-          themeTokens: ctx.themeTokens || null,
-          designTokens,
-          applyShapes: false,
-        }
-      );
-    }
-
-    elementsDoc = finalizeElementsDoc(elementsDoc, layoutSchema, content, ctx.themeTokens || null, {
-      width: canvasSize.width,
-      height: canvasSize.height,
-    }, ctx.slideDesignPlans?.[Number(slide.order)] || null);
-
-    const compiledHasEmpty = (elementsDoc?.elements || []).some((el) => {
-      if (el.type !== 'text' && el.type !== 'textbox') return false;
-      const role = String(el.role || '').toLowerCase();
-      if (!['heading', 'title', 'subheading', 'subtitle', 'body', 'bullet'].includes(role)) return false;
-      return blueprintSeed.isWeakText(el.content?.text);
+    const compiled = await compileSlide({
+      layoutSchema: layoutSchema || { slots: [] },
+      content,
+      imageRef,
+      canvasSize: { width: canvasSize.width, height: canvasSize.height },
+      themeTokens: ctx.themeTokens || null,
+      designTokens,
+      rebindBase,
+      forceTextReplace: ctx.forceTextReplace,
+      slideDesignPlan: ctx.slideDesignPlans?.[Number(slide.order)] || null,
+      outlineSlide,
+      context: {
+        slideId: slide.id,
+        deckId: ctx.deckId || slide.deckId,
+        packBound: ctx.packBound,
+        currentElements,
+      },
     });
-    if (compiledHasEmpty && layoutSchema?.slots?.length) {
-      content = blueprintSeed.mergeSeedIntoContent(
-        content,
-        blueprintSeed.seedFromOutlineSlide(outlineSlide),
-        layoutSchema
-      );
-      elementsDoc = layoutSlotsToElements(
-        layoutSchema,
-        content,
-        imageRef,
-        { width: canvasSize.width, height: canvasSize.height },
-        {
-          themeTokens: ctx.themeTokens || null,
-          designTokens,
-          applyShapes: false,
-        }
-      );
-      elementsDoc = finalizeElementsDoc(elementsDoc, layoutSchema, content, ctx.themeTokens || null, {
-        width: canvasSize.width,
-        height: canvasSize.height,
-      }, ctx.slideDesignPlans?.[Number(slide.order)] || null);
-    }
+    content = compiled.content;
+    let elementsDoc = compiled.elementsDoc;
 
     if (ctx.themeTokens?.palette?.bg) {
       elementsDoc.backgroundColor = ctx.themeTokens.palette.bg;
@@ -5709,7 +4622,7 @@ async function regenerateSlide({
   };
 
   // For image-only, keep content and skip content LLM by marking duplicate-like path:
-  // processSlide always runs content; for image-only restore content after if wiped — we kept content when target=image.
+  // processSlide always runs content; for image-only restore content after if wiped â€” we kept content when target=image.
   setImmediate(async () => {
     try {
       const fresh = await presentationDao.findSlideById(slideId);

@@ -13,7 +13,8 @@ Broader A→Z (with PPT + Brand Kit): [`FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md`]
 |------|--------|
 | `image` | **Live** — general images |
 | `infographic` | **Live** — spec-first typesetting; see [`INFOGRAPHIC_MODE_PRD.md`](INFOGRAPHIC_MODE_PRD.md) |
-| `social` | **Not shipped** — formats/fields removed; crop helper name is legacy only |
+| `social` | **Live** — seven exact-size destinations; see [Part 13](#part-13--social-mode-mode-3) |
+| `printable` | **Live** — posters (A4/A3/A2), business card, invitation with bleed; see [Part 14](#part-14--printable-mode-mode-4) |
 
 Use **Parts 1–10** to review the current product. Use **Part 11** as the Infographics research + development plan.
 
@@ -57,7 +58,7 @@ Workspace → Folder → Image chat
 
 | Rule | Behavior |
 |------|----------|
-| Mode | `image` only. `infographic` / `social` → **400** |
+| Mode | `image` (Mode 1), `infographic` (Mode 2), `social` (Mode 3), `printable` (Mode 4). Anything else → **400**. See [Part 13](#part-13--social-mode-mode-3) for social and [Part 14](#part-14--printable-mode-mode-4) for printable |
 | Auth | `Authorization: Bearer <accessToken>` on all routes |
 | Workspace access | `checkWorkspaceAccess` (PRIVATE = owner; TEAM = any member) |
 | Folder | `folderId` **required** on generate — chat lives in that folder |
@@ -94,9 +95,16 @@ Mounted at **`/api/image-gen`** from `src/app.js` (not under `/api/workspaces`).
 | `imageGen.dao.js` / `thread.dao` / `message.dao` / `context.dao` | Prisma |
 | `imageGenExport.service.js` | PNG / JPG / PDF download stream |
 | `imageGenFilename.js` | Display name from prompt / client `name` |
-| `socialCrop.service.js` | Sharp resize to format (name is legacy; used for all formats) |
-| `catalogs/models.js` | Model catalog + credit estimate |
-| `catalogs/formats.js` | square / landscape / portrait |
+| `socialCrop.service.js` | Sharp resize to format (name is legacy; used for all formats), `padToAspect`, `cropToPrint` (bleed + trim with DPI) |
+| `catalogs/models.js` | Model catalog, provider groups, per-mode defaults, credit estimate |
+| `catalogs/formats.js` | square / landscape / portrait + seven social destinations + eight print sizes (mode-scoped) |
+| `print.service.js` | PrintSpec build / patch / copy clamp / render prompt / edit routing |
+| `prompts/printSpec.prompt.js` / `printRender.prompt.js` / `printChat.prompt.js` | Print spec LLM, image prompt (trim + safe boxes, anti-mockup), edit router |
+| `validations/printSpec.validations.js` | Joi PrintSpec |
+| `imageGenExport.service.js` | PNG / JPG / PDF downloads; physical-size and bleed PDFs for printables |
+| `social.service.js` | SocialPostSpec build / patch / copy clamp / render prompt / edit routing |
+| `prompts/socialSpec.prompt.js` / `socialRender.prompt.js` / `socialChat.prompt.js` | Social spec LLM, image prompt (safe area + crop band), edit router |
+| `validations/socialSpec.validations.js` | Joi SocialPostSpec |
 | `catalogs/styles.js` | Vibe presets → prompt suffixes |
 | `prompts/imageStyle.prompt.js` | Prompt + style wrap |
 | `prompts/contextEnrichment.prompt.js` | Append context block + ref index hints |
@@ -182,14 +190,16 @@ Assets link back via `stockMetadata.generationId` (+ mode, model, format, action
 
 | `id` | Provider | Model under the hood | Default AC | Notes |
 |------|----------|----------------------|------------|--------|
-| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Default for `image`; recommended |
-| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `infographic` |
+| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `image`; recommended |
+| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Standard quality |
 | `dall-e-3` | openai | `gpt-image-1` (high) | **12** | Compat alias (DALL·E 3 retired) |
-| `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K |
+| `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K. Default for `infographic`, `social`, and `printable` |
 | `gemini-3.1-flash-image` | gemini | `gemini-3.1-flash-image` | **8** | Nano Banana 2; balanced; ≤4K |
 | `gemini-3.1-flash-lite-image` | gemini | `gemini-3.1-flash-lite-image` | **4** | Nano Banana 2 Lite; **1K only** |
 
-Each model lists `provider`, `maxImageSize` (Gemini only), `modes: ["image","infographic"]`, `supportsEdit: true`, `creditEstimate`.
+Each model lists `provider`, `quality`, `maxImageSize` (Gemini only), `modes: ["image","infographic","social","printable"]`, `recommended`, `supportsEdit: true`, `creditEstimate`.
+
+The response also carries `providers` (OpenAI and Gemini, three `modelIds` each, high quality first, plus `defaultModelId`), `defaults` per mode (`image` → OpenAI `gpt-image-1-hd` with `recommendedProvider: "openai"`; `infographic`, `social`, and `printable` → Gemini `gemini-3-pro-image` with no recommended provider), and `defaultProviderModel`. The frontend picker shows providers first, then the chosen provider's three models. Generate without `modelId` falls back to `defaultModelIdForMode(mode)`.
 
 **Provider routing.** `imageGen.service` never calls a vendor SDK directly; it calls
 `generateForModel` / `editForModel` in `shared/services/ai/imageProvider.service.js`, which
@@ -207,7 +217,7 @@ the parent generation's provider.
 | `landscape` | 1536×1024 | `1536x1024` |
 | `portrait` | 1024×1536 | `1024x1536` |
 
-Category is `generic` only. Formats include `composeRules` / `safeZone` used when wrapping prompts (full-bleed guidance).
+Generic formats (`category: "generic"`) accept modes `image` and `infographic`. The seven social destinations (`category: "social"`) accept only `social`; see Part 13. The eight print sizes (`category: "print"`) accept only `printable`; see Part 14. Formats include `composeRules` / `safeZone` used when wrapping prompts (full-bleed guidance).
 
 ### 5.3 Styles — `GET /api/image-gen/styles`
 
@@ -324,6 +334,9 @@ Also: `GET /api/image-gen/workspaces/:workspaceId/threads?folderId=`
 | `image_gen_gpt_image_hd` | 12 | `IMAGE_GEN_GPT_IMAGE_HD_AC` |
 | `image_gen_dall_e_3` | 12 | `IMAGE_GEN_DALL_E_3_AC` |
 | `image_gen_tweak` | same as model | (charged via tweak path; label “AI image tweak”) |
+| `image_gen_infographic` | selected model AC | `IMAGE_GEN_INFOGRAPHIC_AC` (label “AI infographic”) |
+| `image_gen_social` | selected model AC | `IMAGE_GEN_SOCIAL_AC` (label “AI social post”) |
+| `image_gen_printable` | selected model AC | `IMAGE_GEN_PRINTABLE_AC` (label “AI printable”) |
 
 Context create = **0 AC**. Estimate: `GET .../estimate?modelId=&mode=image&tweak=`.
 
@@ -705,6 +718,113 @@ If step 2 fails text quality badly, escalate Option C earlier (or reduce to “i
 - [ ] Answer open decisions §11.7  
 - [ ] Approve phase plan §11.6  
 - [ ] Assign owner for P0 spike eval set  
+
+---
+
+## Part 13 — Social mode (Mode 3)
+
+**Flow:** the user picks Mode 3, picks one destination, types a free-text prompt (same as infographic, no structured headline/CTA fields), picks provider → model (default Gemini `gemini-3-pro-image`), and generates one asset at the exact destination size.
+
+### 13.1 Destinations (`catalogs/formats.js`)
+
+| `formatId` | Size | OpenAI render | Gemini render | Copy limits (headline / supporting / CTA) | Notes |
+|------------|------|---------------|---------------|-------------------------------------------|-------|
+| `youtube-thumbnail` | 1280×720 | 1536x1024 | 16:9 | 40 / 0 / 0 | Headline only; big face or subject; readable when small |
+| `instagram-post` | 1080×1350 | 1024x1536 | 4:5 | 60 / 110 / 24 | Feed crop keeps the center |
+| `facebook-post` | 940×788 | 1024x1024 | 5:4 | 60 / 100 / 24 | |
+| `facebook-cover` | 851×315 | 1536x1024 | 21:9 | 50 / 80 / 0 | Profile photo overlaps bottom-left |
+| `youtube-banner` | 2560×1440 | 1536x1024 | 16:9 | 40 / 60 / 0 | `safeArea` 1546×423 center box visible on all devices |
+| `twitter-post` | 1600×900 | 1536x1024 | 16:9 | 60 / 90 / 24 | |
+| `linkedin-banner` | 1584×396 | 1536x1024 | 21:9 | 50 / 80 / 0 | Profile photo overlaps bottom-left |
+
+Validation: `formatId` is required for `social` and must be a social id; social ids in other modes → 400. Output is cropped `cover` to exact pixels. The render prompt names the centered band that survives the crop (for example the middle 38% of the height for `linkedin-banner` on OpenAI), and states the `safeArea` box in percentages.
+
+### 13.2 Pipeline
+
+```
+moderate prompt
+  → spec LLM (IMAGE_GEN_SPEC_MODEL) → SocialPostSpec
+      { headline, supportingText?, cta?, visualSubject, composition?, visualStyle?, palette?, constraints }
+  → Joi validate (+1 corrective retry → 400 IMAGE_GEN_SOCIAL_SPEC_INVALID)
+  → clampCopy: truncate at a word to destination limits; drop fields with limit 0; warnings
+  → buildSocialRenderPrompt (exact copy, compose rules, safe zone/area, crop band, style, palette)
+  → generateForModel (OpenAI size / Gemini aspectRatio) → cover crop → Asset + generation + thread
+  → charge image_gen_social (= selected model AC, or IMAGE_GEN_SOCIAL_AC)
+```
+
+Stored: `request.socialSpec`, `request.warnings`, `request.renderPromptPreview`; `generation.socialSpec` and `generation.platform` in responses; `platform` in charge metadata, asset `stockMetadata`, and thread payloads.
+
+### 13.3 Thread lifecycle
+
+- A thread is sticky to `mode=social` **and** its `formatId`. Regenerate with a different `formatId` → 400 `IMAGE_GEN_FORMAT_LOCKED`.
+- Regenerate: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` rebuilds the spec; otherwise the stored spec is re-rendered (for example after a model change).
+- Chat / tweak: `socialService.classifyEdit` routes copy/layout instructions to a **spec patch** (visual style and palette are preserved, then re-clamped) and pure visual instructions to a **pixel edit** (`request.pixelEdited: true`, spec kept). `editMode` overrides.
+- Pixel edits first pad the stored post to the provider canvas ratio (`padToAspect`: blurred extension, original centred), so the final `cover` crop lands exactly on the original area. The edit prompt repeats the existing copy and tells the model to keep it unchanged.
+
+Tests: `src/modules/imageGen/social.service.test.js` (catalog, validation, clamp, prompts, pricing) and `imageGen.social.flow.test.js` (generate / regenerate / chat through the real service with DB, S3, credits, and providers stubbed), both in `npm test`.
+
+---
+
+## Part 14 — Printable mode (Mode 4)
+
+**Flow:** the user picks Mode 4, picks one print size, types a free-text prompt with every fact to print, picks provider → model (default Gemini `gemini-3-pro-image`, same as Mode 3, no Recommended badge), and generates one print-ready design.
+
+### 14.1 Sizes (`catalogs/formats.js`)
+
+Trim pixels are `round(mm / 25.4 × dpi)`. The bleed canvas adds `round(bleedMm / 25.4 × dpi)` px on **each** side, so the trim cut is symmetric (numbers can differ by 1 px from multiplying the full bleed width).
+
+| `formatId` | Trim | DPI | Trim px | Bleed px | Bleed / safe | Gemini / OpenAI |
+|------------|------|-----|---------|----------|--------------|-----------------|
+| `poster-a4-portrait` / `-landscape` | 210×297 mm | 300 | 2480×3508 | 2550×3578 | 3 / 5 mm | 3:4 / 1024x1536 (swap for landscape) |
+| `poster-a3-portrait` / `-landscape` | 297×420 mm | 150 | 1754×2480 | 1790×2516 | 3 / 5 mm | same |
+| `poster-a2-portrait` / `-landscape` | 420×594 mm | 150 | 2480×3508 | 2516×3544 | 3 / 5 mm | same |
+| `business-card` | 3.5×2 in, front | 300 | 1050×600 | 1126×676 | 1/8 / 1/8 in | 16:9 / 1536x1024 |
+| `invitation-a6-portrait` | 105×148 mm | 300 | 1240×1748 | 1310×1818 | 3 / 5 mm | 3:4 / 1024x1536 |
+
+Print formats have `category: 'print'`, `modes: ['printable']`, `platform: null`, `kind` (`poster` \| `business_card` \| `invitation`), and `textLimits` for headline / subheadline / detail lines / CTA. `bleedCanvasFor(format)` and `printInfo(format)` (exposed as `format.print` in `GET /formats`) hold the physical numbers. Gemini renders print at `IMAGE_GEN_PRINT_GEMINI_IMAGE_SIZE` (default `2K`, clamped by `maxImageSize`); at 2K an A2 poster is upscaled, which is why A3/A2 use 150 DPI.
+
+### 14.2 Pipeline
+
+```
+moderate prompt
+  → spec LLM (IMAGE_GEN_SPEC_MODEL) → PrintSpec
+      { headline, subheadline?, details[] (one printed line each), cta?, visualSubject,
+        composition?, visualStyle?, palette?, constraints { doNotInventNumbers, doNotInventContactDetails } }
+  → Joi validate (+1 corrective retry → 400 IMAGE_GEN_PRINT_SPEC_INVALID)
+  → print.service.clampCopy: word-boundary truncation, extra detail lines dropped, limit 0 fields dropped; warnings
+  → buildPrintRenderPrompt: flat artwork (not a mockup, no crop marks), background into the bleed,
+      trim + safe boxes as % of the provider canvas, kind guidance, exact copy block
+  → generateForModel (OpenAI size / Gemini aspectRatio + imageSize)
+  → cropToPrint: cover → bleed canvas (DPI stamped) → extract trim box (DPI stamped)
+  → trim PNG = Asset; bleed PNG → S3 workspace/{ws}/image-gen/print-bleed/{generationId}.png
+  → charge image_gen_printable (= selected model AC, or IMAGE_GEN_PRINTABLE_AC)
+```
+
+Stored: `request.printSpec`, `request.warnings`, `request.renderPromptPreview`, and `request.print = { ...printInfo, bleedKey }`. Responses return `generation.printSpec` and `generation.print` (without `bleedKey`, with `bleedAvailable`). Charge metadata carries `print: { formatId, dpi }`.
+
+### 14.3 Spec-mode registry
+
+`imageGen.service.js` now drives infographic, social, and printable from one `SPEC_HANDLERS` table. Each entry names the spec `service`, the `requestKey` (`infographicSpec` / `socialSpec` / `printSpec`), the crop `fit`, whether the thread is locked to its `formatId` (`lockFormat`), and the regenerate `shouldRebuild` rule. `runPipeline`, `regenerate`, `runTweakOnParent`, and chat routing (`runSpecModeEdit` → `runSpecPatchEdit` or a pixel edit) read the handler instead of branching per mode. `finalizeOutput` does the crop; for printable it also stores the bleed master.
+
+### 14.4 Thread lifecycle
+
+- Sticky to `mode=printable` and its `formatId`. A different `formatId` on regenerate → 400 `IMAGE_GEN_FORMAT_LOCKED` (shared with social).
+- Regenerate: same rebuild rules as social; model-only regenerate re-renders the stored `printSpec`.
+- Chat / tweak: `print.service.classifyEdit` sends wording changes (dates, venue, phone, email, headline, CTA) to a spec patch and pure visual changes to a pixel edit.
+- Pixel edits start from the **bleed master** (falling back to the trim asset for rows without one), pad it to the provider ratio, edit, then `cropToPrint` again, so every version keeps a bleed. The edit prompt repeats the printed copy and keeps it unchanged.
+
+### 14.5 Export (`imageGenExport.service.js`)
+
+| Request | Output |
+|---------|--------|
+| `format=png` | Trim PNG as stored (DPI in the file) |
+| `format=jpg` | Trim JPEG, DPI stamped |
+| `format=pdf` | One page at the physical trim size (mm × 72 / 25.4 pt; A4 = 595.28×841.89), TrimBox = page |
+| `format=pdf&bleed=true` | Bleed master on a page of trim + bleed + 10 mm margin per side; 0.25 pt registration crop marks at each trim corner, starting 1 mm outside the bleed; `BleedBox` and `TrimBox` set |
+
+`bleed=true` with a non-PDF format or a non-printable generation → 400. Non-printable PDFs are unchanged (page size = image pixels).
+
+Tests: `print.service.test.js` (catalog pixels, sizing, defaults, pricing, Joi, clamp, prompt geometry, heuristics) and `imageGen.print.flow.test.js` (generate every size on both providers, bleed object and DPI, regenerate lock, spec and pixel chat hops on the bleed master, PDF page sizes and boxes, bleed rejection for other modes), both in `npm test`.
 
 ---
 

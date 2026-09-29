@@ -20,10 +20,14 @@ logCorsConfig();
 
 (async () => {
   try {
-    await connectRedis();
-    console.log("All services connected");
+    const redisOk = await connectRedis();
+    if (redisOk) {
+      console.log('All services connected');
+    } else {
+      console.warn('API started without Redis (see REDIS_URL / REDIS_OPTIONAL)');
+    }
   } catch (err) {
-    console.error("Startup error:", err);
+    console.error('Startup error:', err);
     process.exit(1);
   }
 })();

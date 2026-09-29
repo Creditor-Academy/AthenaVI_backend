@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { redisClient } = require('../shared/config/redis');
+const { redisClient, assertRedisReady } = require('../shared/config/redis');
 const asyncHandler = require('../shared/utils/asyncHandler');
 const AppError = require('../shared/utils/AppError');
 const messages = require('../shared/utils/messages');
@@ -18,7 +18,6 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    console.log(err);
     throw new AppError(messages.TOKEN_EXPIRED, 401);
   }
 
@@ -28,7 +27,13 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
     throw new AppError(messages.UNAUTHORIZED, 401);
   }
 
-  const session = await redisClient.get(`session:${sessionId}`);
+  assertRedisReady();
+  let session;
+  try {
+    session = await redisClient.get(`session:${sessionId}`);
+  } catch {
+    throw new AppError(messages.REDIS_UNAVAILABLE, 503);
+  }
 
   if (!session) {
     throw new AppError(messages.SESSION_EXPIRED, 401);
@@ -69,7 +74,15 @@ const optionalAuthMiddleware = asyncHandler(async (req, res, next) => {
     return next();
   }
 
-  const session = await redisClient.get(`session:${sessionId}`);
+  if (!redisClient.isOpen) {
+    return next();
+  }
+  let session;
+  try {
+    session = await redisClient.get(`session:${sessionId}`);
+  } catch {
+    return next();
+  }
   if (!session) {
     return next();
   }

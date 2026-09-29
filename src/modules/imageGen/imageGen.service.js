@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { generateForModel, editForModel } = require('../../shared/services/ai');
-const { getObjectBuffer } = require('../s3/s3.service');
+const { getObjectBuffer, uploadFileToKey } = require('../s3/s3.service');
 const { persistWorkspaceAsset } = require('../asset/asset.service');
 const prisma = require('../../shared/config/prismaClient');
 const projectDao = require('../project/project.dao');
@@ -12,32 +12,176 @@ const threadDao = require('./imageGen.thread.dao');
 const messageDao = require('./imageGen.message.dao');
 const rateLimit = require('./imageGenRateLimit.service');
 const contextService = require('./imageGen.context.service');
-const { listModels, resolveModel, estimateCredits, defaultModelIdForMode } = require('./catalogs/models');
+const {
+  listModels,
+  modelCatalog,
+  resolveModel,
+  estimateCredits,
+  defaultModelIdForMode,
+  modeAc,
+} = require('./catalogs/models');
 const {
   listFormats,
   resolveFormat,
+  isFormatForMode,
+  defaultFormatIdForMode,
   openaiSizeForFormat,
   geminiImageConfigForFormat,
+  printInfo,
 } = require('./catalogs/formats');
 const { listStyles, resolveStyle } = require('./catalogs/styles');
 const { listArchetypes } = require('./catalogs/archetypes');
 const { buildImagePrompt } = require('./prompts/imageStyle.prompt');
 const { buildChatEditInstruction } = require('./prompts/chatEdit.prompt');
-const { cropToFormat } = require('./socialCrop.service');
+const { cropToFormat, cropToPrint, padToAspect } = require('./socialCrop.service');
 const { DOWNLOAD_FORMATS, sendDownload } = require('./imageGenExport.service');
 const { resolveAssetFilename } = require('./imageGenFilename');
-const {
-  IMAGE_GEN_FEATURE,
-  getInfographicAc,
-} = require('../../shared/config/imageGenCreditPricing');
+const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
 const infographicService = require('./infographic.service');
+const socialService = require('./social.service');
+const printService = require('./print.service');
 
-const STUDIO_MODES = Object.freeze(['image', 'infographic']);
+const STUDIO_MODES = Object.freeze(['image', 'infographic', 'social', 'printable']);
+
+function normalizeMode(value) {
+  return STUDIO_MODES.includes(value) ? value : 'image';
+}
+
+function sameColors(a, b) {
+  const left = Array.isArray(a) ? a : [];
+  const right = Array.isArray(b) ? b : [];
+  return left.length === right.length && left.every((c, i) => c === right[i]);
+}
+
+function styleChanged(body, prev) {
+  if (body.style === undefined && body.styleId === undefined) return false;
+  return (body.style || body.styleId) !== prev.styleId;
+}
+
+function shouldRebuildInfographicSpec(body = {}, prev = {}) {
+  if (body.prompt !== undefined && body.prompt !== prev.prompt) return true;
+  if (body.archetypeHint !== undefined && body.archetypeHint !== prev.archetypeHint) {
+    return true;
+  }
+  if (body.styleHint !== undefined && body.styleHint !== prev.styleHint) return true;
+  if (styleChanged(body, prev)) return true;
+  if (body.contextId !== undefined && body.contextId !== prev.contextId) return true;
+  return false;
+}
+
+/** Copy/look inputs rebuild a design spec; model-only changes re-render it. */
+function shouldRebuildDesignSpec(body = {}, prev = {}) {
+  if (body.prompt !== undefined && body.prompt !== prev.prompt) return true;
+  if (body.styleHint !== undefined && body.styleHint !== prev.styleHint) return true;
+  if (styleChanged(body, prev)) return true;
+  if (body.brandPalette !== undefined && !sameColors(body.brandPalette, prev.brandPalette)) {
+    return true;
+  }
+  if (body.contextId !== undefined && body.contextId !== prev.contextId) return true;
+  return false;
+}
+
+function designSpecHandler({ service, requestKey, invalidMessage }) {
+  return {
+    service,
+    requestKey,
+    invalidMessage,
+    fit: 'cover',
+    lockFormat: true,
+    shouldRebuild: shouldRebuildDesignSpec,
+    build: ({ prompt, contextText, styleHint, brandPalette, format }) =>
+      service.buildSpec({ prompt, contextText, styleHint, brandPalette, format }),
+    normalize: (spec) => spec,
+    render: ({ spec, format, sizing, hasReferences }) =>
+      service.buildRenderPrompt({ spec, format, sizing, hasReferences }),
+    pixelInstruction: ({ instruction, spec }) =>
+      service.buildPixelEditInstruction({ instruction, spec }),
+  };
+}
+
+/**
+ * Spec-first modes: an LLM writes a spec from the prompt, the spec is rendered,
+ * and chat edits either patch the spec or pixel-edit the image.
+ */
+const SPEC_HANDLERS = Object.freeze({
+  infographic: {
+    service: infographicService,
+    requestKey: 'infographicSpec',
+    invalidMessage: messages.IMAGE_GEN_SPEC_INVALID,
+    fit: 'contain',
+    lockFormat: false,
+    shouldRebuild: shouldRebuildInfographicSpec,
+    build: ({ prompt, contextText, styleHint, archetypeHint, format }) =>
+      infographicService.buildSpec({
+        prompt,
+        contextText,
+        archetypeHint: archetypeHint || null,
+        styleHint,
+        format,
+      }),
+    normalize: (spec, format) =>
+      spec && !spec.orientation ? { ...spec, orientation: format.id } : spec,
+    render: ({ spec, format, hasReferences }) =>
+      infographicService.buildRenderPrompt({ spec, format, hasReferences }),
+    pixelInstruction: ({ instruction }) => instruction,
+  },
+  social: designSpecHandler({
+    service: socialService,
+    requestKey: 'socialSpec',
+    invalidMessage: messages.IMAGE_GEN_SOCIAL_SPEC_INVALID,
+  }),
+  printable: designSpecHandler({
+    service: printService,
+    requestKey: 'printSpec',
+    invalidMessage: messages.IMAGE_GEN_PRINT_SPEC_INVALID,
+  }),
+});
+
+const SPEC_MODES = Object.freeze(Object.keys(SPEC_HANDLERS));
+
+function specHandlerFor(mode) {
+  return SPEC_HANDLERS[mode] || null;
+}
+
+function printBleedKey(workspaceId, generationId) {
+  return `workspace/${workspaceId}/image-gen/print-bleed/${generationId}.png`;
+}
+
+/**
+ * Crop the provider output to the final canvas. Printables also store the bleed
+ * master next to the trim-size asset and return its print metadata.
+ */
+async function finalizeOutput({ buffer, format, mode, workspaceId, generationId }) {
+  if (mode === 'printable') {
+    const { trim, bleed } = await cropToPrint(buffer, format);
+    const bleedKey = printBleedKey(workspaceId, generationId);
+    await uploadFileToKey(bleed.buffer, bleedKey, 'image/png');
+    return {
+      cropped: trim,
+      print: { ...printInfo(format), bleedKey },
+    };
+  }
+  const handler = specHandlerFor(mode);
+  const cropped = await cropToFormat(buffer, format, { fit: handler ? handler.fit : 'cover' });
+  return { cropped, print: null };
+}
+
+function publicPrintInfo(print) {
+  if (!print) return null;
+  const { bleedKey, ...rest } = print;
+  return { ...rest, bleedAvailable: Boolean(bleedKey) };
+}
+
+function platformFor(formatId) {
+  return resolveFormat(formatId)?.platform || null;
+}
 
 function serializeGeneration(row) {
   if (!row) return row;
   const request = row.request && typeof row.request === 'object' ? row.request : {};
   const infographicSpec = request.infographicSpec || null;
+  const socialSpec = request.socialSpec || null;
+  const printSpec = request.printSpec || null;
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -58,6 +202,10 @@ function serializeGeneration(row) {
     contextPreview: request.contextPreview || null,
     infographicSpec,
     archetype: infographicSpec?.archetype || request.archetypeHint || null,
+    socialSpec,
+    printSpec,
+    print: publicPrintInfo(request.print),
+    platform: platformFor(row.formatId),
     s3Key: row.s3Key,
     url: row.url,
     openaiSize: row.openaiSize,
@@ -81,6 +229,8 @@ function serializeHead(generation) {
     action: generation.action,
     mode: generation.mode || null,
     archetype: request.infographicSpec?.archetype || request.archetypeHint || null,
+    formatId: generation.formatId || null,
+    platform: platformFor(generation.formatId),
     createdAt: generation.createdAt,
     asset: generation.asset || null,
   };
@@ -123,6 +273,7 @@ function serializeThread(row, { includeMessages = false } = {}) {
     title: row.title,
     mode,
     archetype,
+    platform: platformFor(row.formatId),
     rootGenerationId: row.rootGenerationId,
     headGenerationId: row.headGenerationId,
     contextId: row.contextId || null,
@@ -181,15 +332,22 @@ async function assertFolderInWorkspace(folderId, workspaceId) {
   return folder;
 }
 
-function resolveRequestFormat(formatId) {
-  if (formatId) {
-    const format = resolveFormat(formatId);
-    if (!format) {
-      throw new AppError('Invalid formatId', 400);
-    }
-    return format;
+/**
+ * Resolve the canvas for a mode. Social and printable have no default: a size is required.
+ */
+function resolveRequestFormat(formatId, mode = 'image') {
+  const id = formatId || defaultFormatIdForMode(mode);
+  if (!id) {
+    throw new AppError(`formatId is required for ${mode} mode`, 400);
   }
-  return resolveFormat('square');
+  const format = resolveFormat(id);
+  if (!format) {
+    throw new AppError('Invalid formatId', 400);
+  }
+  if (!isFormatForMode(format, mode)) {
+    throw new AppError(`formatId "${format.id}" is not available in ${mode} mode`, 400);
+  }
+  return format;
 }
 
 /**
@@ -198,13 +356,18 @@ function resolveRequestFormat(formatId) {
  */
 function providerSizingFor(model, format) {
   if (model && model.provider === 'gemini') {
-    const { aspectRatio } = geminiImageConfigForFormat(format, model);
+    const { aspectRatio, imageSize } = geminiImageConfigForFormat(format, model);
     const size = format ? `${format.width}x${format.height}` : '1024x1024';
-    return { size, aspectRatio };
+    return {
+      size,
+      aspectRatio,
+      imageSize: format && format.category === 'print' ? imageSize : undefined,
+    };
   }
   return {
     size: openaiSizeForFormat(format, model && model.providerModel),
     aspectRatio: null,
+    imageSize: undefined,
   };
 }
 
@@ -387,11 +550,12 @@ async function runPipeline({
   contextId = null,
   parentSnapshot = null,
   threadId = null,
-  infographicSpec: providedSpec = null,
-  infographicWarnings: providedWarnings = null,
+  spec: providedSpec = null,
+  specWarnings: providedWarnings = null,
   skipSpecBuild = false,
 }) {
-  const mode = modeInput === 'infographic' ? 'infographic' : 'image';
+  const mode = normalizeMode(modeInput);
+  const handler = specHandlerFor(mode);
   if (!prompt || !String(prompt).trim()) {
     throw new AppError('prompt is required', 400);
   }
@@ -406,10 +570,7 @@ async function runPipeline({
     throw new AppError('Invalid style', 400);
   }
 
-  const format =
-    mode === 'infographic'
-      ? resolveRequestFormat(formatId || 'landscape')
-      : resolveRequestFormat(formatId || null);
+  const format = resolveRequestFormat(formatId, mode);
   const pricing = estimateCredits({ modelId: model.id, mode, isTweak: false });
 
   await rateLimitFn(userId, workspace.id);
@@ -427,36 +588,30 @@ async function runPipeline({
   const referenceBuffers = contextResult.referenceImageBuffers || [];
   const useRefs = referenceBuffers.length > 0;
 
+  const sizing = providerSizingFor(model, format);
+
   let enrichedPrompt;
-  let infographicSpec = providedSpec || null;
-  let infographicWarnings = Array.isArray(providedWarnings) ? [...providedWarnings] : [];
+  let spec = providedSpec || null;
+  let specWarnings = Array.isArray(providedWarnings) ? [...providedWarnings] : [];
   let renderPromptPreview = null;
 
-  if (mode === 'infographic') {
-    if (!skipSpecBuild || !infographicSpec) {
-      const built = await infographicService.buildSpec({
+  if (handler) {
+    if (!skipSpecBuild || !spec) {
+      const built = await handler.build({
         prompt: String(prompt).trim(),
         contextText: contextResult.enrichmentBlock || '',
-        archetypeHint: archetypeHint || null,
-        styleHint:
-          infographicService.mergeStyleHint({
-            styleHint,
-            style: styleId,
-            styleId,
-          }),
+        styleHint: infographicService.mergeStyleHint({ styleHint, style: styleId, styleId }),
+        archetypeHint,
+        brandPalette,
         format,
       });
-      infographicSpec = built.spec;
-      infographicWarnings = [...infographicWarnings, ...(built.warnings || [])];
-    } else if (infographicSpec && !infographicSpec.orientation) {
-      infographicSpec = { ...infographicSpec, orientation: format.id };
+      spec = built.spec;
+      specWarnings = [...specWarnings, ...(built.warnings || [])];
+    } else {
+      spec = handler.normalize(spec, format);
     }
 
-    enrichedPrompt = infographicService.buildRenderPrompt({
-      spec: infographicSpec,
-      format,
-      hasReferences: useRefs,
-    });
+    enrichedPrompt = handler.render({ spec, format, sizing, hasReferences: useRefs });
     renderPromptPreview = String(enrichedPrompt).slice(0, 500);
   } else {
     const basePrompt = buildImagePrompt({ prompt: prompt || '', styleId });
@@ -473,27 +628,60 @@ async function runPipeline({
     );
   }
 
-  const { size: requestedSize, aspectRatio } = providerSizingFor(model, format);
+  const { size: requestedSize, aspectRatio, imageSize } = sizing;
   const generated = await generateForModel({
     model,
     prompt: enrichedPrompt,
     size: requestedSize,
     aspectRatio,
+    imageSize,
     referenceBuffers: useRefs ? referenceBuffers : [],
   });
   const openaiSize = requestedSize;
 
-  const cropped = await cropToFormat(generated.buffer, format, {
-    fit: mode === 'infographic' ? 'contain' : 'cover',
-  });
   const revisedPrompt = generated.revised_prompt || null;
-
   const generationId = uuidv4();
+  const { cropped, print } = await finalizeOutput({
+    buffer: generated.buffer,
+    format,
+    mode,
+    workspaceId: workspace.id,
+    generationId,
+  });
+  const archetype = mode === 'infographic' ? spec?.archetype || null : null;
   const assetName = resolveAssetFilename({
     name,
     prompt,
     mode,
   });
+
+  const resolvedRootId = rootId || parentId || generationId;
+  const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
+  const chargeFeature = pricing.breakdown.feature || model.feature;
+  const chargeAmount = pricing.athenaCredits;
+
+  // CHARGE UPFRONT to prevent race condition exploit
+  const charge = await imageGenCredit.chargeFlat({
+    workspaceId: workspace.id,
+    userId,
+    feature: chargeFeature,
+    idempotencyKey: `imageGen:${generationId}:${action}`,
+    amountAc: chargeAmount,
+    metadata: {
+      generationId,
+      mode,
+      modelId: model.id,
+      formatId: format?.id || null,
+      action,
+      contextId: liveContextId,
+      threadId: threadId || null,
+      archetype,
+      platform: format.platform || null,
+      ...(print ? { print: { formatId: format.id, dpi: print.dpi } } : {}),
+    },
+  });
+
+  const charged = charge?.pricing?.athenaCredits ?? chargeAmount;
 
   const asset = await persistWorkspaceAsset({
     userId,
@@ -512,16 +700,11 @@ async function runPipeline({
       action,
       contextId: contextResult.contextId || null,
       threadId: threadId || null,
-      archetype: infographicSpec?.archetype || null,
+      archetype,
+      platform: format.platform || null,
+      ...(print ? { dpi: print.dpi } : {}),
     },
   });
-
-  const resolvedRootId = rootId || parentId || generationId;
-  const liveContextId = contextResult.usedLiveContext ? contextResult.contextId : null;
-  const chargeFeature =
-    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : model.feature;
-  const chargeAmount =
-    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
 
   const requestPayload = {
     mode,
@@ -536,13 +719,14 @@ async function runPipeline({
     contextId: liveContextId || contextResult.contextId || contextId || null,
     contextPreview: contextResult.contextPreview || null,
     contextSnapshot: contextResult.contextSnapshot || null,
-    ...(mode === 'infographic'
+    ...(handler
       ? {
-          infographicSpec,
-          warnings: infographicWarnings,
+          [handler.requestKey]: spec,
+          warnings: specWarnings,
           renderPromptPreview,
         }
       : {}),
+    ...(print ? { print } : {}),
   };
 
   const row = await imageGenDao.createGeneration({
@@ -567,39 +751,12 @@ async function runPipeline({
     openaiSize,
     exportWidth: cropped.width,
     exportHeight: cropped.height,
-    creditsCharged: 0,
+    creditsCharged: charged,
     status: 'SUCCEEDED',
   });
 
   if (contextResult.pinContextId) {
     await contextService.pinIfNeeded(contextResult.pinContextId);
-  }
-
-  const charge = await imageGenCredit.chargeFlat({
-    workspaceId: workspace.id,
-    userId,
-    feature: chargeFeature,
-    idempotencyKey: `imageGen:${generationId}:${action}`,
-    amountAc: chargeAmount,
-    metadata: {
-      generationId,
-      mode,
-      modelId: model.id,
-      formatId: format?.id || null,
-      action,
-      contextId: liveContextId,
-      threadId: threadId || null,
-      archetype: infographicSpec?.archetype || null,
-    },
-  });
-
-  const charged = charge?.pricing?.athenaCredits ?? chargeAmount;
-  if (charged > 0) {
-    await prisma.imageGeneration.update({
-      where: { id: generationId },
-      data: { creditsCharged: charged },
-    });
-    row.creditsCharged = charged;
   }
 
   return {
@@ -622,15 +779,13 @@ async function runTweakOnParent({
     throw new AppError('instruction is required', 400);
   }
 
-  const mode = parent.mode === 'infographic' ? 'infographic' : 'image';
-  const model =
-    resolveModel(parent.modelId) ||
-    resolveModel(mode === 'infographic' ? 'gpt-image-1-hd' : 'gpt-image-1');
+  const mode = normalizeMode(parent.mode);
+  const model = resolveModel(parent.modelId) || resolveModel(defaultModelIdForMode(mode));
   const format = parent.formatId
     ? resolveFormat(parent.formatId)
-    : resolveRequestFormat(mode === 'infographic' ? 'landscape' : null);
+    : resolveRequestFormat(null, mode);
   const pricing = estimateCredits({
-    modelId: model.supportsEdit ? model.id : model.id,
+    modelId: model.id,
     mode,
     isTweak: true,
   });
@@ -638,21 +793,37 @@ async function runTweakOnParent({
   await rateLimit.assertRegenerateAllowed(userId, workspace.id);
   await imageGenCredit.assertAfford(workspace.id, userId, pricing.athenaCredits);
 
-  const sourceBuffer = await getObjectBuffer(parent.s3Key);
-  const { size: openaiSize, aspectRatio } = providerSizingFor(model, format);
-  const editInstruction = String(editPrompt || instruction).trim();
+  const prev = parent.request || {};
+  const handler = specHandlerFor(mode);
+  const sizing = providerSizingFor(model, format);
+  const { size: openaiSize, aspectRatio, imageSize } = sizing;
+  const sourceKey = (mode === 'printable' && prev.print?.bleedKey) || parent.s3Key;
+  let sourceBuffer = await getObjectBuffer(sourceKey);
+  let editInstruction = String(editPrompt || instruction).trim();
+  if (handler && handler.lockFormat) {
+    sourceBuffer = await padToAspect(sourceBuffer, handler.service.providerAspectFor(sizing));
+    editInstruction = handler.pixelInstruction({
+      instruction: editInstruction,
+      spec: prev[handler.requestKey] || null,
+    });
+  }
   const edited = await editForModel({
     model,
     imageBuffer: sourceBuffer,
     instruction: editInstruction,
     size: openaiSize,
     aspectRatio,
+    imageSize,
   });
 
-  const cropped = await cropToFormat(edited.buffer, format, {
-    fit: mode === 'infographic' ? 'contain' : 'cover',
-  });
   const generationIdNew = uuidv4();
+  const { cropped, print } = await finalizeOutput({
+    buffer: edited.buffer,
+    format,
+    mode,
+    workspaceId: workspace.id,
+    generationId: generationIdNew,
+  });
   const assetName = resolveAssetFilename({
     prompt: parent.prompt,
     mode,
@@ -675,14 +846,13 @@ async function runTweakOnParent({
       action: 'tweak',
       parentId: parent.id,
       threadId: threadId || parent.threadId || null,
+      platform: format?.platform || null,
+      ...(print ? { dpi: print.dpi } : {}),
     },
   });
 
-  const prev = parent.request || {};
-  const chargeFeature =
-    mode === 'infographic' ? IMAGE_GEN_FEATURE.INFOGRAPHIC : IMAGE_GEN_FEATURE.TWEAK;
-  const chargeAmount =
-    mode === 'infographic' ? getInfographicAc(model.id) : pricing.athenaCredits;
+  const chargeFeature = pricing.breakdown.feature || IMAGE_GEN_FEATURE.TWEAK;
+  const chargeAmount = modeAc(mode, model.id);
 
   const requestPayload = {
     mode,
@@ -696,13 +866,15 @@ async function runTweakOnParent({
     contextPreview: prev.contextPreview || null,
     contextSnapshot: prev.contextSnapshot || null,
     tweakInstruction: String(instruction).trim(),
-    ...(mode === 'infographic'
+    ...(handler
       ? {
-          infographicSpec: prev.infographicSpec || null,
+          [handler.requestKey]: prev[handler.requestKey] || null,
+          ...(handler.lockFormat ? { styleHint: prev.styleHint || null } : {}),
           pixelEdited: true,
           warnings: prev.warnings || [],
         }
       : {}),
+    ...(print ? { print } : {}),
   };
 
   const row = await imageGenDao.createGeneration({
@@ -744,7 +916,8 @@ async function runTweakOnParent({
       modelId: model.id,
       mode,
       threadId: threadId || parent.threadId || null,
-      pixelEdited: mode === 'infographic',
+      pixelEdited: SPEC_MODES.includes(mode),
+      ...(print ? { print: { formatId: format.id, dpi: print.dpi } } : {}),
     },
   });
 
@@ -766,10 +939,10 @@ async function runTweakOnParent({
 }
 
 async function generate({ userId, workspace, body }) {
-  const mode = body.mode === 'infographic' ? 'infographic' : 'image';
-  if (!STUDIO_MODES.includes(mode)) {
+  if (body.mode && !STUDIO_MODES.includes(body.mode)) {
     throw new AppError(messages.IMAGE_GEN_MODE_INVALID, 400);
   }
+  const mode = normalizeMode(body.mode);
   await assertFolderInWorkspace(body.folderId, workspace.id);
 
   const styleHint = infographicService.mergeStyleHint({
@@ -783,9 +956,7 @@ async function generate({ userId, workspace, body }) {
     workspace,
     mode,
     modelId: defaultModelIdForMode(mode, body.modelId),
-    formatId:
-      body.formatId ||
-      (mode === 'infographic' ? 'landscape' : undefined),
+    formatId: body.formatId || null,
     styleId: body.style || body.styleId,
     styleHint,
     archetypeHint: body.archetypeHint || null,
@@ -811,35 +982,25 @@ async function generate({ userId, workspace, body }) {
   return withThreadPayload(result, thread, workspace.id);
 }
 
-function shouldRebuildInfographicSpec(body = {}, prev = {}) {
-  if (body.prompt !== undefined && body.prompt !== prev.prompt) return true;
-  if (body.archetypeHint !== undefined && body.archetypeHint !== prev.archetypeHint) {
-    return true;
-  }
-  if (body.styleHint !== undefined && body.styleHint !== prev.styleHint) return true;
-  if (body.style !== undefined || body.styleId !== undefined) {
-    const nextStyle = body.style || body.styleId;
-    if (nextStyle !== prev.styleId) return true;
-  }
-  if (body.contextId !== undefined && body.contextId !== prev.contextId) return true;
-  return false;
-}
-
 async function regenerate({ userId, workspace, generationId, body = {} }) {
   const parent = requireStudioGeneration(
     await imageGenDao.findById(generationId, workspace.id)
   );
 
   const prev = parent.request || {};
-  const mode =
-    body.mode === 'infographic' || body.mode === 'image'
-      ? body.mode
-      : parent.mode === 'infographic'
-        ? 'infographic'
-        : 'image';
+  const mode = normalizeMode(parent.mode);
+  const handler = specHandlerFor(mode);
 
   if (body.mode && body.mode !== parent.mode) {
     throw new AppError(messages.IMAGE_GEN_MODE_MISMATCH, 400);
+  }
+  if (
+    handler &&
+    handler.lockFormat &&
+    body.formatId &&
+    body.formatId !== (parent.formatId || prev.formatId)
+  ) {
+    throw new AppError(messages.IMAGE_GEN_FORMAT_LOCKED, 400);
   }
 
   const inheritedContextId =
@@ -857,9 +1018,8 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
     styleId: body.styleId !== undefined ? body.styleId : parent.styleId || prev.styleId,
   });
 
-  const rebuildSpec =
-    mode === 'infographic' &&
-    (shouldRebuildInfographicSpec(body, prev) || !prev.infographicSpec);
+  const prevSpec = handler ? prev[handler.requestKey] || null : null;
+  const reuseSpec = Boolean(handler && prevSpec && !handler.shouldRebuild(body, prev));
 
   const result = await runPipeline({
     userId,
@@ -871,9 +1031,9 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
       prev.modelId ||
       defaultModelIdForMode(mode),
     formatId:
-      body.formatId !== undefined
+      body.formatId !== undefined && body.formatId !== null && body.formatId !== ''
         ? body.formatId
-        : parent.formatId || prev.formatId || (mode === 'infographic' ? 'landscape' : null),
+        : parent.formatId || prev.formatId || null,
     styleId:
       body.style !== undefined || body.styleId !== undefined
         ? body.style || body.styleId
@@ -894,9 +1054,9 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
     contextId: inheritedContextId,
     parentSnapshot: prev.contextSnapshot || null,
     threadId: thread.id,
-    infographicSpec: rebuildSpec ? null : prev.infographicSpec || null,
-    infographicWarnings: prev.warnings || null,
-    skipSpecBuild: mode === 'infographic' && !rebuildSpec && Boolean(prev.infographicSpec),
+    spec: reuseSpec ? prevSpec : null,
+    specWarnings: reuseSpec ? prev.warnings || null : null,
+    skipSpecBuild: reuseSpec,
   });
 
   await attachHopMessages({
@@ -911,24 +1071,17 @@ async function regenerate({ userId, workspace, generationId, body = {} }) {
   return withThreadPayload(result, updated, workspace.id);
 }
 
-async function runInfographicSpecEdit({
-  userId,
-  workspace,
-  parent,
-  instruction,
-  threadId,
-}) {
+async function runSpecPatchEdit({ userId, workspace, parent, instruction, threadId }) {
+  const mode = normalizeMode(parent.mode);
+  const handler = specHandlerFor(mode);
   const prev = parent.request || {};
-  const existingSpec = prev.infographicSpec;
+  const existingSpec = prev[handler.requestKey];
   if (!existingSpec) {
-    throw new AppError(messages.IMAGE_GEN_SPEC_INVALID, 400);
+    throw new AppError(handler.invalidMessage, 400);
   }
 
-  const format = parent.formatId
-    ? resolveFormat(parent.formatId)
-    : resolveRequestFormat('landscape');
-
-  const patched = await infographicService.patchSpec({
+  const format = resolveRequestFormat(parent.formatId || prev.formatId, mode);
+  const patched = await handler.service.patchSpec({
     spec: existingSpec,
     instruction,
     format,
@@ -937,12 +1090,13 @@ async function runInfographicSpecEdit({
   return runPipeline({
     userId,
     workspace,
-    mode: 'infographic',
-    modelId: parent.modelId || defaultModelIdForMode('infographic'),
-    formatId: format?.id || 'landscape',
+    mode,
+    modelId: parent.modelId || defaultModelIdForMode(mode),
+    formatId: format.id,
     styleId: parent.styleId || prev.styleId,
     styleHint: prev.styleHint || null,
-    archetypeHint: patched.spec.archetype || prev.archetypeHint,
+    archetypeHint:
+      mode === 'infographic' ? patched.spec.archetype || prev.archetypeHint : null,
     prompt: parent.prompt,
     brandPalette: prev.brandPalette,
     name: prev.name,
@@ -953,9 +1107,31 @@ async function runInfographicSpecEdit({
     contextId: parent.contextId || prev.contextId || null,
     parentSnapshot: prev.contextSnapshot || null,
     threadId,
-    infographicSpec: patched.spec,
-    infographicWarnings: patched.warnings,
+    spec: patched.spec,
+    specWarnings: patched.warnings,
     skipSpecBuild: true,
+  });
+}
+
+/**
+ * Spec-first modes: patch the spec and re-render, or pixel-edit.
+ * Returns null for image mode so callers keep their own edit composition.
+ */
+async function runSpecModeEdit({ userId, workspace, parent, instruction, editMode, threadId }) {
+  const handler = specHandlerFor(parent.mode);
+  if (!handler) return null;
+
+  const route = await handler.service.classifyEdit({ instruction, editMode });
+  if (route === 'spec') {
+    return runSpecPatchEdit({ userId, workspace, parent, instruction, threadId });
+  }
+  return runTweakOnParent({
+    userId,
+    workspace,
+    parent,
+    instruction,
+    editPrompt: instruction,
+    threadId,
   });
 }
 
@@ -965,28 +1141,15 @@ async function tweak({ userId, workspace, generationId, instruction, editMode = 
   );
   const thread = await ensureThreadForParent({ parent, workspace, userId });
 
-  let result;
-  if (parent.mode === 'infographic') {
-    const route = await infographicService.classifyEdit({ instruction, editMode });
-    if (route === 'spec') {
-      result = await runInfographicSpecEdit({
-        userId,
-        workspace,
-        parent,
-        instruction,
-        threadId: thread.id,
-      });
-    } else {
-      result = await runTweakOnParent({
-        userId,
-        workspace,
-        parent,
-        instruction,
-        editPrompt: instruction,
-        threadId: thread.id,
-      });
-    }
-  } else {
+  let result = await runSpecModeEdit({
+    userId,
+    workspace,
+    parent,
+    instruction,
+    editMode,
+    threadId: thread.id,
+  });
+  if (!result) {
     result = await runTweakOnParent({
       userId,
       workspace,
@@ -1008,6 +1171,8 @@ async function tweak({ userId, workspace, generationId, instruction, editMode = 
   const updated = await advanceThreadHead(thread.id, result.generation);
   return withThreadPayload(result, updated, workspace.id);
 }
+
+
 
 async function sendThreadMessage({
   userId,
@@ -1039,31 +1204,15 @@ async function sendThreadMessage({
   }
 
   // Sticky thread mode: stay on the parent's mode
-  let result;
-  if (parent.mode === 'infographic') {
-    const route = await infographicService.classifyEdit({
-      instruction: String(content).trim(),
-      editMode,
-    });
-    if (route === 'spec') {
-      result = await runInfographicSpecEdit({
-        userId,
-        workspace,
-        parent,
-        instruction: String(content).trim(),
-        threadId: thread.id,
-      });
-    } else {
-      result = await runTweakOnParent({
-        userId,
-        workspace,
-        parent,
-        instruction: String(content).trim(),
-        editPrompt: String(content).trim(),
-        threadId: thread.id,
-      });
-    }
-  } else {
+  let result = await runSpecModeEdit({
+    userId,
+    workspace,
+    parent,
+    instruction: String(content).trim(),
+    editMode,
+    threadId: thread.id,
+  });
+  if (!result) {
     const priorRows = await messageDao.listUserMessages(thread.id, { take: 12 });
     const priorUserTurns = [...priorRows].reverse().map((row) => row.content);
     let editPrompt = buildChatEditInstruction({
@@ -1157,8 +1306,7 @@ async function getGeneration({ workspace, generationId }) {
 }
 
 async function listGenerations({ userId, workspace, query = {} }) {
-  const modeFilter =
-    query.mode === 'image' || query.mode === 'infographic' ? query.mode : undefined;
+  const modeFilter = STUDIO_MODES.includes(query.mode) ? query.mode : undefined;
   const rows = await imageGenDao.listGenerations({
     workspaceId: workspace.id,
     userId,
@@ -1168,7 +1316,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
     mode: modeFilter,
     threadId: query.threadId,
   });
-  // When mode omitted, return both studio modes (filter out any legacy unknown modes)
+  // When mode omitted, return every studio mode (filter out any legacy unknown modes)
   const filtered = modeFilter
     ? rows
     : rows.filter((row) => STUDIO_MODES.includes(row.mode));
@@ -1176,10 +1324,10 @@ async function listGenerations({ userId, workspace, query = {} }) {
 }
 
 function creditEstimate({ modelId, mode, tweak }) {
-  const resolvedMode = mode === 'infographic' ? 'infographic' : 'image';
   if (mode && !STUDIO_MODES.includes(mode)) {
     throw new AppError(messages.IMAGE_GEN_MODE_INVALID, 400);
   }
+  const resolvedMode = normalizeMode(mode);
   return estimateCredits({
     modelId,
     mode: resolvedMode,
@@ -1187,7 +1335,7 @@ function creditEstimate({ modelId, mode, tweak }) {
   });
 }
 
-async function downloadGeneration({ req, res, workspace, generationId, format }) {
+async function downloadGeneration({ req, res, workspace, generationId, format, bleed = false }) {
   const row = await imageGenDao.findById(generationId, workspace.id);
   requireStudioGeneration(row, { notFoundIfWrongMode: true });
   const filenameBase = row.asset?.name || `image-${row.id}`;
@@ -1195,11 +1343,36 @@ async function downloadGeneration({ req, res, workspace, generationId, format })
     s3Key: row.s3Key,
     format,
     filenameBase,
+    generation: row,
+    bleed,
   });
 }
 
+/**
+ * Fetch a generation safely without workspace context for public sharing
+ */
+async function getSharedGeneration(token) {
+  // Token is just the generationId UUID
+  const row = await imageGenDao.findGlobalById(token);
+  if (!row) {
+    throw new AppError('Shared generation not found or is no longer available.', 404);
+  }
+
+  const creatorName = (row.user && row.user.name) ? row.user.name : 'Unknown';
+
+  return {
+    id: row.id,
+    prompt: row.prompt,
+    mode: row.mode,
+    url: row.asset?.url,
+    createdAt: row.createdAt,
+    version: row.version,
+    creatorName
+  };
+}
 module.exports = {
   listModels,
+  modelCatalog,
   listFormats,
   listStyles,
   listArchetypes,
@@ -1207,6 +1380,7 @@ module.exports = {
   generate,
   regenerate,
   tweak,
+
   sendThreadMessage,
   listThreads,
   getThread,
@@ -1214,6 +1388,7 @@ module.exports = {
   moveThread,
   deleteThread,
   getGeneration,
+  getSharedGeneration,
   listGenerations,
   downloadGeneration,
   serializeThread,

@@ -4,6 +4,8 @@ module.exports = {
   INVALID_REQUEST: 'Invalid request',
   UNAUTHORIZED: 'Unauthorized',
   SESSION_EXPIRED: 'Session expired',
+  REDIS_UNAVAILABLE:
+    'Session and OTP services are temporarily unavailable. Check Redis connection or REDIS_URL.',
   NOT_FOUND: 'Not found',
   INVALID_IMAGE_TYPE: 'Only JPG, PNG and WEBP images are allowed',
   PROFILE_IMAGE_REQUIRED: 'Profile image is required',
@@ -358,7 +360,11 @@ module.exports = {
   IMAGE_GEN_FETCHED: 'Image generation fetched',
   IMAGE_GEN_LIST_FETCHED: 'Image generations fetched',
   IMAGE_GEN_SPEC_INVALID: 'Infographic specification was invalid after generation',
-  IMAGE_GEN_MODE_INVALID: 'Invalid mode. Supported modes: image, infographic',
+  IMAGE_GEN_MODE_INVALID: 'Invalid mode. Supported modes: image, infographic, social, printable',
+  IMAGE_GEN_SOCIAL_SPEC_INVALID: 'Social post specification was invalid after generation',
+  IMAGE_GEN_PRINT_SPEC_INVALID: 'Print design specification was invalid after generation',
+  IMAGE_GEN_FORMAT_LOCKED:
+    'This chat is locked to one size. Start a new generate for another size.',
   IMAGE_GEN_MODE_MISMATCH: 'This chat is locked to a different generation mode',
   IMAGE_GEN_CONTEXT_CREATED: 'Image generation context created',
   IMAGE_GEN_CONTEXT_FETCHED: 'Image generation context fetched',

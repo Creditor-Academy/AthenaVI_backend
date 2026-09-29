@@ -1,0 +1,32 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "printable",
+      "folderId": "{{folderId}}",
+      "formatId": "poster-a3-landscape",
+      "styleHint": "clean, minimal, lots of whitespace",
+      "prompt": "Classroom poster: 5 habits of effective online learners. Set a schedule, take notes by hand, ask questions early, review weekly, rest well. Athena VI"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        const threadId = j && j.data && j.data.thread && j.data.thread.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+        if (threadId) {
+          pm.collectionVariables.set("imageGenThreadId", threadId);
+          pm.environment.set("imageGenThreadId", threadId);
+        }
+      }
+    language: text/javascript
+order: 3175

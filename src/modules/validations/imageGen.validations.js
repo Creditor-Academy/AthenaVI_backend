@@ -1,5 +1,11 @@
 const Joi = require('joi');
 const { ARCHETYPE_IDS } = require('../imageGen/catalogs/archetypes');
+const {
+  SOCIAL_FORMAT_IDS,
+  PRINT_FORMAT_IDS,
+  resolveFormat,
+  isFormatForMode,
+} = require('../imageGen/catalogs/formats');
 
 /** Freeform generate/regenerate prompt. */
 const IMAGE_GEN_PROMPT_MAX = 16_000;
@@ -7,7 +13,32 @@ const IMAGE_GEN_PROMPT_MAX = 16_000;
 const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 4_000;
 const STYLE_HINT_MAX = 300;
 
-const STUDIO_MODES = ['image', 'infographic'];
+const STUDIO_MODES = ['image', 'infographic', 'social', 'printable'];
+
+/** Modes whose output size is a required, mode-specific destination. */
+const SIZED_MODES = ['social', 'printable'];
+
+const MODE_FORMAT_IDS = {
+  social: SOCIAL_FORMAT_IDS,
+  printable: PRINT_FORMAT_IDS,
+};
+
+/** Social and printable require one of their own ids; other modes reject those ids. */
+function assertFormatMatchesMode(value, helpers) {
+  const format = resolveFormat(value.formatId);
+  if (value.formatId && !format) {
+    return helpers.message('formatId is not a known format');
+  }
+  if (!value.mode || !format) return value;
+  if (!isFormatForMode(format, value.mode)) {
+    if (MODE_FORMAT_IDS[value.mode]) {
+      return helpers.message(`formatId must be one of: ${MODE_FORMAT_IDS[value.mode].join(', ')}`);
+    }
+    const ownerMode = format.modes[0];
+    return helpers.message(`formatId "${value.formatId}" belongs to mode "${ownerMode}"`);
+  }
+  return value;
+}
 
 const workspaceParams = Joi.object({
   workspaceId: Joi.string().uuid().required(),
@@ -29,7 +60,11 @@ const generateBody = Joi.object({
     .default('image'),
   folderId: Joi.string().uuid().required(),
   modelId: Joi.string().trim().max(64).allow('', null).optional(),
-  formatId: Joi.string().trim().max(64).allow(null, '').optional(),
+  formatId: Joi.when('mode', {
+    is: Joi.valid(...SIZED_MODES),
+    then: Joi.string().trim().max(64).required(),
+    otherwise: Joi.string().trim().max(64).allow(null, '').optional(),
+  }),
   style: Joi.string().trim().max(64).allow(null, '').optional(),
   styleId: Joi.string().trim().max(64).allow(null, '').optional(),
   styleHint: Joi.string().trim().max(STYLE_HINT_MAX).allow(null, '').optional(),
@@ -46,7 +81,7 @@ const generateBody = Joi.object({
   subheadline: Joi.forbidden(),
   textMode: Joi.forbidden(),
   infographic: Joi.forbidden(),
-});
+}).custom(assertFormatMatchesMode, 'format matches mode');
 
 const generateSchema = Joi.object({
   params: workspaceParams,
@@ -166,6 +201,9 @@ const downloadSchema = Joi.object({
   params: generationParams,
   query: Joi.object({
     format: Joi.string().valid('png', 'jpg', 'jpeg', 'pdf').optional(),
+    bleed: Joi.alternatives()
+      .try(Joi.boolean(), Joi.string().valid('true', 'false'))
+      .optional(),
   }),
 });
 
@@ -191,6 +229,7 @@ module.exports = {
   IMAGE_GEN_PROMPT_MAX,
   IMAGE_GEN_TWEAK_INSTRUCTION_MAX,
   STUDIO_MODES,
+  SIZED_MODES,
   generateSchema,
   regenerateSchema,
   tweakSchema,
