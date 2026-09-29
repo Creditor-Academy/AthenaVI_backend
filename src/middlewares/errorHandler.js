@@ -4,7 +4,19 @@ const messages = require('../shared/utils/messages');
 const logger = require('../shared/utils/logger');
 
 module.exports = (err, req, res, next) => {
-  logger.error(err.stack || err);
+  const statusCode = Number(err.statusCode || err.status) || 500;
+  const isOperational = err.isOperational === true;
+  if (isOperational && statusCode >= 400 && statusCode < 500) {
+    if (statusCode >= 500) {
+      logger.error(err.stack || err);
+    } else if (statusCode === 401 || statusCode === 403 || statusCode === 503) {
+      // Expected client auth failures / dependency unavailable — avoid flooding combined.log
+    } else {
+      logger.warn(err.message || err);
+    }
+  } else {
+    logger.error(err.stack || err);
+  }
 
   /** express.json / body-parser: payload larger than `limit` */
   if (
@@ -42,8 +54,6 @@ module.exports = (err, req, res, next) => {
         : err.message || 'Upload error';
     return errorResponse(req, res, 400, msg, [msg]);
   }
-
-  const statusCode = Number(err.statusCode || err.status) || 500;
 
   /** AppError, or body-parser / http-errors client errors (e.g. 413 payload too large) */
   const exposeClientError =

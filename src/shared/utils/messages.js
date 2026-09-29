@@ -4,6 +4,8 @@ module.exports = {
   INVALID_REQUEST: 'Invalid request',
   UNAUTHORIZED: 'Unauthorized',
   SESSION_EXPIRED: 'Session expired',
+  REDIS_UNAVAILABLE:
+    'Session and OTP services are temporarily unavailable. Check Redis connection or REDIS_URL.',
   NOT_FOUND: 'Not found',
   INVALID_IMAGE_TYPE: 'Only JPG, PNG and WEBP images are allowed',
   PROFILE_IMAGE_REQUIRED: 'Profile image is required',
