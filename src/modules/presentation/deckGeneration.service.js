@@ -3787,8 +3787,44 @@ async function processSlide(ctx, slide) {
       error: err.message,
       stack: err.stack,
     });
+    // A slide that throws mid-generation otherwise keeps content:null/elements:null
+    // forever (startGenerate only ever sets those to null), and the frontend has no
+    // per-slide FAILED handling — so without this the slide just renders blank with
+    // no indication anything went wrong. Write a minimal, visible fallback instead.
+    const fallbackOutline =
+      (ctx.outline?.slides || []).find((s) => Number(s.order) === Number(slide.order)) ||
+      (ctx.outline?.slides || [])[slide.order - 1] ||
+      {};
+    const fallbackTitle =
+      fallbackOutline.title ||
+      (slide.content && slide.content.title) ||
+      `Slide ${slide.order}`;
+    const fallbackSummary = fallbackOutline.summary || '';
+    const fallbackContent = {
+      title: fallbackTitle,
+      summary: fallbackSummary,
+      body: fallbackSummary,
+      bullets: [],
+    };
+    let fallbackElements = null;
+    try {
+      fallbackElements = layoutSlotsToElements(
+        { slots: [] },
+        fallbackContent,
+        null,
+        { width: 1920, height: 1080 },
+        {}
+      );
+    } catch (fallbackErr) {
+      logger.warn?.('presentation_slide_fallback_render_failed', {
+        slideId: slide.id,
+        error: fallbackErr.message,
+      });
+    }
     const failed = await presentationDao.updateSlide(slide.id, {
       status: 'FAILED',
+      content: fallbackContent,
+      elements: fallbackElements,
       imageRef: withImageStatus({ source: 'none' }, 'failed', { error: err.message }),
     });
     return {

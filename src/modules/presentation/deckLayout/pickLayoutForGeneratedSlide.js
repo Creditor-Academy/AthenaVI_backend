@@ -4,6 +4,7 @@ const { rankLayouts } = require('./rankLayouts');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
 const { layoutFamilyExcludeIds } = require('../layoutSelector.service');
+const logger = require('../../../shared/utils/logger');
 
 function templateLayoutId(template) {
   return String(template?.schema?.layout_id || template?.variant || template?.id || '').trim();
@@ -200,9 +201,25 @@ async function pickLayoutForGeneratedSlide({
       .filter(Boolean)
   );
   if (excluded.size) {
-    list = list.filter((t) => !excluded.has(templateLayoutId(t)));
+    const filtered = list.filter((t) => !excluded.has(templateLayoutId(t)));
+    if (filtered.length) {
+      list = filtered;
+    } else if (list.length) {
+      // Exclusions would exhaust the whole candidate pool — better to reuse an
+      // excluded layout than to hand back no layout at all (which renders blank).
+      logger.warn?.('presentation_layout_pool_exhausted_by_exclusions', {
+        slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
+        phase,
+        excludeLayoutIds: [...excluded],
+        candidateCount: list.length,
+      });
+    }
   }
   if (!list.length) {
+    logger.warn?.('presentation_layout_pool_empty', {
+      slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
+      phase,
+    });
     return { layoutId: null, template: null };
   }
 
