@@ -1,0 +1,17 @@
+$kind: http-request
+description: >
+  TEAM only, VIDEO projects only. OWNER/ADMIN assign or unassign one scene (sceneId is the client-generated
+  scene_<id>). Body assigneeId = workspace member user.id, or null to unassign. Editor autosaves
+  (PATCH .../data) never change scene assignees — only this route does.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/scenes/{{sceneId}}/assignee"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "assigneeId": "{{userId}}"
+    }
+order: 6600

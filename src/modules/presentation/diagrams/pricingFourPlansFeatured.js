@@ -268,6 +268,7 @@ function layoutPricingFourPlansFeaturedElements(elements, schema, palette = {}, 
   const canvasW = canvas.width || 1920
   const canvasH = canvas.height || 1080
   const sx = canvasW / PRICING_FF_GEOM.viewW
+  const sy = canvasH / PRICING_FF_GEOM.viewH
   const overlay = pricingFourPlansFeaturedOverlay(0, 0, canvasW, canvasH)
   const chromeRe = /^PRICING_FF_/i
   const prevBySlot = new Map(

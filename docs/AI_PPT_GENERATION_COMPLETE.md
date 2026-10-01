@@ -839,3 +839,14 @@ sequenceDiagram
 | [`docs/api/ENVIRONMENT.md`](api/ENVIRONMENT.md) | PPT_* env vars |
 
 **Eval:** `npm run eval:presentation` (offline export/prompt checks; live eval gated by `PPT_EVAL_LIVE`).
+
+## Text fit & title runs (compile-time guarantees)
+
+`finalizeElementsDoc` (`layoutToElements.js`) ends with `fitTextElementsToBoxes` (`textFit.util.js`):
+
+- Layout typography is authored in editor-stage pixels (~900px-wide stage; diagram geometry uses `viewW: 1000`), placements are canvas pixels (1920×1080). The pass estimates each text element's wrapped height (`FONT_REF_WIDTH = 900`) and **shrinks** `fontSize` (never grows, floor 45% of the authored size) until it fits the placement box. Single-line (`wrap: "nowrap"`) text is also width-checked.
+- Text boxes hanging off the slide edge are shifted back inside (no resize).
+- `titleRuns` that merely repeat `content.subtitle` are dropped when the layout has its own `SUBTITLE` slot (otherwise the tagline printed twice — once glued onto the headline), and adjacent runs keep a word break.
+- Layout builders that work on a bare elements array (`process_linear_*`, `table_two_*`, `intro_three_para_icons*`, `grid_bento_*`) are called through `applyElementsStyleLayout`; previously they received the doc object and produced zero elements.
+
+The editor additionally fits slot-bound text to its box at render time (`PptCanvasElement`), so older decks and manual resizes stay inside their slots.

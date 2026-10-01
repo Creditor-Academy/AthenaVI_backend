@@ -75,6 +75,12 @@ router.get(
   presentationController.getPresentation
 );
 
+router.post(
+  '/:presentationId/duplicate',
+  validate(presentationValidations.presentationByIdSchema),
+  presentationController.duplicatePresentation
+);
+
 router.get(
   '/:presentationId/preview',
   validate(presentationValidations.presentationPreviewSchema),

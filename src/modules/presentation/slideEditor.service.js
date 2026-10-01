@@ -572,8 +572,28 @@ async function listDeckLayouts({ contentType, category } = {}) {
   };
 }
 
+async function getDeckLayoutTemplate({ templateId }) {
+  const t = await presentationDao.findTemplateById(templateId);
+  if (!t || t.type !== 'DECK_LAYOUT' || !t.isActive) {
+    throw new AppError(messages.PRESENTATION_TEMPLATE_NOT_FOUND, 404);
+  }
+  return {
+    id: t.id,
+    templateId: t.id,
+    name: t.name,
+    contentType: t.contentType,
+    categories: categoryIdsForContentType(t.contentType),
+    variant: t.variant,
+    schema: t.schema,
+    version: t.version,
+    previewUrl: null,
+    thumbnailUrl: null,
+  };
+}
+
 module.exports = {
   addSlide,
+  getDeckLayoutTemplate,
   deleteSlide,
   duplicateSlide,
   reorderSlides,

@@ -136,6 +136,7 @@ async function listPresentations({ workspaceId, folderId, assignmentQuery, userI
 const SLIDE_EDITOR_PASSTHROUGH = new Set([
   'listElementCatalog',
   'listDeckLayouts',
+  'getDeckLayoutTemplate',
   'normalizeCanvasPayload',
   'getElementsDoc',
 ]);
@@ -456,6 +457,32 @@ async function createPresentation({
   return withFlatPresentationFields({
     project,
     deck: { ...outDeck, slides: signedSlides },
+    slides: signedSlides,
+  });
+}
+
+async function duplicatePresentation({ workspaceId, presentationId, userId }) {
+  const { deck, project: source } = await deckGeneration.loadPresentationDeck(presentationId, {
+    requireWorkspaceId: workspaceId,
+  });
+  if (deck.status === 'GENERATING') {
+    throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
+  }
+
+  const baseName = String(source.name || 'Untitled Presentation').trim() || 'Untitled Presentation';
+  const copy = await presentationDao.duplicatePresentationProject({
+    sourceProjectId: presentationId,
+    name: `${baseName} (Copy)`.slice(0, 255),
+    createdBy: userId,
+  });
+  if (!copy) throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
+
+  const signedSlides = enrichSlidesForClient(
+    await attachPresignedMediaToSlides(copy.deck.slides || [])
+  );
+  return withFlatPresentationFields({
+    project: copy.project,
+    deck: { ...copy.deck, slides: signedSlides },
     slides: signedSlides,
   });
 }
@@ -799,6 +826,7 @@ async function getPresentationPreview({ workspaceId, presentationId, ifNoneMatch
 
 module.exports = {
   createPresentation,
+  duplicatePresentation,
   listPresentations,
   getPresentation,
   getPresentationPreview,

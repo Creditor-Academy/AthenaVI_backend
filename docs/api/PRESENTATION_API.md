@@ -99,6 +99,7 @@ After AI generates ≤20 slides, users may add more by hand until 40.
 | Method | Path | Returns |
 |---|---|---|
 | `GET` | `/api/workspaces/:workspaceId/presentation-templates?contentType=&category=` | Active `DECK_LAYOUT` templates + `categories[]` gallery tabs |
+| `GET` | `/api/workspaces/:workspaceId/presentation-templates/:templateId` | One active `DECK_LAYOUT` → `{ template }` (same row shape as the list; **404** if inactive / not a layout) |
 | `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs` | Active `DECK_PACK` multi-slide packs (summary picker) |
 | `GET` | `/api/workspaces/:workspaceId/presentation-deck-packs/:packId` | One active `DECK_PACK` with full `schema.slides` + `slidePreviews[]` |
 | `GET` | `/api/workspaces/:workspaceId/presentation-themes` | Curated theme catalog |
@@ -588,6 +589,18 @@ Structural mutations return **409** while deck `status === GENERATING`.
 - Manual (default): user-authored → `status: READY`, `manuallyEdited: true`. Response `{ slide, deckId }`.
 - **`generate: true`**: creates the slide then starts AI regenerate (same billing as regenerate). Requires **`prompt`** or **`content.title`**. Response includes `{ slide, deckId, status: "GENERATING", target, estimatedCredits }`. Poll `GET .../status` until the slide is `READY`.
 - Rejects if deck already has **40** slides.
+
+### Duplicate presentation
+
+`POST /api/workspaces/:workspaceId/presentations/:presentationId/duplicate` (no body, any workspace member) — clones the project, deck (theme tokens, outline, aspect ratio) and every slide into the same folder as `"<name> (Copy)"`. **201**, same flat shape as create (`id`, `title`, `slides[]`, …).
+
+- **Not copied:** assignees (project and slide), comments, share links, exports, stored cover thumbnail (the library falls back to the first slide).
+- Media S3 keys are shared with the source (same as slide duplicate).
+- **409** while the source deck is `GENERATING`; **404** if the presentation is not in the workspace.
+
+### Assign slide (TEAM only)
+
+`PATCH /api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/assignee` body `{ "assigneeId": "<member user.id>" | null }` — OWNER/ADMIN only; **400** on PRIVATE workspaces or a non-member assignee. Workflow metadata only (never gates open/edit). Inbox: `SLIDE_ASSIGNED` / `SLIDE_UNASSIGNED`. Response `data.slide` carries hydrated `assignee` / `assignedBy` / `assignedAt`; every other slide-returning route hydrates them too, so the assignee never appears to reset after an unrelated edit. Removing a member from the workspace clears their slide assignments.
 
 ### Delete / duplicate / reorder
 

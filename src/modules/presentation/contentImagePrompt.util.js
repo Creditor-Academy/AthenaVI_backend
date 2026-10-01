@@ -15,6 +15,17 @@ const CHART_PHOTO_NEGATIVES =
 
 const TEXT_NEGATIVES =
   'no text, no words, no letters, no captions, no typography, no watermarks, no logos, no UI chrome, no posters with headlines';
+const DEFAULT_TEXT_NEGATIVE_TERMS = [
+  'text',
+  'words',
+  'letters',
+  'captions',
+  'typography',
+  'watermarks',
+  'logos',
+  'posters with headlines',
+];
+
 function shortVisualPhrase(text, maxWords = 8) {
   const raw = String(text || '').trim();
   if (!raw) return '';
@@ -363,6 +374,8 @@ function titleWordsFromBody(body, fallback) {
 }
 
 module.exports = {
+  TEXT_NEGATIVES,
+  DEFAULT_TEXT_NEGATIVE_TERMS,
   shortVisualPhrase,
   slideCopyCorpus,
   imagePromptEchoesCopy,

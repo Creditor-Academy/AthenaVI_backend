@@ -107,6 +107,8 @@ const {
   countDiagramCellSlotsFromSchema,
 } = require('./contentPreShape.util');
 const {
+  TEXT_NEGATIVES,
+  DEFAULT_TEXT_NEGATIVE_TERMS,
   buildSlotImagePrompt,
   deriveSlotImagePrompt,
   appendImageNegatives,

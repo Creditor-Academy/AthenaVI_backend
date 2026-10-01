@@ -14,6 +14,7 @@ const { resolveSemanticTheme } = require('./artDirection/semanticTheme');
 const { resolveTextColor } = require('./artDirection/resolveTextColor');
 const { inferTypographyRole } = require('./artDirection/typographyRoles');
 const { repairElementsDoc } = require('./artDirection/validateDesign');
+const { fitTextElementsToBoxes } = require('./textFit.util');
 const {
   normalizeContentForLayout,
   deriveContentContract,
@@ -2206,7 +2207,7 @@ function layoutSlotsToElements(
     if (style.colorRole) textContent.colorRole = style.colorRole;
     if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
     if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
-    textContent = applyRichTitleToTextContent(textContent, content, slotId, role, onImage);
+    textContent = applyRichTitleToTextContent(textContent, content, slotId, role, onImage, layoutSchema);
     textContent = applyRichBulletsToTextContent(textContent, content, slotId, onImage);
     const slotRole = elementRoleFromSlot(slot, slotId);
     const fontFamily = fontFamilyForRole(slotRole, themeTokens);
@@ -2865,6 +2866,14 @@ function resolveImageGenSize(slot, canvas = {}, allSlots = null) {
   return '1024x1024';
 }
 
+function tableRowsOf(content) {
+  const table = content?.table;
+  if (!table) return [];
+  const rows = Array.isArray(table) ? table : Array.isArray(table.rows) ? table.rows : [];
+  const headers = Array.isArray(table?.headers) ? [table.headers] : [];
+  return [...headers, ...rows].map((row) => (Array.isArray(row) ? row.map((c) => String(c ?? '')) : [String(row)]));
+}
+
 function isRichTitleSlot(slotId, role) {
   // Only slide-level title/quote slots get titleRuns — never CARD_/COL_/ROW_ headings.
   const id = String(slotId || '').toUpperCase();
@@ -2890,10 +2899,46 @@ function deriveTitleRunsFallback(content, onImage = false) {
   ];
 }
 
-function buildRichTitleContent(content, onImage = false) {
+function normalizeRunText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function layoutHasSubtitleSlot(layoutSchema) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  return slots.some(
+    (slot) => /^SUBTITLE$/i.test(String(slot?.id || '')) && !slot?.aiOnly
+  );
+}
+
+/**
+ * The model (and the blueprint seed) sometimes put the subtitle in as the last title run.
+ * When the layout renders SUBTITLE as its own slot that prints the tagline twice — once glued
+ * onto the headline — so drop title runs that merely repeat the subtitle.
+ */
+function dropSubtitleEchoRuns(runs, content, layoutSchema) {
+  if (!Array.isArray(runs) || runs.length < 2) return runs;
+  if (!layoutHasSubtitleSlot(layoutSchema)) return runs;
+  const subtitle = normalizeRunText(content?.subtitle);
+  if (!subtitle) return runs;
+  const kept = runs.filter((r) => {
+    const t = normalizeRunText(r?.text);
+    return !t || !(t === subtitle || subtitle.includes(t) || t.includes(subtitle));
+  });
+  return kept.length ? kept : runs;
+}
+
+function buildRichTitleContent(content, onImage = false, layoutSchema = null) {
   let runs = Array.isArray(content?.titleRuns) ? content.titleRuns.filter((r) => r?.text) : null;
+  runs = dropSubtitleEchoRuns(runs, content, layoutSchema);
   if (!runs?.length) runs = deriveTitleRunsFallback(content, onImage);
   if (!runs?.length) return null;
+  // Segments arrive trimmed ("A Day in" + "Uncertainty"); keep a word break between them.
+  runs = runs.map((r, i) => {
+    if (i === 0) return r;
+    const prev = String(runs[i - 1].text || '');
+    const cur = String(r.text || '');
+    return prev && cur && !/\s$/.test(prev) && !/^\s/.test(cur) ? { ...r, text: ` ${cur}` } : r;
+  });
   const text = runs.map((r) => String(r.text || '')).join('');
   return {
     text,
@@ -2908,9 +2953,9 @@ function buildRichTitleContent(content, onImage = false) {
   };
 }
 
-function applyRichTitleToTextContent(textContent, content, slotId, role, onImage = false) {
+function applyRichTitleToTextContent(textContent, content, slotId, role, onImage = false, layoutSchema = null) {
   if (!isRichTitleSlot(slotId, role)) return textContent;
-  const rich = buildRichTitleContent(content, onImage);
+  const rich = buildRichTitleContent(content, onImage, layoutSchema);
   if (!rich) return textContent;
   return { ...textContent, text: rich.text, runs: rich.runs };
 }
@@ -9033,6 +9078,20 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   return { ...doc, elements: [...chrome, ...elements] };
 }
 
+/**
+ * Some layout builders (process_linear_*, table_two_*, intro_three_para_icons, grid_bento_*) take and
+ * return a bare elements array, not a { version, canvas, elements } doc. Feeding them the doc made
+ * them throw or hand back an array that finalize then spread into a doc with no `elements`,
+ * leaving the slide with zero canvas elements.
+ */
+function applyElementsStyleLayout(doc, layoutFn, layoutSchema, themeTokens, canvas) {
+  const base = Array.isArray(doc) ? { version: 1, canvas, elements: doc } : doc;
+  const palette = themeTokens?.palette || themeTokens || {};
+  const out = layoutFn(Array.isArray(base?.elements) ? base.elements : [], layoutSchema, palette, canvas);
+  if (Array.isArray(out)) return { ...base, elements: out };
+  return out || base;
+}
+
 function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}, slideDesignPlan = null) {
   if (!doc) return doc;
   const canvas = {
@@ -9328,36 +9387,36 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   } else if (isTableWithDescriptionSideLayout(layoutSchema?.layout_id)) {
     next = layoutTableWithDescriptionSide(next, layoutSchema, themeTokens, canvas);
   } else if (isTableTwoDescLayout(layoutSchema?.layout_id)) {
-    next = layoutTableTwoDesc(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutTableTwoDesc, layoutSchema, themeTokens, canvas);
   } else if (isTableTwoDescCardsLayout(layoutSchema?.layout_id)) {
-    next = layoutTableTwoDescCards(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutTableTwoDescCards, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearHortiLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearHorti(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearHorti, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearHortiFourLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearHortiFour(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearHortiFour, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearHorizontalLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearHorizontal(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearHorizontal, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearFourCardsLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearFourCards(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearFourCards, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearNumericLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearNumeric(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearNumeric, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearNumericCardsLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearNumericCards(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearNumericCards, layoutSchema, themeTokens, canvas);
   } else if (isProcessLinearBusinessLayout(layoutSchema?.layout_id)) {
-    next = layoutProcessLinearBusiness(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutProcessLinearBusiness, layoutSchema, themeTokens, canvas);
   } else if (isTableTwoSameHeaderCardsLayout(layoutSchema?.layout_id)) {
-    next = layoutTableTwoSameHeaderCards(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutTableTwoSameHeaderCards, layoutSchema, themeTokens, canvas);
   } else if (isTableTwoSameHeaderLayout(layoutSchema?.layout_id)) {
-    next = layoutTableTwoSameHeader(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutTableTwoSameHeader, layoutSchema, themeTokens, canvas);
   } else if (isEightShortTextsImageLayout(layoutSchema?.layout_id)) {
     const laid = layoutEightShortTextsImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
     next = Array.isArray(laid) ? { ...next, elements: laid } : laid;
   } else if (isIntroThreeParaIconsLayout(layoutSchema?.layout_id)) {
-    next = layoutIntroThreeParaIcons(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutIntroThreeParaIcons, layoutSchema, themeTokens, canvas);
   } else if (isGridBentoThreeLayout(layoutSchema?.layout_id)) {
-    next = layoutGridBentoThree(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutGridBentoThree, layoutSchema, themeTokens, canvas);
   } else if (isGridBentoFourLayout(layoutSchema?.layout_id)) {
-    next = layoutGridBentoFour(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutGridBentoFour, layoutSchema, themeTokens, canvas);
   } else if (isGridFourMosaicLayout(layoutSchema?.layout_id)) {
     next = layoutGridFourMosaic(next, layoutSchema, themeTokens, canvas);
   } else if (isGridSixImagesMosaicLayout(layoutSchema?.layout_id)) {
@@ -9473,7 +9532,8 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   ) {
     next = repairElementsDoc(next, { themeTokens, layoutSchema, content, slideDesignPlan });
   }
-  return next;
+  // Last step: shrink any text that would overflow its box so generated slides fit the page.
+  return fitTextElementsToBoxes(next, canvas);
 }
 
 function shouldRecompileLayout(layoutSchema, elementsDoc = null) {
@@ -9556,7 +9616,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
         applyText(el, content.title, 'title');
       }
       const onImage = layoutRequiresOverlayScrim(opts.layoutSchema);
-      const rich = buildRichTitleContent(content, onImage);
+      const rich = buildRichTitleContent(content, onImage, opts.layoutSchema);
       if (rich && (isMainTitleSlot(slotKey, role) || isMainTitleSlot(id, role) || role === 'quote')) {
         el.content = { ...(el.content || {}), text: rich.text, runs: rich.runs };
       }

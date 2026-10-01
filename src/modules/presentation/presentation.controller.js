@@ -39,6 +39,17 @@ const createPresentation = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 201, messages.PRESENTATION_CREATED);
 });
 
+const duplicatePresentation = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await presentationService.duplicatePresentation({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+  });
+
+  return successResponse(req, res, data, 201, messages.PRESENTATION_DUPLICATED);
+});
+
 const listPresentations = asyncHandler(async (req, res) => {
   const { workspaceId } = req.params;
   const { folderId, assignedTo, assigneeId, unassigned } = req.query;
@@ -443,6 +454,13 @@ const listPresentationTemplates = asyncHandler(async (req, res) => {
   );
 });
 
+const getPresentationTemplate = asyncHandler(async (req, res) => {
+  const template = await presentationService.getDeckLayoutTemplate({
+    templateId: req.params.templateId,
+  });
+  return successResponse(req, res, { template }, 200, messages.PRESENTATION_TEMPLATES_FETCHED);
+});
+
 const listPresentationThemes = asyncHandler(async (req, res) => {
   const data = presentationService.listThemes();
   return successResponse(req, res, { themes: data }, 200, messages.PRESENTATION_THEMES_FETCHED);
@@ -511,6 +529,7 @@ const insertSlideStock = asyncHandler(async (req, res) => {
 
 module.exports = {
   createPresentation,
+  duplicatePresentation,
   listPresentations,
   getPresentation,
   getPresentationPreview,
@@ -544,6 +563,7 @@ module.exports = {
   getExport,
   creditEstimate,
   listPresentationTemplates,
+  getPresentationTemplate,
   listPresentationThemes,
   listPresentationElements,
   listPresentationDeckPacks,

@@ -54,6 +54,78 @@ async function createPresentationProject({
   });
 }
 
+/**
+ * Clone a PRESENTATION Project + Deck + Slides in one transaction.
+ * Copies deck content only — assignees, comments, share links, exports and the stored
+ * cover are intentionally NOT carried over (the copy starts as a fresh, unassigned deck).
+ * Media S3 keys are shared with the source, same as slide duplication.
+ */
+async function duplicatePresentationProject({ sourceProjectId, name, createdBy }) {
+  return prisma.$transaction(async (tx) => {
+    const sourceProject = await tx.project.findUnique({ where: { id: sourceProjectId } });
+    const sourceDeck = await tx.deck.findUnique({
+      where: { projectId: sourceProjectId },
+      include: slidesOrderedInclude,
+    });
+    if (!sourceProject || !sourceDeck) return null;
+
+    const project = await tx.project.create({
+      data: {
+        name,
+        workspaceId: sourceProject.workspaceId,
+        folderId: sourceProject.folderId,
+        createdBy,
+        updatedBy: createdBy,
+        type: 'PRESENTATION',
+        status: 'draft',
+        data: sourceProject.data ?? { presentation: { version: 1 } },
+      },
+      include: {
+        folder: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    const deck = await tx.deck.create({
+      data: {
+        projectId: project.id,
+        themeTokens: sourceDeck.themeTokens ?? {},
+        outline: sourceDeck.outline ?? undefined,
+        status: sourceDeck.status,
+        aspectRatio: sourceDeck.aspectRatio,
+        locale: sourceDeck.locale,
+        promptBundleVersion: sourceDeck.promptBundleVersion,
+        generationMetrics: sourceDeck.generationMetrics ?? undefined,
+        partial: sourceDeck.partial,
+      },
+    });
+
+    if (sourceDeck.slides.length) {
+      await tx.slide.createMany({
+        data: sourceDeck.slides.map((slide) => ({
+          deckId: deck.id,
+          order: slide.order,
+          contentType: slide.contentType,
+          layoutId: slide.layoutId,
+          content: slide.content ?? undefined,
+          imageRef: slide.imageRef ?? undefined,
+          elements: slide.elements ?? undefined,
+          status: slide.status,
+          progressStatus: slide.progressStatus,
+          manuallyEdited: slide.manuallyEdited,
+        })),
+      });
+    }
+
+    const fullDeck = await tx.deck.findUnique({
+      where: { id: deck.id },
+      include: slidesOrderedInclude,
+    });
+    return { project, deck: fullDeck };
+  });
+}
+
 async function findDeckByProjectId(projectId) {
   return prisma.deck.findUnique({
     where: { projectId },
@@ -613,6 +685,7 @@ module.exports = {
   findSlideById,
   deleteSlideById,
   clearSlideAssignmentsForUser,
+  duplicatePresentationProject,
   deleteSlidesByDeckId,
   shiftSlideOrders,
   resequenceSlideOrders,
