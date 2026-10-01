@@ -39,6 +39,71 @@ function isSceneAssignmentUnchanged(scene, nextAssigneeId) {
 }
 
 /**
+ * Assignment is server-owned: only PATCH .../scenes/:sceneId/assignee may change it.
+ * Editor autosaves replace Project.data wholesale with client scenes, which never carry a
+ * fresh assignedToId (the client only holds the hydrated `assignee` object), so a naive
+ * save would revert or drop an assignment. Re-apply the stored assignment by scene key and
+ * strip client-sent assignment fields (including the hydrated assignee/assignedBy objects).
+ * @param {object[]} incomingScenes scenes from the client save payload
+ * @param {object[]} existingScenes scenes currently stored on the project
+ * @returns {object[]}
+ */
+function preserveSceneAssignments(incomingScenes, existingScenes) {
+  if (!Array.isArray(incomingScenes)) return incomingScenes;
+  const stored = new Map();
+  for (const scene of Array.isArray(existingScenes) ? existingScenes : []) {
+    const key = sceneKey(scene);
+    if (key && scene.assignedToId) stored.set(key, scene);
+  }
+  return incomingScenes.map((scene) => {
+    if (!scene || typeof scene !== 'object') return scene;
+    const {
+      assignee: _assignee,
+      assignedBy: _assignedBy,
+      assignedToId: _assignedToId,
+      assignedById: _assignedById,
+      assignedAt: _assignedAt,
+      ...rest
+    } = scene;
+    const prev = stored.get(sceneKey(scene));
+    if (!prev) return rest;
+    return {
+      ...rest,
+      assignedToId: prev.assignedToId,
+      assignedById: prev.assignedById ?? null,
+      assignedAt: prev.assignedAt ?? null,
+    };
+  });
+}
+
+/**
+ * Clear a departed member from scene assignment fields (mirrors
+ * project.dao.clearAssignmentsForUser for the DB-backed project/slide assignees).
+ * - assignee: clear assignedToId + assignedById + assignedAt
+ * - only assignedBy: clear assignedById
+ * @param {object[]} scenes
+ * @param {string} userId
+ * @returns {{ scenes: object[], changed: boolean }}
+ */
+function clearUserFromSceneAssignments(scenes, userId) {
+  if (!Array.isArray(scenes) || !userId) return { scenes, changed: false };
+  let changed = false;
+  const next = scenes.map((scene) => {
+    if (!scene || typeof scene !== 'object') return scene;
+    if (scene.assignedToId === userId) {
+      changed = true;
+      return { ...scene, assignedToId: null, assignedById: null, assignedAt: null };
+    }
+    if (scene.assignedById === userId) {
+      changed = true;
+      return { ...scene, assignedById: null };
+    }
+    return scene;
+  });
+  return { scenes: changed ? next : scenes, changed };
+}
+
+/**
  * Inbox metadata + deep link for scene assignment notifications.
  * @param {{ scene: object, project: object, workspace?: object, actor?: object, frontendUrl?: string }} args
  */
@@ -71,5 +136,7 @@ module.exports = {
   sceneKey,
   attachSceneAssignees,
   isSceneAssignmentUnchanged,
+  preserveSceneAssignments,
+  clearUserFromSceneAssignments,
   buildSceneAssignmentMetadata,
 };

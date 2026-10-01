@@ -791,6 +791,23 @@ Picker source: `GET /api/workspaces/:id/members` → use `members[].user.id` (no
 
 ---
 
+### Assign scene (TEAM only, VIDEO)
+
+Per-scene sibling of project assignment. Scenes are objects inside `Project.data.scenes[]` (not DB rows), keyed by `sceneId` (or `id`).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/scenes/:sceneId/assignee` |
+| **Role** | OWNER or ADMIN |
+| **Workspace** | `TEAM` only; project must be `VIDEO` (**400** otherwise); unknown scene → **404** |
+
+Body `{ "assigneeId": "<member user.id>" | null }`. Same rules/notifications as project assignment (`SCENE_ASSIGNED` / `SCENE_UNASSIGNED`). Response `data.scene` with hydrated `assignee` / `assignedBy` / `assignedAt`.
+
+**Server-owned fields:** `assignedToId`, `assignedById`, `assignedAt` on scenes can only be changed through this route. `PATCH .../projects/:projectId/data` re-applies the stored values by scene key and strips client-sent `assignee` / `assignedBy` / `assigned*`, so an editor autosave can never revert or forge an assignment. Removing a member from the workspace clears their scene assignments.
+
+---
+
 ### Get project
 
 | | |

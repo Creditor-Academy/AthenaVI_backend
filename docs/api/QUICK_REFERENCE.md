@@ -145,6 +145,10 @@
 | GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign project (TEAM only) |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/scenes/:sceneId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign a video scene (TEAM, VIDEO only) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign a slide (TEAM only) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/duplicate` | Bearer + member | Duplicate presentation ("<name> (Copy)") |
+| GET | `/api/workspaces/:workspaceId/presentation-templates/:templateId` | Bearer + member | One DECK_LAYOUT template |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
 | POST | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` | Bearer + member | Append scene from VIDEO_SCENE template |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |

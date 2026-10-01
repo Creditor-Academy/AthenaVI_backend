@@ -305,6 +305,7 @@ module.exports = {
 
   // Presentations (AI PPT)
   PRESENTATION_CREATED: 'Presentation created successfully',
+  PRESENTATION_DUPLICATED: 'Presentation duplicated successfully',
   PRESENTATIONS_FETCHED: 'Presentations fetched successfully',
   PRESENTATION_FETCHED: 'Presentation fetched successfully',
   PRESENTATION_PREVIEW_FETCHED: 'Presentation preview fetched successfully',

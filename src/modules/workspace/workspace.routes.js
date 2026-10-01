@@ -94,6 +94,13 @@ router.use(
 );
 router.use('/:workspaceId/brand-kits', authMiddleware, brandKitRoutes);
 router.get(
+  '/:workspaceId/presentation-templates/:templateId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.workspacePresentationTemplateByIdSchema),
+  presentationController.getPresentationTemplate
+);
+router.get(
   '/:workspaceId/presentation-deck-packs',
   authMiddleware,
   requireWorkspaceRole(anyMember),

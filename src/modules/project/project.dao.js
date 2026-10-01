@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { clearUserFromSceneAssignments } = require('./sceneAssignment');
 
 const projectListSelect = {
   id: true,
@@ -117,6 +118,27 @@ const clearAssignmentsForUser = async (workspaceId, userId, tx = prisma) => {
   });
 };
 
+/**
+ * Scene assignees live inside Project.data.scenes[] (JSON), so the updateMany above can't
+ * reach them. Clear them for a departed member on VIDEO projects in the workspace.
+ */
+const clearSceneAssignmentsForUser = async (workspaceId, userId, tx = prisma) => {
+  const videos = await tx.project.findMany({
+    where: { workspaceId, type: 'VIDEO' },
+    select: { id: true, data: true },
+  });
+  for (const video of videos) {
+    const scenes = video.data && Array.isArray(video.data.scenes) ? video.data.scenes : null;
+    if (!scenes) continue;
+    const result = clearUserFromSceneAssignments(scenes, userId);
+    if (!result.changed) continue;
+    await tx.project.update({
+      where: { id: video.id },
+      data: { data: { ...video.data, scenes: result.scenes } },
+    });
+  }
+};
+
 const findCoverSourcesByIds = async (ids) => {
   if (!Array.isArray(ids) || ids.length === 0) return [];
   return prisma.project.findMany({
@@ -172,6 +194,7 @@ module.exports = {
   updateProject,
   deleteProject,
   clearAssignmentsForUser,
+  clearSceneAssignmentsForUser,
   findAssetsByIds,
   findCoverSourcesByIds,
   transaction,

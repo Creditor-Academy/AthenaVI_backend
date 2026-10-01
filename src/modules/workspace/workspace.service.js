@@ -348,6 +348,7 @@ async function removeMember(workspaceId, requesterId, memberId) {
 
   await workspaceDao.transaction(async (tx) => {
     await projectDao.clearAssignmentsForUser(workspaceId, targetMember.userId, tx);
+    await projectDao.clearSceneAssignmentsForUser(workspaceId, targetMember.userId, tx);
     await presentationDao.clearSlideAssignmentsForUser(workspaceId, targetMember.userId, tx);
     await tx.workspaceMember.delete({
       where: { id: memberId },

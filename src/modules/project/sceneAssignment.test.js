@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const {
   sceneKey,
   isSceneAssignmentUnchanged,
+  preserveSceneAssignments,
+  clearUserFromSceneAssignments,
   buildSceneAssignmentMetadata,
 } = require('./sceneAssignment');
 const { setSceneAssigneeSchema } = require('../validations/project.validations');
@@ -131,5 +133,64 @@ describe('scene assignment notification wiring', () => {
     const collab = getTypesForCategory(CATEGORIES.COLLABORATION);
     assert.ok(collab.includes('SCENE_ASSIGNED'));
     assert.ok(collab.includes('SCENE_UNASSIGNED'));
+  });
+});
+
+describe('preserveSceneAssignments', () => {
+  const stored = [
+    { id: 's1', sceneId: 's1', assignedToId: USER, assignedById: WS, assignedAt: '2026-01-01T00:00:00.000Z' },
+    { id: 's2', sceneId: 's2' },
+  ];
+
+  it('re-applies the stored assignment and ignores stale client values', () => {
+    const [out] = preserveSceneAssignments(
+      [{ id: 's1', sceneId: 's1', name: 'Intro', assignedToId: 'stale', assignee: { id: 'stale' }, assignedBy: { id: 'x' } }],
+      stored
+    );
+    assert.equal(out.assignedToId, USER);
+    assert.equal(out.assignedById, WS);
+    assert.equal(out.assignedAt, '2026-01-01T00:00:00.000Z');
+    assert.equal(out.name, 'Intro');
+    assert.equal('assignee' in out, false);
+    assert.equal('assignedBy' in out, false);
+  });
+
+  it('does not let a client assign or keep an assignment the server does not hold', () => {
+    const [out] = preserveSceneAssignments(
+      [{ id: 's2', sceneId: 's2', assignedToId: USER, assignee: { id: USER } }],
+      stored
+    );
+    assert.equal('assignedToId' in out, false);
+    assert.equal('assignee' in out, false);
+  });
+
+  it('leaves new scenes unassigned and tolerates missing inputs', () => {
+    assert.deepEqual(preserveSceneAssignments([{ id: 'new' }], stored), [{ id: 'new' }]);
+    assert.deepEqual(preserveSceneAssignments([{ id: 'new' }], undefined), [{ id: 'new' }]);
+    assert.equal(preserveSceneAssignments(undefined, stored), undefined);
+  });
+});
+
+describe('clearUserFromSceneAssignments', () => {
+  const OTHER = '44444444-4444-4444-4444-444444444444';
+
+  it('clears assignee scenes fully and assigner-only scenes partially', () => {
+    const scenes = [
+      { id: 'a', assignedToId: USER, assignedById: OTHER, assignedAt: 't' },
+      { id: 'b', assignedToId: OTHER, assignedById: USER, assignedAt: 't' },
+      { id: 'c' },
+    ];
+    const { scenes: out, changed } = clearUserFromSceneAssignments(scenes, USER);
+    assert.equal(changed, true);
+    assert.deepEqual(out[0], { id: 'a', assignedToId: null, assignedById: null, assignedAt: null });
+    assert.deepEqual(out[1], { id: 'b', assignedToId: OTHER, assignedById: null, assignedAt: 't' });
+    assert.deepEqual(out[2], { id: 'c' });
+  });
+
+  it('reports no change when the user is not referenced', () => {
+    const scenes = [{ id: 'a', assignedToId: OTHER, assignedById: OTHER }];
+    const result = clearUserFromSceneAssignments(scenes, USER);
+    assert.equal(result.changed, false);
+    assert.equal(result.scenes, scenes);
   });
 });

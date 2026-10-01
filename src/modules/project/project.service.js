@@ -35,6 +35,7 @@ const {
   sceneKey,
   attachSceneAssignees,
   isSceneAssignmentUnchanged,
+  preserveSceneAssignments,
 } = require('./sceneAssignment');
 
 function buildDefaultProjectData() {
@@ -612,8 +613,13 @@ const updateProject = async (workspaceId, projectId, userId, payload) => {
 };
 
 const saveProjectData = async (workspaceId, projectId, userId, data) => {
-  await assertProjectInWorkspace(workspaceId, projectId);
-  const normalizedState = normalizeProjectState(data);
+  const existing = await assertProjectInWorkspace(workspaceId, projectId);
+  // Scene assignees are owned by the dedicated assignee route, never by editor autosaves.
+  const incoming =
+    data && Array.isArray(data.scenes)
+      ? { ...data, scenes: preserveSceneAssignments(data.scenes, existing.data?.scenes) }
+      : data;
+  const normalizedState = normalizeProjectState(incoming);
   const [heygenRows, speechRows] = await Promise.all([
     heygenDao.listHeygenResponsesByProject(workspaceId, projectId),
     speechDao.listSpeechGenerationsByProject(workspaceId, projectId),
