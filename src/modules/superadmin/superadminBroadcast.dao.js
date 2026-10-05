@@ -109,6 +109,92 @@ const listBroadcastRecipients = async ({ broadcastId, page, limit, status }) => 
   };
 };
 
+
+const templateSelect = {
+  id: true,
+  name: true,
+  subject: true,
+  htmlBody: true,
+  textBody: true,
+  type: true,
+  createdByUserId: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: {
+    select: { id: true, email: true, name: true },
+  },
+};
+
+const createEmailTemplate = async (data) => {
+  return prisma.emailTemplate.create({
+    data,
+    select: templateSelect,
+  });
+};
+
+const getEmailTemplateById = async (id) => {
+  const template = await prisma.emailTemplate.findUnique({
+    where: { id },
+    select: templateSelect,
+  });
+  if (!template) {
+    throw new AppError(messages.EMAIL_TEMPLATE_NOT_FOUND, 404);
+  }
+  return template;
+};
+
+const listEmailTemplates = async ({ page = 1, limit = 50, search, type } = {}) => {
+  const skip = (page - 1) * limit;
+  const where = {
+    ...(type ? { type } : {}),
+    ...(search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { subject: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  };
+
+  const [templates, total] = await Promise.all([
+    prisma.emailTemplate.findMany({
+      where,
+      select: templateSelect,
+      orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.emailTemplate.count({ where }),
+  ]);
+
+  return {
+    templates,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    },
+  };
+};
+
+const updateEmailTemplate = async (id, data) => {
+  await getEmailTemplateById(id);
+  return prisma.emailTemplate.update({
+    where: { id },
+    data,
+    select: templateSelect,
+  });
+};
+
+const deleteEmailTemplate = async (id) => {
+  await getEmailTemplateById(id);
+  return prisma.emailTemplate.delete({
+    where: { id },
+  });
+};
+
 module.exports = {
   createBroadcast,
   updateBroadcastCounts,
@@ -116,4 +202,9 @@ module.exports = {
   listBroadcasts,
   getBroadcastById,
   listBroadcastRecipients,
+  createEmailTemplate,
+  getEmailTemplateById,
+  listEmailTemplates,
+  updateEmailTemplate,
+  deleteEmailTemplate,
 };

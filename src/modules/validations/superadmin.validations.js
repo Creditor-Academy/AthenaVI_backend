@@ -272,6 +272,65 @@ const earlyAccessRequestIdParamsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+
+const createEmailTemplateBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    name: Joi.string().trim().min(1).max(100).required(),
+    subject: Joi.string().trim().max(200).allow('').default(''),
+    htmlBody: Joi.string().trim().min(1).required(),
+    textBody: Joi.string().trim().allow(null, '').optional(),
+    type: Joi.string().valid('html', 'design', 'text').default('html'),
+  }).required(),
+});
+
+const updateEmailTemplateBodySchema = Joi.object({
+  params: Joi.object({
+    templateId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    name: Joi.string().trim().min(1).max(100).optional(),
+    subject: Joi.string().trim().max(200).allow('').optional(),
+    htmlBody: Joi.string().trim().min(1).optional(),
+    textBody: Joi.string().trim().allow(null, '').optional(),
+    type: Joi.string().valid('html', 'design', 'text').optional(),
+  }).min(1).required(),
+});
+
+const emailTemplateIdParamsSchema = Joi.object({
+  params: Joi.object({
+    templateId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const listEmailTemplatesQuerySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    search: Joi.string().trim().optional(),
+    type: Joi.string().valid('html', 'design', 'text').optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const resendProductEmailBroadcastBodySchema = Joi.object({
+  params: Joi.object({
+    broadcastId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    emails: Joi.array().items(Joi.string().email().trim()).min(1).optional(),
+    confirm: Joi.string().valid('send').required().messages({
+      'any.only': 'Type send to confirm product email broadcast resend',
+    }),
+  }).required(),
+});
+
 module.exports = {
   userIdParamsSchema,
   workspaceIdParamsSchema,
@@ -298,4 +357,9 @@ module.exports = {
   earlyAccessRequestsQuerySchema,
   earlyAccessRequestIdParamsSchema,
   earlyAccessUpdateStatusBodySchema,
+  createEmailTemplateBodySchema,
+  updateEmailTemplateBodySchema,
+  emailTemplateIdParamsSchema,
+  listEmailTemplatesQuerySchema,
+  resendProductEmailBroadcastBodySchema,
 };

@@ -383,6 +383,54 @@ const updateEarlyAccessRequestStatus = asyncHandler(async (req, res) => {
   return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_STATUS_UPDATED);
 });
 
+
+const createEmailTemplate = asyncHandler(async (req, res) => {
+  const result = await superadminBroadcastService.createEmailTemplate({
+    ...req.body,
+    createdByUserId: req.user.id,
+  });
+  return successResponse(req, res, { template: result }, 201, messages.EMAIL_TEMPLATE_CREATED);
+});
+
+const listEmailTemplates = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const result = await superadminBroadcastService.listEmailTemplates({
+    page,
+    limit,
+    search: req.query.search,
+    type: req.query.type,
+  });
+  return successResponse(req, res, result, 200, messages.EMAIL_TEMPLATES_FETCHED);
+});
+
+const getEmailTemplate = asyncHandler(async (req, res) => {
+  const template = await superadminBroadcastService.getEmailTemplate(req.params.templateId);
+  return successResponse(req, res, { template }, 200, messages.EMAIL_TEMPLATE_FETCHED);
+});
+
+const updateEmailTemplate = asyncHandler(async (req, res) => {
+  const template = await superadminBroadcastService.updateEmailTemplate(
+    req.params.templateId,
+    req.body
+  );
+  return successResponse(req, res, { template }, 200, messages.EMAIL_TEMPLATE_UPDATED);
+});
+
+const deleteEmailTemplate = asyncHandler(async (req, res) => {
+  await superadminBroadcastService.deleteEmailTemplate(req.params.templateId);
+  return successResponse(req, res, null, 200, messages.EMAIL_TEMPLATE_DELETED);
+});
+
+const resendProductEmailBroadcast = asyncHandler(async (req, res) => {
+  const result = await superadminBroadcastService.resendBroadcastProductEmail({
+    broadcastId: req.params.broadcastId,
+    emails: req.body.emails,
+    sentByUserId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCAST_RESENT);
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -411,6 +459,12 @@ module.exports = {
   listProductEmailBroadcasts,
   getProductEmailBroadcast,
   listProductEmailBroadcastRecipients,
+  createEmailTemplate,
+  listEmailTemplates,
+  getEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+  resendProductEmailBroadcast,
   listEarlyAccessRequests,
   getEarlyAccessRequest,
   approveEarlyAccessRequest,

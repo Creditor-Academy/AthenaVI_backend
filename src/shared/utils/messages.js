@@ -302,6 +302,15 @@ module.exports = {
   PRODUCT_EMAIL_BROADCAST_FETCHED: 'Product email broadcast fetched',
   PRODUCT_EMAIL_BROADCAST_NOT_FOUND: 'Product email broadcast not found',
   PRODUCT_EMAIL_BROADCAST_RECIPIENTS_FETCHED: 'Product email broadcast recipients fetched',
+  PRODUCT_EMAIL_BROADCAST_RESENT: 'Product email broadcast resent successfully',
+
+  // Email Templates
+  EMAIL_TEMPLATE_CREATED: 'Email template created successfully',
+  EMAIL_TEMPLATES_FETCHED: 'Email templates fetched successfully',
+  EMAIL_TEMPLATE_FETCHED: 'Email template fetched successfully',
+  EMAIL_TEMPLATE_UPDATED: 'Email template updated successfully',
+  EMAIL_TEMPLATE_DELETED: 'Email template deleted successfully',
+  EMAIL_TEMPLATE_NOT_FOUND: 'Email template not found',
 
   // Presentations (AI PPT)
   PRESENTATION_CREATED: 'Presentation created successfully',

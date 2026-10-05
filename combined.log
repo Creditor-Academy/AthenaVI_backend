@@ -14528,3 +14528,21 @@
 {"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-05T04:57:01.732Z"}
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-05T04:57:01.733Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-05T04:57:01.734Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-05T06:42:39.597Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-05T06:42:39.601Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-05T06:42:39.624Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-05T06:42:39.624Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-05T06:42:39.626Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":3.42,"timestamp":"2026-10-05T06:42:42.509Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-05T07:16:11.013Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-05T07:16:11.016Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-05T07:16:11.043Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-05T07:16:11.043Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-05T07:16:11.045Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":3.42,"timestamp":"2026-10-05T07:16:14.063Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-05T07:32:20.894Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-05T07:32:20.898Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-05T07:32:20.921Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-05T07:32:20.922Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-05T07:32:20.924Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":3.42,"timestamp":"2026-10-05T07:32:23.301Z"}

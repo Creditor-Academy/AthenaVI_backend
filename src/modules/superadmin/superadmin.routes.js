@@ -189,6 +189,44 @@ router.get(
   superadminController.listProductEmailBroadcastRecipients
 );
 
+
+// Email Templates (CRM style)
+router.get(
+  '/email-templates',
+  validate(superadminValidation.listEmailTemplatesQuerySchema),
+  superadminController.listEmailTemplates
+);
+
+router.post(
+  '/email-templates',
+  validate(superadminValidation.createEmailTemplateBodySchema),
+  superadminController.createEmailTemplate
+);
+
+router.get(
+  '/email-templates/:templateId',
+  validate(superadminValidation.emailTemplateIdParamsSchema),
+  superadminController.getEmailTemplate
+);
+
+router.patch(
+  '/email-templates/:templateId',
+  validate(superadminValidation.updateEmailTemplateBodySchema),
+  superadminController.updateEmailTemplate
+);
+
+router.delete(
+  '/email-templates/:templateId',
+  validate(superadminValidation.emailTemplateIdParamsSchema),
+  superadminController.deleteEmailTemplate
+);
+
+router.post(
+  '/broadcasts/product-email/:broadcastId/resend',
+  validate(superadminValidation.resendProductEmailBroadcastBodySchema),
+  superadminController.resendProductEmailBroadcast
+);
+
 router.post(
   '/broadcasts/product-email',
   validate(superadminValidation.productEmailBroadcastBodySchema),

@@ -167,6 +167,7 @@ model User {
   sentInvitations Invitation[] @relation("InvitationInvitedBy")
   productEmailBroadcastsSent ProductEmailBroadcast[] @relation("ProductEmailBroadcastSentBy")
   productEmailBroadcastRecipients ProductEmailBroadcastRecipient[]
+  emailTemplates EmailTemplate[] @relation("EmailTemplateCreatedBy")
   presentationShareLinks  PresentationShareLink[]  @relation("PresentationShareCreatedBy")
   presentationShareAudits PresentationShareAudit[] @relation("PresentationShareAuditActor")
   assignedProjects        Project[]                @relation("ProjectAssignee")
@@ -1245,4 +1246,22 @@ model ProductEmailBroadcastRecipient {
   @@index([broadcastId])
   @@index([userId])
   @@map("product_email_broadcast_recipients")
+}
+
+model EmailTemplate {
+  id            String   @id @default(uuid())
+  name          String
+  subject       String   @default("")
+  htmlBody      String   @map("html_body") @db.Text
+  textBody      String?  @map("text_body") @db.Text
+  type          String   @default("html") // html | design | text
+  createdByUserId String @map("created_by_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  createdBy User @relation("EmailTemplateCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUserId])
+  @@index([createdAt])
+  @@map("email_templates")
 }
