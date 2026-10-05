@@ -111,7 +111,9 @@ async function createTemplate({
     validatedSchema = assertVideoPackSchema(schema);
   } else if (type === 'DECK_PACK') {
     validatedSchema = assertDeckPackSchema(schema);
-    await assertPackLayoutIdsExist(validatedSchema);
+    if (validatedSchema?.meta?.authoredVia !== 'canvas') {
+      await assertPackLayoutIdsExist(validatedSchema);
+    }
   } else {
     validatedSchema = assertDeckLayoutSchema(schema);
   }
@@ -153,7 +155,9 @@ async function updateTemplate({ id, name, schema, isActive, contentType, variant
       data.schema = assertDeckLayoutSchema(schema);
     } else if (existing.type === 'DECK_PACK') {
       data.schema = assertDeckPackSchema(schema);
-      await assertPackLayoutIdsExist(data.schema);
+      if (data.schema?.meta?.authoredVia !== 'canvas') {
+        await assertPackLayoutIdsExist(data.schema);
+      }
     } else {
       data.schema = schema;
     }

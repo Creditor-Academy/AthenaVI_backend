@@ -6,6 +6,11 @@ const s3Service = require('../s3/s3.service');
 const templateAdminService = require('./templateAdmin.service');
 const templateMediaService = require('./templateMedia.service');
 const presentationDao = require('../presentation/presentation.dao');
+const {
+  designTokensSchema,
+  generationHintsSchema,
+} = require('../validations/presentation.validations');
+const { PPT_ASPECT_RATIOS } = require('../presentation/presentation.constants');
 
 const AI_TEXT_ROLES = new Set([
   'title',
@@ -139,6 +144,37 @@ function buildPlaceholderFromContent(content = {}) {
   return rest;
 }
 
+function optionalValidated(schema, value) {
+  if (value == null || value === '') return undefined;
+  if (typeof value !== 'object') return undefined;
+  const { error, value: validated } = schema.validate(value, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
+  if (error) return undefined;
+  return validated;
+}
+
+function coercePackIntent(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') return value.trim().slice(0, 280) || null;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).slice(0, 280);
+  }
+  return null;
+}
+
+function normalizePackAspectRatio(value) {
+  const ar = String(value || '16:9').trim();
+  return PPT_ASPECT_RATIOS.includes(ar) ? ar : '16:9';
+}
+
+function normalizePackContentType(slide, content) {
+  const raw = slide.contentType || content.content_type || 'title_body';
+  const s = String(raw || 'title_body').trim().slice(0, 64);
+  return s || 'title_body';
+}
+
 async function loadPresentationForPublish(presentationId) {
   const deck = await presentationDao.findDeckByProjectId(presentationId);
   if (!deck) {
@@ -183,26 +219,34 @@ async function publishPresentationAsPack({
   const normalizedPackId = String(packId).trim();
   await assertPackIdUnique('DECK_PACK', normalizedPackId);
 
-  const packSlides = slides.map((slide) => {
+  const packSlides = slides.map((slide, index) => {
     const content = slide.content && typeof slide.content === 'object' ? slide.content : {};
     const elementsDoc =
       slide.elements && typeof slide.elements === 'object'
         ? deepClone(slide.elements)
         : { version: 1, canvas: {}, elements: [] };
     const layoutId = slide.layoutId || content.layout_id || null;
+    const designTokens = optionalValidated(
+      designTokensSchema,
+      slide.designTokens || content.designTokens
+    );
+    const generationHints = optionalValidated(
+      generationHintsSchema,
+      slide.generationHints || content.generationHints
+    );
     const entry = {
-      order: slide.order,
-      contentType: slide.contentType || content.content_type || 'title_body',
-      intent: content.intent || null,
-      designTokens: content.designTokens || null,
-      generationHints: content.generationHints || null,
+      order: index + 1,
+      contentType: normalizePackContentType(slide, content),
+      intent: coercePackIntent(content.intent),
       placeholder: buildPlaceholderFromContent(content),
       snapshot: {
         elements: elementsDoc,
         imageS3Key: extractSlideImageKey(slide) || null,
       },
     };
-    if (layoutId) entry.layout_id = layoutId;
+    if (designTokens) entry.designTokens = designTokens;
+    if (generationHints) entry.generationHints = generationHints;
+    if (layoutId) entry.layout_id = String(layoutId).trim();
     return entry;
   });
 
@@ -211,10 +255,10 @@ async function publishPresentationAsPack({
     schemaVersion: 1,
     pack_id: normalizedPackId,
     themeId: themeId || deck.themeTokens?.themeId || null,
-    aspectRatio: deck.aspectRatio || '16:9',
+    aspectRatio: normalizePackAspectRatio(deck.aspectRatio),
     meta: {
       name,
-      description: description || null,
+      ...(description ? { description: String(description).trim().slice(0, 2000) } : {}),
       authoredVia: 'canvas',
       aiReady,
       sourcePresentationId: presentationId,
@@ -542,7 +586,7 @@ async function publishProjectAsVideoPack({
     meta: {
       authoredVia: 'canvas',
       name,
-      description: description || null,
+      ...(description ? { description: String(description).trim().slice(0, 2000) } : {}),
       sourceProjectId: projectId,
       sourceWorkspaceId: project.workspaceId,
     },

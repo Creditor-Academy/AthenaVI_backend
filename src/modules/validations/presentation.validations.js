@@ -1188,5 +1188,7 @@ module.exports = {
   assertDeckLayoutTemplateSchema,
   deckPackTemplateSchemaObject,
   assertDeckPackTemplateSchema,
+  designTokensSchema,
+  generationHintsSchema,
   canvasDocSchema,
 };
