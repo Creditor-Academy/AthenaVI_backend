@@ -179,6 +179,7 @@
 | GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog (`models`, `providers`, per-mode `defaults`) |
 | GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait + seven social destinations + eight print sizes) |
 | GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
+| GET | `/api/image-gen/archetypes` | Bearer | Image Gen infographic archetype catalog |
 | GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
 | POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |
 | GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
