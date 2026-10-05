@@ -1,4 +1,7 @@
 $kind: http-request
+description: |-
+  Poll until deck status is READY or FAILED. Slide rows include status only —
+  FAILED reason is on GET slide (`imageRef.error`), not this response.
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/status"
 method: GET
 headers:

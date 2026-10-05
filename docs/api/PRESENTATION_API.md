@@ -564,6 +564,8 @@ Starts async slide generation. Poll **status**. Pre-checks affordability; charge
 
 Deck `status` values include `DRAFT`, `GENERATING`, `READY`, `FAILED` (and similar). Slide statuses: `PENDING`, `GENERATING`, `READY`, `FAILED`.
 
+`status` is a progress poll. It does **not** include per-slide error text. When a slide is `FAILED`, the reason is on `GET .../slides/:slideId` as `imageRef.error` (and on `slide_generation_jobs.error`). A deck can be `READY` with `partial: true` if some slides failed. Whole-deck compiler crashes are also stored on `deck.generationMetrics.error`.
+
 ---
 
 ## Slides
