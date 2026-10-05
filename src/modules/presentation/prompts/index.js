@@ -5,7 +5,7 @@ const imageBriefPrompt = require('./imageBrief.prompt');
 const pathBPrompt = require('./pathB.prompt');
 const visionRelevancePrompt = require('./visionRelevance.prompt');
 
-const PROMPT_BUNDLE_VERSION = 'v2.0';
+const PROMPT_BUNDLE_VERSION = 'v2.1';
 
 function getOutlinePrompt() {
   return outlinePrompt;

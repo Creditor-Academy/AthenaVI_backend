@@ -4,6 +4,11 @@
  */
 
 const { looksLikeLinearProcessSlide, looksLikeDeviceFramesSlide } = require('./diagramPathPolicy.util');
+const {
+  blueprintForSlideCount,
+  normalizeRole,
+  roleToContentDefaults,
+} = require('./narrativeSlideBlueprints');
 
 const ARCHETYPES = {
   general: {
@@ -269,11 +274,16 @@ function enrichOutlineWithArrangement(outline, { sourceText = '', userPrompt = '
     return outline;
   }
   const archetype = detectArchetype(sourceText || outline.sourcePrompt || '', userPrompt);
-  const sequence = archetype.sequence(outline.slides.length);
+  const promptText = sourceText || outline.sourcePrompt || userPrompt || '';
+  const blueprint = blueprintForSlideCount(outline.slides.length);
   const slides = outline.slides.map((slide, idx) => {
     const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
-    const seqIndex = order - 1;
-    const hint = sequence[seqIndex] || 'image+text';
+    const role =
+      normalizeRole(slide.narrativeRole || slide.narrative_role) || blueprint[order - 1] || null;
+    const roleDefaults = role
+      ? roleToContentDefaults(role, { slide, sourceText: promptText })
+      : null;
+    const hint = roleDefaults?.suggestedContentType || 'image+text';
     let suggested =
       slide.suggestedContentType || slide.content_type || hint;
     const processSignals = {
@@ -284,29 +294,40 @@ function enrichOutlineWithArrangement(outline, { sourceText = '', userPrompt = '
       intent: slide.intent || slide.purpose,
       purpose: slide.purpose,
       contentType: suggested,
+      visual_need: slide.visual_need || slide.visualNeed,
     };
+    const suggestedLower = String(suggested || '').toLowerCase();
     // Product UI / app mockups → device_frames (never leave as diagram).
     if (looksLikeDeviceFramesSlide(processSignals)) {
       suggested = 'device_frames';
     } else if (
       looksLikeLinearProcessSlide(processSignals) &&
       !['title', 'closing', 'chart', 'section_divider', 'device_frames', 'team', 'swot'].includes(
-        String(suggested).toLowerCase()
+        suggestedLower
       )
     ) {
-      // Prefer process layouts for how-it-works style beats (not architecture/ERD).
-      // 5+ beats → timeline (5-milestone layouts); otherwise diagram.
       const beatN = Array.isArray(slide.beats) ? slide.beats.filter(Boolean).length : 0;
       suggested = beatN >= 5 ? 'timeline' : 'diagram';
+    } else if (
+      ['diagram', 'timeline'].includes(suggestedLower) &&
+      !looksLikeLinearProcessSlide(processSignals) &&
+      normalizeRole(role) !== 'process_workflow'
+    ) {
+      suggested = hint;
+      if (['diagram', 'timeline'].includes(String(hint).toLowerCase())) {
+        suggested = 'image+text';
+      }
     }
     return {
       ...slide,
       order,
+      narrativeRole: role || slide.narrativeRole || undefined,
       suggestedContentType: suggested,
+      purpose: slide.purpose || roleDefaults?.purpose || slide.purpose,
       visual_need:
         ['diagram', 'timeline'].includes(String(suggested).toLowerCase()) && !slide.visual_need
           ? 'diagram_template'
-          : slide.visual_need || slide.visualNeed || undefined,
+          : slide.visual_need || slide.visualNeed || roleDefaults?.visual_need || undefined,
       arrangementHint: hint,
     };
   });

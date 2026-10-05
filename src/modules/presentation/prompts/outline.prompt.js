@@ -1,3 +1,5 @@
+const { formatBlueprintExampleForPrompt } = require('../narrativeSlideBlueprints');
+
 const DENSITY_CAPS = {
   concise: {
     maxBullets: 3,
@@ -25,7 +27,7 @@ const DENSITY_CAPS = {
 function buildSystem() {
   return [
     'You are a presentation strategist writing a pitch-deck blueprint.',
-    'Each slide is a spec: headline, tagline, argument, labeled beats, unique visual, purpose, content intent, content type hints, and visual intent.',
+    'Each slide is a spec: headline, tagline, argument, labeled beats, unique visual, narrativeRole, purpose, content intent, content type hints, and visual intent.',
     'Write real copy the generator will place into slots — not a topic list.',
     'Do not select a final layout for normal slides. Focus on what each slide should communicate.',
     'Do not invent charts, funnels, or device mockups unless the source is quantitative or about an app/product UI.',
@@ -104,6 +106,12 @@ function buildUser(vars = {}) {
     `Chart density budget: at most ${
       Number(slideCount) <= 10 ? 2 : Number(slideCount) <= 16 ? 3 : 4
     } chart slides for this ${slideCount}-slide deck (≤10 → 2; ≤16 → 3; else 4). Prefer image+text / gallery / comparison for brand storytelling; reserve chart only for true quantitative proof.`,
+    `Diagram/timeline budget: at most ${
+      Number(slideCount) <= 10 ? 2 : Number(slideCount) <= 16 ? 3 : 4
+    } combined diagram+timeline slides. Never use the same suggestedContentType on two consecutive slides.`,
+    '',
+    `Reference story arc for ${slideCount} slides (adapt to the source — roles and topics must match the prompt, not this template verbatim):`,
+    formatBlueprintExampleForPrompt(slideCount),
     '',
     'Source:',
     String(sourceText),
@@ -148,8 +156,9 @@ function buildUser(vars = {}) {
     '- Use chart only when the source is quantitative; use device_frames when the slide is about an app/product UI / phone-tablet mockups (never diagram for those)',
     '- Chart density: N≤10 slides → max 2 charts; N≤16 → max 3; else max 4. Do not stack three chart slides in a short deck.',
     '- Deck title: concise natural title (3–10 words). Do NOT paste the prompt.',
-    '- suggestedContentType should align with expected content structure',
-    '- How-it-works / N-step workflow / pipeline slides → suggestedContentType "diagram" for 2–4 steps; use "timeline" when there are 5+ numbered steps. Never grid or bullet_list for those',
+    '- suggestedContentType should align with expected content structure; include narrativeRole per slide (e.g. hero_title, problem_statement, process_workflow, summary_cta)',
+    '- How-it-works / workflow: use suggestedContentType "diagram" or "timeline" ONLY when beats[] lists 2+ explicit numbered/labeled steps; otherwise use image+text, bullet_list, or grid',
+    '- No two consecutive slides may share the same suggestedContentType',
     '- Product UI / app screens / device mockups → suggestedContentType "device_frames" (not diagram)',
     '- visual_need: none|photo|illustration|chart|diagram_template — none when the layout has no image slots; diagram_template for process/SWOT/funnel layouts',
     '- Do NOT use path_b in the outline; Path B is decided later only for architecture/ERD-style slides',
@@ -171,6 +180,7 @@ function buildUser(vars = {}) {
             contentType: ['title', 'subtitle', 'image'],
             visualIntent: ['brand-led', 'premium', 'warm'],
             suggestedContentType: 'title',
+            narrativeRole: 'hero_title',
             visual_need: 'photo',
             layoutId: null,
             layoutLocked: false,

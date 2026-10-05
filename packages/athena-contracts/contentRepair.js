@@ -28,6 +28,41 @@ function contextPhrase(content) {
   return t || 'Topic';
 }
 
+function coercePlanItem(item, index, ctx, itemCount = 0) {
+  if (item == null || typeof item !== 'object') {
+    const label = `Plan ${index + 1}`;
+    const items =
+      itemCount > 0
+        ? Array.from({ length: itemCount }, (_, i) => `Included benefit ${i + 1}`)
+        : [`Core value for ${ctx}.`];
+    return { label, price: '—', items, cta: 'Get started' };
+  }
+  const items = Array.isArray(item.items)
+    ? [...item.items]
+    : Array.isArray(item.bullets)
+      ? [...item.bullets]
+      : Array.isArray(item.features)
+        ? [...item.features]
+        : item.body
+          ? [String(item.body)]
+          : [];
+  if (itemCount > 0) {
+    while (items.length < itemCount) {
+      items.push(`Included benefit ${items.length + 1}`);
+    }
+    items.splice(itemCount);
+  }
+  return {
+    label: String(item.label ?? item.name ?? item.title ?? `Plan ${index + 1}`).trim(),
+    price: String(item.price ?? item.amount ?? '—').trim(),
+    period: item.period != null ? String(item.period).trim() : undefined,
+    cta: String(item.cta ?? item.button ?? item.callToAction ?? 'Get started').trim(),
+    items,
+    body: item.body != null ? String(item.body).trim() : undefined,
+    storage: item.storage != null ? String(item.storage).trim() : undefined,
+  };
+}
+
 function coerceColumnItem(item, index, ctx) {
   if (item == null) {
     return {
@@ -232,6 +267,41 @@ function clampRepeatingGroups(content, contract, repairs = []) {
       pushRepair(repairs, 'quotes', 'pad_clamp', beforeLen, quotes.length);
     }
     next.quotes = quotes;
+  }
+
+  if (contract.groups.plans > 0) {
+    let plans = Array.isArray(next.plans) ? [...next.plans] : [];
+    if (!plans.length && next.pricing != null) {
+      const pricing = next.pricing;
+      if (Array.isArray(pricing)) plans = [...pricing];
+      else if (typeof pricing === 'object' && Array.isArray(pricing.tiers)) plans = [...pricing.tiers];
+      else if (typeof pricing === 'object' && Array.isArray(pricing.plans)) plans = [...pricing.plans];
+    }
+    const beforeLen = plans.length;
+    const itemCount = contract.groups.planItems || 0;
+    plans = padArray(plans, contract.groups.plans, (i) =>
+      coercePlanItem(null, i, ctx, itemCount)
+    ).map((plan, i) => coercePlanItem(plan, i, ctx, itemCount));
+    if (beforeLen !== plans.length || !Array.isArray(next.plans)) {
+      pushRepair(repairs, 'plans', 'pad_clamp', beforeLen, plans.length);
+    }
+    next.plans = plans;
+  }
+
+  if (contract.groups.pricingFeatures > 0) {
+    let features = Array.isArray(next.features)
+      ? [...next.features]
+      : Array.isArray(next.planFeatures)
+        ? [...next.planFeatures]
+        : Array.isArray(next.comparison?.features)
+          ? [...next.comparison.features]
+          : [];
+    const beforeLen = features.length;
+    features = padArray(features, contract.groups.pricingFeatures, (i) => `Feature row ${i + 1}`);
+    if (beforeLen !== features.length) {
+      pushRepair(repairs, 'features', 'pad_clamp', beforeLen, features.length);
+    }
+    next.features = features;
   }
 
   return next;

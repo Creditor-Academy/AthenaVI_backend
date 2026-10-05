@@ -25,6 +25,17 @@ const nova = {
   beats: ['Upload', 'Extract', 'Validate', 'Post'],
 };
 assert.strictEqual(looksLikeLinearProcessSlide(nova), true, 'NovaFlow is linear process');
+
+const vagueWorkflow = {
+  title: 'How we work',
+  summary: 'Our workflow and pipeline improve outcomes',
+  beats: [],
+};
+assert.strictEqual(
+  looksLikeLinearProcessSlide(vagueWorkflow),
+  false,
+  'workflow words alone without steps are not linear process'
+);
 assert.strictEqual(looksLikePathBTopology(nova), false, 'NovaFlow is not Path B topology');
 
 const novaPolicy = resolveDiagramVisualPolicy({

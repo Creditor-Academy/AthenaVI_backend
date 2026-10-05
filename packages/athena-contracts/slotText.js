@@ -17,7 +17,9 @@ const LIST_SOURCE_KEYS = {
 
 const INDEXED_SLOT_RE = /^(stat|metric|member|milestone|card|feature|item|column|plan|price|tier)_(\d+)$/;
 const MEMBER_FIELD_RE = /^member_(\d+)_(name|role|email|title|bio|body|desc)$/;
-const PLAN_FIELD_RE = /^plan_(\d+)_(label|name|price|body)$/;
+const PLAN_FIELD_RE = /^plan_(\d+)_(label|name|price|body|cta|period|cents|caption)$/;
+const PLAN_ITEM_RE = /^plan_(\d+)_item_(\d+)$/;
+const PRICING_FEATURE_ROW_RE = /^feature_(\d+)$/;
 const AGENDA_ITEM_RE = /^agenda_col_(\d+)_item_(\d+)$/;
 const AGENDA_HEADING_RE = /^agenda_col_(\d+)_heading$/;
 const DEPT_HEADING_RE = /^dept_(\d+)_heading$/;
@@ -239,6 +241,14 @@ function objectListForKind(kind, content) {
     const raw = content[key];
     if (Array.isArray(raw) && raw.length) return raw;
   }
+  if (kind === 'plan' && content.pricing != null) {
+    const pricing = content.pricing;
+    if (Array.isArray(pricing) && pricing.length) return pricing;
+    if (typeof pricing === 'object') {
+      const nested = pricing.tiers || pricing.plans;
+      if (Array.isArray(nested) && nested.length) return nested;
+    }
+  }
   return [];
 }
 
@@ -250,9 +260,25 @@ function memberAt(content, index) {
   return item;
 }
 
+function planItemText(item) {
+  if (item == null) return '';
+  if (typeof item === 'string') return item.trim();
+  if (typeof item === 'boolean') return item ? 'Yes' : '';
+  if (typeof item !== 'object') return String(item).trim();
+  return String(item.text ?? item.label ?? item.name ?? item.value ?? item.detail ?? '').trim();
+}
+
 function planAt(content, index) {
   const list = objectListForKind('plan', content);
   return list[index] || null;
+}
+
+function pricingFeatureRows(content) {
+  const direct = content.features || content.planFeatures || content.comparison?.features;
+  if (Array.isArray(direct) && direct.length) return direct;
+  const rows = content.comparison?.rows;
+  if (Array.isArray(rows) && rows.length) return rows;
+  return [];
 }
 
 function agendaColumnAt(content, colIndex) {
@@ -580,17 +606,51 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     return String(raw?.name ?? raw?.attribution ?? raw?.author ?? '').trim();
   }
 
+  const planItem = id.match(PLAN_ITEM_RE);
+  if (planItem) {
+    const plan = planAt(content, Number(planItem[1]) - 1);
+    if (!plan) return '';
+    const itemIndex = Number(planItem[2]) - 1;
+    const items = Array.isArray(plan.items)
+      ? plan.items
+      : Array.isArray(plan.bullets)
+        ? plan.bullets
+        : Array.isArray(plan.features)
+          ? plan.features
+          : [];
+    if (items[itemIndex] != null) return planItemText(items[itemIndex]);
+    if (itemIndex === 0 && plan.storage != null) return planItemText(plan.storage);
+    return '';
+  }
+
   const planField = id.match(PLAN_FIELD_RE);
   if (planField) {
     const plan = planAt(content, Number(planField[1]) - 1);
     if (!plan) return '';
     const field = planField[2];
-    if (field === 'label' || field === 'name') return String(plan.label ?? plan.name ?? '').trim();
-    if (field === 'price') return String(plan.price ?? '').trim();
+    if (field === 'label' || field === 'name') return String(plan.label ?? plan.name ?? plan.title ?? '').trim();
+    if (field === 'price') return String(plan.price ?? plan.amount ?? '').trim();
+    if (field === 'period') return String(plan.period ?? plan.interval ?? plan.billing ?? '').trim();
+    if (field === 'cents') return String(plan.cents ?? plan.priceCents ?? '').trim();
+    if (field === 'caption') return String(plan.caption ?? plan.tagline ?? plan.subtitle ?? '').trim();
+    if (field === 'cta') {
+      return String(plan.cta ?? plan.button ?? plan.callToAction ?? content.cta ?? '').trim();
+    }
     if (field === 'body') {
       const items = Array.isArray(plan.items) ? plan.items : Array.isArray(plan.bullets) ? plan.bullets : [];
-      return items.length ? items.map((item) => String(item ?? '').trim()).filter(Boolean).join('\n') : String(plan.body ?? '').trim();
+      return items.length
+        ? items.map((item) => planItemText(item)).filter(Boolean).join('\n')
+        : String(plan.body ?? plan.description ?? '').trim();
     }
+  }
+
+  const pricingFeatureRow = id.match(PRICING_FEATURE_ROW_RE);
+  if (pricingFeatureRow) {
+    const rows = pricingFeatureRows(content);
+    const raw = rows[Number(pricingFeatureRow[1]) - 1];
+    if (raw == null) return '';
+    if (typeof raw === 'string') return raw.trim();
+    return String(raw.label ?? raw.title ?? raw.name ?? raw.text ?? '').trim();
   }
 
   const agendaHeading = id.match(AGENDA_HEADING_RE);

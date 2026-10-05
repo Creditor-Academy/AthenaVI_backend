@@ -75,6 +75,8 @@ function looksLikeLinearProcessSlide({
   visual,
   intent,
   contentType,
+  visual_need,
+  visualNeed,
 } = {}) {
   if (looksLikeDeviceFramesSlide({ title, summary, beats, bullets, visual, intent, contentType })) {
     return false;
@@ -92,8 +94,9 @@ function looksLikeLinearProcessSlide({
       /\b(upload|extract|validate|post|sync|store)\b/.test(hay));
 
   if (processCue && stepCount >= 2 && stepCount <= 6) return true;
-  if (processCue && stepCount === 0) return true; // title/summary alone often enough pre-content
   if (stepCount >= 3 && stepCount <= 6 && /(→|->|then\b|next\b)/.test(hay)) return true;
+  const vn = String(visual_need || visualNeed || '').toLowerCase();
+  if (vn === 'diagram_template' && stepCount >= 2 && stepCount <= 6) return true;
   if (String(contentType || '').toLowerCase() === 'diagram' && stepCount >= 2 && stepCount <= 6) {
     return !/swot|funnel|matrix|venn|pyramid|cycle/.test(hay);
   }

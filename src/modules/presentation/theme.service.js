@@ -102,11 +102,26 @@ function enforceAppearancePalette(themeTokens) {
   }
 
   // cardBg / surface accents: keep readable vs bg
-  if (palette.cardBg && !luminanceMatchesAppearance(palette.cardBg, appearance)) {
+  if (!palette.cardBg || !luminanceMatchesAppearance(palette.cardBg, appearance)) {
     palette.cardBg = appearance === 'dark' ? '#1E293B' : '#F1F5F9';
+  }
+  if (!palette.heading || !inkMatchesAppearance(palette.heading, appearance)) {
+    palette.heading = safeInk.heading;
+  }
+  if (!palette.body || !inkMatchesAppearance(palette.body, appearance)) {
+    palette.body = safeInk.muted;
   }
 
   return { ...themeTokens, appearance, palette };
+}
+
+function safeInkForAppearance(appearance) {
+  return SAFE_INK_BY_APPEARANCE[appearance] || SAFE_INK_BY_APPEARANCE.light;
+}
+
+/** Light vs dark from a surface fill (card, slide bg, etc.). */
+function appearanceFromSurfaceHex(hex) {
+  return appearanceFromBg(hex);
 }
 
 /** Map wizard / FE PDF theme ids onto catalog or wizard-derived tokens later. */
@@ -374,7 +389,10 @@ module.exports = {
   getThemeById,
   resolveThemeTokens,
   enforceAppearancePalette,
+  safeInkForAppearance,
+  appearanceFromSurfaceHex,
   appearanceFromBg,
+  SAFE_INK_BY_APPEARANCE,
   assertContrast,
   contrastRatio,
   relativeLuminance,

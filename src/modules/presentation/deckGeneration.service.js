@@ -515,6 +515,10 @@ function finalizeBlueprintOutline(outline, metas, policy, slideCount) {
     imageType: policy?.imageType,
   });
   slides = layoutCatalogPolicy.enforceChartDensityCap(slides);
+  slides = layoutCatalogPolicy.enforceDiagramTimelineDensityCap(slides);
+  slides = layoutCatalogPolicy.enforceNoAdjacentSameContentType(slides, {
+    sourceText: outline?.sourcePrompt || '',
+  });
   return {
     ...outline,
     slides,
@@ -1503,6 +1507,7 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
         ? s.visualIntent.map((v) => String(v).trim()).filter(Boolean)
         : [],
       suggestedContentType: s.suggestedContentType || s.content_type || null,
+      narrativeRole: s.narrativeRole || s.narrative_role || null,
       layoutId: s.layoutId || s.layout_id || null,
       layoutLocked:
         s.layoutLocked != null
@@ -1530,6 +1535,12 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     }
   }
 
+  const { applyRoleDefaultsToSlides } = require('./narrativeSlideBlueprints');
+  normalizedSlides = applyRoleDefaultsToSlides(normalizedSlides, {
+    sourceText,
+    slideCount: requested || normalizedSlides.length,
+  });
+
   normalizedSlides = normalizedSlides.map((s) => {
     const signals = {
       title: s.title,
@@ -1539,6 +1550,7 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
       intent: s.intent || s.purpose,
       purpose: s.purpose,
       contentType: s.suggestedContentType,
+      visual_need: s.visual_need || s.visualNeed,
     };
     let suggested = String(s.suggestedContentType || '').toLowerCase() || null;
     if (looksLikeDeviceFramesSlide(signals)) {

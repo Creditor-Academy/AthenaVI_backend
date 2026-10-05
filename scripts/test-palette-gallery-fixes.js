@@ -3,6 +3,8 @@ const assert = require('assert');
 const catalog = require('../src/modules/presentation/themes/catalog.json');
 const themeService = require('../src/modules/presentation/theme.service');
 const { resolveStickyBrandColors } = require('../src/modules/presentation/artDirection/semanticTheme');
+const { resolveTextColor } = require('../src/modules/presentation/artDirection/resolveTextColor');
+const { resolveSemanticTheme } = require('../src/modules/presentation/artDirection/semanticTheme');
 const { designTokensForVisualRole } = require('../src/modules/presentation/artDirection/visualTreatment');
 const { validateSlide } = require('../src/modules/presentation/layoutQa.service');
 const { textForSlot, layoutSlotsToElements } = require('../src/modules/presentation/layoutToElements');
@@ -64,6 +66,36 @@ function approxLum(hex) {
   assert.ok(
     themeService.relativeLuminance(badDark.palette.bg) < 0.35,
     'dark appearance must not keep light bg'
+  );
+}
+
+// 2b) Dark deck text on a light card surface uses dark ink (not light theme tokens).
+{
+  const tokens = themeService.enforceAppearancePalette({
+    appearance: 'dark',
+    palette: {
+      bg: '#0B1220',
+      surface: '#121A2B',
+      text: '#F8FAFC',
+      muted: '#94A3B8',
+      heading: '#F8FAFC',
+      primary: '#3B82F6',
+      secondary: '#22D3EE',
+      cardBg: '#1E293B',
+    },
+  });
+  const theme = resolveSemanticTheme(tokens);
+  const onLightCard = resolveTextColor({
+    theme,
+    textRole: 'heading',
+    backgroundMode: 'light',
+    backgroundHex: '#F8FAFC',
+  });
+  const ratio = themeService.contrastRatioCss(onLightCard.color, '#F8FAFC');
+  assert.ok(ratio != null && ratio >= 4.5, `light card text must contrast, got ${ratio}`);
+  assert.ok(
+    themeService.relativeLuminance(onLightCard.color) < 0.35,
+    'heading on light card should be dark ink'
   );
 }
 

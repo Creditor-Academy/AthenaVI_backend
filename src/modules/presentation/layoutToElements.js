@@ -6142,7 +6142,14 @@ function layoutDiagramSwotCards(doc, layoutSchema, themeTokens, canvas = {}) {
       type: 'shape',
       layer: 1,
       placement: { ...cell, rotation: 0, opacity: 1 },
-      content: { shape: 'rect', fill: prevC?.content?.fill || '#F8FAFC', borderRadius: 20, layoutSurface: true },
+      content: {
+        shape: 'rect',
+        fill:
+          prevC?.content?.fill ||
+          { type: 'solid', color: paletteColor(palette, 'cardBg', '#F1F5F9'), colorRole: 'cardBg' },
+        borderRadius: 20,
+        layoutSurface: true,
+      },
       role: 'decoration',
       slotId: cardId,
     });

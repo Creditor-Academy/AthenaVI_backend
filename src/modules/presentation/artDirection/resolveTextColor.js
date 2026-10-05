@@ -1,17 +1,35 @@
-const { contrastRatioCss, relativeLuminance } = require('../theme.service');
+const {
+  contrastRatioCss,
+  relativeLuminance,
+  safeInkForAppearance,
+  appearanceFromSurfaceHex,
+} = require('../theme.service');
 
 function highContrastFallback(backgroundHex) {
-  const lum = relativeLuminance(backgroundHex);
-  if (lum != null && lum > 0.45) {
-    return { colorRole: 'text', color: '#0F172A' };
-  }
-  return { colorRole: 'textOnImage', color: '#FFFFFF' };
+  const surface = appearanceFromSurfaceHex(backgroundHex);
+  const ink = safeInkForAppearance(surface === 'dark' ? 'dark' : 'light');
+  return { colorRole: 'text', color: ink.text };
 }
 
 function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroundHex, _depth = 0 } = {}) {
   const palette = theme?.palette || {};
-  const safeHeadingColor = palette.heading || palette.text || palette.body || '#18212B';
-  const safeBodyColor = palette.body || palette.muted || palette.text || '#52606D';
+  const surfaceAppearance =
+    backgroundHex != null ? appearanceFromSurfaceHex(backgroundHex) : null;
+  const surfaceInk =
+    surfaceAppearance != null ? safeInkForAppearance(surfaceAppearance) : null;
+
+  const safeHeadingColor =
+    (surfaceInk && surfaceInk.heading) ||
+    palette.heading ||
+    palette.text ||
+    palette.body ||
+    '#18212B';
+  const safeBodyColor =
+    (surfaceInk && surfaceInk.muted) ||
+    palette.body ||
+    palette.muted ||
+    palette.text ||
+    '#52606D';
 
   const mode = String(backgroundMode || '').toLowerCase();
   const useOnImage = mode === 'image' || mode === 'on_image' || mode === 'text_on_image';
@@ -33,7 +51,7 @@ function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroun
       color = palette.textOnImageMuted;
       colorRole = 'textOnImageMuted';
     } else {
-      color = palette.body || palette.muted || safeBodyColor;
+      color = safeBodyColor;
       colorRole = 'muted';
     }
   } else {
@@ -42,7 +60,7 @@ function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroun
       color = palette.textOnImage;
       colorRole = 'textOnImage';
     } else {
-      color = palette.heading || palette.text || safeHeadingColor;
+      color = safeHeadingColor;
       colorRole = 'text';
     }
   }
@@ -83,4 +101,3 @@ function resolveTextColor({ theme, textRole, backgroundMode = 'light', backgroun
 module.exports = {
   resolveTextColor,
 };
-

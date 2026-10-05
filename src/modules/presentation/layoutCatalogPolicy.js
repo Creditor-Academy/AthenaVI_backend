@@ -302,30 +302,55 @@ function filterLayoutTemplates(templates, policy = {}) {
   return kept.length ? kept : metas.filter((m) => m.layoutId);
 }
 
-function buildLayoutDigest(metas, { maxPerType = 6, maxTotal = 48 } = {}) {
+function digestShuffleKey(layoutId, seed = 0) {
+  const s = String(layoutId || '');
+  let h = seed | 0;
+  for (let i = 0; i < s.length; i += 1) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function buildLayoutDigest(metas, { maxPerType = 6, maxTotal = 64, digestSeed = 0 } = {}) {
   const byType = new Map();
   for (const meta of metas) {
     const type = meta.contentType || 'other';
     if (!byType.has(type)) byType.set(type, []);
-    const bucket = byType.get(type);
-    if (bucket.length < maxPerType) bucket.push(meta);
+    byType.get(type).push(meta);
   }
+  for (const bucket of byType.values()) {
+    bucket.sort(
+      (a, b) =>
+        digestShuffleKey(a.layoutId, digestSeed) - digestShuffleKey(b.layoutId, digestSeed) ||
+        String(a.layoutId).localeCompare(String(b.layoutId))
+    );
+  }
+  const typeOrder = [...byType.keys()].sort();
   const rows = [];
-  for (const [contentType, bucket] of byType) {
-    for (const meta of bucket) {
-      rows.push({
-        layoutId: meta.layoutId,
-        name: meta.name,
-        contentType,
-        imageSlotCount: meta.imageSlotCount,
-        textSlotCount: meta.textSlotCount,
-        hasHeadingSlot: Boolean(meta.hasHeadingSlot),
-        captionOnly: Boolean(meta.captionOnly),
-        families: meta.imageStyleFamilies,
-        appearance: meta.appearance,
-      });
-      if (rows.length >= maxTotal) return rows;
+  let round = 0;
+  while (rows.length < maxTotal) {
+    let added = false;
+    for (const contentType of typeOrder) {
+      const bucket = byType.get(contentType) || [];
+      if (round < maxPerType && bucket[round]) {
+        const meta = bucket[round];
+        rows.push({
+          layoutId: meta.layoutId,
+          name: meta.name,
+          contentType,
+          imageSlotCount: meta.imageSlotCount,
+          textSlotCount: meta.textSlotCount,
+          hasHeadingSlot: Boolean(meta.hasHeadingSlot),
+          captionOnly: Boolean(meta.captionOnly),
+          families: meta.imageStyleFamilies,
+          appearance: meta.appearance,
+        });
+        added = true;
+        if (rows.length >= maxTotal) return rows;
+      }
     }
+    if (!added) break;
+    round += 1;
   }
   return rows;
 }
@@ -622,6 +647,109 @@ function enforceChartDensityCap(slides) {
   return list;
 }
 
+function maxDiagramTimelineSlidesForDeck(slideCount) {
+  const n = Number(slideCount) || 0;
+  if (n <= 10) return 2;
+  if (n <= 16) return 3;
+  return 4;
+}
+
+function scoreDiagramSlideCandidate(slide) {
+  const beats = Array.isArray(slide?.beats) ? slide.beats.filter(Boolean).length : 0;
+  const vn = String(slide?.visual_need || slide?.visualNeed || '').toLowerCase();
+  let score = beats;
+  if (vn === 'diagram_template') score += 3;
+  if (String(slide?.narrativeRole || '').toLowerCase() === 'process_workflow') score += 2;
+  return score;
+}
+
+/**
+ * Cap diagram + timeline slides by deck length. Demotes weakest middle slides.
+ */
+function enforceDiagramTimelineDensityCap(slides) {
+  const list = Array.isArray(slides) ? slides.map((s) => ({ ...s })) : [];
+  if (list.length < 2) return list;
+
+  const maxCombined = maxDiagramTimelineSlidesForDeck(list.length);
+  const isDiagTime = (s) => {
+    const t = String(s?.suggestedContentType || '').toLowerCase();
+    return t === 'diagram' || t === 'timeline';
+  };
+
+  const candidates = list
+    .map((s, i) => ({ s, i }))
+    .filter(({ s, i }) => {
+      if (i === 0 || i === list.length - 1) return false;
+      if (s.layoutLocked || s.layout_locked) return false;
+      return isDiagTime(s);
+    });
+
+  if (candidates.length <= maxCombined) return list;
+
+  const ranked = candidates
+    .map((row) => ({ ...row, score: scoreDiagramSlideCandidate(row.s) }))
+    .sort((a, b) => a.score - b.score || a.i - b.i);
+
+  const demote = ranked.slice(0, candidates.length - maxCombined);
+  for (const row of demote) {
+    const next = { ...list[row.i] };
+    const hint = String(next.arrangementHint || '').toLowerCase();
+    const fallback =
+      hint && !['diagram', 'timeline'].includes(hint) ? hint : 'image+text';
+    next.suggestedContentType = fallback;
+    next.layoutWhy = next.layoutWhy
+      ? `${next.layoutWhy}; Demoted diagram/timeline — deck budget`
+      : 'Demoted diagram/timeline — deck budget';
+    if (String(next.visual_need || '').toLowerCase() === 'diagram_template') {
+      next.visual_need = 'photo';
+    }
+    if (!next.layoutLocked && !next.layout_locked) {
+      next.layoutId = null;
+    }
+    list[row.i] = next;
+  }
+
+  return list;
+}
+
+/**
+ * No two consecutive slides may share the same suggestedContentType.
+ */
+function enforceNoAdjacentSameContentType(slides, { sourceText = '' } = {}) {
+  const { alternateContentTypeForAdjacency } = require('./narrativeSlideBlueprints');
+  const list = Array.isArray(slides) ? slides.map((s) => ({ ...s })) : [];
+  if (list.length < 2) return list;
+
+  for (let i = 1; i < list.length; i += 1) {
+    const prev = list[i - 1];
+    const cur = list[i];
+    const prevType = String(prev?.suggestedContentType || '').toLowerCase();
+    let curType = String(cur?.suggestedContentType || '').toLowerCase();
+    if (!prevType || !curType || prevType !== curType) continue;
+    if (cur.layoutLocked || cur.layout_locked) continue;
+    if (i === list.length - 1 && curType === 'closing') continue;
+
+    const alt = alternateContentTypeForAdjacency({
+      previousType: prevType,
+      slide: cur,
+      narrativeRole: cur.narrativeRole || cur.narrative_role,
+    });
+    list[i] = {
+      ...cur,
+      suggestedContentType: alt,
+      layoutWhy: cur.layoutWhy
+        ? `${cur.layoutWhy}; Adjacent duplicate type → ${alt}`
+        : `Adjacent duplicate type → ${alt}`,
+      layoutId: cur.layoutLocked || cur.layout_locked ? cur.layoutId : null,
+    };
+    if (String(list[i].visual_need || '').toLowerCase() === 'diagram_template' && alt !== 'diagram' && alt !== 'timeline') {
+      list[i].visual_need = 'photo';
+    }
+  }
+
+  return list;
+}
+
 function buildPolicyFromWizard({
   density,
   imageType,
@@ -675,6 +803,9 @@ module.exports = {
   ensureDeckMix,
   maxChartSlidesForDeck,
   enforceChartDensityCap,
+  maxDiagramTimelineSlidesForDeck,
+  enforceDiagramTimelineDensityCap,
+  enforceNoAdjacentSameContentType,
   buildPolicyFromWizard,
   layoutChoicesForUi,
   pickFallbackLayout,

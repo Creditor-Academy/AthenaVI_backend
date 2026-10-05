@@ -29,6 +29,16 @@ function countSlotPattern(slots, regex) {
   return maxIndex;
 }
 
+function countPlanItemSlots(slots) {
+  const ids = slots.map((s) => String(s.id || '').toUpperCase());
+  let max = 0;
+  for (const id of ids) {
+    const match = id.match(/^PLAN_\d+_ITEM_(\d+)$/);
+    if (match) max = Math.max(max, parseInt(match[1], 10));
+  }
+  return max;
+}
+
 function roleOf(slot) {
   return String(slot?.role || '').trim().toLowerCase();
 }
@@ -98,6 +108,9 @@ function deriveContentContract(schema) {
     quotes: countSlotPattern(slots, /^QUOTE_(\d+)/i),
     items: countSlotPattern(slots, /^ITEM_(\d+)/i),
     images: countSlotPattern(slots, /^IMAGE_(\d+)/i),
+    plans: countSlotPattern(slots, /^PLAN_(\d+)_/i),
+    planItems: countPlanItemSlots(slots),
+    pricingFeatures: countSlotPattern(slots, /^FEATURE_(\d+)$/i),
   };
 
   const slotMap = {};
@@ -231,6 +244,21 @@ function normalizeContentForLayout(content, schema) {
 
   if (Array.isArray(normalized.items) && contract.groups.items > 0) {
     normalized.items = normalized.items.slice(0, contract.groups.items);
+  }
+
+  if (contract.groups.plans > 0 && Array.isArray(normalized.plans)) {
+    normalized.plans = normalized.plans.slice(0, contract.groups.plans);
+    const itemCap = contract.groups.planItems;
+    if (itemCap > 0) {
+      normalized.plans = normalized.plans.map((plan) => {
+        if (!plan || typeof plan !== 'object') return plan;
+        const next = { ...plan };
+        if (Array.isArray(next.items) && next.items.length > itemCap) {
+          next.items = next.items.slice(0, itemCap);
+        }
+        return next;
+      });
+    }
   }
 
   const quotesList = normalized.quotes || normalized.testimonials;

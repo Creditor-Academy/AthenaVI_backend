@@ -82,6 +82,7 @@ const unknown = policy.coerceOutlineLayouts(
       summary: 'Open',
       suggestedContentType: 'title',
       layoutId: 'not_a_real_layout_v9',
+      layoutLocked: true,
     },
   ],
   concise,
@@ -126,6 +127,7 @@ const coercedHero = policy.coerceOutlineLayouts(
       summary: 'Cover',
       suggestedContentType: 'image+text',
       layoutId: 'large_image_v1',
+      layoutLocked: true,
     },
   ],
   cinematic,
@@ -142,7 +144,15 @@ const noVisuals = policy.filterLayoutTemplates(templates, {
   imageType: 'none',
 });
 const coercedPlain = policy.coerceOutlineLayouts(
-  [{ order: 1, title: 'Hello', summary: 'Open', layoutId: 'large_image_v1' }],
+  [
+    {
+      order: 1,
+      title: 'Hello',
+      summary: 'Open',
+      layoutId: 'large_image_v1',
+      layoutLocked: true,
+    },
+  ],
   noVisuals,
   { slideCount: 1, imageType: 'none' }
 );
@@ -155,6 +165,44 @@ const named = policy.namedPromptPalette(
 );
 assert.ok(named && named.bg && named.text, 'named hospitality colors bias the palette');
 assert.ok(named.text.toLowerCase() !== '#64748b', 'espresso text is not grey');
+
+const dupTypes = [
+  { order: 1, title: 'A', suggestedContentType: 'title' },
+  { order: 2, title: 'B', suggestedContentType: 'diagram', beats: ['1', '2'] },
+  { order: 3, title: 'C', suggestedContentType: 'diagram', beats: ['a'] },
+  { order: 4, title: 'D', suggestedContentType: 'closing' },
+];
+const fixedAdj = policy.enforceNoAdjacentSameContentType(dupTypes);
+assert.notStrictEqual(
+  fixedAdj[1].suggestedContentType,
+  fixedAdj[2].suggestedContentType,
+  'adjacent duplicate content types are broken'
+);
+
+const manyDiagrams = [
+  { order: 1, title: 'T', suggestedContentType: 'title' },
+  { order: 2, title: 'D1', suggestedContentType: 'diagram' },
+  { order: 3, title: 'D2', suggestedContentType: 'diagram' },
+  { order: 4, title: 'D3', suggestedContentType: 'diagram' },
+  { order: 5, title: 'X', suggestedContentType: 'closing' },
+];
+const cappedDiag = policy.enforceDiagramTimelineDensityCap(manyDiagrams);
+const bodyDiag = cappedDiag
+  .slice(1, -1)
+  .filter((s) => ['diagram', 'timeline'].includes(String(s.suggestedContentType).toLowerCase()));
+assert.ok(bodyDiag.length <= 2, '5-slide deck caps diagram/timeline on middle slides to 2');
+
+const digestBalanced = policy.buildLayoutDigest(concise, { maxTotal: 64 });
+const digestTypes = new Set(digestBalanced.map((r) => r.contentType));
+assert.ok(digestTypes.size >= 5, 'digest round-robin covers multiple content types');
+
+const narrative = require('../src/modules/presentation/narrativeSlideBlueprints');
+assert.strictEqual(narrative.blueprintForSlideCount(8).length, 8);
+assert.strictEqual(narrative.roleToContentDefaults('hero_title').suggestedContentType, 'title');
+assert.strictEqual(
+  narrative.roleToContentDefaults('process_workflow', { slide: { beats: [] } }).suggestedContentType,
+  'bullet_list'
+);
 
 console.log('layoutCatalogPolicy tests passed', {
   seed: templates.length,
