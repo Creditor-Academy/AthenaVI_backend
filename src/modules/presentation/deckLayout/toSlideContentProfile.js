@@ -240,6 +240,12 @@ function toSlideContentProfile(input = {}) {
         )
     ),
     hasDeviceMockup: Boolean(input.hasDeviceMockup || input.mockup || input.deviceMockup || input.appScreenshot),
+    suggestedContentType: input.suggestedContentType
+      ? String(input.suggestedContentType).toLowerCase()
+      : undefined,
+    narrativeRole: input.narrativeRole
+      ? String(input.narrativeRole).toLowerCase().replace(/-/g, '_')
+      : undefined,
     preferredStyles: asArray(input.preferredStyles).map((s) => String(s).toLowerCase()),
     preferredMoods: asArray(input.preferredMoods).map((s) => String(s).toLowerCase()),
     industry: input.industry ? String(input.industry).toLowerCase() : undefined,

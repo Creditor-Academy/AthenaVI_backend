@@ -58,12 +58,21 @@ function resolveAspectCanvas(aspectRatio) {
   return ASPECT_CANVAS[key] || ASPECT_CANVAS['16:9'];
 }
 
+const {
+  SLIDE_TEXT_SAFE_INSET_X,
+  SLIDE_TEXT_SAFE_INSET_Y,
+  slideTextSafeRect,
+} = require('./slideTextSafeArea');
+
 module.exports = {
   AI_SLIDE_MAX,
   DECK_SLIDE_MAX,
   MAX_ELEMENTS_PER_SLIDE,
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  SLIDE_TEXT_SAFE_INSET_X,
+  SLIDE_TEXT_SAFE_INSET_Y,
+  slideTextSafeRect,
   PPTX_WIDTH_IN,
   PPTX_HEIGHT_IN,
   ELEMENT_TYPES,

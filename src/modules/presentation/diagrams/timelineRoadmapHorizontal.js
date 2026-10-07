@@ -3,6 +3,8 @@
  * Layout id: timeline_roadmap_horizontal_v1 only.
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TLRH_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -183,8 +185,11 @@ function timelineRoadmapHorizontalOverlay(gx, gy, gw, gh) {
 }
 
 function specToTimelineRoadmapHorizontalContent(spec) {
-  if (spec.kind === 'road') return { svg: roadSvg(), colorMode: 'fixed', fill: spec.color }
-  return { svg: pinSvg(spec), colorMode: 'recolorable', fill: spec.color }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec.kind === 'road') {
+    return graphicContentFromTheme({ svg: roadSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  return graphicContentFromTheme({ svg: pinSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -279,7 +284,7 @@ function layoutTimelineRoadmapHorizontalElements(elements, schema, palette = {},
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

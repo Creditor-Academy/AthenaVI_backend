@@ -39,7 +39,8 @@ function seedFromOutlineSlide(outlineSlide = {}) {
   const title = String(outlineSlide.title || '').trim();
   const subtitle = String(outlineSlide.subtitle || '').trim();
   const summary = String(outlineSlide.summary || outlineSlide.description || '').trim();
-  return {
+  const suggested = String(outlineSlide.suggestedContentType || outlineSlide.contentType || '').toLowerCase();
+  const seed = {
     title,
     subtitle,
     body: summary,
@@ -48,7 +49,12 @@ function seedFromOutlineSlide(outlineSlide = {}) {
     beats,
     bullets: beats.map((b) => (b.title === b.body ? b.title : `**${b.title}:** ${b.body}`)),
     columns: beats.map((b) => ({ title: b.title, body: b.body })),
+    outlineSlide,
   };
+  if (suggested === 'pricing' || suggested.includes('pricing')) {
+    seed.plans = seedPlansFromOutline(outlineSlide);
+  }
+  return seed;
 }
 
 function countHeadingSlots(slots) {
@@ -70,6 +76,104 @@ function countBodyishSlots(slots) {
     if (['subheading', 'body', 'bullet', 'caption', 'stat', 'cta', 'quote'].includes(role)) return true;
     return /subtitle|body|bullet|card_|col_|item_/.test(id);
   }).length;
+}
+
+function hasPricingPlanSlots(slots) {
+  return (slots || []).some((s) => /^plan_\d+_/i.test(String(s.id || '')));
+}
+
+function countPlanLabelSlots(slots) {
+  return (slots || []).filter((s) => /^plan_\d+_(label|name)$/i.test(String(s.id || ''))).length;
+}
+
+function isPricingLayoutSchema(layoutSchema) {
+  const ct = String(layoutSchema?.content_type || '').toLowerCase();
+  const layoutId = String(layoutSchema?.layout_id || layoutSchema?.layoutId || '');
+  return ct === 'pricing' || /^pricing_/.test(layoutId) || hasPricingPlanSlots(layoutSchema?.slots);
+}
+
+function planEntryIsWeak(plan) {
+  if (!plan || typeof plan !== 'object') return true;
+  if (isWeakText(plan.label) && isWeakText(plan.name)) return true;
+  if (isWeakText(plan.price)) return true;
+  const items = Array.isArray(plan.items) ? plan.items : [];
+  if (!items.some((item) => !isWeakText(typeof item === 'string' ? item : item?.text))) return true;
+  return false;
+}
+
+function seedPlansFromOutline(outlineSlide = {}) {
+  const beats = beatItems(outlineSlide.beats);
+  if (beats.length >= 2) {
+    return beats.slice(0, 4).map((b, i) => {
+      const body = String(b.body || '').trim();
+      const priceMatch = body.match(/\$[\d,.]+(?:\s*\/\s*(?:mo|yr|month|year))?/i);
+      return {
+        label: b.title || `Tier ${i + 1}`,
+        price: priceMatch ? priceMatch[0] : '',
+        period: body.includes('/mo') ? '/mo' : body.includes('/yr') ? '/yr' : '',
+        items: body && !priceMatch ? [body] : [`Includes ${b.title || `tier ${i + 1}`} benefits`],
+        highlighted: i === 1,
+      };
+    });
+  }
+  return [
+    { label: 'Starter', price: '$29', period: '/mo', items: ['Core access', 'Community support'] },
+    {
+      label: 'Pro',
+      price: '$59',
+      period: '/mo',
+      items: ['Everything in Starter', 'Priority support'],
+      highlighted: true,
+    },
+    { label: 'Enterprise', price: 'Custom', items: ['Dedicated success', 'Custom SLA'] },
+  ];
+}
+
+function contentMissingPricingPlans(content, layoutSchema = null) {
+  if (!isPricingLayoutSchema(layoutSchema)) return false;
+  const minPlans = Math.max(2, countPlanLabelSlots(layoutSchema?.slots) || 3);
+  const plans = Array.isArray(content?.plans)
+    ? content.plans
+    : Array.isArray(content?.pricing?.tiers)
+      ? content.pricing.tiers
+      : [];
+  const valid = plans.filter((p) => !planEntryIsWeak(p));
+  return valid.length < Math.min(minPlans, 3);
+}
+
+function compiledHasWeakPricingElements(elementsDoc, layoutSchema = null) {
+  if (!isPricingLayoutSchema(layoutSchema)) return false;
+  const elements = Array.isArray(elementsDoc?.elements) ? elementsDoc.elements : [];
+  const bySlot = new Map();
+  for (const el of elements) {
+    if (el.type !== 'text' && el.type !== 'textbox') continue;
+    const sid = String(el.slotId || el.id || '').toUpperCase();
+    if (!/^PLAN_\d+_/.test(sid)) continue;
+    bySlot.set(sid, el);
+  }
+  if (!bySlot.size) return false;
+
+  for (let n = 1; n <= 6; n += 1) {
+    const labelKey = bySlot.has(`PLAN_${n}_LABEL`)
+      ? `PLAN_${n}_LABEL`
+      : bySlot.has(`PLAN_${n}_NAME`)
+        ? `PLAN_${n}_NAME`
+        : null;
+    const priceKey = bySlot.has(`PLAN_${n}_PRICE`) ? `PLAN_${n}_PRICE` : null;
+    if (!labelKey && !priceKey) {
+      if (![...bySlot.keys()].some((k) => k.startsWith(`PLAN_${n}_`))) continue;
+    }
+    if (labelKey && isWeakText(bySlot.get(labelKey)?.content?.text)) return true;
+    if (priceKey && isWeakText(bySlot.get(priceKey)?.content?.text)) return true;
+    const itemKeys = [...bySlot.keys()]
+      .filter((k) => k.startsWith(`PLAN_${n}_ITEM_`))
+      .sort();
+    if (itemKeys.length) {
+      const anyItem = itemKeys.some((k) => !isWeakText(bySlot.get(k)?.content?.text));
+      if (!anyItem) return true;
+    }
+  }
+  return false;
 }
 
 function mergeSeedIntoContent(content, seed, layoutSchema = null) {
@@ -133,10 +237,26 @@ function mergeSeedIntoContent(content, seed, layoutSchema = null) {
     next.visual = seedObj.visual;
   }
 
+  if (isPricingLayoutSchema(layoutSchema)) {
+    const plans = Array.isArray(next.plans) ? next.plans.slice() : [];
+    const validPlans = plans.filter((p) => !planEntryIsWeak(p));
+    const minPlans = Math.max(2, countPlanLabelSlots(slots) || 3);
+    if (validPlans.length < minPlans) {
+      const seeded =
+        Array.isArray(seedObj.plans) && seedObj.plans.length
+          ? seedObj.plans
+          : seedPlansFromOutline(seedObj.outlineSlide || seedObj);
+      next.plans = seeded.slice(0, Math.max(minPlans, seeded.length));
+    } else if (validPlans.length) {
+      next.plans = validPlans;
+    }
+  }
+
   return next;
 }
 
 function contentMissingRequiredCopy(content, layoutSchema = null) {
+  if (contentMissingPricingPlans(content, layoutSchema)) return true;
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   if (!slots.length) return isWeakText(content?.title);
   const headings = countHeadingSlots(slots);
@@ -161,8 +281,13 @@ module.exports = {
   isWeakText,
   beatItems,
   seedFromOutlineSlide,
+  seedPlansFromOutline,
   mergeSeedIntoContent,
   contentMissingRequiredCopy,
+  contentMissingPricingPlans,
+  compiledHasWeakPricingElements,
+  isPricingLayoutSchema,
   countHeadingSlots,
   countBodyishSlots,
+  hasPricingPlanSlots,
 };

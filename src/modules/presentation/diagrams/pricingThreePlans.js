@@ -30,11 +30,11 @@ const PRICING_TP_GEOM = {
   n: 3,
 }
 
-const PRICING_TP_PALETTE = [
-  { main: '#2EC4D6', checks: 1 },
-  { main: '#8BC34A', checks: 2 },
-  { main: '#E8A317', checks: 3 },
-]
+const { graphicContentFromTheme, resolvePaletteRole, resolvePaletteSequenceIndex } = require('@athena/contracts/graphicTheme.js')
+const { resolveTextColor } = require('../artDirection/resolveTextColor')
+
+/** Feature check counts per tier (colors come from theme palette sequence). */
+const PRICING_TP_CHECKS = [1, 2, 3]
 
 function isPricingThreePlansLayout(layoutId) {
   const id = String(layoutId || '')
@@ -138,14 +138,13 @@ function planChromeSvg(spec) {
   const markX = tab + 22
   const markY0 = 128
   const markStep = 58
-  const navy = '#1B3A4B'
   const marks = []
   for (let i = 0; i < 4; i += 1) {
     const y = markY0 + i * markStep
     if (i < checks) {
-      marks.push(`<path d="M ${markX - 8} ${y} L ${markX - 2} ${y + 7} L ${markX + 10} ${y - 8}" fill="none" stroke="${navy}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`)
+      marks.push(`<path d="M ${markX - 8} ${y} L ${markX - 2} ${y + 7} L ${markX + 10} ${y - 8}" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`)
     } else {
-      marks.push(`<path d="M ${markX - 8} ${y - 8} L ${markX + 8} ${y + 8} M ${markX + 8} ${y - 8} L ${markX - 8} ${y + 8}" fill="none" stroke="${navy}" stroke-width="3" stroke-linecap="round"/>`)
+      marks.push(`<path d="M ${markX - 8} ${y - 8} L ${markX + 8} ${y + 8} M ${markX + 8} ${y - 8} L ${markX - 8} ${y + 8}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.55"/>`)
     }
   }
   const tabY = g.tabInset
@@ -180,12 +179,11 @@ function pricingThreePlansChromeSpecs() {
       y: g.ruleY,
       w: g.ruleW,
       h: g.ruleH,
-      color: '#2EC4D6',
       layer: 3,
     },
   ]
   for (let i = 0; i < g.n; i += 1) {
-    const pal = PRICING_TP_PALETTE[i]
+    const checks = PRICING_TP_CHECKS[i] || 1
     const x = cardX(i)
     specs.push({
       slotId: `PRICING_TP_${i + 1}_CARD`,
@@ -195,19 +193,19 @@ function pricingThreePlansChromeSpecs() {
       w,
       h: g.cardH,
       borderRadius: 16,
-      fill: '#E8EEF2',
+      fillColorRole: 'cardBg',
       layer: 3,
     })
     specs.push({
       slotId: `PRICING_TP_${i + 1}`,
       kind: 'graphic',
       n: i + 1,
-      checks: pal.checks,
+      checks,
       x,
       y: g.cardY,
       w,
       h: g.cardH,
-      color: pal.main,
+      sequenceIndex: i,
       layer: 4,
     })
     const starSize = g.burstR * 2
@@ -215,11 +213,12 @@ function pricingThreePlansChromeSpecs() {
       slotId: `PRICING_TP_${i + 1}_STAR`,
       kind: 'graphic',
       star: true,
+      n: i + 1,
       x: x + g.burstCx - g.burstR,
       y: g.cardY + g.burstCy - g.burstR,
       w: starSize,
       h: starSize,
-      color: pal.main,
+      sequenceIndex: i,
       layer: 5,
     })
   }
@@ -275,24 +274,54 @@ function pricingThreePlansOverlay(gx, gy, gw, gh) {
   }
 }
 
-function specToPricingThreePlansContent(spec) {
-  if (spec?.rule) return { svg: ruleSvg(), colorMode: 'recolorable', fill: spec.color }
-  if (spec?.star) return { svg: starBadgeSvg(), colorMode: 'recolorable', fill: spec.color }
-  return { svg: planChromeSvg(spec), colorMode: 'recolorable', fill: spec.color }
+function specToPricingThreePlansContent(spec, themeTokens = {}) {
+  const colorRoles = themeTokens?.colorRoles || null
+  if (spec?.rule) {
+    return graphicContentFromTheme({
+      svg: ruleSvg(),
+      fillColorRole: 'primary',
+      colorMode: 'themed',
+      colorRoles,
+    })
+  }
+  if (spec?.star) {
+    const idx = Math.max(0, (spec.n || 1) - 1)
+    return graphicContentFromTheme({
+      svg: starBadgeSvg(),
+      sequenceIndex: idx,
+      colorMode: 'sequenced',
+      colorRoles,
+    })
+  }
+  const idx = Math.max(0, (spec.sequenceIndex ?? (spec.n || 1) - 1))
+  return graphicContentFromTheme({
+    svg: planChromeSvg(spec),
+    sequenceIndex: idx,
+    colorMode: 'sequenced',
+    colorRoles,
+  })
 }
 
-function pricingThreePlansPreviewSvg() {
+function pricingThreePlansPreviewSvg(themeTokens = {}) {
+  const palette = themeTokens?.palette || themeTokens || {}
+  const colorRoles = themeTokens?.colorRoles || null
   const specs = pricingThreePlansChromeSpecs()
   const g = PRICING_TP_GEOM
   const parts = specs.map((spec) => {
     if (spec.kind === 'shape') {
-      return `<rect x="${spec.x}" y="${spec.y}" width="${spec.w}" height="${spec.h}" rx="${spec.borderRadius || 12}" fill="${spec.fill}"/>`
+      const fill = resolvePaletteRole(palette, colorRoles, spec.fillColorRole || 'cardBg', '#E8EEF2')
+      return `<rect x="${spec.x}" y="${spec.y}" width="${spec.w}" height="${spec.h}" rx="${spec.borderRadius || 12}" fill="${fill}"/>`
     }
-    const inner = specToPricingThreePlansContent(spec).svg
+    const inner = specToPricingThreePlansContent(spec, themeTokens).svg
     const match = inner.match(/<svg[^>]*>([\s\S]*)<\/svg>/i)
     const vb = inner.match(/viewBox="([^"]+)"/)
     const par = spec.star ? 'xMidYMid meet' : 'none'
-    return `<svg x="${spec.x}" y="${spec.y}" width="${spec.w}" height="${spec.h}" viewBox="${vb ? vb[1] : '0 0 100 100'}" preserveAspectRatio="${par}" color="${spec.color}">${match ? match[1] : ''}</svg>`
+    const idx = spec.sequenceIndex ?? 0
+    const color =
+      spec.rule
+        ? resolvePaletteRole(palette, colorRoles, 'primary', '#6366F1')
+        : resolvePaletteSequenceIndex(palette, colorRoles, idx, '#6366F1')
+    return `<svg x="${spec.x}" y="${spec.y}" width="${spec.w}" height="${spec.h}" viewBox="${vb ? vb[1] : '0 0 100 100'}" preserveAspectRatio="${par}" color="${color}">${match ? match[1] : ''}</svg>`
   })
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.viewW} ${g.viewH}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${parts.join('')}</svg>`
 }
@@ -301,8 +330,13 @@ function newId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function layoutPricingThreePlans(elements, schema, palette = {}, canvas = {}) {
+function layoutPricingThreePlansElements(elements, schema, themeTokens = {}, canvas = {}) {
   if (!Array.isArray(elements)) return elements
+  const palette = themeTokens?.palette || themeTokens || {}
+  const colorRoles = themeTokens?.colorRoles || palette?.colorRoles || null
+  const theme = { palette, colorRoles }
+  const headingColor = resolveTextColor({ theme, textRole: 'heading' }).color
+  const bodyMuted = resolveTextColor({ theme, textRole: 'body' }).color
   const canvasW = canvas.width || 1920
   const canvasH = canvas.height || 1080
   const sx = canvasW / PRICING_TP_GEOM.viewW
@@ -335,17 +369,19 @@ function layoutPricingThreePlans(elements, schema, palette = {}, canvas = {}) {
     }
   }
 
+  const onAccent = resolvePaletteRole(palette, colorRoles, 'textOnAccent', '#ffffff')
   const next = [
-    placeText('HEADING', overlay.heading, { align: 'center', verticalAlign: 'center', fontSize: 32, fontWeight: 800, color: '#1B3A4B', clipToSlot: true, lineHeight: 1.1 }),
-    placeText('SUBHEADING', overlay.subheading, { align: 'center', verticalAlign: 'center', fontSize: 14, fontWeight: 500, color: '#6B7280', clipToSlot: true, lineHeight: 1.25 }),
+    placeText('HEADING', overlay.heading, { align: 'center', verticalAlign: 'center', fontSize: 32, fontWeight: 800, color: headingColor, clipToSlot: true, lineHeight: 1.1 }),
+    placeText('SUBHEADING', overlay.subheading, { align: 'center', verticalAlign: 'center', fontSize: 14, fontWeight: 500, color: bodyMuted, clipToSlot: true, lineHeight: 1.25 }),
   ]
   for (let i = 0; i < 3; i += 1) {
     const n = i + 1
-    next.push(placeText(`PLAN_${n}_LABEL`, overlay.labels[i], { align: 'center', verticalAlign: 'center', fontSize: 15, fontWeight: 700, color: '#ffffff', clipToSlot: true, lineHeight: 1 }))
-    next.push(placeText(`PLAN_${n}_PRICE`, overlay.prices[i], { align: 'left', verticalAlign: 'center', fontSize: 40, fontWeight: 800, color: PRICING_TP_PALETTE[i].main, clipToSlot: true, lineHeight: 1 }))
-    next.push(placeText(`PLAN_${n}_CTA`, overlay.ctas[i], { align: 'center', verticalAlign: 'center', fontSize: 11, fontWeight: 800, color: '#ffffff', clipToSlot: true, lineHeight: 1.12, wrap: 'wrap' }))
+    const tierColor = resolvePaletteSequenceIndex(palette, colorRoles, i, resolvePaletteRole(palette, colorRoles, 'accent', '#6366F1'))
+    next.push(placeText(`PLAN_${n}_LABEL`, overlay.labels[i], { align: 'center', verticalAlign: 'center', fontSize: 15, fontWeight: 700, color: onAccent, clipToSlot: true, lineHeight: 1 }))
+    next.push(placeText(`PLAN_${n}_PRICE`, overlay.prices[i], { align: 'left', verticalAlign: 'center', fontSize: 40, fontWeight: 800, color: tierColor, clipToSlot: true, lineHeight: 1 }))
+    next.push(placeText(`PLAN_${n}_CTA`, overlay.ctas[i], { align: 'center', verticalAlign: 'center', fontSize: 11, fontWeight: 800, color: onAccent, clipToSlot: true, lineHeight: 1.12, wrap: 'wrap' }))
     for (let k = 0; k < 4; k += 1) {
-      next.push(placeText(`PLAN_${n}_ITEM_${k + 1}`, overlay.items[i][k], { align: 'left', verticalAlign: 'center', fontSize: 14, fontWeight: 500, color: '#6B7280', clipToSlot: true, lineHeight: 1.2 }))
+      next.push(placeText(`PLAN_${n}_ITEM_${k + 1}`, overlay.items[i][k], { align: 'left', verticalAlign: 'center', fontSize: 14, fontWeight: 500, color: bodyMuted, clipToSlot: true, lineHeight: 1.2 }))
     }
   }
   const chrome = pricingThreePlansChromeSpecs().map((spec) => {
@@ -369,23 +405,28 @@ function layoutPricingThreePlans(elements, schema, palette = {}, canvas = {}) {
         opacity: 1,
       }
     if (spec.kind === 'shape') {
+      const cardFill = resolvePaletteRole(palette, colorRoles, spec.fillColorRole || 'cardBg', '#E8EEF2')
       return {
         id: prev?.id || newId('shp-price'),
         type: 'shape',
         layer: spec.layer || 3,
         placement,
-        content: { shape: 'rect', borderRadius: Math.round((spec.borderRadius || 12) * Math.min(sx, sy)), fill: spec.fill },
+        content: {
+          shape: 'rect',
+          borderRadius: Math.round((spec.borderRadius || 12) * Math.min(sx, sy)),
+          fill: { colorRole: spec.fillColorRole || 'cardBg', color: cardFill },
+        },
         role: 'decoration',
         slotId: spec.slotId,
       }
     }
-    const graphic = specToPricingThreePlansContent(spec)
+    const graphic = specToPricingThreePlansContent(spec, themeTokens)
     return {
       id: prev?.id || newId('shp-price'),
       type: 'graphic',
       layer: spec.layer || 4,
       placement,
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill || spec.color, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }
@@ -393,9 +434,24 @@ function layoutPricingThreePlans(elements, schema, palette = {}, canvas = {}) {
   return [...chrome, ...next]
 }
 
+function layoutPricingThreePlans(doc, layoutSchema, themeTokens, canvas = {}) {
+  if (!doc) return doc
+  if (Array.isArray(doc)) {
+    return layoutPricingThreePlansElements(doc, layoutSchema, themeTokens || {}, canvas)
+  }
+  const size = {
+    width: canvas.width || doc.canvas?.width || 1920,
+    height: canvas.height || doc.canvas?.height || 1080,
+  }
+  return {
+    ...doc,
+    elements: layoutPricingThreePlansElements(doc.elements || [], layoutSchema, themeTokens || {}, size),
+  }
+}
+
 module.exports = {
   PRICING_TP_GEOM,
-  PRICING_TP_PALETTE,
+  PRICING_TP_CHECKS,
   PRICING_TP_DEFAULTS,
   isPricingThreePlansLayout,
   isPricingThreePlansTextSlot,
@@ -403,5 +459,6 @@ module.exports = {
   pricingThreePlansOverlay,
   specToPricingThreePlansContent,
   pricingThreePlansPreviewSvg,
+  layoutPricingThreePlansElements,
   layoutPricingThreePlans,
 }

@@ -8,6 +8,8 @@ const {
   ADJACENT_LAYOUT_PENALTY,
 } = require('./layoutScoring.weights');
 const { evaluateLayoutCompatibility } = require('./layoutCompatibility');
+const { scoreAiPricingLayoutPreference } = require('./pricingLayoutPolicy');
+const { scoreProblemLayoutPreference } = require('./problemLayoutPolicy');
 
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
@@ -236,6 +238,14 @@ function scoreDomainIntent(slide, layout, reasons) {
   if (slide.hasPricing && (purposes.includes('pricing') || layout?.category === 'pricing' || tags.includes('pricing'))) {
     boost += 4;
     reasons.push('Layout aligns with pricing comparison content');
+    const pref = scoreAiPricingLayoutPreference(layout?.id);
+    if (pref > 0) {
+      boost += pref;
+      reasons.push('Preferred AI pricing tier-card layout');
+    } else if (pref < 0) {
+      boost += pref;
+      reasons.push('Demoted complex pricing layout for AI generation');
+    }
   }
   if (slide.hasTeam && (purposes.includes('team') || layout?.category === 'team' || id.includes('team'))) {
     boost += 3;
@@ -402,7 +412,17 @@ function scoreLayout(slide, layout, options = {}) {
   }
   const uniqueWarnings = [...new Set(warnings)];
   const domainBoost = scoreDomainIntent(slide, layout, reasons);
-  const score = clamp(scaled + repetitionPenalty + adjacentPenalty + domainBoost, 0, 100);
+  const problemBoost = scoreProblemLayoutPreference(layout, {
+    purpose: slide.purpose,
+    narrativeRole: slide.narrativeRole,
+    suggestedContentType: slide.suggestedContentType,
+  });
+  if (problemBoost !== 0) {
+    reasons.push(
+      problemBoost > 0 ? 'Layout fits problem / friction narrative' : 'Chart layout demoted for problem slide'
+    );
+  }
+  const score = clamp(scaled + repetitionPenalty + adjacentPenalty + domainBoost + problemBoost, 0, 100);
 
   if (!reasons.length) reasons.push('Scored from available layout metadata');
 

@@ -28,6 +28,81 @@ function runContentPreShape(content, layoutSchema) {
   next = normalizeDiagramContent(next, layoutSchema);
   next = normalizeDeviceContent(next, layoutSchema);
   next = normalizeAgendaContent(next, layoutSchema);
+  next = normalizeComparisonProsConsContent(next, layoutSchema);
+  return next;
+}
+
+function isComparisonProsConsLayoutId(layoutId) {
+  return /comparison_pros_cons/i.test(String(layoutId || ''));
+}
+
+function prosConsRowFromEntry(entry) {
+  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+    const title = String(entry.title ?? entry.label ?? entry.heading ?? entry.topic ?? '').trim();
+    const body = String(entry.body ?? entry.text ?? entry.detail ?? '').trim();
+    return { title, body };
+  }
+  const raw = typeof entry === 'string' ? entry.trim() : String(entry ?? '').trim();
+  if (!raw) return { title: '', body: '' };
+  const colon = raw.match(/^([^:]{2,60}):\s*(.+)$/);
+  if (colon) return { title: colon[1].trim(), body: colon[2].trim() };
+  return { title: raw, body: '' };
+}
+
+function normalizeProsConsList(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  const rows = list.map((entry) => prosConsRowFromEntry(entry));
+  while (rows.length < 5) rows.push({ title: '', body: '' });
+  return rows.slice(0, 5);
+}
+
+function normalizeComparisonProsConsContent(content, layoutSchema) {
+  const layoutId = String(layoutSchema?.layout_id || '');
+  if (!isComparisonProsConsLayoutId(layoutId) || !content || typeof content !== 'object') {
+    return content;
+  }
+  const next = { ...content };
+  const cmp = next.comparison && typeof next.comparison === 'object' ? { ...next.comparison } : {};
+
+  if (!next.prosTitle) {
+    next.prosTitle =
+      cmp.prosTitle || cmp.left?.title || next.left?.title || 'Pros';
+  }
+  if (!next.consTitle) {
+    next.consTitle =
+      cmp.consTitle || cmp.right?.title || next.right?.title || 'Cons';
+  }
+
+  let prosRows = Array.isArray(next.prosRows) ? next.prosRows : null;
+  let consRows = Array.isArray(next.consRows) ? next.consRows : null;
+  if (!prosRows?.length) {
+    if (Array.isArray(cmp.pros) && cmp.pros.length) prosRows = cmp.pros;
+    else if (Array.isArray(next.pros) && next.pros.length) prosRows = next.pros;
+    else if (Array.isArray(cmp.left?.bullets)) prosRows = cmp.left.bullets;
+    else if (Array.isArray(next.left?.bullets)) prosRows = next.left.bullets;
+  }
+  if (!consRows?.length) {
+    if (Array.isArray(cmp.cons) && cmp.cons.length) consRows = cmp.cons;
+    else if (Array.isArray(next.cons) && next.cons.length) consRows = next.cons;
+    else if (Array.isArray(cmp.right?.bullets)) consRows = cmp.right.bullets;
+    else if (Array.isArray(next.right?.bullets)) consRows = next.right.bullets;
+  }
+
+  next.prosRows = normalizeProsConsList(prosRows || []);
+  next.consRows = normalizeProsConsList(consRows || []);
+  next.pros = next.prosRows.map((r) =>
+    r.title && r.body ? `${r.title}: ${r.body}` : r.title || r.body || ''
+  );
+  next.cons = next.consRows.map((r) =>
+    r.title && r.body ? `${r.title}: ${r.body}` : r.title || r.body || ''
+  );
+  next.comparison = {
+    ...cmp,
+    prosTitle: next.prosTitle,
+    consTitle: next.consTitle,
+    left: { ...(cmp.left || next.left || {}), title: next.prosTitle },
+    right: { ...(cmp.right || next.right || {}), title: next.consTitle },
+  };
   return next;
 }
 
@@ -787,7 +862,9 @@ module.exports = {
   normalizeTimelineContent,
   normalizeDiagramContent,
   normalizeDeviceContent,
+  normalizeComparisonProsConsContent,
   layoutUsesPerSlotGalleryImages,
+  isComparisonProsConsLayoutId,
   layoutNeedsDiagramCellsFromSchema,
   countDiagramCellSlotsFromSchema,
 };

@@ -3,6 +3,8 @@
  * Layout id: timeline_milestones_cards_v1 only.
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TLMC_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -222,10 +224,17 @@ function timelineMilestonesCardsOverlay(gx, gy, gw, gh) {
 }
 
 function specToTimelineMilestonesCardsContent(spec) {
-  if (spec.kind === 'spine') return { svg: spineSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'bracket') return { svg: bracketSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'node') return { svg: nodeSvg(), colorMode: 'recolorable', fill: spec.color }
-  return { svg: cardSvg(spec), colorMode: 'recolorable', fill: spec.color }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec.kind === 'spine') {
+    return graphicContentFromTheme({ svg: spineSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'bracket') {
+    return graphicContentFromTheme({ svg: bracketSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'node') {
+    return graphicContentFromTheme({ svg: nodeSvg(), sequenceIndex: idx, colorMode: 'sequenced' })
+  }
+  return graphicContentFromTheme({ svg: cardSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -322,7 +331,7 @@ function layoutTimelineMilestonesCardsElements(elements, schema, palette = {}, c
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

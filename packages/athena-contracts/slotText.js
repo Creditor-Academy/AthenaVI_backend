@@ -346,6 +346,53 @@ function sideOf(content, side) {
   };
 }
 
+const PROS_CONS_ROW_COUNT = 5;
+
+function prosConsRowFromEntry(entry) {
+  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+    const title = String(entry.title ?? entry.label ?? entry.heading ?? entry.topic ?? '').trim();
+    const body = String(entry.body ?? entry.text ?? entry.detail ?? entry.description ?? '').trim();
+    if (title || body) return { title, body };
+  }
+  const raw = typeof entry === 'string' ? entry.trim() : itemToText(entry);
+  if (!raw) return { title: '', body: '' };
+  const cleaned = raw.replace(/^•\s*/, '').replace(/^â€¢\s*/, '');
+  const colonMatch = cleaned.match(/^([^:]{2,60}):\s*(.+)$/);
+  if (colonMatch) {
+    return {
+      title: stripMarkdownBold(colonMatch[1]).trim(),
+      body: stripMarkdownBold(colonMatch[2]).trim(),
+    };
+  }
+  const mdMatch = cleaned.match(/^\*\*(.+?)\*\*:\s*(.+)$/);
+  if (mdMatch) {
+    return { title: mdMatch[1].trim(), body: stripMarkdownBold(mdMatch[2]).trim() };
+  }
+  return { title: stripMarkdownBold(cleaned), body: '' };
+}
+
+function rawListForProsConsSide(content, side) {
+  const key = side === 'pros' ? 'pros' : 'cons';
+  const rowsKey = side === 'pros' ? 'prosRows' : 'consRows';
+  if (Array.isArray(content[rowsKey]) && content[rowsKey].length) return content[rowsKey];
+  const cmp = content.comparison && typeof content.comparison === 'object' ? content.comparison : null;
+  if (cmp && Array.isArray(cmp[rowsKey]) && cmp[rowsKey].length) return cmp[rowsKey];
+  if (cmp && Array.isArray(cmp[key]) && cmp[key].length) return cmp[key];
+  if (Array.isArray(content[key]) && content[key].length) return content[key];
+  const lateral = side === 'pros' ? 'left' : 'right';
+  const src = content[lateral] || cmp?.[lateral] || {};
+  const bullets = src.bullets || src.items || src.points;
+  if (Array.isArray(bullets) && bullets.length) return bullets;
+  return [];
+}
+
+function prosConsRowsForSide(content, side) {
+  const raw = rawListForProsConsSide(content, side);
+  const rows = raw.map((entry) => prosConsRowFromEntry(entry));
+  while (rows.length < PROS_CONS_ROW_COUNT) rows.push({ title: '', body: '' });
+  return rows.slice(0, PROS_CONS_ROW_COUNT);
+}
+
 function linesOf(value) {
   if (Array.isArray(value)) return itemsToTexts(value).join('\n');
   if (value && typeof value === 'object') return itemToText(value);
@@ -978,11 +1025,40 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     return bullets[idx] || '';
   }
 
+  if (id === 'pros_project_title') {
+    return String(
+      content.prosTitle ||
+        content.comparison?.prosTitle ||
+        content.comparison?.left?.title ||
+        content.left?.title ||
+        'Pros'
+    ).trim();
+  }
+  if (id === 'cons_project_title') {
+    return String(
+      content.consTitle ||
+        content.comparison?.consTitle ||
+        content.comparison?.right?.title ||
+        content.right?.title ||
+        'Cons'
+    ).trim();
+  }
+
+  const prosConsIndexed = id.match(/^(pros|cons)_(\d+)_(title|body)$/);
+  if (prosConsIndexed) {
+    const side = prosConsIndexed[1];
+    const index = Number(prosConsIndexed[2]) - 1;
+    const field = prosConsIndexed[3];
+    const rows = prosConsRowsForSide(content, side);
+    const row = rows[index] || { title: '', body: '' };
+    return field === 'title' ? row.title : row.body;
+  }
+
   if (
     id.includes('title') &&
     !id.includes('subtitle') &&
     // Never flood indexed process/card/column/row slots with the slide title.
-    !/^metric_|^plan_|^col_|^card_|^row_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_/.test(
+    !/^metric_|^plan_|^col_|^card_|^row_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_|^pros_\d+_|^cons_\d+_/.test(
       id
     )
   ) {

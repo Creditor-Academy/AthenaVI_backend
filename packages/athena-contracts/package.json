@@ -34,6 +34,11 @@
       "import": "./esm/contentRepair.js",
       "require": "./contentRepair.js",
       "default": "./contentRepair.js"
+    },
+    "./graphicTheme.js": {
+      "import": "./esm/graphicTheme.js",
+      "require": "./graphicTheme.js",
+      "default": "./graphicTheme.js"
     }
   }
 }

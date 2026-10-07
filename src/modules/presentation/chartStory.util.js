@@ -3,6 +3,11 @@
  * Layout is chosen from the data shape, not a fixed template per deck.
  */
 
+const {
+  isProblemNarrativeSlide,
+  isQuantitativeNarrativeRole,
+} = require('./narrativeContentTypeGuard');
+
 function chartDatasetCount(content = {}) {
   if (!content || typeof content !== 'object') return 0;
   if (Array.isArray(content.charts) && content.charts.length) {
@@ -44,6 +49,29 @@ function chartLabelLooksTemporal(labels) {
 
 function slideText(content = {}) {
   return `${content.title || ''} ${content.summary || ''} ${content.body || ''}`.toLowerCase();
+}
+
+function chartLabelsAreQualitative(labels) {
+  const arr = Array.isArray(labels) ? labels : [];
+  if (!arr.length) return false;
+  return arr.every((label) => {
+    const s = String(label || '').trim();
+    return (
+      s &&
+      !/\d|%|q[1-4]\b|20\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(s)
+    );
+  });
+}
+
+function chartsHaveDuplicateSeries(content = {}) {
+  const v1 = chartValues(content.chart);
+  const v2 = chartValues(content.chart2);
+  if (!v1.length || !v2.length) return false;
+  const len = Math.min(v1.length, v2.length);
+  if (len < 3) return false;
+  const a = v1.slice(0, len);
+  const b = v2.slice(0, len);
+  return a.every((value, index) => value === b[index]);
 }
 
 /**
@@ -148,6 +176,10 @@ function slideJustifiesChart({ content = {}, outlineSlide = {}, contentType, vis
   const need = String(visualNeed || content?.visual_need || '').toLowerCase();
   if (type !== 'chart' && need !== 'chart') return true;
 
+  if (isProblemNarrativeSlide(outlineSlide) && !isQuantitativeNarrativeRole(outlineSlide)) {
+    return false;
+  }
+
   const hay = [
     content?.title,
     content?.summary,
@@ -177,17 +209,21 @@ function slideJustifiesChart({ content = {}, outlineSlide = {}, contentType, vis
 
   const chart = content?.chart;
   if (chart && typeof chart === 'object') {
+    const labels = Array.isArray(chart.labels) ? chart.labels : [];
+    const qualitativeLabels = chartLabelsAreQualitative(labels);
+    if (qualitativeLabels && !isQuantitativeNarrativeRole(outlineSlide)) {
+      return false;
+    }
+    if (chartsHaveDuplicateSeries(content)) {
+      return false;
+    }
     if (chartLabelLooksTemporal(chart.labels)) return true;
     if (chartLooksLikeComposition(chart)) return true;
-    const labels = Array.isArray(chart.labels) ? chart.labels : [];
     // Labels that are just qualitative pillars (no units / periods) → not a real chart need
-    const qualitativeOnly =
-      labels.length > 0 &&
-      labels.every((label) => {
-        const s = String(label || '').trim();
-        return s && !/\d|%|q[1-4]|20\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(s);
-      });
-    if (qualitativeOnly && /security|isolation|compliance|encryption|audit|feature|benefit|risk reduction/i.test(hay)) {
+    if (
+      qualitativeLabels &&
+      /security|isolation|compliance|encryption|audit|feature|benefit|risk reduction/i.test(hay)
+    ) {
       return false;
     }
   }
@@ -215,8 +251,13 @@ function demoteSpuriousChart({ contentType, visualNeed, content, outlineSlide, p
   if (slideJustifiesChart({ content, outlineSlide, contentType, visualNeed })) {
     return { contentType, visualNeed, demoted: false };
   }
+  const fallbackType =
+    isProblemNarrativeSlide(outlineSlide) ||
+    String(outlineSlide?.suggestedContentType || '').toLowerCase() === 'bullet_list'
+      ? 'bullet_list'
+      : 'image+text';
   return {
-    contentType: 'image+text',
+    contentType: fallbackType,
     visualNeed: preferVisuals === false ? 'none' : 'photo',
     demoted: true,
   };
@@ -230,4 +271,6 @@ module.exports = {
   inferChartTypeFromStory,
   slideJustifiesChart,
   demoteSpuriousChart,
+  chartLabelsAreQualitative,
+  chartsHaveDuplicateSeries,
 };

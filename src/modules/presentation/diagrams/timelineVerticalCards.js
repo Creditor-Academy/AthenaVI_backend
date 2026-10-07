@@ -3,6 +3,8 @@
  * Layout id: timeline_vertical_cards_v1 only.
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TLVC_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -237,8 +239,11 @@ function hBody() {
 }
 
 function specToTimelineVerticalCardsContent(spec) {
-  if (spec.kind === 'spine') return { svg: spineSvg(), colorMode: 'fixed', fill: spec.color }
-  return { svg: rowSvg(spec), colorMode: 'recolorable', fill: spec.color }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec.kind === 'spine') {
+    return graphicContentFromTheme({ svg: spineSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  return graphicContentFromTheme({ svg: rowSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -340,7 +345,7 @@ function layoutTimelineVerticalCardsElements(elements, schema, palette = {}, can
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

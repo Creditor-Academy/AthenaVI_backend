@@ -2,6 +2,8 @@
  * Agenda timeline preview — 6 hex nodes + pastel body cards (no time pills).
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const AGENDA_TL_HEX_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -217,9 +219,14 @@ function agendaTimelineHexOverlayPlacements(gx, gy, gw, gh) {
 }
 
 function specToTimelineHexContent(spec) {
-  if (spec?.axis) return { svg: axisInlineSvg(), colorMode: 'fixed', fill: '#C5CAD3' }
-  if (spec?.card) return { svg: cardInlineSvg(), colorMode: 'recolorable', fill: spec.color }
-  return { svg: hexNodeInlineSvg(spec), colorMode: 'recolorable', fill: spec.color }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec?.axis) {
+    return graphicContentFromTheme({ svg: axisInlineSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec?.card) {
+    return graphicContentFromTheme({ svg: cardInlineSvg(), fillColorRole: 'cardBg', colorMode: 'themed' })
+  }
+  return graphicContentFromTheme({ svg: hexNodeInlineSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function agendaTimelineHexPreviewSvg() {

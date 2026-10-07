@@ -1,3 +1,5 @@
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 /**
  * Process Linear Horizontal Layout (Backend)
  * Layout ID: process_linear_horizontal_v2
@@ -286,11 +288,13 @@ function layoutProcessLinearHorizontal(elements = [], schema = {}, palette = {},
       opacity: 1,
     },
     content: {
-      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${trackEndX - trackStartX} 4" width="100%" height="100%" fill="none">
-        <line x1="0" y1="2" x2="${trackEndX - trackStartX}" y2="2" stroke="#CBD5E1" stroke-width="3" stroke-dasharray="4 3" />
+      ...graphicContentFromTheme({
+        svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${trackEndX - trackStartX} 4" width="100%" height="100%" fill="none">
+        <line x1="0" y1="2" x2="${trackEndX - trackStartX}" y2="2" stroke="currentColor" stroke-width="3" stroke-dasharray="4 3" />
       </svg>`,
-      colorMode: 'fixed',
-      fill: '#CBD5E1',
+        fillColorRole: 'muted',
+        colorMode: 'themed',
+      }),
       alt: 'Process Track',
     },
   });

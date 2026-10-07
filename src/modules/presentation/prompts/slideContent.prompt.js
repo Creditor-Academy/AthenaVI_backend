@@ -53,9 +53,13 @@ function buildSystem() {
   ].join(' ');
 }
 
-function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') {
+function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', narrative = {}) {
   const id = String(layoutId || '').toLowerCase();
   const type = String(suggestedType || '').toLowerCase();
+  const purpose = String(narrative.purpose || narrative.intent || '').toLowerCase();
+  const narrativeRole = String(narrative.narrativeRole || narrative.narrative_role || '')
+    .toLowerCase()
+    .replace(/-/g, '_');
   const lines = [];
 
   if (slideOrder === 1 || type === 'title') {
@@ -109,6 +113,18 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
   if (/closing_thank_you_fullbleed|fullbleed.*thank/i.test(id)) {
     lines.push(
       'Full-bleed thank-you slide: REQUIRED quote (≤25 words, attribution optional), titleRuns for "Thank you" bottom-left, shapeDecisions.__overlay__.enabled true.'
+    );
+  }
+
+  if (/comparison_pros_cons/.test(id) || (type === 'comparison' && /pros_cons/.test(id))) {
+    lines.push(
+      'Pros/cons comparison layout: REQUIRED title, prosTitle and consTitle (side labels, e.g. "Franchisee" vs "Independent"). Provide exactly 5 pros and 5 cons — each entry as "Short title: one-line detail" or { title, body }. Optional prosRows/consRows arrays with the same shape. Do not use a single pros/cons bullet block only.'
+    );
+  }
+
+  if (/grid_six_images|grid_three_images|four_images_v1/.test(id)) {
+    lines.push(
+      'Gallery grid: REQUIRED items[] or columns[] with one DISTINCT short title (≤4 words) per image slot — e.g. menu items, product variants, or venue features. REQUIRED imagePrompts with keys IMAGE_1, IMAGE_2, … — one isolated photographic subject per slot (≤12 words), no collage.'
     );
   }
 
@@ -169,6 +185,25 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '') 
   if (/device_(laptop|tablet)_/.test(id)) {
     lines.push(
       'Device split/centered layout: REQUIRED title + body. Fill imagePrompts for LAPTOP_IMAGE / TABLET_IMAGE as a flat WEBSITE or web-app UI screenshot (browser page layout) — no hardware bezel, no photographic scene. DEVICE_IMAGE on phone layouts stays mobile app UI.'
+    );
+  }
+
+  if (type === 'pricing' || /^pricing_/.test(id)) {
+    lines.push(
+      'Pricing slide: REQUIRED plans[] with at least 3 tiers when the brief mentions three memberships/plans. Each plan MUST include label (tier name), price (currency string), optional period (/mo, /yr), items[] (3–5 feature bullets), optional cta, and highlighted:true on the recommended tier when applicable.'
+    );
+    lines.push(
+      'Do not leave pricing slots empty — every PLAN_* field (label, price, period, items, CTA) must be populated from plans[]. Never output placeholder tier names or empty item lists.'
+    );
+  }
+
+  if (
+    purpose === 'problem' ||
+    narrativeRole === 'problem_statement' ||
+    narrativeRole === 'pain_points'
+  ) {
+    lines.push(
+      'Problem / friction slide: REQUIRED beats[] or bullets[] (2–5 concrete pains from the brief). Use columns[] only when the layout has card/column slots. Do NOT emit chart, chart2, charts[], stats[], or metrics[] — this is a qualitative narrative slide, not a data visualization.'
     );
   }
 
@@ -258,6 +293,8 @@ function buildUser(vars = {}) {
     vars.visual ? `Visual direction for this slide only: ${vars.visual}` : '',
     `Suggested type: ${vars.suggestedContentType || 'bullet_list'}`,
     vars.intent ? `Slide intent (follow closely): ${vars.intent}` : '',
+    vars.purpose ? `Slide purpose (narrative role): ${vars.purpose}` : '',
+    vars.narrativeRole ? `Narrative role: ${vars.narrativeRole}` : '',
     `Previous slide title: ${vars.previousSlideTitle || '(none)'}`,
     `Next slide title: ${vars.nextSlideTitle || '(none)'}`,
     vars.wizardBrief ? `\nWizard brief (honor voice, audience, purpose, narrative):\n${vars.wizardBrief}` : '',
@@ -272,7 +309,11 @@ function buildUser(vars = {}) {
       ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for the two para cards METRIC_TITLE_1/METRIC_BODY_1 and METRIC_TITLE_3/METRIC_BODY_3. Fill stats[] with { value, label } for STAT_1 (wide bottom) and STAT_2 (top). One image slot METRIC_IMAGE_2 sits between the top stat and the right card. Do NOT put bullets or long body copy into metric or stat slots.'
       : '',
     vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
-    layoutSpecificRules(vars.layoutId, vars.slideOrder, vars.suggestedContentType),
+    layoutSpecificRules(vars.layoutId, vars.slideOrder, vars.suggestedContentType, {
+      purpose: vars.purpose,
+      intent: vars.intent,
+      narrativeRole: vars.narrativeRole,
+    }),
     Array.isArray(vars.layoutContext?.shapeHints) && vars.layoutContext.shapeHints.length
       ? `\nShape hints (suggestions only — you decide in shapeDecisions):\n${vars.layoutContext.shapeHints
           .map(
@@ -295,7 +336,8 @@ function buildUser(vars = {}) {
     '- Replace any template placeholder wording with original content from the brief.',
     '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
     '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
-    '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → fill plans[] with label, price, items[]; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
+    '- Text is laid out inside slide safe margins (not edge-to-edge); respect max_lines and max_words so copy fits without over-shrinking.',
+    '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → MANDATORY plans[] with label, price, period?, items[] (min 2 tiers, prefer 3); every PLAN slot must map from plans[] — no empty tier fields; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
     '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
     '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated photographic subject per IMAGE_n / COL_n_IMAGE / DEVICE_IMAGE_n (≤12 words). Visual metaphor of the column topic only — do NOT paste title/body text into the prompt; forbid text/captions/logos in the image; no collages or triptychs.',
     '- imagePrompt / imagePrompts: describe a scene or object a camera would see. Never dump paragraph copy. Prefer "server racks in a dim data center" over quoting the slide body.',
@@ -338,7 +380,11 @@ function buildUser(vars = {}) {
           rows: [['Row 1', 'Value'], ['Row 2', 'Value']],
         },
         members: [{ name: '...', role: '...', email: '...' }],
-        plans: [{ label: '...', price: '...', items: ['...'], highlighted: false }],
+        plans: [
+          { label: 'Basic', price: '$29', period: '/mo', items: ['Feature A', 'Feature B'], cta: 'Choose Basic' },
+          { label: 'Pro', price: '$59', period: '/mo', items: ['Everything in Basic', 'Feature C'], highlighted: true, cta: 'Choose Pro' },
+          { label: 'Enterprise', price: 'Custom', items: ['Dedicated support', 'SLA'], cta: 'Contact us' },
+        ],
         contact: { address: '...', phone: '...', email: '...' },
         agenda: {
           columns: [{ heading: '...', items: ['...'] }],

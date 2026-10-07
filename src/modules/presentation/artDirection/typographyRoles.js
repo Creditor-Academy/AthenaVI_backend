@@ -1,4 +1,5 @@
 const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
+const CARD_TITLE_SLOT_RE = /^(card|col|row|feature|bullet|item)_\d+_(title|subtitle)$/i;
 
 function isLikelyCoverLayout(layoutSchema) {
   const layoutId = String(layoutSchema?.layout_id || layoutSchema?.layoutId || '').toLowerCase();
@@ -18,6 +19,10 @@ function isLikelyCoverLayout(layoutSchema) {
 function inferTypographyRole({ slot = {}, layoutSchema = {} } = {}) {
   const slotRole = String(slot?.role || '').toLowerCase();
   const slotId = String(slot?.id || '').toLowerCase();
+
+  if (CARD_TITLE_SLOT_RE.test(slotId)) {
+    return 'cardTitle';
+  }
 
   const mainTitle = MAIN_TITLE_SLOT_RE.test(slotId) || (slotRole === 'heading' && MAIN_TITLE_SLOT_RE.test(slotId));
   const cover = isLikelyCoverLayout(layoutSchema);

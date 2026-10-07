@@ -3,6 +3,8 @@
  * Layout id: timeline_milestones_v1 only (not cards / image).
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TLM_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -249,9 +251,14 @@ function timelineMilestonesOverlay(gx, gy, gw, gh) {
 }
 
 function specToTimelineMilestonesContent(spec) {
-  if (spec.kind === 'spine') return { svg: spineSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'node') return { svg: axisSvg(), colorMode: 'recolorable', fill: spec.color }
-  return { svg: cardSvg(spec), colorMode: 'recolorable', fill: spec.color }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec.kind === 'spine') {
+    return graphicContentFromTheme({ svg: spineSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'node') {
+    return graphicContentFromTheme({ svg: axisSvg(), sequenceIndex: idx, colorMode: 'sequenced' })
+  }
+  return graphicContentFromTheme({ svg: cardSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -354,7 +361,7 @@ function layoutTimelineMilestonesElements(elements, schema, palette = {}, canvas
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

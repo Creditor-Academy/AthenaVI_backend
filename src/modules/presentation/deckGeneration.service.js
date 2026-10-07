@@ -43,6 +43,7 @@ const {
   inferChartTypeFromStory,
   demoteSpuriousChart,
 } = require('./chartStory.util');
+const { guardNarrativeContentType } = require('./narrativeContentTypeGuard');
 const { resolveTitlePreferredLayoutId } = require('./titleLayout.util');
 const {
   countProcessSteps,
@@ -102,6 +103,7 @@ const {
   normalizeTimelineContent,
   normalizeDiagramContent,
   normalizeDeviceContent,
+  normalizeComparisonProsConsContent,
   layoutUsesPerSlotGalleryImages,
   layoutNeedsDiagramCellsFromSchema,
   countDiagramCellSlotsFromSchema,
@@ -3092,6 +3094,8 @@ async function processSlide(ctx, slide) {
               locale: ctx.locale || 'en',
               wizardBrief: ctx.wizardBrief || '',
               intent: slideIntent,
+              purpose: outlineSlide.purpose || null,
+              narrativeRole: outlineSlide.narrativeRole || outlineSlide.narrative_role || null,
               generationHints: mergedGenerationHints,
               slotConstraints: slotConstraintsFromLayout(contentLayoutSchema),
               layoutContext: layoutContextFromSchema(contentLayoutSchema),
@@ -3205,6 +3209,16 @@ async function processSlide(ctx, slide) {
           contentType = classified.data?.content_type || contentType || 'bullet_list';
         }
         visualNeed = classified.data?.visual_need || visualNeed || (preferVisuals ? 'photo' : 'none');
+        const narrativeGuard = guardNarrativeContentType(outlineSlide, contentType, content, {
+          outlineExplicit: outlineExplicit || ctx.outlineExplicitType,
+          visualNeed,
+        });
+        if (narrativeGuard.adjusted) {
+          contentType = narrativeGuard.contentType;
+          if (String(visualNeed).toLowerCase() === 'chart') {
+            visualNeed = preferVisuals ? 'photo' : 'none';
+          }
+        }
         await finishJob(classifyJob.job.id, {
           status: 'SUCCEEDED',
           usage: classified.usage,
@@ -3262,6 +3276,21 @@ async function processSlide(ctx, slide) {
       ? policy.contentType
       : applyContentDistribution(policy.contentType, ctx);
 
+    if (!blueprintLayoutIdEarly) {
+      const narrativeGuardLate = guardNarrativeContentType(outlineSlide, contentType, content, {
+        outlineExplicit: ctx.outlineExplicitType,
+        visualNeed,
+      });
+      if (narrativeGuardLate.adjusted) {
+        contentType = narrativeGuardLate.contentType;
+        policy.contentType = contentType;
+        if (String(visualNeed).toLowerCase() === 'chart') {
+          visualNeed = preferVisuals ? 'photo' : 'none';
+          policy.visualNeed = visualNeed;
+        }
+      }
+    }
+
     // Path B vs process layouts: linear how-it-works â†’ diagram_template;
     // path_b without usable pathBSpec â†’ diagram_template.
     if (!blueprintLayoutIdEarly) {
@@ -3297,6 +3326,8 @@ async function processSlide(ctx, slide) {
           delete content.chart;
           delete content.chart2;
           delete content.charts;
+          delete content.stats;
+          delete content.metrics;
         }
       }
 
@@ -3522,6 +3553,15 @@ async function processSlide(ctx, slide) {
       content = normalizeTimelineContent(content, template.schema);
       content = normalizeDiagramContent(content, template.schema);
       content = normalizeDeviceContent(content, template.schema);
+      content = normalizeComparisonProsConsContent(content, template.schema);
+    }
+
+    if (template?.schema && layoutUsesPerSlotGalleryImages(template.schema)) {
+      ctx.imageStrategyByOrder = ctx.imageStrategyByOrder || {};
+      ctx.imageStrategyByOrder[Number(slide.order)] = {
+        ...(ctx.imageStrategyByOrder[Number(slide.order)] || {}),
+        usage: 'required',
+      };
     }
 
     let qa = validateSlide({

@@ -20,7 +20,7 @@
   { "id": "milestones_legacy", "content": { "title": "History", "milestones": [{ "label": "Founded", "detail": "2010" }, { "label": "IPO", "detail": "2020" }] } },
   { "id": "agenda", "content": { "title": "Agenda", "agenda": { "columns": [{ "heading": "Morning", "items": ["Kickoff", "Workshop"] }, { "heading": "Afternoon", "items": ["Demo", "Q&A"] }] } } },
   { "id": "plans_pricing", "content": { "title": "Pricing", "plans": [{ "label": "Starter", "price": "$9", "items": ["5 users", "Email support"] }, { "label": "Pro", "price": "$29", "items": ["Unlimited", "Priority support"] }] } },
-  { "id": "pros_cons", "content": { "title": "Decision", "pros": ["Speed", "Cost"], "cons": ["Lock-in", "Migration"] } },
+  { "id": "pros_cons", "content": { "title": "Decision", "prosTitle": "Option A", "consTitle": "Option B", "pros": ["Speed: faster rollout", "Cost: lower capex"], "cons": ["Lock-in: vendor tie", "Migration: switching pain"] } },
   { "id": "table_data", "content": { "title": "Metrics table", "table": { "headers": ["Region", "Q1", "Q2"], "rows": [["NA", "10", "12"], ["EU", "8", "9"]] } } },
   { "id": "mixed_diagram", "content": { "title": "Process", "steps": [{ "title": "Discover", "body": "Research" }, { "title": "Build", "body": "Ship" }, { "title": "Measure", "body": "Learn" }] } },
   { "id": "stress_unicode_title", "content": { "title": "Naïve café résumé — 日本語 mixed", "body": "Body with emoji 🚀 and combining chars" } }

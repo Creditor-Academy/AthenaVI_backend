@@ -2,8 +2,15 @@
 const {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  slideTextSafeRect,
 } = require('./presentation.constants');
+const {
+  clampPlacementToSafeRect,
+  placementInsideSafeRect,
+  SLIDE_TEXT_SAFE_INSET_X,
+} = require('./slideTextSafeArea');
 const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const blueprintSeed = require('./blueprintSeed');
 const {
   relativeLuminance,
   AA_CONTRAST_RATIO,
@@ -1103,6 +1110,12 @@ function styleForSlot(slotId, layoutSchema) {
   if (id.includes('quote')) return { fontSize: 28, bold: false, align: centerable };
   if (id.includes('subtitle')) return { fontSize: 24, bold: false, align: centerable };
   if (id === 'left_title' || id === 'right_title') return { fontSize: 24, bold: true, align: 'left' };
+  if (/^(card|col|row|feature|bullet|item)_\d+_title$/.test(id)) {
+    return { fontSize: 24, bold: true, align: 'left' };
+  }
+  if (/^(card|col|row|feature|bullet|item)_\d+_(body|text)$/.test(id)) {
+    return { fontSize: 16, bold: false, align: 'left' };
+  }
   if (id.includes('title')) return { fontSize: 42, bold: true, align: centerable };
   return { fontSize: 18, bold: false, align: 'left' };
 }
@@ -1112,9 +1125,16 @@ const {
   resolveTypeScaleFontSize,
 } = require('./canvasTypography');
 
-function paletteColor(palette, role, fallback) {
-  if (!palette || !role) return fallback;
-  return palette[role] || fallback;
+const { resolvePaletteRole } = require('@athena/contracts/graphicTheme.js');
+
+function paletteColor(paletteOrTokens, role, fallback) {
+  if (!role) return fallback;
+  const colorRoles = paletteOrTokens?.colorRoles || null;
+  const palette =
+    paletteOrTokens?.palette && typeof paletteOrTokens.palette === 'object'
+      ? paletteOrTokens.palette
+      : paletteOrTokens;
+  return resolvePaletteRole(palette, colorRoles, role, fallback);
 }
 
 function isOverlayLayout(layoutSchema, designTokens) {
@@ -1210,19 +1230,28 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens, placeme
         ? scale.display
         : typographyRole === 'title' || typographyRole === 'sectionTitle'
           ? scale.title
-          : typographyRole === 'subtitle'
-            ? scale.subtitle
-            : typographyRole === 'body'
-              ? scale.body
-              : typographyRole === 'caption' || typographyRole === 'eyebrow' || typographyRole === 'label'
-                ? scale.caption
-                : typographyRole === 'metric'
-                  ? scale.stat ?? scale.display
-                  : null;
+          : typographyRole === 'cardTitle'
+            ? scale.subtitle ??
+              (scale.body != null ? Math.round(Number(scale.body) * 1.35) : null)
+            : typographyRole === 'subtitle'
+              ? scale.subtitle
+              : typographyRole === 'body'
+                ? scale.body
+                : typographyRole === 'caption' || typographyRole === 'eyebrow' || typographyRole === 'label'
+                  ? scale.caption
+                  : typographyRole === 'metric'
+                    ? scale.stat ?? scale.display
+                    : null;
     if (semanticSize != null && Number(semanticSize) > 0) fontSize = Number(semanticSize);
-    else fontSize = resolveTypeScaleFontSize(role, scale);
+    else fontSize = resolveTypeScaleFontSize(role, scale, slotId);
   }
-  if (fontSize == null && role === 'heading' && scale.display != null) {
+  if (
+    fontSize == null &&
+    role === 'heading' &&
+    scale.display != null &&
+    typographyRole !== 'cardTitle' &&
+    !/^(card|col|row|feature|bullet|item)_\d+_/i.test(String(slotId || ''))
+  ) {
     fontSize = scale.display;
   }
   if (fontSize == null && placement) {
@@ -3065,7 +3094,7 @@ function centerMultiCardHeading(doc, cardGroupCount, layoutSchema = null) {
   if (/timeline|process_linear|process_linner|diagram_process|process_steps/.test(layoutId)) return doc;
 
   const canvasW = doc.canvas?.width || 1920;
-  const edgeInset = 56;
+  const edgeInset = SLIDE_TEXT_SAFE_INSET_X;
   const elements = (doc.elements || []).map((el) => {
     if (el.type !== 'text' && el.type !== 'textbox') return el;
     const sid = String(el.slotId || '').toUpperCase();
@@ -8440,6 +8469,52 @@ function applyTimelineConnectorShapes(doc, layoutSchema, themeTokens, canvas = {
   return { ...doc, elements };
 }
 
+const CARD_SCOPED_TEXT_SLOT_RE = /^(CARD|COL|ROW|FEATURE|BULLET|ITEM)_\d+_/i;
+const OVERLAY_TEXT_SLOT_RE = /^(MAIN_TITLE|TITLE|HEADLINE|STATEMENT|SUBTITLE|SUBHEADLINE|OVERLAY)/i;
+
+function layoutSkipsSlideTextSafeArea(layoutSchema) {
+  const id = String(layoutSchema?.layout_id || layoutSchema?.layoutId || '').toLowerCase();
+  if (!id) return false;
+  if (/three_cards_image|two_cards_image|two_large_image|pricing_|device_|chart_three|grid_bento|process_linear|diagram_/.test(id)) {
+    return true;
+  }
+  return false;
+}
+
+function shouldSkipTextSafeAreaForElement(el, layoutSchema, doc) {
+  if (layoutSkipsSlideTextSafeArea(layoutSchema)) return true;
+  const slotId = String(el.slotId || '').toUpperCase();
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const slotDef = slots.find((s) => String(s.id || '').toUpperCase() === slotId);
+  if (slotDef?.safeArea === false) return true;
+  if (docHasFullBleedBackground(doc, layoutSchema)) {
+    if (OVERLAY_TEXT_SLOT_RE.test(slotId)) return true;
+    const role = String(el.role || '').toLowerCase();
+    if (role === 'heading' && !CARD_SCOPED_TEXT_SLOT_RE.test(slotId)) return true;
+  }
+  return false;
+}
+
+function applySlideTextSafeArea(doc, layoutSchema, canvas = {}) {
+  if (!doc || !Array.isArray(doc.elements) || layoutSkipsSlideTextSafeArea(layoutSchema)) {
+    return doc;
+  }
+  const canvasW = canvas.width || doc.canvas?.width || CANVAS_WIDTH;
+  const canvasH = canvas.height || doc.canvas?.height || CANVAS_HEIGHT;
+  const safe = slideTextSafeRect(canvasW, canvasH);
+  const elements = doc.elements.map((el) => {
+    if (el.type !== 'text' && el.type !== 'textbox') return el;
+    if (shouldSkipTextSafeAreaForElement(el, layoutSchema, doc)) return el;
+    const placement = el.placement || {};
+    if (placementInsideSafeRect(placement, safe)) return el;
+    return {
+      ...el,
+      placement: clampPlacementToSafeRect(placement, safe),
+    };
+  });
+  return { ...doc, elements };
+}
+
 function docHasFullBleedBackground(doc, layoutSchema) {
   // Only treat as full-bleed overlay when a real image URL is present.
   if (layoutRequiresOverlayScrim(layoutSchema) && docHasLoadedOverlayImage(doc)) return true;
@@ -9530,6 +9605,7 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
   next = applyReadableTextContrast(next, themeTokens, layoutSchema);
   next = applySplitImageEdgeFade(next, layoutSchema);
+  next = applySlideTextSafeArea(next, layoutSchema, canvas);
 
   if (
     !isDiagramProcessStepsLayout(layoutSchema?.layout_id) &&
@@ -9579,12 +9655,18 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
     (Array.isArray(content.imageUrls) ? content.imageUrls[0] : null) ||
     null;
 
-  const applyText = (el, nextText, role) => {
+  const applyText = (el, nextText, role, optsApply = {}) => {
     if (nextText == null) return;
     const value = String(nextText);
     if (!value.length) return;
     const current = el.content?.text;
-    if (forceTextReplace || !current || isPackPlaceholderText(current)) {
+    const treatWeakAsEmpty = optsApply.treatWeakAsEmpty === true;
+    const mayReplace =
+      forceTextReplace ||
+      !current ||
+      isPackPlaceholderText(current) ||
+      (treatWeakAsEmpty && blueprintSeed.isWeakText(current));
+    if (mayReplace) {
       el.content = { ...(el.content || {}), text: value };
       applyThemeFontsToText(el, themeTokens, role);
       applyThemeColorsToText(el, themeTokens, role);
@@ -9602,8 +9684,9 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       if ((!text || !String(text).length) && id && id !== slotKey) {
         text = textForSlot(id, content, layoutSchema);
       }
+      const isPlanSlot = /^plan_\d+_/.test(slotKey) || /^plan_\d+_/.test(id);
       if (text != null && String(text).length) {
-        applyText(el, text, role);
+        applyText(el, text, role, { treatWeakAsEmpty: isPlanSlot });
       } else if (isMainTitleSlot(slotKey, role) || isMainTitleSlot(id, role)) {
         applyText(el, content.title, role);
       } else if (role === 'subtitle' || role === 'subheading') {
@@ -9714,6 +9797,7 @@ module.exports = {
   applyTextOverImageContrast,
   applySlideDesignTokens,
   finalizeElementsDoc,
+  applySlideTextSafeArea,
   resolveImageGenSize,
   blankCanvas,
   newElementId,

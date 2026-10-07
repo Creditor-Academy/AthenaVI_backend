@@ -21,6 +21,10 @@ function compiledHasWeakRequiredText(elementsDoc) {
   });
 }
 
+function isPricingLayoutSchema(layoutSchema) {
+  return blueprintSeed.isPricingLayoutSchema(layoutSchema);
+}
+
 /**
  * Pre-compile repair + layoutSlotsToElements + finalize.
  */
@@ -62,7 +66,9 @@ async function compileSlide({
       : rebindBase;
   const useFreshCompile =
     Boolean(layoutSchema?.slots?.length) &&
-    (context.packBound || shouldRecompileLayout(layoutSchema, compileAgainst));
+    (context.packBound ||
+      shouldRecompileLayout(layoutSchema, compileAgainst) ||
+      isPricingLayoutSchema(layoutSchema));
 
   let elementsDoc;
   if (rebindBase && !useFreshCompile) {
@@ -103,7 +109,14 @@ async function compileSlide({
   );
 
   let emptySlotFallback = false;
-  if (compiledHasWeakRequiredText(elementsDoc) && layoutSchema?.slots?.length && outlineSlide) {
+  const weakPricing =
+    blueprintSeed.compiledHasWeakPricingElements(elementsDoc, layoutSchema) &&
+    !blueprintSeed.contentMissingPricingPlans(workingContent, layoutSchema);
+  if (
+    (compiledHasWeakRequiredText(elementsDoc) || weakPricing) &&
+    layoutSchema?.slots?.length &&
+    outlineSlide
+  ) {
     workingContent = blueprintSeed.mergeSeedIntoContent(
       workingContent,
       blueprintSeed.seedFromOutlineSlide(outlineSlide),
@@ -141,4 +154,6 @@ async function compileSlide({
 module.exports = {
   compileSlide,
   compiledHasWeakRequiredText,
+  compiledHasWeakPricingElements: blueprintSeed.compiledHasWeakPricingElements,
+  isPricingLayoutSchema,
 };

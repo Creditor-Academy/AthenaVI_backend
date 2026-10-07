@@ -4,6 +4,8 @@
  * Layout id: timeline_process_steps_v1 only.
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TLPS_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -239,9 +241,14 @@ function timelineProcessStepsHorizontalOverlay(gx, gy, gw, gh) {
 }
 
 function specToTimelineProcessStepsHorizontalContent(spec) {
-  if (spec.kind === 'line') return { svg: lineSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'circle') return { svg: circleSvg(spec), colorMode: 'recolorable', fill: spec.fill }
-  return { svg: titleBoxSvg(spec), colorMode: 'recolorable', fill: spec.fill }
+  const idx = Math.max(0, (spec.n || 1) - 1)
+  if (spec.kind === 'line') {
+    return graphicContentFromTheme({ svg: lineSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'circle') {
+    return graphicContentFromTheme({ svg: circleSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
+  }
+  return graphicContentFromTheme({ svg: titleBoxSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -346,7 +353,7 @@ function layoutTimelineProcessStepsHorizontalElements(elements, schema, palette 
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

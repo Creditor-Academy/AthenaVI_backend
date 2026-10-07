@@ -4,6 +4,8 @@
  * Layout id: timeline_process_horizontal_v1.
  */
 
+const { graphicContentFromTheme } = require('@athena/contracts/graphicTheme.js')
+
 const TPH_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -250,10 +252,17 @@ function timelineProcessHorizontalOverlay(gx, gy, gw, gh) {
 }
 
 function specToTimelineProcessHorizontalContent(spec) {
-  if (spec.kind === 'lines') return { svg: linesSvg(), colorMode: 'fixed', fill: spec.color }
-  if (spec.kind === 'circle') return { svg: circleSvg(spec), colorMode: 'recolorable', fill: spec.fill }
-  if (spec.kind === 'connector') return { svg: connectorSvg(spec), colorMode: 'fixed', fill: spec.color }
-  return { svg: chevronSvg(spec), colorMode: 'recolorable', fill: spec.fill }
+  const idx = Math.max(0, (spec.n || spec.step || 1) - 1)
+  if (spec.kind === 'lines') {
+    return graphicContentFromTheme({ svg: linesSvg(), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'connector') {
+    return graphicContentFromTheme({ svg: connectorSvg(spec), fillColorRole: 'muted', colorMode: 'themed' })
+  }
+  if (spec.kind === 'circle') {
+    return graphicContentFromTheme({ svg: circleSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
+  }
+  return graphicContentFromTheme({ svg: chevronSvg(spec), sequenceIndex: idx, colorMode: 'sequenced' })
 }
 
 function plainTextFromContent(content = {}) {
@@ -354,7 +363,7 @@ function layoutTimelineProcessHorizontalElements(elements, schema, palette = {},
         rotation: 0,
         opacity: 1,
       },
-      content: { svg: graphic.svg, colorMode: graphic.colorMode, fill: graphic.fill, alt: spec.slotId },
+      content: { ...graphic, alt: spec.slotId },
       role: 'decoration',
       slotId: spec.slotId,
     }

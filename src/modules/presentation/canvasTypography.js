@@ -18,6 +18,8 @@ function vwForSlot(role, slotId = '') {
   const id = String(slotId || '').toLowerCase();
   if (id === 'stat_value' || /^stat_\d+_value$/.test(id) || id === 'section_number') return 0.1;
   if (id === 'stat_label' || /^stat_\d+_label$/.test(id)) return 0.016;
+  if (/^(card|col|row|feature|bullet|item)_\d+_title$/.test(id)) return 0.028;
+  if (/^(card|col|row|feature|bullet|item)_\d+_(body|text)$/.test(id)) return ROLE_VW.body;
   if (id.includes('title') && !id.includes('subtitle')) return 0.052;
   if (id.includes('subtitle')) return 0.028;
   return ROLE_VW[String(role || 'body').toLowerCase()] ?? ROLE_VW.body;
@@ -48,8 +50,15 @@ function fontSizeForTextSlot(slot, placement, canvasWidth = CANVAS_REF_WIDTH) {
   return Math.round(Math.max(minSize, Math.min(cap, maxByHeight)));
 }
 
-function resolveTypeScaleFontSize(role, typeScale = {}) {
+function resolveTypeScaleFontSize(role, typeScale = {}, slotId = '') {
   const r = String(role || '').toLowerCase();
+  const id = String(slotId || '').toLowerCase();
+  if (/^(card|col|row|feature|bullet|item)_\d+_title$/.test(id)) {
+    const size =
+      typeScale.subtitle ??
+      (typeScale.body != null ? Math.round(Number(typeScale.body) * 1.35) : null);
+    return size != null && Number(size) > 0 ? Number(size) : null;
+  }
   const map = {
     heading: typeScale.title ?? typeScale.display,
     quote: typeScale.subtitle ?? typeScale.title,

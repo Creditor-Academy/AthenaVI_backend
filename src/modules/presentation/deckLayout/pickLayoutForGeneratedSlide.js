@@ -71,6 +71,9 @@ const {
   isTextImageGridLayout,
   looksLikeImageLedGallery,
 } = require('../galleryGridPolicy.util');
+const { filterTemplatesForAiPricingIntent } = require('./pricingLayoutPolicy');
+const { filterTemplatesForProblemIntent } = require('./problemLayoutPolicy');
+const { isProblemNarrativeSlide } = require('../narrativeContentTypeGuard');
 
 function profileFromContent({ content, outlineSlide, ctx, slide, presentationContext }) {
   const wizard = ctx?.wizard || {};
@@ -136,11 +139,12 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
     summary: galleryOverrides ? '' : outlineSlide?.summary || content?.summary || '',
     beats: outlineSlide?.beats || content?.beats || [],
     purpose:
-      outlineSlide?.intent ||
       outlineSlide?.purpose ||
+      outlineSlide?.intent ||
       content?.purpose ||
       presentationContext?.purpose,
     suggestedContentType: outlineSlide?.suggestedContentType || content?.content_type,
+    narrativeRole: outlineSlide?.narrativeRole || outlineSlide?.narrative_role || null,
     slideNumber: presentationContext?.slideNumber || slide?.order,
     industry: presentationContext?.industry || wizard.industry,
     preferredStyles: wizard.designStyles || wizard.styles || ctx?.preferredStyles,
@@ -311,6 +315,28 @@ async function pickLayoutForGeneratedSlide({
   });
   if (ctxPresentation.slideNumber && profile.slideNumber == null) {
     profile.slideNumber = ctxPresentation.slideNumber;
+  }
+
+  const layoutLockedEarly = Boolean(outlineSlide?.layoutLocked);
+  const outlinePricingType = String(
+    outlineSlide?.suggestedContentType ||
+      outlineSlide?.contentType ||
+      content?.content_type ||
+      content?.contentType ||
+      ''
+  ).toLowerCase();
+
+  const isPricingIntent =
+    profile.hasPricing || outlinePricingType === 'pricing' || outlinePricingType.includes('pricing');
+  if (phase === 'final' && isPricingIntent && !layoutLockedEarly) {
+    list = filterTemplatesForAiPricingIntent(list, { layoutLocked: layoutLockedEarly });
+  }
+
+  if (phase === 'final' && isProblemNarrativeSlide(outlineSlide) && !layoutLockedEarly) {
+    list = filterTemplatesForProblemIntent(list, {
+      outlineSlide,
+      layoutLocked: layoutLockedEarly,
+    });
   }
 
   if (preferImageSlot) {
