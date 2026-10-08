@@ -2,6 +2,18 @@ const asyncHandler = require('../../shared/utils/asyncHandler');
 const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const presentationService = require('./presentation.service');
+const vibePaletteSuggestService = require('./presentationVibePalette.suggest.service');
+
+const suggestVibePalette = asyncHandler(async (req, res) => {
+  const { prompt, tone, audience, purpose } = req.body;
+  const data = await vibePaletteSuggestService.suggestVibePalette({
+    prompt,
+    tone,
+    audience,
+    purpose,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_THEMES_FETCHED);
+});
 
 const createPresentation = asyncHandler(async (req, res) => {
   const { workspaceId } = req.params;
@@ -528,6 +540,7 @@ const insertSlideStock = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  suggestVibePalette,
   createPresentation,
   duplicatePresentation,
   listPresentations,

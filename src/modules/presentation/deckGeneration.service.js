@@ -35,6 +35,7 @@ const { enforceAppearancePalette } = themeService;
 const {
   enrichOutlineWithArrangement,
   preferredLayoutForSlide,
+  resolveClosingPreferredLayoutId,
 } = require('./slideArrangementPlan.service');
 const { validateSlide } = require('./layoutQa.service');
 const {
@@ -121,6 +122,9 @@ const {
   resolveImagePromptAlias,
   resolveAuthorImagePrompt,
   titleWordsFromBody,
+  columnEntryAt,
+  columnSubjectFromEntry,
+  numberedImageSlotIndex,
 } = require('./contentImagePrompt.util');
 const { isDeviceScreenSlotId } = require('./diagrams/deviceChrome.util');
 const { compileSlide } = require('./slideCompiler.service');
@@ -329,7 +333,11 @@ async function repairSlideContentFromQa({
       nextContent = { ...(nextContent || {}), ...repairResult.data };
       nextContent = applyGenerationHints(nextContent, mergedGenerationHints);
       nextContent = normalizeMultiColumnContent(nextContent, template.schema);
-      nextContent = normalizeGalleryImageContent(nextContent, template.schema);
+      nextContent = normalizeGalleryImageContent(
+        nextContent,
+        template.schema,
+        galleryPreShapeOptions(ctx, outlineSlide)
+      );
       nextContent = normalizeChartContent(nextContent, template.schema);
       nextContent = normalizeTimelineContent(nextContent, template.schema);
       nextContent = normalizeDiagramContent(nextContent, template.schema);
@@ -1603,6 +1611,49 @@ function slideTextForVision(content) {
   return parts.join(' â€” ').slice(0, 1500);
 }
 
+function galleryPreShapeOptions(ctx, outlineSlide) {
+  const outline = outlineSlide && typeof outlineSlide === 'object' ? outlineSlide : {};
+  return {
+    outlineSlide: outline,
+    deckContext: {
+      sourceText:
+        ctx?.userPrompt ||
+        ctx?.outline?.sourcePrompt ||
+        ctx?.sourceText ||
+        '',
+      deckNarrative: ctx?.wizardBrief || ctx?.deckNarrative || '',
+    },
+  };
+}
+
+function deckTopicSnippet(ctx, content) {
+  return (
+    shortVisualPhrase(
+      ctx?.userPrompt ||
+        ctx?.outline?.sourcePrompt ||
+        ctx?.sourceText ||
+        ctx?.wizardBrief ||
+        content?.title ||
+        '',
+      8
+    ) || ''
+  );
+}
+
+function slotVisionTextForSlot(content, slotId) {
+  const idx = numberedImageSlotIndex(slotId);
+  if (idx != null) {
+    const col = columnEntryAt(content, idx);
+    if (col) {
+      const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
+      const body = String(col.body ?? col.text ?? '').trim();
+      const joined = [title, body].filter(Boolean).join(' — ');
+      if (joined) return joined.slice(0, 1500);
+    }
+  }
+  return slideTextForVision(content);
+}
+
 async function uploadPresentationImage({ workspaceId, deckId, slideId, buffer, ext, contentType }) {
   const key = `presentations/${workspaceId}/${deckId}/images/${slideId}-${crypto.randomUUID()}${ext}`;
   return s3Service.uploadFileToKey(buffer, key, contentType);
@@ -1758,12 +1809,20 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
     ctx.imageSource !== 'placeholder'
   ) {
     const usedUrls = new Set(Object.values(slotImageUrls).filter(Boolean));
+    const deckTopic = deckTopicSnippet(ctx, content);
+    const slotPromptOpts = {
+      sourceText:
+        ctx.userPrompt || ctx.outline?.sourcePrompt || ctx.sourceText || ctx.wizardBrief || '',
+      deckNarrative: ctx.deckNarrative || ctx.wizardBrief || '',
+    };
     for (const slotId of [...missing]) {
+      const colIdx = numberedImageSlotIndex(slotId);
+      const colTitle =
+        colIdx != null
+          ? columnSubjectFromEntry(columnEntryAt(content, colIdx)) || ''
+          : '';
       const prompt =
-        buildSlotImagePrompt(slotId, content, layoutSchema, {
-          sourceText: ctx.sourceText || ctx.wizardBrief || '',
-          deckNarrative: ctx.deckNarrative || ctx.wizardBrief || '',
-        }) ||
+        buildSlotImagePrompt(slotId, content, layoutSchema, slotPromptOpts) ||
         imagePrompts[slotId] ||
         imagePrompts[String(slotId).toUpperCase()] ||
         `Professional presentation visual for ${content?.title || 'slide topic'} (${slotId})` ||
@@ -1776,7 +1835,9 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
           const variationPrompt =
             attempt === 0
               ? prompt
-              : `${prompt} (variation ${attempt + 1}, completely different subject)`;
+              : [deckTopic, colTitle, prompt, `(variation ${attempt + 1}, different subject)`]
+                  .filter(Boolean)
+                  .join('. ');
           const generated = await generateSlotImage({
             ctx,
             slide,
@@ -1785,10 +1846,24 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
             layoutSchema,
           });
           if (generated?.url && !usedUrls.has(generated.url)) {
-            assignSlotMedia(slotId, generated.url, generated.s3Key || null);
-            usedUrls.add(generated.url);
-            missing = missing.filter((id) => id !== slotId);
-            assigned = true;
+            let accept = true;
+            try {
+              const vision = await checkImageRelevance({
+                imageUrl: generated.url,
+                slideTitle: content?.title || '',
+                slideText: slotVisionTextForSlot(content, slotId),
+                briefSubject: variationPrompt,
+              });
+              accept = vision.relevant !== false;
+            } catch {
+              accept = true;
+            }
+            if (accept) {
+              assignSlotMedia(slotId, generated.url, generated.s3Key || null);
+              usedUrls.add(generated.url);
+              missing = missing.filter((id) => id !== slotId);
+              assigned = true;
+            }
           }
         } catch (err) {
           logger.warn?.('presentation_slot_image_failed', {
@@ -1803,18 +1878,36 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
       // Stock fallback when AI generation failed for this slot.
       if (!assigned) {
         try {
+          const stockQuery = [colTitle, deckTopic, shortVisualPhrase(prompt, 6)]
+            .filter(Boolean)
+            .join(' ')
+            .slice(0, 120);
           const stock = await tryStockImage({
-            query: String(prompt).slice(0, 120),
+            query: stockQuery || String(prompt).slice(0, 120),
             workspaceId: ctx.workspaceId,
             deckId: ctx.deckId,
             slideId: slide.id,
-            brief: { subject: prompt },
+            brief: { subject: colTitle || prompt },
           });
           if (stock?.url && !usedUrls.has(stock.url)) {
-            assignSlotMedia(slotId, stock.url, stock.s3Key || null);
-            usedUrls.add(stock.url);
-            missing = missing.filter((id) => id !== slotId);
-            assigned = true;
+            let acceptStock = true;
+            try {
+              const vision = await checkImageRelevance({
+                imageUrl: stock.url,
+                slideTitle: content?.title || '',
+                slideText: slotVisionTextForSlot(content, slotId),
+                briefSubject: stockQuery || prompt,
+              });
+              acceptStock = vision.relevant !== false;
+            } catch {
+              acceptStock = true;
+            }
+            if (acceptStock) {
+              assignSlotMedia(slotId, stock.url, stock.s3Key || null);
+              usedUrls.add(stock.url);
+              missing = missing.filter((id) => id !== slotId);
+              assigned = true;
+            }
           }
         } catch (stockErr) {
           logger.warn?.('presentation_slot_image_stock_fallback_failed', {
@@ -2534,11 +2627,15 @@ async function planDeckLayouts(ctx, slides) {
       preferVisuals,
       slideOrder: slide.order,
     });
-    if (Number(slide.order) === totalSlides && isSplitHeroLayout(ctx.titleLayoutId)) {
-      // Match title energy with a text/CTA close â€” avoid default full-bleed photo closings.
-      preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, stubContent)
-        ? 'closing_contact_cta_v1'
-        : 'closing_thank_you_v1';
+    if (Number(slide.order) === totalSlides) {
+      const closingPref = resolveClosingPreferredLayoutId({
+        ctx,
+        usedLayoutIds,
+        slideOrder: slide.order,
+        titleLayoutId: ctx.titleLayoutId,
+        contactIntent: outlineSuggestsContactIntent(outlineSlide, stubContent),
+      });
+      if (closingPref) preferredLayoutId = closingPref;
     }
     templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
     let ranked = [];
@@ -2827,7 +2924,7 @@ function generationHintsFromLayout(layoutSchema) {
   if (imageSlots.length > 1) {
     hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (â‰¤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
   }
-  if (/para|cards_image|card_\d|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
+  if (/para|cards_image|card_\d|grid_bento|grid_six|grid_three_asymmetric|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
     hints.parallelStructure =
       'Each column/card/gallery image needs a distinct title (â‰¤4 words) and optional body. Fill columns[] accordingly â€” titles map to IMAGE_n_LABEL captions.';
   }
@@ -3110,7 +3207,11 @@ async function processSlide(ctx, slide) {
         content = applyGenerationHints(content, mergedGenerationHints);
         if (contentLayoutSchema) {
           content = normalizeMultiColumnContent(content, contentLayoutSchema);
-          content = normalizeGalleryImageContent(content, contentLayoutSchema);
+          content = normalizeGalleryImageContent(
+            content,
+            contentLayoutSchema,
+            galleryPreShapeOptions(ctx, outlineSlide)
+          );
           content = normalizeTimelineContent(content, contentLayoutSchema);
           content = normalizeDiagramContent(content, contentLayoutSchema);
           content = normalizeDeviceContent(content, contentLayoutSchema);
@@ -3482,15 +3583,15 @@ async function processSlide(ctx, slide) {
           preferVisuals,
           slideOrder: slide.order,
         });
-        if (Number(slide.order) === slideTotal && isSplitHeroLayout(ctx.titleLayoutId)) {
-          preferredLayoutId = outlineSuggestsContactIntent(outlineSlide, content)
-            ? 'closing_contact_cta_v1'
-            : 'closing_thank_you_v1';
-        } else if (
-          Number(slide.order) === slideTotal &&
-          outlineSuggestsContactIntent(outlineSlide, content)
-        ) {
-          preferredLayoutId = preferredLayoutId || 'closing_contact_cta_v1';
+        if (Number(slide.order) === slideTotal) {
+          const closingPref = resolveClosingPreferredLayoutId({
+            ctx,
+            usedLayoutIds: ctx.usedLayoutIds || new Set(),
+            slideOrder: slide.order,
+            titleLayoutId: ctx.titleLayoutId,
+            contactIntent: outlineSuggestsContactIntent(outlineSlide, content),
+          });
+          if (closingPref) preferredLayoutId = closingPref;
         }
         templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
         ({ layoutId, template } = await pickLayoutForGeneratedSlide({
@@ -3548,7 +3649,11 @@ async function processSlide(ctx, slide) {
 
     if (template?.schema) {
       content = normalizeMultiColumnContent(content, template.schema);
-      content = normalizeGalleryImageContent(content, template.schema);
+      content = normalizeGalleryImageContent(
+        content,
+        template.schema,
+        galleryPreShapeOptions(ctx, outlineSlide)
+      );
       content = normalizeChartContent(content, template.schema);
       content = normalizeTimelineContent(content, template.schema);
       content = normalizeDiagramContent(content, template.schema);
@@ -3630,7 +3735,11 @@ async function processSlide(ctx, slide) {
       visualNeed = 'none';
       if (content && typeof content === 'object') {
         content.visual_need = 'none';
-        content = normalizeGalleryImageContent(content, layoutSchemaForImages);
+        content = normalizeGalleryImageContent(
+          content,
+          layoutSchemaForImages,
+          galleryPreShapeOptions(ctx, outlineSlide)
+        );
       }
     }
 

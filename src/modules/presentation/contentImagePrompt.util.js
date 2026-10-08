@@ -272,13 +272,13 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
   const imagePrompts =
     content?.imagePrompts && typeof content.imagePrompts === 'object' ? content.imagePrompts : {};
   const llmPrompt = resolveImagePromptAlias(id, imagePrompts);
+  const numberedIdx = numberedImageSlotIndex(id);
   let subject = '';
 
   if (llmPrompt && !imagePromptEchoesCopy(llmPrompt, content)) {
     // Keep concrete visual briefs from the content model.
     subject = String(llmPrompt).trim();
   } else {
-    const numberedIdx = numberedImageSlotIndex(id);
     if (numberedIdx != null && !/^POINT_IMAGE$/i.test(id)) {
       subject = columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) || '';
     }
@@ -308,6 +308,17 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
   const isHero = /^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id);
   const uiKind = deviceScreenUiKind(id, layoutId);
 
+  const deckSnippet = shortVisualPhrase(
+    opts.sourceText || opts.deckNarrative || '',
+    8
+  );
+  const colTitleForTheme =
+    numberedIdx != null ? columnSubjectFromEntry(columnEntryAt(content, numberedIdx)) : '';
+  const isMultiImageGrid =
+    /four_images|grid_.*images|three_cards_image|grid_images_text|grid_bento|grid_six|grid_three_asymmetric/i.test(
+      layoutId
+    );
+
   const assembled = [
     isDevice
       ? `${id}${layoutId ? ` of ${layoutId}` : ''}: ${
@@ -320,8 +331,11 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
       : isHero
         ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
         : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
-    /four_images|grid_.*images|three_cards_image|grid_images_text/i.test(layoutId)
+    isMultiImageGrid
       ? 'Gallery slot â€” ONE distinct visual metaphor of this cardâ€™s topic (not the cardâ€™s wording)'
+      : null,
+    isMultiImageGrid && deckSnippet
+      ? `Same brand/deck theme as: ${deckSnippet}; this slot illustrates: ${colTitleForTheme || subject} only.`
       : null,
     hasChart && !isHero
       ? 'Slide already has a rendered chart â€” photograph a related real-world subject, not a chart graphic'
@@ -387,4 +401,8 @@ module.exports = {
   deriveSlotImagePrompt,
   resolveAuthorImagePrompt,
   titleWordsFromBody,
+  overallThemeSubject,
+  columnEntryAt,
+  columnSubjectFromEntry,
+  numberedImageSlotIndex,
 };

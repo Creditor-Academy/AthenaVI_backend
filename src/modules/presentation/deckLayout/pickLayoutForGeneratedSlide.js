@@ -3,7 +3,7 @@ const { toSlideContentProfile } = require('./toSlideContentProfile');
 const { rankLayouts } = require('./rankLayouts');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
-const { layoutFamilyExcludeIds } = require('../layoutSelector.service');
+const { layoutFamilyExcludeIds, isSplitHeroLayout } = require('../layoutSelector.service');
 const logger = require('../../../shared/utils/logger');
 
 function templateLayoutId(template) {
@@ -378,6 +378,8 @@ async function pickLayoutForGeneratedSlide({
     previousLayoutIds: prev,
     adjacentLayoutId,
     debug,
+    arrangementArchetype: ctx?.outline?.arrangementArchetype || null,
+    deprioritizeFullBleedClosing: isSplitHeroLayout(ctx?.titleLayoutId),
   });
   ranked = promotePreferred(ranked, preferredLayoutId);
 

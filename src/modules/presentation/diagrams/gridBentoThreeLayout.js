@@ -119,10 +119,11 @@ const GRID_BENTO_THEMES = [
   },
 ];
 
+/** Seed/preview-only fallbacks — generated decks should fill BADGE/HEADING/SUBTITLE from content. */
 const GRID_BENTO_THREE_DEFAULTS = {
-  BADGE: 'CURATED SHOWCASE',
-  HEADING: 'Three-part bento overview',
-  SUBTITLE: 'Flagship product experiences, botanical purity, and sensory wellness highlights.',
+  BADGE: 'HIGHLIGHTS',
+  HEADING: '',
+  SUBTITLE: '',
 };
 
 function isGridBentoThreeLayout(layoutId) {
@@ -216,7 +217,9 @@ function layoutGridBentoThree(docOrElements = [], schema = {}, palette = {}, can
     if (typeof el?.text === 'string' && el.text.trim()) {
       return el.text;
     }
-    return defaults[slotId] || fallback;
+    const preset = defaults[slotId];
+    if (typeof preset === 'string' && preset.trim()) return preset;
+    return fallback || '';
   };
 
   const getImageContent = (idx) => {

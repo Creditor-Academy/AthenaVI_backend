@@ -15,6 +15,7 @@ const {
   withDeviceUiDirective,
   resolveImagePromptAlias,
   titleWordsFromBody,
+  overallThemeSubject,
 } = require('./contentImagePrompt.util');
 const { isDeviceScreenSlotId } = require('./diagrams/deviceChrome.util');
 
@@ -353,21 +354,68 @@ function layoutUsesPerSlotGalleryImages(layoutSchema) {
   return !hasSingleHero;
 }
 
-function normalizeGalleryImageContent(content, layoutSchema) {
+function beatToColumn(entry, index, slideTitle) {
+  if (typeof entry === 'string') {
+    const text = entry.trim();
+    const split = text.split(/[:\-–—]\s*/);
+    return {
+      title: split[0]?.trim() || titleWordsFromBody(text, `Highlight ${index + 1}`),
+      body: split.slice(1).join(' ').trim() || text,
+    };
+  }
+  if (entry && typeof entry === 'object') {
+    return {
+      title: String(entry.title ?? entry.label ?? entry.heading ?? entry.topic ?? '').trim() ||
+        titleWordsFromBody(String(entry.body ?? entry.text ?? ''), `Highlight ${index + 1}`),
+      body: String(entry.body ?? entry.text ?? entry.detail ?? entry.description ?? '').trim(),
+    };
+  }
+  const title = String(slideTitle || 'Topic').trim();
+  return {
+    title: titleWordsFromBody(`${title} highlight ${index + 1}`, `Highlight ${index + 1}`),
+    body: `On-topic visual for ${title}`,
+  };
+}
+
+function normalizeGalleryImageContent(content, layoutSchema, options = {}) {
   const gallerySlots = listGalleryImageSlots(layoutSchema);
   if (gallerySlots.length < 2 || !content || typeof content !== 'object') return content;
 
+  const outlineSlide =
+    options.outlineSlide && typeof options.outlineSlide === 'object' ? options.outlineSlide : {};
+  const deckContext =
+    options.deckContext && typeof options.deckContext === 'object' ? options.deckContext : {};
+
   const needed = gallerySlots.length;
   const next = { ...content };
+  if (!next.subtitle && outlineSlide.summary) {
+    next.subtitle = String(outlineSlide.summary).trim();
+  }
+  if (!next.badge && (next.title || outlineSlide.title)) {
+    next.badge = 'HIGHLIGHTS';
+  }
+
   let columns = Array.isArray(content.columns) ? [...content.columns] : [];
+  const outlineBeats = Array.isArray(outlineSlide.beats) ? outlineSlide.beats : [];
+  const contentBeats = Array.isArray(content.beats) ? content.beats : [];
+  const beats = outlineBeats.length >= needed ? outlineBeats : contentBeats;
 
   if (columns.length < needed) {
     const items = Array.isArray(content.items) ? content.items : [];
     const bullets = Array.isArray(content.bullets) ? content.bullets : [];
-    const summary = String(content.summary || content.body || content.subtitle || '').trim();
+    const summary = String(
+      content.summary ||
+        content.body ||
+        content.subtitle ||
+        outlineSlide.summary ||
+        ''
+    ).trim();
     const parts = summary.split(/[.;]\s+/).map((part) => part.trim()).filter(Boolean);
+    const slideTitle = String(content.title || outlineSlide.title || 'Topic').trim();
 
-    if (items.length >= needed) {
+    if (beats.length >= needed) {
+      columns = beats.slice(0, needed).map((beat, index) => beatToColumn(beat, index, slideTitle));
+    } else if (items.length >= needed) {
       columns = items.slice(0, needed).map((item, index) => {
         if (typeof item === 'string') {
           const text = item.trim();
@@ -400,10 +448,18 @@ function normalizeGalleryImageContent(content, layoutSchema) {
         };
       });
     } else {
-      const slideTitle = String(content.title || 'Topic').trim();
+      const deckSnippet = shortVisualPhrase(
+        deckContext.sourceText || deckContext.deckNarrative || summary || slideTitle,
+        6
+      );
       columns = Array.from({ length: needed }, (_, index) => ({
-        title: titleWordsFromBody(`${slideTitle} aspect ${index + 1}`, `Gallery ${index + 1}`),
-        body: `Visual ${index + 1} illustrating ${slideTitle}`,
+        title: titleWordsFromBody(
+          deckSnippet ? `${deckSnippet} moment ${index + 1}` : `${slideTitle} moment ${index + 1}`,
+          `Highlight ${index + 1}`
+        ),
+        body: deckSnippet
+          ? `${deckSnippet} — visual ${index + 1}`
+          : `Visual ${index + 1} illustrating ${slideTitle}`,
       }));
     }
   }
@@ -436,6 +492,7 @@ function normalizeGalleryImageContent(content, layoutSchema) {
     ...(next.imagePrompts && typeof next.imagePrompts === 'object' ? next.imagePrompts : {}),
   };
   const usedPrompts = new Set();
+  const deckTheme = overallThemeSubject(next, deckContext) || '';
   gallerySlots.forEach((slot, index) => {
     const slotId = String(slot.id);
     const col = next.columns[index];
@@ -445,18 +502,24 @@ function normalizeGalleryImageContent(content, layoutSchema) {
       resolveImagePromptAlias(slotId, imagePrompts) || ''
     ).trim();
     if (!prompt || usedPrompts.has(prompt.toLowerCase())) {
-      prompt = buildSlotImagePrompt(slotId, next, layoutSchema);
+      prompt = buildSlotImagePrompt(slotId, next, layoutSchema, deckContext);
     }
     if ((!prompt || imagePromptEchoesCopy(prompt, next)) && (colTitle || colBody)) {
       const subject = shortVisualPhrase(colTitle || colBody, 8);
       prompt = appendImageNegatives(
         [
+          deckTheme ? `Same deck theme: ${deckTheme}` : null,
           `${slotId}: single photograph of ONE subject for this cardâ€™s topic`,
           `One isolated subject â€” ${subject}`,
           `(variation ${index + 1})`,
-        ].join('. '),
+        ]
+          .filter(Boolean)
+          .join('. '),
         { hasChart: layoutHasChartSlot(layoutSchema) }
       );
+    } else if (prompt && deckTheme && !prompt.toLowerCase().includes(deckTheme.toLowerCase().slice(0, 12))) {
+      const slotSubject = shortVisualPhrase(colTitle || colBody, 6);
+      prompt = `${deckTheme}. This slot: ${colTitle || slotSubject}. ${prompt}`;
     }
     if (prompt) {
       prompt = appendImageNegatives(prompt, {

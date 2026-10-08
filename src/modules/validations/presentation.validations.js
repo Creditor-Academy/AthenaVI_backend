@@ -1137,6 +1137,18 @@ const updatePresentationTemplateSchema = Joi.object({
     .required(),
 });
 
+const suggestVibePaletteSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+  }),
+  body: Joi.object({
+    prompt: Joi.string().trim().min(1).max(8000).required(),
+    tone: Joi.string().trim().max(64).allow('', null).optional(),
+    audience: Joi.string().trim().max(64).allow('', null).optional(),
+    purpose: Joi.string().trim().max(64).allow('', null).optional(),
+  }),
+});
+
 module.exports = {
   AI_SLIDE_MAX,
   createPresentationSchema,
@@ -1168,6 +1180,7 @@ module.exports = {
   exportDeckSchema,
   exportByIdSchema,
   creditEstimateSchema,
+  suggestVibePaletteSchema,
   outlineObjectSchema,
   themeTokensSchema,
   listPresentationTemplatesSchema,

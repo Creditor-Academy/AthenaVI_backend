@@ -307,6 +307,41 @@ function scoreDomainIntent(slide, layout, reasons) {
   return boost;
 }
 
+function scoreClosingLayoutPreference(slide, layout, reasons, options = {}) {
+  const isClosing =
+    String(slide.suggestedContentType || '').toLowerCase() === 'closing' ||
+    String(slide.purpose || '').toLowerCase() === 'conclusion';
+  if (!isClosing) return 0;
+
+  const id = String(layout?.id || layout?.schema?.layout_id || '').toLowerCase();
+  let boost = 0;
+
+  if (slide.hasContact && (id.includes('contact') || id.includes('cta'))) {
+    boost += 3;
+    reasons.push('Closing slide with contact intent — boost CTA layouts');
+  } else if (!slide.hasContact && (id.includes('thank_you') || id.includes('centered_text'))) {
+    boost += 2;
+    reasons.push('Closing slide — boost thank-you / centered CTA variety');
+  }
+
+  const archetype = String(options.arrangementArchetype || '').toLowerCase();
+  if (archetype === 'pitch' && (id.includes('contact') || id.includes('cta'))) {
+    boost += 2;
+    reasons.push('Pitch archetype — prefer contact closing layouts');
+  }
+  if (archetype === 'educational' && (id.includes('thank_you') || id.includes('centered_text'))) {
+    boost += 2;
+    reasons.push('Educational archetype — prefer classic closing layouts');
+  }
+
+  if (options.deprioritizeFullBleedClosing && /fullbleed|full_bg_image_overlay/.test(id)) {
+    boost -= 8;
+    reasons.push('Split-hero title deck — deprioritize full-bleed closing');
+  }
+
+  return boost;
+}
+
 function scoreStyle(slide, layout, max) {
   const prefs = [
     ...((slide.preferredStyles || []).map((s) => String(s).toLowerCase())),
@@ -412,6 +447,10 @@ function scoreLayout(slide, layout, options = {}) {
   }
   const uniqueWarnings = [...new Set(warnings)];
   const domainBoost = scoreDomainIntent(slide, layout, reasons);
+  const closingBoost = scoreClosingLayoutPreference(slide, layout, reasons, {
+    arrangementArchetype: options.arrangementArchetype,
+    deprioritizeFullBleedClosing: options.deprioritizeFullBleedClosing,
+  });
   const problemBoost = scoreProblemLayoutPreference(layout, {
     purpose: slide.purpose,
     narrativeRole: slide.narrativeRole,
@@ -422,7 +461,11 @@ function scoreLayout(slide, layout, options = {}) {
       problemBoost > 0 ? 'Layout fits problem / friction narrative' : 'Chart layout demoted for problem slide'
     );
   }
-  const score = clamp(scaled + repetitionPenalty + adjacentPenalty + domainBoost + problemBoost, 0, 100);
+  const score = clamp(
+    scaled + repetitionPenalty + adjacentPenalty + domainBoost + closingBoost + problemBoost,
+    0,
+    100
+  );
 
   if (!reasons.length) reasons.push('Scored from available layout metadata');
 

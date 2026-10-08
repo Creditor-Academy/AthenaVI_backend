@@ -108,6 +108,11 @@ function normalizeWizardThemeId(colorTheme) {
   return id.replace(/_/g, '-');
 }
 
+function isPromptSuggestedThemeId(colorTheme) {
+  const id = normalizeWizardThemeId(colorTheme);
+  return id === 'prompt-suggested';
+}
+
 function getWizardThemeById(colorTheme) {
   const id = normalizeWizardThemeId(colorTheme);
   if (!id) return null;
@@ -342,9 +347,12 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
   const themeMode = String(s.themeMode || '').toLowerCase();
   const useWizardPalette =
     themeMode === 'palette' || (!themeMode && !s.packId && !s.brandKitId && s.colorTheme);
+  const catalogWizardTokens = isPromptSuggestedThemeId(s.colorTheme)
+    ? null
+    : resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter);
   const themeTokens = useWizardPalette
     ? layoutCatalogPolicy.biasPaletteFromSourceText(
-        resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter),
+        catalogWizardTokens,
         s.prompt || s.outlineNotes || ''
       )
     : null;

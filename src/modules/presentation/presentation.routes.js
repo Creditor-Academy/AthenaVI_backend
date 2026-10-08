@@ -63,6 +63,12 @@ router.post(
   presentationController.createPresentation
 );
 
+router.post(
+  '/suggest-vibe-palette',
+  validate(presentationValidations.suggestVibePaletteSchema),
+  presentationController.suggestVibePalette
+);
+
 router.get(
   '/',
   validate(presentationValidations.listPresentationsSchema),

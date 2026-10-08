@@ -338,6 +338,13 @@ function assertContrast(palette) {
  * @param {{ themeId?: string|null, themeTokens?: object|null }} input
  * @returns {object} themeTokens
  */
+function isPromptSuggestedThemeId(themeId) {
+  const raw = String(themeId || '')
+    .trim()
+    .replace(/_/g, '-');
+  return raw === 'prompt-suggested';
+}
+
 function resolveThemeTokens({ themeId, themeTokens } = {}) {
   const hasCustom = themeTokens != null && typeof themeTokens === 'object';
   const id = themeId != null && String(themeId).trim() !== '' ? normalizeThemeId(themeId) : null;
@@ -345,6 +352,11 @@ function resolveThemeTokens({ themeId, themeTokens } = {}) {
   let resolved;
   if (hasCustom) {
     resolved = themeTokens;
+  } else if (isPromptSuggestedThemeId(themeId)) {
+    throw new AppError(
+      'Prompt-suggested palette requires themeTokens; pick the suggested palette again in the wizard',
+      400
+    );
   } else if (id || (themeId != null && String(themeId).trim() !== '')) {
     const theme = getThemeById(themeId);
     if (!theme) {

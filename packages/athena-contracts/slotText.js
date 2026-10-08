@@ -1054,6 +1054,10 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     return field === 'title' ? row.title : row.body;
   }
 
+  if (id === 'badge') {
+    return String(content.badge || content.tag || content.kicker || content.eyebrow || 'HIGHLIGHTS').trim();
+  }
+
   if (
     id.includes('title') &&
     !id.includes('subtitle') &&

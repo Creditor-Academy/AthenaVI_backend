@@ -128,7 +128,13 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
     );
   }
 
-  if (/three_cards|four_images|cards_image|grid_.*image|device|timeline_milestones_image/.test(id)) {
+  if (/grid_bento_three|grid_bento_four|grid_three_asymmetric/.test(id)) {
+    lines.push(
+      'Bento grid: title and subtitle must reflect this deck and slide topic — never generic wellness or template placeholder themes. REQUIRED columns[] with one entry per IMAGE_n slot; each { title, body } names a distinct on-topic visual (menu item, venue moment, product). REQUIRED imagePrompts.IMAGE_1…n: unique ≤12-word photographic subject per column, same industry/mood as the deck; no collages.'
+    );
+  }
+
+  if (/three_cards|four_images|cards_image|grid_.*image|grid_bento|device|timeline_milestones_image/.test(id)) {
     lines.push(
       'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual metaphor per image slot (IMAGE_1, IMAGE_2, COL_1_IMAGE, etc.). Each prompt ≤12 words naming ONE photographic subject inspired by the column topic — never quote title/body wording, never describe text/captions in the image. Forbid collages, triptychs, and multi-panel images.'
     );

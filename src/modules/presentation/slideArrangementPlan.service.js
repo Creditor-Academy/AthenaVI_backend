@@ -4,6 +4,7 @@
  */
 
 const { looksLikeLinearProcessSlide, looksLikeDeviceFramesSlide } = require('./diagramPathPolicy.util');
+const { closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
 const {
   blueprintForSlideCount,
   normalizeRole,
@@ -369,6 +370,51 @@ function preferredLayoutForSlide(ctx, contentType, usedLayoutIds = new Set(), sl
   return pool[idx];
 }
 
+function closingLayoutPoolForCtx(ctx, titleLayoutId) {
+  const archetypeId = ctx?.outline?.arrangementArchetype || 'general';
+  const archetype = ARCHETYPES[archetypeId] || ARCHETYPES.general;
+  const fallback = ARCHETYPES.general.preferredLayouts?.closing || [];
+  const pool = [...(archetype.preferredLayouts?.closing || fallback)];
+  const excluded = new Set((closingLayoutExcludeIds(titleLayoutId) || []).map(String));
+  let filtered = pool.filter((id) => !excluded.has(String(id)));
+  if (isSplitHeroLayout(titleLayoutId)) {
+    const noFullBleed = filtered.filter((id) => !/fullbleed|full_bg_image_overlay/i.test(String(id)));
+    if (noFullBleed.length) filtered = noFullBleed;
+  }
+  return filtered.length ? filtered : pool.filter((id) => !excluded.has(String(id))) || pool;
+}
+
+function pickFromLayoutPool(ctx, pool, usedLayoutIds, slideOrder) {
+  const used = usedLayoutIds instanceof Set ? usedLayoutIds : new Set(usedLayoutIds || []);
+  const list = Array.isArray(pool) ? pool.filter(Boolean) : [];
+  if (!list.length) return null;
+  const unused = list.filter((layoutId) => !used.has(String(layoutId)));
+  const candidatePool = unused.length ? unused : list;
+  const order = Math.max(0, Number(slideOrder) - 1);
+  const seed = simpleDeckHash(ctx);
+  const idx = (order + seed) % candidatePool.length;
+  return candidatePool[idx];
+}
+
+/**
+ * Last-slide closing layout: rotate within archetype pool, respect title-family exclusions.
+ * Contact intent narrows pool but does not force a single layout id.
+ */
+function resolveClosingPreferredLayoutId({
+  ctx,
+  usedLayoutIds,
+  slideOrder,
+  titleLayoutId = null,
+  contactIntent = false,
+}) {
+  let pool = closingLayoutPoolForCtx(ctx, titleLayoutId);
+  if (contactIntent) {
+    const contactLean = pool.filter((id) => /contact|cta/i.test(String(id)));
+    if (contactLean.length) pool = contactLean;
+  }
+  return pickFromLayoutPool(ctx, pool, usedLayoutIds, slideOrder);
+}
+
 function getArchetype(id) {
   return ARCHETYPES[id] || ARCHETYPES.general;
 }
@@ -378,6 +424,9 @@ module.exports = {
   detectArchetype,
   enrichOutlineWithArrangement,
   preferredLayoutForSlide,
+  closingLayoutPoolForCtx,
+  pickFromLayoutPool,
+  resolveClosingPreferredLayoutId,
   expandSequence,
   ensureMandatorySlideTypes,
   getArchetype,
