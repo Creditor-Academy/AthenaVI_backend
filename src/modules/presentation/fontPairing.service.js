@@ -150,21 +150,34 @@ function mergeThemeTokensPreservingFonts(deckTokens, incomingTokens) {
       ? { ...(deck.fonts || {}) }
       : { ...(deck.fonts || {}), ...(incoming.fonts || {}) };
 
+  const normThemeId = (id) =>
+    String(id || '')
+      .trim()
+      .replace(/_/g, '-')
+      .toLowerCase();
+  const incomingThemeId = normThemeId(incoming.wizardColorThemeId);
+  const deckThemeId = normThemeId(deck.wizardColorThemeId);
+  const themeSelectionChanged =
+    Boolean(incomingThemeId) && Boolean(deckThemeId) && incomingThemeId !== deckThemeId;
+
   return {
     ...deck,
     ...incoming,
-    palette: {
-      ...(deck.palette || {}),
-      ...(incoming.palette || {}),
-    },
+    palette: themeSelectionChanged
+      ? { ...(incoming.palette || {}) }
+      : { ...(deck.palette || {}), ...(incoming.palette || {}) },
     fonts,
     fontPairingId: incoming.fontPairingId || deck.fontPairingId || null,
     fontSource: incoming.fontSource || deck.fontSource || null,
     typeScale: incoming.typeScale || deck.typeScale || null,
     brand: incoming.brand || deck.brand || undefined,
-    colorTreatment: incoming.colorTreatment ?? deck.colorTreatment ?? null,
+    colorTreatment: themeSelectionChanged
+      ? incoming.colorTreatment ?? null
+      : incoming.colorTreatment ?? deck.colorTreatment ?? null,
     imageStyle: incoming.imageStyle || deck.imageStyle || null,
-    wizardColorThemeId: incoming.wizardColorThemeId || deck.wizardColorThemeId || null,
+    wizardColorThemeId: themeSelectionChanged
+      ? incoming.wizardColorThemeId ?? null
+      : incoming.wizardColorThemeId || deck.wizardColorThemeId || null,
   };
 }
 

@@ -12,7 +12,9 @@ Rules:
 - Return valid #RRGGBB hex colors only.
 - "appearance" is "light" or "dark" based on background luminance.
 - "background" is slide base; "text" must meet WCAG AA contrast on background (4.5:1).
-- primary/secondary/accent are brand accents; keep them harmonious with the topic mood.
+- Use ONE dominant hue family: primary, secondary, and accent must share the same base hue (analogous) or one controlled accent shift (±30°)—never unrelated rainbow primaries (e.g. pink + yellow + green together).
+- "secondary" is a muted, low-saturation support tone (not a second loud brand color).
+- "accent" is a single pop color derived from primary (slightly shifted hue or brighter), not a third unrelated hue.
 - "name" is a short evocative palette title (2-4 words).`;
 
 const VIBE_PALETTE_SCHEMA = {
@@ -34,6 +36,97 @@ function normalizeHex(value) {
   const withHash = raw.startsWith('#') ? raw : `#${raw}`;
   if (!HEX_RE.test(withHash)) return null;
   return withHash.toUpperCase();
+}
+
+function hexToHsl(hex) {
+  const rgb = themeService.parseHexColor(normalizeHex(hex) || '');
+  if (!rgb) return null;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return { h: h * 360, s, l };
+}
+
+function hslToHex(h, s, l) {
+  const hue = ((Number(h) % 360) + 360) % 360;
+  const sat = Math.max(0, Math.min(1, Number(s)));
+  const lit = Math.max(0, Math.min(1, Number(l)));
+  const c = (1 - Math.abs(2 * lit - 1)) * sat;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = lit - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hue < 60) {
+    r = c;
+    g = x;
+  } else if (hue < 120) {
+    r = x;
+    g = c;
+  } else if (hue < 180) {
+    g = c;
+    b = x;
+  } else if (hue < 240) {
+    g = x;
+    b = c;
+  } else if (hue < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const toHex = (n) => {
+    const s = Math.round(Math.max(0, Math.min(255, n))).toString(16);
+    return s.length === 1 ? `0${s}` : s;
+  };
+  return `#${toHex((r + m) * 255)}${toHex((g + m) * 255)}${toHex((b + m) * 255)}`.toUpperCase();
+}
+
+/**
+ * Derive secondary/accent from primary so UI stripes stay one harmonious family.
+ */
+function harmonizeSuggestedPalette(data) {
+  if (!data || typeof data !== 'object') return data;
+  const primaryHex = normalizeHex(data.primary);
+  const bgHex = normalizeHex(data.background);
+  if (!primaryHex) return data;
+
+  const primaryHsl = hexToHsl(primaryHex);
+  if (!primaryHsl) return data;
+
+  const accentH = (primaryHsl.h + 32) % 360;
+  const secondaryHsl = {
+    h: primaryHsl.h,
+    s: Math.min(0.38, Math.max(0.12, primaryHsl.s * 0.45)),
+    l: primaryHsl.l > 0.55 ? 0.62 : 0.42,
+  };
+  const accentHsl = {
+    h: accentH,
+    s: Math.min(0.72, Math.max(0.35, primaryHsl.s)),
+    l: Math.min(0.58, Math.max(0.42, primaryHsl.l + 0.06)),
+  };
+
+  const secondaryHex = hslToHex(secondaryHsl.h, secondaryHsl.s, secondaryHsl.l);
+  const accentHex = hslToHex(accentHsl.h, accentHsl.s, accentHsl.l);
+
+  return {
+    ...data,
+    primary: primaryHex,
+    secondary: secondaryHex,
+    accent: accentHex,
+    ...(bgHex ? { background: bgHex } : {}),
+  };
 }
 
 function tokenizeForScore(text) {
@@ -231,7 +324,7 @@ async function suggestVibePalette({ prompt, tone, audience, purpose }) {
       temperature: 0.45,
     });
     validateLlmPalette(data);
-    return responseFromCustom(data);
+    return responseFromCustom(harmonizeSuggestedPalette(data));
   } catch (err) {
     const catalogTheme = scoreCatalogTheme(trimmed, tone, audience, purpose);
     if (!catalogTheme) {
@@ -247,4 +340,6 @@ module.exports = {
   buildThemeTokensFromRoles,
   scoreCatalogTheme,
   normalizeHex,
+  harmonizeSuggestedPalette,
+  hexToHsl,
 };

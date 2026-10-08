@@ -16576,3 +16576,22 @@
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-08T04:23:10.048Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-08T04:23:10.050Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":0.1,"timestamp":"2026-10-08T04:23:12.514Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-08T04:40:49.621Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-08T04:40:49.627Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-08T04:40:49.667Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-08T04:40:49.668Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-08T04:40:49.670Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":0.1,"timestamp":"2026-10-08T04:40:51.771Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-08T04:41:05.635Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-08T04:41:05.639Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-08T04:41:05.692Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-08T04:41:05.695Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-08T04:41:05.698Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":0.1,"timestamp":"2026-10-08T04:41:07.803Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-10-08T04:41:28.572Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-10-08T04:41:28.577Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-10-08T04:41:28.618Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-08T04:41:28.620Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-08T04:41:28.622Z"}
+{"level":"error","message":"Error: Session and OTP services are temporarily unavailable. Check Redis connection or REDIS_URL.\n    at assertRedisReady (D:\\Athena VS\\AthenaVI_backend\\src\\shared\\config\\redis.js:70:11)\n    at D:\\Athena VS\\AthenaVI_backend\\src\\middlewares\\auth.middlware.js:30:3\n    at D:\\Athena VS\\AthenaVI_backend\\src\\shared\\utils\\asyncHandler.js:2:19\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:297:9\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:600:14)\n    at param (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:610:14)\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:664:3)\n    at next (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:291:5)\n    at Function.handle (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:186:3)\n    at router (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:60:12)\n    at Layer.handleRequest (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\lib\\layer.js:152:17)\n    at trimPrefix (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:342:13)\n    at D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:297:9\n    at processParams (D:\\Athena VS\\AthenaVI_backend\\node_modules\\router\\index.js:582:12)","timestamp":"2026-10-08T04:41:29.090Z"}
+{"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":0.1,"timestamp":"2026-10-08T04:41:30.641Z"}

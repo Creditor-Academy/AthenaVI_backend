@@ -347,15 +347,27 @@ function resolveFlowToGenerateCtx(generationFlow, opts = {}) {
   const themeMode = String(s.themeMode || '').toLowerCase();
   const useWizardPalette =
     themeMode === 'palette' || (!themeMode && !s.packId && !s.brandKitId && s.colorTheme);
-  const catalogWizardTokens = isPromptSuggestedThemeId(s.colorTheme)
-    ? null
-    : resolveWizardThemeTokens(s.colorTheme, s.imageStyle, s.imageStyleFilter);
-  const themeTokens = useWizardPalette
-    ? layoutCatalogPolicy.biasPaletteFromSourceText(
-        catalogWizardTokens,
-        s.prompt || s.outlineNotes || ''
-      )
-    : null;
+  let themeTokens = null;
+  if (useWizardPalette) {
+    const sourceText = s.prompt || s.outlineNotes || '';
+    if (isPromptSuggestedThemeId(s.colorTheme)) {
+      const custom =
+        s.customThemeTokens && typeof s.customThemeTokens === 'object' ? s.customThemeTokens : null;
+      if (custom?.palette) {
+        themeTokens = layoutCatalogPolicy.biasPaletteFromSourceText(
+          { ...custom, imageStyle: imageStylePhrase || custom.imageStyle },
+          sourceText
+        );
+      }
+    } else {
+      const catalogWizardTokens = resolveWizardThemeTokens(
+        s.colorTheme,
+        s.imageStyle,
+        s.imageStyleFilter
+      );
+      themeTokens = layoutCatalogPolicy.biasPaletteFromSourceText(catalogWizardTokens, sourceText);
+    }
+  }
   if (themeTokens && imageStylePhrase) {
     themeTokens.imageStyle = imageStylePhrase;
   }
@@ -397,5 +409,6 @@ module.exports = {
   resolveFlowToGenerateCtx,
   resolveImageStylePhrase,
   getWizardThemeById,
+  isPromptSuggestedThemeId,
   CANVAS_BY_ASPECT,
 };

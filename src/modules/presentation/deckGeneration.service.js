@@ -685,6 +685,59 @@ function contentNeedsFreshGeneration(content, layoutSchema = null) {
   return !title || isPackPlaceholderText(title);
 }
 
+function normalizeWizardColorThemeId(id) {
+  return String(id || '')
+    .trim()
+    .replace(/_/g, '-')
+    .toLowerCase();
+}
+
+function isPromptSuggestedWizardThemeId(id) {
+  const norm = normalizeWizardColorThemeId(id);
+  return norm === 'prompt-suggested' || norm === 'prompt_suggested';
+}
+
+/**
+ * When the user picked a catalog palette, ensure image colorTreatment matches that theme—not stale prompt-suggested deck tokens.
+ */
+function assertEffectiveWizardTheme(flowCtx, deck) {
+  const s = flowCtx?.generationFlow?.selections || {};
+  const colorTheme = s.colorTheme;
+  if (!colorTheme || generationFlowService.isPromptSuggestedThemeId(colorTheme)) return;
+
+  const fresh = generationFlowService.resolveWizardThemeTokens(
+    colorTheme,
+    s.imageStyle,
+    s.imageStyleFilter
+  );
+  if (!fresh?.palette) return;
+
+  const source = flowCtx.userPrompt || deck.outline?.sourcePrompt || '';
+  const biased = layoutCatalogPolicy.biasPaletteFromSourceText({ ...fresh }, source);
+  const deckSuggested = isPromptSuggestedWizardThemeId(deck?.themeTokens?.wizardColorThemeId);
+  const ctxSuggested = isPromptSuggestedWizardThemeId(flowCtx?.themeTokens?.wizardColorThemeId);
+
+  if (!deckSuggested && !ctxSuggested && flowCtx.themeTokens?.colorTreatment === fresh.colorTreatment) {
+    return;
+  }
+
+  flowCtx.themeTokens = {
+    ...(flowCtx.themeTokens || deck.themeTokens || {}),
+    ...biased,
+    colorTreatment: fresh.colorTreatment,
+    wizardColorThemeId: fresh.wizardColorThemeId,
+    palette: {
+      ...(flowCtx.themeTokens?.palette || deck.themeTokens?.palette || {}),
+      ...biased.palette,
+    },
+    imageStyle:
+      flowCtx.imageStylePhrase ||
+      flowCtx.themeTokens?.imageStyle ||
+      fresh.imageStyle ||
+      biased.imageStyle,
+  };
+}
+
 async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   const metricsPack =
     deck.generationMetrics && typeof deck.generationMetrics === 'object'
@@ -777,6 +830,8 @@ async function loadPackAndBrandForGenerate({ workspaceId, deck, flowCtx }) {
   } else if (!flowCtx.themeTokens && deck.themeTokens) {
     flowCtx.themeTokens = deck.themeTokens;
   }
+
+  assertEffectiveWizardTheme(flowCtx, deck);
 
   flowCtx.themeTokens = fontPairingService.mergeThemeTokensPreservingFonts(
     deck.themeTokens,
@@ -5229,4 +5284,5 @@ module.exports = {
   sanitizePresentationTitle,
   detectPreferVisuals,
   applyVisualPolicy,
+  assertEffectiveWizardTheme,
 };
