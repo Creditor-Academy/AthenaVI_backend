@@ -76,14 +76,6 @@ enum InboxNotificationType {
   SCENE_UNASSIGNED
 }
 
-enum EarlyAccessRequestStatus {
-  PENDING
-  UNDER_REVIEW
-  IN_DISCUSSION
-  APPROVED
-  REJECTED
-}
-
 enum ProjectType {
   VIDEO
   PRESENTATION
@@ -880,23 +872,6 @@ model HeygenWorkspaceShare {
   @@index([avatarGroupId])
   @@index([voiceId])
   @@map("heygen_workspace_shares")
-}
-
-model EarlyAccessRequest {
-  id         String                   @id @db.VarChar(20)
-  name       String                   @db.VarChar(100)
-  email      String                   @unique @db.VarChar(254)
-  company    String?                  @db.VarChar(150)
-  role       String?                  @db.VarChar(100)
-  useCase    String?                  @map("use_case") @db.VarChar(100)
-  message    String?                  @db.Text
-  status     EarlyAccessRequestStatus @default(PENDING)
-  createdAt  DateTime                 @default(now()) @map("created_at")
-  reviewedAt DateTime?                @map("reviewed_at")
-  reviewerId String?                  @map("reviewer_id") @db.VarChar(50)
-
-  @@index([status, createdAt])
-  @@map("early_access_requests")
 }
 
 model Deck {

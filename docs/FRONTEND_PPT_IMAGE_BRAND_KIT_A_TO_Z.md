@@ -1342,7 +1342,7 @@ Activate/deactivate with `PATCH { "isActive": true|false }`. Only **active** tem
 - [ ] Confirm packs appear in user `GET .../presentation-deck-packs` after activate
 - [ ] Do not mix VIDEO_SCENE into PPT screens
 
-(Other superadmin surfaces — credits grant/revoke, storage, early access — exist but are outside these three features.)
+(Other superadmin surfaces — credits grant/revoke, storage — exist but are outside these three features.)
 
 ---
 

@@ -6,7 +6,6 @@ const { enrichCreditHistoryResult } = require('../credit/creditHistory.enrich');
 const heygenV3Service = require('../heygen/heygenV3.service');
 const storageService = require('../storage/storage.service');
 const storageDao = require('../storage/storage.dao');
-const earlyAccessService = require('../earlyAccess/earlyAccess.service');
 const superadminDao = require('./superadmin.dao');
 const { STORAGE_TIERS } = require('../../shared/config/storagePricing');
 
@@ -160,30 +159,6 @@ async function rejectStorageUpgradeRequest({ requestId, reviewedByUserId, review
   });
 }
 
-async function listEarlyAccessRequests(page, limit, status) {
-  return earlyAccessService.listEarlyAccessRequestsForAdmin(page, limit, status);
-}
-
-async function getEarlyAccessRequest(requestId) {
-  return earlyAccessService.getEarlyAccessRequestForAdmin(requestId);
-}
-
-async function approveEarlyAccessRequest({ requestId, reviewerId }) {
-  return earlyAccessService.approveEarlyAccessRequest({ requestId, reviewerId });
-}
-
-async function rejectEarlyAccessRequest({ requestId, reviewerId }) {
-  return earlyAccessService.rejectEarlyAccessRequest({ requestId, reviewerId });
-}
-
-async function updateEarlyAccessRequestStatus({ requestId, status, reviewerId }) {
-  return earlyAccessService.updateEarlyAccessRequestStatus({ requestId, status, reviewerId });
-}
-
-async function countPendingEarlyAccessRequests() {
-  return earlyAccessService.countPendingEarlyAccessRequests();
-}
-
 async function updateUserPlatformAccess({
   targetUserId,
   isPlatformSuperadmin,
@@ -234,11 +209,5 @@ module.exports = {
   revokeUserStorage,
   listStorageUpgradeRequests,
   rejectStorageUpgradeRequest,
-  listEarlyAccessRequests,
-  getEarlyAccessRequest,
-  approveEarlyAccessRequest,
-  rejectEarlyAccessRequest,
-  updateEarlyAccessRequestStatus,
-  countPendingEarlyAccessRequests,
   updateUserPlatformAccess,
 };

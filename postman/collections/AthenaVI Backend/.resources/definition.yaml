@@ -33,7 +33,7 @@ description: |-
 
   **Graphics** under **Graphics** (published catalog) and **Superadmin → Graphics** (draft/publish + GetIllustrations import). Create/list saves `graphicId`.
 
-  **Superadmin** under **Superadmin**: users, platform-access, credit grant/revoke, TEAM workspace pools, usage reports, HeyGen wallet, alerts. Storage grant/early-access/broadcasts stay under **Storage**. Templates stay under **Superadmin templates**.
+  **Superadmin** under **Superadmin**: users, platform-access, credit grant/revoke, TEAM workspace pools, usage reports, HeyGen wallet, alerts. Storage grant/broadcasts stay under **Storage**. Templates stay under **Superadmin templates**.
 
   **Storage** under **Storage**: user quota (`GET /api/user/storage`), upgrade requests, workspace footprint, and superadmin grant/revoke (`/api/superadmin/users/:userId/storage/*`). Byte fields are binary (1 GiB = `1073741824`). Grant with `tierId` (preset) or `additionalBytes` (increment any positive amount). See `docs/api/STORAGE_API.md` and `docs/api/SUPERADMIN_API.md`.
 variables:

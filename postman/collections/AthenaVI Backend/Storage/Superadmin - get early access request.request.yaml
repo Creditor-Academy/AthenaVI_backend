@@ -1,5 +1,0 @@
-$kind: http-request
-description: Single request by ea_ id.
-url: "{{baseUrl}}/api/superadmin/early-access/requests/{{earlyAccessRequestId}}"
-method: GET
-order: 17000
