@@ -25,6 +25,8 @@ module.exports = {
   USER_NOT_FOUND: 'User not found',
   USER_CREATED: 'User created successfully',
   USER_EMAIL_EXISTS: 'Email already registered',
+  USER_CREATED_BY_ADMIN: 'User account created',
+  USER_CREATE_PASSWORD_TOO_LONG: 'Password must be at most 72 bytes',
   USERS_FETCHED_SUCCESSFULLY: 'Users fetched successfully',
   USER_PROFILE_FETCHED_SUCCESSFULLY: 'User profile fetched successfully',
   NO_VALID_FIELDS_PROVIDED: 'No valid fields provided for update',

@@ -3,8 +3,21 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
 const superadminService = require('./superadmin.service');
+const { createUserByAdmin: createAdminUser } = require('./superadminUserCreate.service');
 const superadminAlertsService = require('./superadminAlerts.service');
 const superadminBroadcastService = require('./superadminBroadcast.service');
+
+const createUser = asyncHandler(async (req, res) => {
+  const { name, email, password, sendWelcomeEmail } = req.body;
+  const result = await createAdminUser({
+    name,
+    email,
+    password,
+    sendWelcomeEmail,
+    createdByUserId: req.user.id,
+  });
+  return successResponse(req, res, result, 201, messages.USER_CREATED_BY_ADMIN);
+});
 
 const grantUserCredits = asyncHandler(async (req, res) => {
   const { userId } = req.params;
@@ -390,6 +403,7 @@ const resendProductEmailBroadcast = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  createUser,
   grantUserCredits,
   revokeUserCredits,
   getUserCredits,

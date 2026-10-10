@@ -21,6 +21,12 @@ router.get(
   superadminController.listUsers
 );
 
+router.post(
+  '/users',
+  validate(superadminValidation.createUserBodySchema),
+  superadminController.createUser
+);
+
 router.patch(
   '/users/:userId/platform-access',
   validate(superadminValidation.platformAccessBodySchema),

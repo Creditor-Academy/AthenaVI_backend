@@ -24,6 +24,33 @@ const requestIdParamsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const createUserBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    // Same constraints as self-service register so admin-created accounts look identical.
+    name: Joi.string().trim().min(2).max(50).required(),
+    email: Joi.string().trim().lowercase().email().max(254).required(),
+    // Optional: when omitted the user gets a "set your password" email instead.
+    password: Joi.string()
+      .min(8)
+      .max(128)
+      .custom((value, helpers) =>
+        Buffer.byteLength(value, 'utf8') > 72 ? helpers.error('string.max', { limit: 72 }) : value
+      )
+      .allow('', null)
+      .optional(),
+    sendWelcomeEmail: Joi.boolean().default(true),
+  })
+    .custom((value, helpers) => {
+      const hasPassword = typeof value.password === 'string' && value.password !== '';
+      return hasPassword || value.sendWelcomeEmail
+        ? value
+        : helpers.message('Provide a password or enable the welcome email');
+    })
+    .required(),
+});
+
 const grantRevokeBodySchema = Joi.object({
   params: Joi.object({
     userId: Joi.string().uuid().required(),
@@ -294,6 +321,7 @@ const resendProductEmailBroadcastBodySchema = Joi.object({
 });
 
 module.exports = {
+  createUserBodySchema,
   userIdParamsSchema,
   workspaceIdParamsSchema,
   requestIdParamsSchema,

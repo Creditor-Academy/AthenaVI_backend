@@ -228,6 +228,51 @@ Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs` (
 
 ---
 
+### Create user (admin-provisioned account)
+
+```http
+POST /api/superadmin/users
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "optional-min-8-chars",
+  "sendWelcomeEmail": true
+}
+```
+
+Creates a verified account with a Personal workspace and the default storage tier (same as self-service register).
+
+| Field | Rules |
+|-------|-------|
+| `name` | required, 2–50 chars (trimmed) |
+| `email` | required, valid email, max 254 (trimmed, lower-cased) |
+| `password` | optional, 8–128 chars and at most 72 bytes (bcrypt limit). Omit it and the user receives a "set your password" link (valid 72 h) instead |
+| `sendWelcomeEmail` | optional, default `true`. Must be `true` when no `password` is given |
+
+Unknown fields (e.g. `isPlatformSuperadmin`, `credits`) are ignored — use the dedicated endpoints to change those.
+
+**201**
+
+```json
+{
+  "success": true,
+  "message": "User account created",
+  "data": {
+    "user": { "id": "...", "email": "jane@example.com", "name": "Jane Doe", "credits": 0, "storageLimit": 1073741824, "storageUsed": 0, "isPlatformSuperadmin": false, "createdAt": "..." },
+    "welcomeEmailSent": true
+  }
+}
+```
+
+A password is never emailed or returned. If the email fails to send the account is still created and `welcomeEmailSent` is `false` (the user can use *Forgot password*).
+
+**400** — validation (see table). **409** — email already registered (including a concurrent signup race).
+
+---
+
 ### Platform access management
 
 ```http

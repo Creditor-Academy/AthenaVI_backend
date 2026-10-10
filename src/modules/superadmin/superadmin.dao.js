@@ -4,6 +4,20 @@ const {
   parseSuperadminEmails,
 } = require('../../shared/services/platformSuperadmin.service');
 
+const USER_SUMMARY_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  credits: true,
+  storageLimit: true,
+  storageUsed: true,
+  isPlatformSuperadmin: true,
+  createdAt: true,
+};
+
+const findUserSummaryById = async (userId) =>
+  prisma.user.findUnique({ where: { id: userId }, select: USER_SUMMARY_SELECT });
+
 const listWorkspacesWithCredits = async ({ page, limit, search }) => {
   const skip = (page - 1) * limit;
   const where = {
@@ -89,6 +103,7 @@ const updateUserPlatformAccess = async (userId, isPlatformSuperadmin) => {
 };
 
 module.exports = {
+  findUserSummaryById,
   listWorkspacesWithCredits,
   countAccessibleSuperadminsAfterChange,
   updateUserPlatformAccess,

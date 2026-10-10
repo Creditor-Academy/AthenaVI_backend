@@ -9,13 +9,13 @@ const { getSaltRounds } = require('../../../shared/utils/bcryptConfig');
 
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
 
-const generateResetToken = async (user) => {
+const generateResetToken = async (user, { expiryMinutes = RESET_TOKEN_EXPIRY_MINUTES } = {}) => {
   const rawToken = crypto.randomBytes(32).toString('hex');
 
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
   const expiresAt = new Date(
-    Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000
+    Date.now() + expiryMinutes * 60 * 1000
   );
 
   await authdao.createPasswordResetToken({
