@@ -4,6 +4,7 @@ const messages = require('../../shared/utils/messages');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
 const superadminService = require('./superadmin.service');
 const { createUserByAdmin: createAdminUser } = require('./superadminUserCreate.service');
+const userLifecycle = require('./superadminUserLifecycle.service');
 const superadminAlertsService = require('./superadminAlerts.service');
 const superadminBroadcastService = require('./superadminBroadcast.service');
 
@@ -17,6 +18,32 @@ const createUser = asyncHandler(async (req, res) => {
     createdByUserId: req.user.id,
   });
   return successResponse(req, res, result, 201, messages.USER_CREATED_BY_ADMIN);
+});
+
+const pauseUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.pauseUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+    reason: req.body?.reason,
+  });
+  return successResponse(req, res, result, 200, messages.USER_PAUSED);
+});
+
+const resumeUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.resumeUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.USER_RESUMED);
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.deleteUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+    confirmEmail: req.body.confirmEmail,
+  });
+  return successResponse(req, res, result, 200, messages.USER_DELETED_BY_ADMIN);
 });
 
 const grantUserCredits = asyncHandler(async (req, res) => {
@@ -404,6 +431,9 @@ const resendProductEmailBroadcast = asyncHandler(async (req, res) => {
 
 module.exports = {
   createUser,
+  pauseUser,
+  resumeUser,
+  deleteUser,
   grantUserCredits,
   revokeUserCredits,
   getUserCredits,

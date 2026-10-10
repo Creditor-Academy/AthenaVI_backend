@@ -80,6 +80,9 @@ const createPasswordResetToken = async ({ userId, tokenHash, expiresAt }) => {
   });
 };
 
+const findUserPauseState = async (userId) =>
+  prisma.user.findUnique({ where: { id: userId }, select: { id: true, pausedAt: true } });
+
 const findUserByEmail = async (email) => {
   const normalized = normalizeEmail(email);
   if (!normalized) {
@@ -168,6 +171,7 @@ module.exports = {
   findValidPasswordResetTokenByHash,
   updatePasswordAndInvalidateResetTokens,
   findUserByEmail,
+  findUserPauseState,
   createUser,
   createUserWithPrivateWorkspace,
   findAccountByProvider,

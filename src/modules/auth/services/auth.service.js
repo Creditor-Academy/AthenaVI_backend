@@ -18,6 +18,7 @@ const inboxService = require('../../inbox/inbox.service');
 const { normalizeEmail } = require('../../../shared/utils/normalizeEmail');
 const { isPrismaUniqueConstraintError } = require('../../../shared/utils/prismaErrors');
 const { getSaltRounds } = require('../../../shared/utils/bcryptConfig');
+const { assertAccountActive } = require('../../../shared/utils/accountStatus');
 const workspaceService = require('../../workspace/workspace.service');
 const {
   hasPlatformSuperadminAccess,
@@ -179,6 +180,9 @@ async function loginUser({ email, password, userAgent, ip }) {
 
   await authRateLimitService.clearLoginAttempts({ email: normalizedEmail, ip });
 
+  // Only after credentials are verified, so account state is not revealed to guessers.
+  assertAccountActive(user);
+
   const accountRecovered = Boolean(
     user.deletionScheduledAt && user.deletionScheduledAt > new Date()
   );
@@ -227,6 +231,9 @@ async function loginSuperadminUser({ email, password, userAgent, ip }) {
   }
 
   await authRateLimitService.clearLoginAttempts({ email: normalizedEmail, ip });
+
+  // Only after credentials are verified, so account state is not revealed to guessers.
+  assertAccountActive(user);
 
   const accountRecovered = Boolean(
     user.deletionScheduledAt && user.deletionScheduledAt > new Date()
@@ -285,6 +292,13 @@ async function rotateRefreshToken(incomingRawToken) {
   if (!sessionExists) {
     throw new AppError(messages.SESSION_EXPIRED, 401);
   }
+
+  // Pausing revokes tokens, but a refresh racing the pause must not mint a new session.
+  const pauseState = await authDao.findUserPauseState(savedToken.userId);
+  if (!pauseState) {
+    throw new AppError(messages.UNAUTHORIZED, 401);
+  }
+  assertAccountActive(pauseState);
 
   await refreshTokenDao.revoke(savedToken.id);
 
@@ -463,6 +477,8 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
       idToken,
     });
   }
+
+  assertAccountActive(user);
 
   const securityService = require('../../settings/security.service');
   const accountRecovered = Boolean(

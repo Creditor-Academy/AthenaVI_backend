@@ -27,6 +27,24 @@ router.post(
   superadminController.createUser
 );
 
+router.post(
+  '/users/:userId/pause',
+  validate(superadminValidation.pauseUserBodySchema),
+  superadminController.pauseUser
+);
+
+router.post(
+  '/users/:userId/resume',
+  validate(superadminValidation.userIdParamsSchema),
+  superadminController.resumeUser
+);
+
+router.delete(
+  '/users/:userId',
+  validate(superadminValidation.deleteUserBodySchema),
+  superadminController.deleteUser
+);
+
 router.patch(
   '/users/:userId/platform-access',
   validate(superadminValidation.platformAccessBodySchema),

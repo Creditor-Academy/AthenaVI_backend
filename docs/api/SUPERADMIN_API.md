@@ -273,6 +273,25 @@ A password is never emailed or returned. If the email fails to send the account 
 
 ---
 
+### Pause, resume and delete a user
+
+```http
+POST   /api/superadmin/users/:userId/pause    { "reason": "optional, max 500" }
+POST   /api/superadmin/users/:userId/resume
+DELETE /api/superadmin/users/:userId          { "confirmEmail": "user@example.com" }
+```
+
+- **Pause** sets `pausedAt` / `pauseReason` and immediately revokes every session and refresh token. While paused the user cannot sign in (password, Google or superadmin login → **403** `Your account has been paused…`) and cannot refresh a token. Data is untouched. Idempotent: `data.changed` is `false` if already paused (sessions are still revoked, so a retry after a partial failure is safe).
+- **Resume** clears the pause; the user signs in again normally. Idempotent.
+- **Delete** is permanent (S3 files, credit history, workspaces, everything). `confirmEmail` must match the user's email (case-insensitive).
+- Users list rows now include `pausedAt` and `pauseReason`.
+
+Rejected for all three: your own account (**400**), a platform superadmin including `PLATFORM_SUPERADMIN_EMAILS` (**400**, remove access first), unknown user (**404**). Delete additionally returns **400** on a confirmation mismatch and **409** if the user owns team workspaces other members still use (transfer/delete them first) or is still referenced by other records.
+
+Requires migration `20261011090000_user_service_pause` (`npx prisma migrate deploy`).
+
+---
+
 ### Platform access management
 
 ```http

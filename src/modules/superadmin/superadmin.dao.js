@@ -12,8 +12,36 @@ const USER_SUMMARY_SELECT = {
   storageLimit: true,
   storageUsed: true,
   isPlatformSuperadmin: true,
+  pausedAt: true,
+  pauseReason: true,
   createdAt: true,
 };
+
+const findUserLifecycleState = async (userId) =>
+  prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, isPlatformSuperadmin: true, pausedAt: true },
+  });
+
+const setUserPaused = async (userId, { pausedAt, pauseReason }) =>
+  prisma.user.update({
+    where: { id: userId },
+    data: { pausedAt, pauseReason },
+    select: USER_SUMMARY_SELECT,
+  });
+
+/** TEAM workspaces the user owns that still have other members (deleting the owner would wipe them). */
+const findOwnedSharedTeamWorkspaces = async (userId) =>
+  prisma.workspace.findMany({
+    where: {
+      ownerId: userId,
+      type: 'TEAM',
+      members: { some: { userId: { not: userId } } },
+    },
+    select: { id: true, name: true },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  });
 
 const findUserSummaryById = async (userId) =>
   prisma.user.findUnique({ where: { id: userId }, select: USER_SUMMARY_SELECT });
@@ -103,6 +131,9 @@ const updateUserPlatformAccess = async (userId, isPlatformSuperadmin) => {
 };
 
 module.exports = {
+  findUserLifecycleState,
+  setUserPaused,
+  findOwnedSharedTeamWorkspaces,
   findUserSummaryById,
   listWorkspacesWithCredits,
   countAccessibleSuperadminsAfterChange,

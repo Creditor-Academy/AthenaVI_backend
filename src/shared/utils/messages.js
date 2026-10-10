@@ -49,6 +49,15 @@ module.exports = {
     'Account scheduled for deletion. You can recover by signing in within 7 days.',
   ACCOUNT_DELETION_ALREADY_PENDING: 'Account deletion is already scheduled',
   ACCOUNT_DELETION_CONFIRMATION_INVALID: 'Type delete to confirm account deletion',
+  ACCOUNT_PAUSED: 'Your account has been paused. Please contact support.',
+  USER_PAUSED: 'User service paused',
+  USER_RESUMED: 'User service resumed',
+  USER_DELETED_BY_ADMIN: 'User account deleted',
+  USER_ADMIN_ACTION_SELF: 'You cannot perform this action on your own account',
+  USER_ADMIN_ACTION_SUPERADMIN: 'Remove platform administrator access before performing this action',
+  USER_DELETE_CONFIRMATION_MISMATCH: 'Confirmation email does not match this user',
+  USER_DELETE_OWNS_TEAM_WORKSPACES:
+    'This user owns team workspaces that other members still use. Transfer or delete them first',
   ACCOUNT_PERMANENTLY_DELETED: 'This account has been permanently deleted',
 
   // Inbox

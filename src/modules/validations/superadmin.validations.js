@@ -51,6 +51,23 @@ const createUserBodySchema = Joi.object({
     .required(),
 });
 
+const pauseUserBodySchema = Joi.object({
+  params: Joi.object({ userId: Joi.string().uuid().required() }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    reason: Joi.string().trim().max(500).allow('', null).optional(),
+  }).default({}),
+});
+
+const deleteUserBodySchema = Joi.object({
+  params: Joi.object({ userId: Joi.string().uuid().required() }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    // Typed confirmation: must equal the target user's email (checked in the service).
+    confirmEmail: Joi.string().trim().lowercase().email().max(254).required(),
+  }).required(),
+});
+
 const grantRevokeBodySchema = Joi.object({
   params: Joi.object({
     userId: Joi.string().uuid().required(),
@@ -322,6 +339,8 @@ const resendProductEmailBroadcastBodySchema = Joi.object({
 
 module.exports = {
   createUserBodySchema,
+  pauseUserBodySchema,
+  deleteUserBodySchema,
   userIdParamsSchema,
   workspaceIdParamsSchema,
   requestIdParamsSchema,
