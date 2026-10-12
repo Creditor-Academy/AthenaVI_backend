@@ -334,19 +334,92 @@ function scoreTemplate(
   return { layoutId, score, template };
 }
 
+const CLOSING_SAFE_CONTENT_TYPES = new Set([
+  'closing',
+  'image+text',
+  'bullet_list',
+  'section_divider',
+  'quote',
+  'stat',
+  'title',
+]);
+
+function templateLayoutIdKey(template) {
+  return String(
+    template?.schema?.layout_id || template?.variant || template?.id || ''
+  ).toLowerCase();
+}
+
+function schemaSlotList(template) {
+  const schema = template?.schema || template || {};
+  return Array.isArray(schema.slots) ? schema.slots : [];
+}
+
+/**
+ * True when a catalog layout is unsuitable for the final closing slide (charts, diagrams, timelines, heavy tables).
+ */
+function isClosingIncompatibleLayout(template) {
+  const schema = template?.schema || template || {};
+  const layoutId = templateLayoutIdKey(template);
+  const ct = String(template?.contentType || schema.content_type || '').toLowerCase();
+  const slots = schemaSlotList(template);
+
+  if (slots.some((s) => String(s.type || '').toLowerCase() === 'chart')) return true;
+  if (slots.filter((s) => /chart/i.test(String(s.id || s.role || ''))).length >= 2) return true;
+  if (slots.filter((s) => String(s.type || '').toLowerCase() === 'table').length >= 2) return true;
+
+  if (/chart|diagram|process|timeline|funnel|swot|table_|_table|two_chart|multi_chart/.test(layoutId)) {
+    return true;
+  }
+
+  if (ct && !CLOSING_SAFE_CONTENT_TYPES.has(ct) && ct !== 'closing') {
+    if (/chart|diagram|timeline|comparison|grid|agenda|device/.test(ct)) return true;
+  }
+
+  return false;
+}
+
+function filterTemplatesForClosingSlide(templates) {
+  const list = Array.isArray(templates) ? templates : [];
+  const closingTyped = list.filter((t) => {
+    const ct = String(t.contentType || t.schema?.content_type || '').toLowerCase();
+    return ct === 'closing';
+  });
+  const pool = closingTyped.length ? closingTyped : list;
+  return pool.filter((t) => !isClosingIncompatibleLayout(t));
+}
+
+function filterTemplatesForSynthesisSlide(templates) {
+  const list = Array.isArray(templates) ? templates : [];
+  return list.filter((t) => {
+    const ct = String(t.contentType || t.schema?.content_type || '').toLowerCase();
+    if (ct === 'closing' || ct === 'title') return false;
+    if (ct === 'chart' && schemaSlotList(t).some((s) => String(s.type || '').toLowerCase() === 'chart')) {
+      return false;
+    }
+    return !isClosingIncompatibleLayout(t) || ct === 'bullet_list' || ct === 'stat';
+  });
+}
+
 /**
  * Exclude title/closing layouts when slide order forbids them.
  */
 function filterTemplatesForSlideOrder(templates, slideOrder, totalSlides) {
-  const list = Array.isArray(templates) ? templates : [];
+  let list = Array.isArray(templates) ? templates : [];
   const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
   const total = Number(totalSlides) > 0 ? Number(totalSlides) : order;
-  return list.filter((t) => {
+  list = list.filter((t) => {
     const ct = String(t.contentType || t.schema?.content_type || '').toLowerCase();
     if (ct === 'title' && order !== 1) return false;
     if (ct === 'closing' && order !== total) return false;
     return true;
   });
+  if (order === total) {
+    list = filterTemplatesForClosingSlide(list);
+  } else if (total >= 6 && order === total - 1) {
+    list = filterTemplatesForSynthesisSlide(list);
+  }
+  return list;
 }
 
 /**
@@ -436,6 +509,9 @@ function selectLayout({
 module.exports = {
   selectLayout,
   filterTemplatesForSlideOrder,
+  filterTemplatesForClosingSlide,
+  filterTemplatesForSynthesisSlide,
+  isClosingIncompatibleLayout,
   contentDensity,
   countWords,
   templateHasImageSlot,

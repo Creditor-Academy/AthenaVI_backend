@@ -6,7 +6,6 @@
 const { looksLikeLinearProcessSlide, looksLikeDeviceFramesSlide } = require('./diagramPathPolicy.util');
 const { closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
 const {
-  blueprintForSlideCount,
   normalizeRole,
   roleToContentDefaults,
 } = require('./narrativeSlideBlueprints');
@@ -276,11 +275,9 @@ function enrichOutlineWithArrangement(outline, { sourceText = '', userPrompt = '
   }
   const archetype = detectArchetype(sourceText || outline.sourcePrompt || '', userPrompt);
   const promptText = sourceText || outline.sourcePrompt || userPrompt || '';
-  const blueprint = blueprintForSlideCount(outline.slides.length);
   const slides = outline.slides.map((slide, idx) => {
     const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
-    const role =
-      normalizeRole(slide.narrativeRole || slide.narrative_role) || blueprint[order - 1] || null;
+    const role = normalizeRole(slide.narrativeRole || slide.narrative_role) || null;
     const roleDefaults = role
       ? roleToContentDefaults(role, { slide, sourceText: promptText })
       : null;

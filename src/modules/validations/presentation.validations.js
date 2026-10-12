@@ -6,6 +6,7 @@ const {
   ELEMENT_TYPES,
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
+  PPT_NARRATIVE_SLIDE_COUNTS,
 } = require('../presentation/presentation.constants');
 
 const presentationIdParam = Joi.string().required();
@@ -17,7 +18,12 @@ const templateIdField = Joi.string().trim().min(1);
 
 const densityField = Joi.string().valid('concise', 'balanced', 'detailed').default('balanced');
 const localeField = Joi.string().trim().min(2).max(16).default('en');
-const slideCountField = Joi.number().integer().min(5).max(AI_SLIDE_MAX);
+const slideCountField = Joi.number()
+  .integer()
+  .valid(...PPT_NARRATIVE_SLIDE_COUNTS)
+  .messages({
+    'any.only': `slideCount must be one of ${PPT_NARRATIVE_SLIDE_COUNTS.join(', ')}`,
+  });
 const {
   assignmentListQueryJoi,
   withAssignmentOxor,

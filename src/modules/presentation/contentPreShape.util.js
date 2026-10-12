@@ -226,7 +226,7 @@ function normalizePointGridContent(content, layoutSchema) {
         ? [...next.features]
         : [];
   while (cols.length < needed) cols.push({ title: '', body: '' });
-  next.columns = cols.slice(0, needed);
+  next.columns = cols.length > needed ? cols : cols.slice(0, needed);
   return next;
 }
 
@@ -277,7 +277,7 @@ function normalizeDualMetricContent(content, layoutSchema) {
   const next = { ...content };
   const stats = Array.isArray(next.stats) ? [...next.stats] : Array.isArray(next.metrics) ? [...next.metrics] : [];
   while (stats.length < 2) stats.push({ title: '', body: '', label: '', value: '' });
-  next.stats = stats.slice(0, 2);
+  next.stats = stats.length > 2 ? stats : stats.slice(0, 2);
   return next;
 }
 
@@ -321,13 +321,12 @@ function normalizeAgendaContent(content, layoutSchema) {
   const bullets = Array.isArray(content.bullets) ? content.bullets : [];
   const summary = String(content.body || content.summary || content.subtitle || '').trim();
   const parts = summary.split(/[.;]\s+/).map((p) => p.trim()).filter(Boolean);
-  const defaultHeadings = ['Morning', 'Afternoon', 'Evening'];
   const itemsPerCol = agendaItemsPerColumn(layoutSchema.slots);
   const cols = [];
 
   for (let i = 0; i < needed; i += 1) {
     const colNum = i + 1;
-    const heading = defaultHeadings[i] || `Session ${colNum}`;
+    const heading = `Session ${colNum}`;
     const itemSlots = itemsPerCol[colNum] || 2;
     let items = [];
     if (bullets.length >= needed) {
@@ -337,17 +336,14 @@ function normalizeAgendaContent(content, layoutSchema) {
         .map((b) => (typeof b === 'string' ? b.trim() : String(b?.text ?? b?.label ?? '').trim()))
         .filter(Boolean);
     } else if (parts.length >= 2) {
-      items = [parts[i] || parts[i % parts.length] || `Topic ${colNum}`];
+      items = [parts[i] || parts[i % parts.length] || ''].filter(Boolean);
     } else if (summary) {
       items = [summary.slice(0, 80)];
-    } else {
-      items = [`${heading} item 1`, `${heading} item 2`];
     }
     while (items.length < itemSlots) {
-      const n = items.length + 1;
-      items.push(`${heading} focus ${n}`);
+      items.push('');
     }
-    cols.push({ heading, items: items.slice(0, itemSlots) });
+    cols.push({ heading: bullets.length || parts.length >= 2 || summary ? heading : '', items: items.slice(0, itemSlots) });
   }
 
   return { ...content, agenda: { ...(content.agenda || {}), columns: cols } };
@@ -622,26 +618,13 @@ function normalizeGalleryImageContent(content, layoutSchema, options = {}) {
           body,
         };
       });
-    } else {
-      const deckSnippet = shortVisualPhrase(
-        deckContext.sourceText || deckContext.deckNarrative || summary || slideTitle,
-        6
-      );
-      columns = Array.from({ length: needed }, (_, index) => ({
-        title: titleWordsFromBody(
-          deckSnippet ? `${deckSnippet} moment ${index + 1}` : `${slideTitle} moment ${index + 1}`,
-          `Highlight ${index + 1}`
-        ),
-        body: deckSnippet
-          ? `${deckSnippet} — visual ${index + 1}`
-          : `Visual ${index + 1} illustrating ${slideTitle}`,
-      }));
     }
   }
 
   const slideTitleLower = String(next.title || '').trim().toLowerCase();
   const seenTitles = new Set();
-  next.columns = columns.slice(0, needed).map((col, index) => {
+  const columnSource = columns.length > needed ? columns : columns.slice(0, needed);
+  next.columns = columnSource.map((col, index) => {
     const copy = col && typeof col === 'object' ? { ...col } : { title: '', body: '' };
     let title = String(copy.title ?? copy.heading ?? copy.label ?? '').trim();
     const body = String(copy.body ?? copy.text ?? '').trim();
@@ -756,8 +739,8 @@ function normalizeTimelineContent(content, layoutSchema) {
       const inlineDetail = yearOnly ? '' : split.slice(1).join(' ').trim();
       const detail =
         inlineDetail ||
-        summaryParts[index % Math.max(summaryParts.length, 1)] ||
-        (summary ? summary.slice(0, 120) : `Key milestone ${index + 1}`);
+        (summaryParts.length ? summaryParts[index % summaryParts.length] : '') ||
+        (summary && !yearOnly ? summary.slice(0, 120) : '');
       return { label, detail };
     }
 
@@ -767,23 +750,15 @@ function normalizeTimelineContent(content, layoutSchema) {
     ).trim();
     let detail = String(copy.detail ?? copy.body ?? copy.text ?? copy.description ?? copy.summary ?? '').trim();
     if (!label) {
-      label = String(copy.value ?? copy.head ?? `Phase ${index + 1}`).trim();
+      label = String(copy.value ?? copy.head ?? '').trim();
     }
-    if (!detail) {
-      detail =
-        summaryParts[index % Math.max(summaryParts.length, 1)] ||
-        (summary ? summary.slice(0, 120) : `Key development for ${label || `milestone ${index + 1}`}`);
+    if (!detail && summaryParts.length) {
+      detail = summaryParts[index % summaryParts.length] || '';
+    } else if (!detail && summary) {
+      detail = summary.slice(0, 120);
     }
     return { ...copy, label, detail };
   });
-
-  while (normalized.length < needed) {
-    const n = normalized.length + 1;
-    normalized.push({
-      label: String(2010 + n * 3),
-      detail: summaryParts[n % Math.max(summaryParts.length, 1)] || summary.slice(0, 100) || `Milestone ${n}`,
-    });
-  }
 
   const imageSlots = slots.filter((s) => {
     const id = String(s.id || '').toUpperCase();

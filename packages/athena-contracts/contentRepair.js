@@ -23,19 +23,22 @@ function pushRepair(repairs, path, action, before, after) {
   });
 }
 
-function contextPhrase(content) {
-  const t = String(content?.title || content?.subtitle || 'Topic').trim();
-  return t || 'Topic';
+function sliceToMax(arr, target, repairs, path) {
+  const out = Array.isArray(arr) ? [...arr] : [];
+  const beforeLen = out.length;
+  if (beforeLen > target) {
+    const sliced = out.slice(0, target);
+    pushRepair(repairs, path, 'slice_clamp', beforeLen, sliced.length);
+    return sliced;
+  }
+  return out;
 }
 
-function coercePlanItem(item, index, ctx, itemCount = 0) {
+function coercePlanItem(item, index, itemCount = 0) {
   if (item == null || typeof item !== 'object') {
-    const label = `Plan ${index + 1}`;
     const items =
-      itemCount > 0
-        ? Array.from({ length: itemCount }, (_, i) => `Included benefit ${i + 1}`)
-        : [`Core value for ${ctx}.`];
-    return { label, price: '—', items, cta: 'Get started' };
+      itemCount > 0 ? Array.from({ length: itemCount }, () => '') : [];
+    return { label: '', price: '—', items, cta: '' };
   }
   const items = Array.isArray(item.items)
     ? [...item.items]
@@ -46,62 +49,47 @@ function coercePlanItem(item, index, ctx, itemCount = 0) {
         : item.body
           ? [String(item.body)]
           : [];
-  if (itemCount > 0) {
-    while (items.length < itemCount) {
-      items.push(`Included benefit ${items.length + 1}`);
-    }
+  if (itemCount > 0 && items.length > itemCount) {
     items.splice(itemCount);
   }
   return {
-    label: String(item.label ?? item.name ?? item.title ?? `Plan ${index + 1}`).trim(),
+    label: String(item.label ?? item.name ?? item.title ?? '').trim(),
     price: String(item.price ?? item.amount ?? '—').trim(),
     period: item.period != null ? String(item.period).trim() : undefined,
-    cta: String(item.cta ?? item.button ?? item.callToAction ?? 'Get started').trim(),
+    cta: String(item.cta ?? item.button ?? item.callToAction ?? '').trim(),
     items,
     body: item.body != null ? String(item.body).trim() : undefined,
     storage: item.storage != null ? String(item.storage).trim() : undefined,
   };
 }
 
-function coerceColumnItem(item, index, ctx) {
+function coerceColumnItem(item) {
   if (item == null) {
-    return {
-      title: `Focus area ${index + 1}`,
-      body: `Supporting detail for ${ctx}.`,
-    };
+    return { title: '', body: '' };
   }
   if (typeof item === 'string') {
     const text = item.trim();
     const split = text.split(/[:\-—–]\s*/);
     return {
-      title: split[0]?.trim() || `Focus area ${index + 1}`,
-      body: split.slice(1).join(' ').trim() || text || `Detail for ${ctx}.`,
+      title: split[0]?.trim() || '',
+      body: split.slice(1).join(' ').trim() || text,
     };
   }
   if (typeof item === 'object') {
     return {
-      title: String(item.title ?? item.heading ?? item.label ?? `Focus area ${index + 1}`).trim(),
+      title: String(item.title ?? item.heading ?? item.label ?? '').trim(),
       body: String(item.body ?? item.text ?? item.description ?? '').trim(),
     };
   }
-  return { title: `Focus area ${index + 1}`, body: String(item) };
-}
-
-function padArray(arr, target, factory) {
-  const out = Array.isArray(arr) ? [...arr] : [];
-  while (out.length < target) {
-    out.push(factory(out.length));
-  }
-  return out.slice(0, target);
+  return { title: '', body: String(item) };
 }
 
 /**
- * Canonicalize aliases and pad/slice repeating groups to exact contract counts.
+ * Canonicalize aliases and slice overflowing groups (no synthetic underfill padding).
  */
 function clampRepeatingGroups(content, contract, repairs = []) {
   if (!content || typeof content !== 'object') return {};
   const next = { ...content };
-  const ctx = contextPhrase(next);
 
   if (contract.groups.columns > 0) {
     let source =
@@ -110,13 +98,12 @@ function clampRepeatingGroups(content, contract, repairs = []) {
           : Array.isArray(next.features) ? next.features
             : [];
     const beforeLen = source.length;
-    source = source.map((item, i) => coerceColumnItem(item, i, ctx));
-    source = padArray(source, contract.groups.columns, (i) => ({
-      title: `Focus area ${i + 1}`,
-      body: `Key point about ${ctx}.`,
-    }));
+    source = source.map((item) => coerceColumnItem(item));
+    source = sliceToMax(source, contract.groups.columns, repairs, 'columns');
     if (beforeLen !== source.length || !Array.isArray(next.columns)) {
-      pushRepair(repairs, 'columns', 'pad_clamp', beforeLen, source.length);
+      if (beforeLen === source.length && !Array.isArray(next.columns)) {
+        pushRepair(repairs, 'columns', 'coerce_empty', beforeLen, source.length);
+      }
     }
     next.columns = source;
   }
@@ -124,23 +111,21 @@ function clampRepeatingGroups(content, contract, repairs = []) {
   if (contract.groups.stats > 0) {
     let stats = Array.isArray(next.stats) ? [...next.stats] : [];
     const beforeLen = stats.length;
-    stats = padArray(stats, contract.groups.stats, (i) => ({
-      value: '—',
-      label: `Metric ${i + 1}`,
-    })).map((stat, i) => {
+    stats = stats.map((stat) => {
       if (typeof stat === 'string') {
-        return { value: stat.trim(), label: `Metric ${i + 1}` };
+        return { value: stat.trim(), label: '' };
       }
       if (typeof stat !== 'object' || !stat) {
-        return { value: '—', label: `Metric ${i + 1}` };
+        return { value: '—', label: '' };
       }
       return {
         value: stat.value != null ? String(stat.value) : '—',
-        label: String(stat.label ?? stat.name ?? `Metric ${i + 1}`).trim(),
+        label: String(stat.label ?? stat.name ?? '').trim(),
       };
     });
+    stats = sliceToMax(stats, contract.groups.stats, repairs, 'stats');
     if (beforeLen !== stats.length) {
-      pushRepair(repairs, 'stats', 'pad_clamp', beforeLen, stats.length);
+      /* slice_clamp repair already recorded */
     }
     next.stats = stats;
   }
@@ -152,25 +137,22 @@ function clampRepeatingGroups(content, contract, repairs = []) {
           : Array.isArray(next.people) ? next.people
             : [];
     const beforeLen = members.length;
-    members = padArray(members, contract.groups.members, (i) => ({
-      name: `Team member ${i + 1}`,
-      role: 'Role',
-      bio: `Contributor on ${ctx}.`,
-    })).map((m, i) => {
+    members = members.map((m) => {
       if (typeof m === 'string') {
-        return { name: m.trim() || `Team member ${i + 1}`, role: 'Role', bio: '' };
+        return { name: m.trim(), role: '', bio: '' };
       }
       if (typeof m !== 'object' || !m) {
-        return { name: `Team member ${i + 1}`, role: 'Role', bio: '' };
+        return { name: '', role: '', bio: '' };
       }
       return {
-        name: String(m.name ?? m.title ?? `Team member ${i + 1}`).trim(),
-        role: String(m.role ?? m.title ?? 'Role').trim(),
+        name: String(m.name ?? m.title ?? '').trim(),
+        role: String(m.role ?? m.title ?? '').trim(),
         bio: String(m.bio ?? m.body ?? m.description ?? '').trim(),
       };
     });
+    members = sliceToMax(members, contract.groups.members, repairs, 'members');
     if (beforeLen !== members.length) {
-      pushRepair(repairs, 'members', 'pad_clamp', beforeLen, members.length);
+      /* slice_clamp */
     }
     next.members = members;
   }
@@ -182,23 +164,21 @@ function clampRepeatingGroups(content, contract, repairs = []) {
           : Array.isArray(next.events) ? next.events
             : [];
     const beforeLen = timeline.length;
-    timeline = padArray(timeline, contract.groups.timeline, (i) => ({
-      label: String(2020 + i * 2),
-      detail: `Milestone for ${ctx}.`,
-    })).map((item, i) => {
+    timeline = timeline.map((item) => {
       if (typeof item === 'string') {
-        return { label: item.trim() || `Phase ${i + 1}`, detail: `Detail for ${ctx}.` };
+        return { label: item.trim(), detail: '' };
       }
       if (typeof item !== 'object' || !item) {
-        return { label: `Phase ${i + 1}`, detail: `Detail for ${ctx}.` };
+        return { label: '', detail: '' };
       }
       return {
-        label: String(item.label ?? item.date ?? item.year ?? item.title ?? `Phase ${i + 1}`).trim(),
+        label: String(item.label ?? item.date ?? item.year ?? item.title ?? '').trim(),
         detail: String(item.detail ?? item.body ?? item.text ?? '').trim(),
       };
     });
+    timeline = sliceToMax(timeline, contract.groups.timeline, repairs, 'timeline');
     if (beforeLen !== timeline.length) {
-      pushRepair(repairs, 'timeline', 'pad_clamp', beforeLen, timeline.length);
+      /* slice_clamp */
     }
     next.timeline = timeline;
   }
@@ -209,23 +189,21 @@ function clampRepeatingGroups(content, contract, repairs = []) {
       next.diagram?.cells || next.cells || next.steps || next.quadrants || next.funnel;
     if (!Array.isArray(cells)) cells = [];
     const beforeLen = cells.length;
-    cells = padArray(cells, diagramLimit, (i) => ({
-      title: `Step ${i + 1}`,
-      body: `Stage of ${ctx}.`,
-    })).map((cell, i) => {
+    cells = cells.map((cell) => {
       if (typeof cell === 'string') {
-        return { title: `Step ${i + 1}`, body: cell.trim() };
+        return { title: '', body: cell.trim() };
       }
       if (typeof cell !== 'object' || !cell) {
-        return { title: `Step ${i + 1}`, body: '' };
+        return { title: '', body: '' };
       }
       return {
-        title: String(cell.title ?? cell.label ?? cell.heading ?? `Step ${i + 1}`).trim(),
+        title: String(cell.title ?? cell.label ?? cell.heading ?? '').trim(),
         body: String(cell.body ?? cell.text ?? cell.detail ?? '').trim(),
       };
     });
+    cells = sliceToMax(cells, diagramLimit, repairs, 'diagram.cells');
     if (beforeLen !== cells.length) {
-      pushRepair(repairs, 'diagram.cells', 'pad_clamp', beforeLen, cells.length);
+      /* slice_clamp */
     }
     if (contract.groups.steps > 0) next.steps = cells;
     if (contract.groups.quadrants > 0) next.quadrants = cells;
@@ -236,9 +214,9 @@ function clampRepeatingGroups(content, contract, repairs = []) {
   if (contract.groups.bullets > 0) {
     let bullets = Array.isArray(next.bullets) ? [...next.bullets] : [];
     const beforeLen = bullets.length;
-    bullets = padArray(bullets, contract.groups.bullets, (i) => `Point ${i + 1} about ${ctx}`);
+    bullets = sliceToMax(bullets, contract.groups.bullets, repairs, 'bullets');
     if (beforeLen !== bullets.length) {
-      pushRepair(repairs, 'bullets', 'pad_clamp', beforeLen, bullets.length);
+      /* slice_clamp */
     }
     next.bullets = bullets;
   }
@@ -246,9 +224,9 @@ function clampRepeatingGroups(content, contract, repairs = []) {
   if (contract.groups.items > 0) {
     let items = Array.isArray(next.items) ? [...next.items] : [];
     const beforeLen = items.length;
-    items = padArray(items, contract.groups.items, (i) => `Item ${i + 1}`);
+    items = sliceToMax(items, contract.groups.items, repairs, 'items');
     if (beforeLen !== items.length) {
-      pushRepair(repairs, 'items', 'pad_clamp', beforeLen, items.length);
+      /* slice_clamp */
     }
     next.items = items;
   }
@@ -259,12 +237,9 @@ function clampRepeatingGroups(content, contract, repairs = []) {
         : Array.isArray(next.testimonials) ? next.testimonials
           : [];
     const beforeLen = quotes.length;
-    quotes = padArray(quotes, contract.groups.quotes, () => ({
-      text: `Insight about ${ctx}.`,
-      attribution: '',
-    }));
+    quotes = sliceToMax(quotes, contract.groups.quotes, repairs, 'quotes');
     if (beforeLen !== quotes.length) {
-      pushRepair(repairs, 'quotes', 'pad_clamp', beforeLen, quotes.length);
+      /* slice_clamp */
     }
     next.quotes = quotes;
   }
@@ -279,11 +254,12 @@ function clampRepeatingGroups(content, contract, repairs = []) {
     }
     const beforeLen = plans.length;
     const itemCount = contract.groups.planItems || 0;
-    plans = padArray(plans, contract.groups.plans, (i) =>
-      coercePlanItem(null, i, ctx, itemCount)
-    ).map((plan, i) => coercePlanItem(plan, i, ctx, itemCount));
+    plans = plans.map((plan, i) => coercePlanItem(plan, i, itemCount));
+    plans = sliceToMax(plans, contract.groups.plans, repairs, 'plans');
     if (beforeLen !== plans.length || !Array.isArray(next.plans)) {
-      pushRepair(repairs, 'plans', 'pad_clamp', beforeLen, plans.length);
+      if (beforeLen === plans.length && !Array.isArray(next.plans)) {
+        pushRepair(repairs, 'plans', 'coerce_empty', beforeLen, plans.length);
+      }
     }
     next.plans = plans;
   }
@@ -297,9 +273,9 @@ function clampRepeatingGroups(content, contract, repairs = []) {
           ? [...next.comparison.features]
           : [];
     const beforeLen = features.length;
-    features = padArray(features, contract.groups.pricingFeatures, (i) => `Feature row ${i + 1}`);
+    features = sliceToMax(features, contract.groups.pricingFeatures, repairs, 'features');
     if (beforeLen !== features.length) {
-      pushRepair(repairs, 'features', 'pad_clamp', beforeLen, features.length);
+      /* slice_clamp */
     }
     next.features = features;
   }
@@ -352,7 +328,9 @@ function repairContentForLayoutDetailed(content, schema, options = {}) {
 
   const contract = deriveContentContract(schema);
   let next = normalizeContentForLayout(content, schema);
-  next = clampRepeatingGroups(next, contract, repairs);
+  if (!options.skipClampRepeatingGroups) {
+    next = clampRepeatingGroups(next, contract, repairs);
+  }
   next = ensureTitle(next, schema, repairs);
   next = normalizeContentForLayout(next, schema);
   next = clampAllSlotText(next, schema, contract, repairs);

@@ -39,10 +39,10 @@ const SAMPLE_PLANS = [
   { label: 'Elite', price: '$99', period: '/mo', items: ['Personal training', 'Spa'] },
 ];
 
-test('pricing compile pads plans and fills PLAN_1_LABEL', async () => {
+test('pricing compile maps PLAN_1_LABEL from provided plans', async () => {
   const layoutSchema = schemaForLayoutId('pricing_three_plans_v1');
   const prepared = await prepareContentForCompile({
-    content: { title: 'Flexible Memberships' },
+    content: { title: 'Flexible Memberships', plans: SAMPLE_PLANS },
     layoutSchema,
     context: {},
   });
@@ -54,6 +54,7 @@ test('pricing compile pads plans and fills PLAN_1_LABEL', async () => {
   });
   const label = planLabelText(elementsDoc, 1);
   assert.ok(label && !blueprintSeed.isWeakText(label), `expected PLAN_1_LABEL, got ${label}`);
+  assert.equal(label, 'Basic');
 });
 
 test('rebind restores empty PLAN slots from plans[]', async () => {

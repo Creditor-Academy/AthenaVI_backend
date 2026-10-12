@@ -67,7 +67,7 @@ test('soft compatibility penalties reduce score', () => {
   assert.ok((heavy.breakdown.softCompatibilityPenalty || 0) < 0);
 });
 
-test('unconstrained ranking applies penalty when all layouts hard-reject', () => {
+test('ranking returns empty when primary and widened pools hard-reject', () => {
   const profile = toSlideContentProfile({
     title: 'Revenue chart',
     suggestedContentType: 'chart',
@@ -75,12 +75,8 @@ test('unconstrained ranking applies penalty when all layouts hard-reject', () =>
     chart: { labels: ['Q1'], series: [{ data: [1] }] },
   });
   const bullet = deckLayoutFromSeed('bullet_list_dense_v1');
-  const ranked = rankLayouts(profile, [bullet], { topN: 1 });
-  assert.ok(ranked[0].score <= 75);
-  assert.ok(
-    (ranked[0].warnings || []).some((w) => /unconstrained/i.test(w)),
-    'expected unconstrained warning'
-  );
+  const ranked = rankLayouts(profile, [bullet], { topN: 1, widenedLayouts: [] });
+  assert.equal(ranked.length, 0);
 });
 
 test('candidateContentTypes widens comparison slides', () => {

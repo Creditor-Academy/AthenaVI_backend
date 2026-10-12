@@ -494,10 +494,14 @@ function coerceOutlineLayouts(slides, metas, { slideCount, imageType } = {}) {
   return next;
 }
 
-function enforceSlideCount(slides, slideCount) {
+function enforceSlideCount(slides, slideCount, options = {}) {
+  const allowPad = options.allowPad !== false;
   const n = Math.max(1, Number(slideCount) || slides.length);
   let list = Array.isArray(slides) ? slides.slice() : [];
   if (list.length > n) list = list.slice(0, n);
+  if (!allowPad) {
+    return list.map((s, idx) => ({ ...s, order: idx + 1 }));
+  }
   while (list.length < n) {
     const order = list.length + 1;
     const isLast = order === n;
@@ -524,9 +528,12 @@ function ensureDeckMix(slides, metas, policy = {}) {
   function swapMiddle(predicate) {
     const target = pickFromPool(metas, predicate, used);
     if (!target) return;
-    const idx = list.findIndex(
-      (s, i) => i > 0 && i < list.length - 1 && !predicate({ layoutId: s.layoutId, contentType: s.suggestedContentType })
-    );
+    const idx = list.findIndex((s, i) => {
+      const order = Number(s.order) > 0 ? Number(s.order) : i + 1;
+      const total = list.length;
+      if (order <= 2 || order >= total || (total >= 6 && order === total - 1)) return false;
+      return i > 0 && i < list.length - 1 && !predicate({ layoutId: s.layoutId, contentType: s.suggestedContentType });
+    });
     if (idx < 0) return;
     list[idx] = {
       ...list[idx],

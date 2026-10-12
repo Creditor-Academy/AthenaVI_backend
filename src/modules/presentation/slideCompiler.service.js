@@ -11,6 +11,7 @@ const {
 const blueprintSeed = require('./blueprintSeed');
 const { prepareContentForCompile, isRepairPipelineEnabled } = require('./contentRepair.service');
 const { recordContentRepairAudit } = require('./contentRepairAudit');
+const { scanCompiledContentIntegrity } = require('./contentIntegrity.util');
 
 function compiledHasWeakRequiredText(elementsDoc) {
   return (elementsDoc?.elements || []).some((el) => {
@@ -23,6 +24,11 @@ function compiledHasWeakRequiredText(elementsDoc) {
 
 function isPricingLayoutSchema(layoutSchema) {
   return blueprintSeed.isPricingLayoutSchema(layoutSchema);
+}
+
+function integrityBlocksReseed(integrity) {
+  if (!integrity?.issues?.length) return false;
+  return integrity.blocking === true;
 }
 
 /**
@@ -42,6 +48,8 @@ async function compileSlide({
   skipContentRepair = false,
   context = {},
 }) {
+  const rawContent =
+    content && typeof content === 'object' ? JSON.parse(JSON.stringify(content)) : {};
   let workingContent = content && typeof content === 'object' ? content : {};
   let audit = { warnings: [], repairs: [], issues: [], passes: 0, durationMs: 0, skipped: true };
 
@@ -108,15 +116,24 @@ async function compileSlide({
     slideDesignPlan
   );
 
+  const integrity = scanCompiledContentIntegrity(elementsDoc, layoutSchema, workingContent, {
+    rawContent,
+  });
+  audit.integrity = integrity;
+  audit.issues = [...(audit.issues || []), ...(integrity.issues || [])];
+  audit.warnings = [...new Set([...(audit.warnings || []), ...(integrity.warnings || [])])];
+
   let emptySlotFallback = false;
   const weakPricing =
     blueprintSeed.compiledHasWeakPricingElements(elementsDoc, layoutSchema) &&
     !blueprintSeed.contentMissingPricingPlans(workingContent, layoutSchema);
-  if (
+  const mayReseed =
     (compiledHasWeakRequiredText(elementsDoc) || weakPricing) &&
     layoutSchema?.slots?.length &&
-    outlineSlide
-  ) {
+    outlineSlide &&
+    !integrityBlocksReseed(integrity);
+
+  if (mayReseed) {
     workingContent = blueprintSeed.mergeSeedIntoContent(
       workingContent,
       blueprintSeed.seedFromOutlineSlide(outlineSlide),
@@ -136,6 +153,18 @@ async function compileSlide({
       slideDesignPlan
     );
     emptySlotFallback = true;
+    const postReseedIntegrity = scanCompiledContentIntegrity(elementsDoc, layoutSchema, workingContent, {
+      rawContent,
+    });
+    audit.postReseedIntegrity = postReseedIntegrity;
+    audit.issues = [...(audit.issues || []), ...(postReseedIntegrity.issues || [])];
+  } else if (
+    (compiledHasWeakRequiredText(elementsDoc) || weakPricing) &&
+    layoutSchema?.slots?.length &&
+    outlineSlide
+  ) {
+    audit.reseedBlockedReason = integrity.blocking ? 'content_integrity' : 'unknown';
+    audit.warnings = [...new Set([...(audit.warnings || []), 'BLUEPRINT_RESEED_BLOCKED'])];
   }
 
   if (context.slideId) {

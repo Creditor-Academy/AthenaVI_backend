@@ -11,9 +11,13 @@ function buildSlideDesignPlan({ ctx, slide, outlineSlide } = {}) {
 
   // Special treatment for cover regardless of rhythm role, if we can infer it.
   const isCover = Number(slide?.order) === 1 || String(slide?.order) === '1';
+  const outlineType = String(
+    outlineSlide?.suggestedContentType || slide?.suggestedContentType || ''
+  ).toLowerCase();
+  const isTitleSlide = outlineType === 'title' || isCover;
 
   const designTokens =
-    isCover && visualRole === 'cover'
+    isTitleSlide
       ? coverDesignTokens(ctx?.themeTokens || {})
       : designTokensForVisualRole({ visualRole, appearance });
 

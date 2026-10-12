@@ -530,6 +530,42 @@ function chartForSlot(slotId, content = {}) {
   return content.chart || null;
 }
 
+/** True when compile may inject sampleChartDataset for an empty chart slot. */
+function chartSlotAllowsSampleData(content, slotId) {
+  if (!content || typeof content !== 'object') return false;
+  if (content.isIllustrative === true || content.deckIllustrative === true) return true;
+  const id = String(slotId || '').toUpperCase();
+  const chartMatch = id.match(/^CHART_(\d+)$/);
+  const index = chartMatch ? Number(chartMatch[1]) - 1 : 0;
+  const dataset = chartDatasetAt(content, index);
+  if (dataset && dataset.isIllustrative === true) return true;
+  if (index === 0 && content.chart?.isIllustrative === true) return true;
+  return false;
+}
+
+const SYNTHETIC_REPAIR_PATTERNS = [
+  /^Focus area \d+$/i,
+  /^Metric \d+$/i,
+  /^Point \d+ about /i,
+  /^Team member \d+$/i,
+  /^Item \d+$/i,
+  /^Phase \d+$/i,
+  /^Feature row \d+$/i,
+  /^Included benefit \d+$/i,
+];
+
+/** Detect legacy repair padding strings in compiled or content text. */
+function isSyntheticRepairFingerprint(text) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  if (SYNTHETIC_REPAIR_PATTERNS.some((re) => re.test(t))) return true;
+  if (/^Key point about /i.test(t)) return true;
+  if (/^Milestone for /i.test(t)) return true;
+  if (/^Stage of /i.test(t)) return true;
+  if (/^Insight about /i.test(t)) return true;
+  return false;
+}
+
 /** Distinct demo datasets so empty CHART_1/2/3 slots all render. */
 function sampleChartDataset(index = 0, layoutId = '') {
   const i = Math.max(0, Number(index) || 0);
@@ -1342,6 +1378,8 @@ module.exports = {
   isMainTitleSlot,
   chartForSlot,
   chartDatasetAt,
+  chartSlotAllowsSampleData,
+  isSyntheticRepairFingerprint,
   sampleChartDataset,
   isChartElementSlot,
   resolveChartTypeForSlot,

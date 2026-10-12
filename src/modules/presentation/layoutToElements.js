@@ -9,7 +9,7 @@ const {
   placementInsideSafeRect,
   SLIDE_TEXT_SAFE_INSET_X,
 } = require('./slideTextSafeArea');
-const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
+const { isCatalogPlaceholderText, isLayoutEngineDefaultText } = require('./catalogPlaceholder');
 const blueprintSeed = require('./blueprintSeed');
 const {
   relativeLuminance,
@@ -36,6 +36,7 @@ const {
   bulletBlock,
   isMainTitleSlot,
   chartForSlot,
+  chartSlotAllowsSampleData,
   sampleChartDataset,
   isChartElementSlot,
   resolveChartTypeForSlot,
@@ -1137,8 +1138,23 @@ function paletteColor(paletteOrTokens, role, fallback) {
   return resolvePaletteRole(palette, colorRoles, role, fallback);
 }
 
+const {
+  isFullBleedImageTitleLayout,
+  isSplitHeroTitleLayout,
+  resolveSlotTextSurface,
+  isImageOverlaySurface,
+} = require('./artDirection/textSurface');
+const { resolveHeadingTypography } = require('./artDirection/resolveHeadingTypography');
+
 function isOverlayLayout(layoutSchema, designTokens) {
   if (designTokens?.backgroundStyle === 'image' || designTokens?.textContrast === 'high') {
+    return true;
+  }
+  if (isFullBleedImageTitleLayout(layoutSchema)) return true;
+  if (
+    String(layoutSchema?.content_type || '').toLowerCase() === 'title' &&
+    isSplitHeroTitleLayout(layoutSchema)
+  ) {
     return true;
   }
   const layoutId = String(layoutSchema?.layout_id || '');
@@ -1146,7 +1162,7 @@ function isOverlayLayout(layoutSchema, designTokens) {
   if (slots.some((s) => s.id === 'BACKGROUND_IMAGE' || /OVERLAY_SCRIM/i.test(String(s.id || '')))) {
     return true;
   }
-  if (/full_bg|overlay|statement_top|statement_bottom/i.test(layoutId)) {
+  if (/full_bg|overlay|statement_top|statement_bottom|title_hero|title_fullbleed/i.test(layoutId)) {
     return true;
   }
   return false;
@@ -1155,6 +1171,7 @@ function isOverlayLayout(layoutSchema, designTokens) {
 function overlayColorRoleForSlot(role, ty = {}, overlayActive) {
   if (!overlayActive) return null;
   if (ty.colorRole === 'textOnImage' || ty.colorRole === 'textOnImageMuted') return ty.colorRole;
+  if (ty.textSurface === 'card' || ty.surface === 'card') return null;
   if (role === 'caption' || role === 'eyebrow' || role === 'subheading' || role === 'body') {
     return 'textOnImageMuted';
   }
@@ -1220,49 +1237,37 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens, placeme
   const scale = themeTokens?.typeScale || {};
   const palette = themeTokens?.palette || {};
   const mergedDesignTokens = mergeDesignTokensWithTheme(designTokens, themeTokens, layoutSchema);
-  const overlayActive = isOverlayLayout(layoutSchema, mergedDesignTokens);
+  let overlayActive = isOverlayLayout(layoutSchema, mergedDesignTokens);
 
-  const typographyRole = inferTypographyRole({ slot, layoutSchema });
-  let fontSize = ty.fontSize;
-  if (fontSize == null) {
-    const semanticSize =
-      typographyRole === 'heroTitle'
-        ? scale.display
-        : typographyRole === 'title' || typographyRole === 'sectionTitle'
-          ? scale.title
-          : typographyRole === 'cardTitle'
-            ? scale.subtitle ??
-              (scale.body != null ? Math.round(Number(scale.body) * 1.35) : null)
-            : typographyRole === 'subtitle'
-              ? scale.subtitle
-              : typographyRole === 'body'
-                ? scale.body
-                : typographyRole === 'caption' || typographyRole === 'eyebrow' || typographyRole === 'label'
-                  ? scale.caption
-                  : typographyRole === 'metric'
-                    ? scale.stat ?? scale.display
-                    : null;
-    if (semanticSize != null && Number(semanticSize) > 0) fontSize = Number(semanticSize);
-    else fontSize = resolveTypeScaleFontSize(role, scale, slotId);
-  }
-  if (
-    fontSize == null &&
-    role === 'heading' &&
-    scale.display != null &&
-    typographyRole !== 'cardTitle' &&
-    !/^(card|col|row|feature|bullet|item)_\d+_/i.test(String(slotId || ''))
-  ) {
-    fontSize = scale.display;
-  }
-  if (fontSize == null && placement) {
-    fontSize = canvasFontSizeForTextSlot(slot, placement, canvasWidth);
-  }
-  if (fontSize == null) fontSize = fallback.fontSize;
-
-  const fontWeight = ty.fontWeight != null ? Number(ty.fontWeight) : fallback.bold ? 700 : 400;
-  const bold = fontWeight >= 600;
+  const headingTy = resolveHeadingTypography({
+    slot,
+    layoutSchema,
+    themeTokens,
+    placement,
+    canvasWidth,
+    canvasFontSizeForTextSlot,
+    resolveTypeScaleFontSize,
+    styleForSlotFallback: styleForSlot,
+  });
+  const typographyRole = headingTy.typographyRole;
+  let fontSize = headingTy.fontSize;
+  const fontWeight = headingTy.fontWeight;
+  const bold = headingTy.bold;
   const align = ty.align || fallback.align || 'left';
+
+  const textSurface = resolveSlotTextSurface(slot, layoutSchema, mergedDesignTokens, themeTokens);
+  if (isImageOverlaySurface(textSurface)) overlayActive = true;
+
   let colorRole = ty.colorRole || null;
+  if (
+    isImageOverlaySurface(textSurface) &&
+    colorRole &&
+    (colorRole === 'text' || colorRole === 'muted') &&
+    !ty.textSurface &&
+    !ty.surface
+  ) {
+    colorRole = null;
+  }
   if (!colorRole) {
     const overlayRole = overlayColorRoleForSlot(role, ty, overlayActive);
     if (overlayRole) {
@@ -1286,11 +1291,11 @@ function resolveTextStyle(slot, layoutSchema, themeTokens, designTokens, placeme
     if (overlayRole) colorRole = overlayRole;
   }
   if (
-    mergedDesignTokens?.textContrast === 'high' &&
-    !ty.colorRole &&
+    (mergedDesignTokens?.textContrast === 'high' || isImageOverlaySurface(textSurface)) &&
     (colorRole === 'text' || colorRole === 'muted')
   ) {
-    colorRole = overlayActive ? 'textOnImage' : 'text';
+    const overlayRole = overlayColorRoleForSlot(role, ty, overlayActive);
+    colorRole = overlayRole || (overlayActive ? 'textOnImage' : 'text');
   }
 
   return {
@@ -2166,10 +2171,16 @@ function layoutSlotsToElements(
 
     if (isChartElementSlot(slotId, role)) {
       let chartData = chartForSlot(slotId, content);
-      // Multi-chart layouts must still emit CHART_2/CHART_3 when datasets are missing
       if (!chartData && /^CHART_\d+$/i.test(String(slotId))) {
-        const idx = Math.max(0, Number(String(slotId).match(/(\d+)/)?.[1] || 1) - 1);
-        chartData = sampleChartDataset(idx, layoutSchema?.layout_id);
+        if (chartSlotAllowsSampleData(content, slotId)) {
+          const idx = Math.max(0, Number(String(slotId).match(/(\d+)/)?.[1] || 1) - 1);
+          chartData = sampleChartDataset(idx, layoutSchema?.layout_id);
+        } else {
+          continue;
+        }
+      }
+      if (!chartData) {
+        continue;
       }
       const brandChartColors = themeTokens?.brand?.chartColors;
       
@@ -2470,6 +2481,13 @@ function hasOverlappingTextPlacements(elementsDoc) {
 function layoutRequiresOverlayScrim(layoutSchema) {
   if (!layoutSchema || typeof layoutSchema !== 'object') return false;
   const layoutId = String(layoutSchema.layout_id || '');
+  if (isFullBleedImageTitleLayout(layoutSchema)) return true;
+  if (
+    String(layoutSchema?.content_type || '').toLowerCase() === 'title' &&
+    isSplitHeroTitleLayout(layoutSchema)
+  ) {
+    return true;
+  }
   if (isTitleFullbleedOverlayLayout(layoutId, layoutSchema)) return false;
   if (isTitleFullbleedLayout(layoutId, layoutSchema)) return false;
   if (isWideImageStatementOverlayLayout(layoutId, layoutSchema)) return false;
@@ -2484,7 +2502,9 @@ function layoutRequiresOverlayScrim(layoutSchema) {
   ) {
     return true;
   }
-  return /full_bg|overlay|statement_top|statement_bottom/i.test(layoutId);
+  return /full_bg|overlay|statement_top|statement_bottom|title_hero|title_fullbleed/i.test(
+    layoutId
+  );
 }
 
 /** True only when a near-full-bleed background image is present with a URL. */
@@ -2787,7 +2807,14 @@ function applyReadableTextContrast(elementsDoc, themeTokens = null, layoutSchema
       (isSectionDividerSplitLayout(layoutSchema?.layout_id) && (/^(HEADING|BODY|CHROME)$/i.test(String(el.slotId || ''))))
     ) continue;
     const role = String(el.content?.colorRole || '').toLowerCase();
-    if (overlay && (role === 'textonimage' || role === 'textonimagemuted')) continue;
+    if (role === 'textonimage' || role === 'textonimagemuted') continue;
+    const slotDef = (layoutSchema?.slots || []).find(
+      (s) => String(s.id || '').toUpperCase() === String(el.slotId || '').toUpperCase()
+    );
+    if (slotDef) {
+      const surface = resolveSlotTextSurface(slotDef, layoutSchema, null, themeTokens);
+      if (isImageOverlaySurface(surface)) continue;
+    }
     // Keep on-accent CTA labels set by pill shape decisions (cream/white on accent fill).
     const elRole = String(el.role || '').toLowerCase();
     const slotKey = String(el.slotId || '').toUpperCase();
@@ -9076,7 +9103,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
   const specs = isRibbonCards
     ? agendaThreeCardsChromeSpecs({
       hero: isThreeCardsHero,
-      labels: ['Morning', 'Afternoon', 'Evening'].map((fb, i) => {
+      labels: [1, 2, 3].map((colNum, i) => {
         const el = elements.find((item) => String(item.slotId || '').toUpperCase() === `AGENDA_COL_${i + 1}_HEADING`);
         const c = el?.content || {};
         const text = typeof c.text === 'string'
@@ -9084,7 +9111,7 @@ function layoutAgendaInfographic(doc, layoutSchema, themeTokens, canvas = {}) {
           : Array.isArray(c.runs)
             ? c.runs.map((r) => r.text || '').join('')
             : '';
-        return String(text).trim() || fb;
+        return String(text).trim() || `Session ${colNum}`;
       }),
     })
     : agendaChromeSpecs(family, variant, itemCount);
@@ -9426,8 +9453,6 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = layoutChartThreeContext(next, layoutSchema, themeTokens, canvas);
   } else if (isChartThreeContextCardsLayout(layoutSchema?.layout_id)) {
     next = layoutChartThreeContextCards(next, layoutSchema, themeTokens, canvas);
-  } else if (isChartDonutContextLayout(layoutSchema?.layout_id)) {
-    next = layoutChartDonutContext(next, layoutSchema, themeTokens, canvas);
   } else if (isMetricThreeCardsLayout(layoutSchema?.layout_id)) {
     next = layoutMetricThreeCards(next, layoutSchema, themeTokens, canvas);
   } else if (isMetricSingleLayout(layoutSchema?.layout_id)) {
@@ -9617,7 +9642,22 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     next = rebindContentToElements(next, content, null, {
       themeTokens,
       layoutSchema,
+      forceTextReplace: false,
     });
+  }
+
+  if (isChartDonutContextLayout(layoutSchema?.layout_id)) {
+    const palette =
+      themeTokens?.palette ||
+      (themeTokens && typeof themeTokens === 'object' ? themeTokens : null) ||
+      {};
+    next = {
+      ...next,
+      elements: layoutChartDonutContext(next.elements, layoutSchema, palette, {
+        ...canvas,
+        slideContent: content,
+      }),
+    };
   }
 
   if (
@@ -9628,6 +9668,9 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   ) {
     next = repairElementsDoc(next, { themeTokens, layoutSchema, content, slideDesignPlan });
   }
+  const { reconcileCompiledTextWithContent } = require('./contentIntegrity.util');
+  next = reconcileCompiledTextWithContent(next, layoutSchema, content);
+
   // Last step: shrink any text that would overflow its box so generated slides fit the page.
   return fitTextElementsToBoxes(next, canvas);
 }
@@ -9679,6 +9722,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       !current ||
       isPackPlaceholderText(current) ||
       isCatalogPlaceholderText(current) ||
+      isLayoutEngineDefaultText(current) ||
       /^option [ab]$/i.test(String(current || '').trim()) ||
       (treatWeakAsEmpty && blueprintSeed.isWeakText(current));
     if (mayReplace) {

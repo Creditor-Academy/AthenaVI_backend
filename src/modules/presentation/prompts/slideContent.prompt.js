@@ -92,6 +92,18 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
     );
   }
 
+  if (/chart_donut_context/.test(id)) {
+    lines.push(
+      'Donut context / market-share layout: REQUIRED stats[4] with { label, value, body } per segment OR chart.labels plus chart.series values of matching length — never placeholder names like "Metric A". If the brief is qualitative only, set chart.isIllustrative:true with non-numeric segment labels and copy that does not imply real market-share percentages.'
+    );
+  }
+
+  if (/grid_device/.test(id) || type === 'device_frames') {
+    lines.push(
+      'Device mockup layout: REQUIRED features[] or columns[] (minimum 2) with { title, body } per device card — topic-specific copy only, never "Describe this feature".'
+    );
+  }
+
   if (/chart_two|chart_three|chart_dual/.test(id)) {
     lines.push(
       'Dual/triple chart layout: ONLY when comparing two or three distinct datasets. Provide chart + chart2 (or charts[]) with different labels/metrics — never the same data in both charts.'

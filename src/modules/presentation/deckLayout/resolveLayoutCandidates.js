@@ -94,10 +94,71 @@ async function resolveLayoutCandidates(primaryLayoutContentType, options = {}) {
     }
   }
 
+  const templates = [...byId.values()];
+  const primaryType = String(primaryLayoutContentType || types[0] || '')
+    .trim()
+    .toLowerCase();
+  const primaryIds = new Set();
+  const primaryTemplates = [];
+  const widenedTemplates = [];
+
+  for (const template of templates) {
+    const id = templateKey(template);
+    if (!id) continue;
+    const ct = String(template?.contentType || template?.schema?.content_type || '')
+      .trim()
+      .toLowerCase();
+    if (primaryType && ct === primaryType) {
+      if (!primaryIds.has(id)) {
+        primaryIds.add(id);
+        primaryTemplates.push(template);
+      }
+    }
+  }
+  for (const template of templates) {
+    const id = templateKey(template);
+    if (!id || primaryIds.has(id)) continue;
+    widenedTemplates.push(template);
+  }
+
   return {
-    templates: [...byId.values()],
+    templates,
+    primaryTemplates,
+    widenedTemplates,
     contentTypes: types,
   };
+}
+
+/**
+ * Split an already-loaded template list by catalog content_type vs primary type.
+ */
+function splitPrimaryAndWidenedTemplates(templates, primaryLayoutContentType) {
+  const list = Array.isArray(templates) ? templates : [];
+  const primaryType = String(primaryLayoutContentType || '')
+    .trim()
+    .toLowerCase();
+  const primaryIds = new Set();
+  const primaryTemplates = [];
+  const widenedTemplates = [];
+  for (const template of list) {
+    const id = templateKey(template);
+    if (!id) continue;
+    const ct = String(template?.contentType || template?.schema?.content_type || '')
+      .trim()
+      .toLowerCase();
+    if (primaryType && ct === primaryType) {
+      if (!primaryIds.has(id)) {
+        primaryIds.add(id);
+        primaryTemplates.push(template);
+      }
+    }
+  }
+  for (const template of list) {
+    const id = templateKey(template);
+    if (!id || primaryIds.has(id)) continue;
+    widenedTemplates.push(template);
+  }
+  return { primaryTemplates, widenedTemplates };
 }
 
 function buildLayoutSearchText(ctx = {}, outlineSlide = {}, content = {}) {
@@ -126,6 +187,7 @@ function buildLayoutSearchText(ctx = {}, outlineSlide = {}, content = {}) {
 module.exports = {
   candidateContentTypes,
   resolveLayoutCandidates,
+  splitPrimaryAndWidenedTemplates,
   buildLayoutSearchText,
   templateKey,
 };

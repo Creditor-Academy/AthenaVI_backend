@@ -1,7 +1,8 @@
 const { toDeckLayout } = require('./toDeckLayout');
 const { toSlideContentProfile } = require('./toSlideContentProfile');
 const { rankLayouts } = require('./rankLayouts');
-const { buildLayoutSearchText } = require('./resolveLayoutCandidates');
+const { buildLayoutSearchText, splitPrimaryAndWidenedTemplates } = require('./resolveLayoutCandidates');
+const { pickSafeLayoutFallback } = require('./layoutSafeFallback');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
 const { layoutFamilyExcludeIds, isSplitHeroLayout } = require('../layoutSelector.service');
@@ -9,6 +10,31 @@ const logger = require('../../../shared/utils/logger');
 
 function templateLayoutId(template) {
   return String(template?.schema?.layout_id || template?.variant || template?.id || '').trim();
+}
+
+function buildExcludedSet(excludeLayoutIds) {
+  return new Set(
+    (Array.isArray(excludeLayoutIds) ? excludeLayoutIds : [])
+      .map((id) => String(id || '').trim())
+      .filter(Boolean)
+  );
+}
+
+/**
+ * @returns {{ allowed: object[], excluded: Set<string>, exhausted: boolean }}
+ */
+function applyLayoutExclusions(templates, excludeLayoutIds) {
+  const list = Array.isArray(templates) ? templates.filter(Boolean) : [];
+  const excluded = buildExcludedSet(excludeLayoutIds);
+  if (!excluded.size) {
+    return { allowed: list, excluded, exhausted: false };
+  }
+  const allowed = list.filter((t) => !excluded.has(templateLayoutId(t)));
+  return {
+    allowed,
+    excluded,
+    exhausted: list.length > 0 && allowed.length === 0,
+  };
 }
 
 function previousIdsFrom(value) {
@@ -159,9 +185,10 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
   });
 }
 
-function promotePreferred(ranked, preferredLayoutId) {
+function promotePreferred(ranked, preferredLayoutId, excluded = null) {
   const id = String(preferredLayoutId || '').trim();
   if (!id || !Array.isArray(ranked) || !ranked.length) return ranked;
+  if (excluded && excluded.has(id)) return ranked;
   const idx = ranked.findIndex((r) => r.layoutId === id);
   if (idx <= 0) return ranked;
   const copy = ranked.slice();
@@ -199,29 +226,27 @@ async function pickLayoutForGeneratedSlide({
   totalSlides,
   debug = false,
   chatJson,
+  primaryLayoutContentType = null,
+  widenedTemplates = null,
 } = {}) {
-  let list = Array.isArray(templates) ? templates.filter(Boolean) : [];
-  const excluded = new Set(
-    (Array.isArray(excludeLayoutIds) ? excludeLayoutIds : [])
-      .map((id) => String(id || '').trim())
-      .filter(Boolean)
-  );
-  if (excluded.size) {
-    const filtered = list.filter((t) => !excluded.has(templateLayoutId(t)));
-    if (filtered.length) {
-      list = filtered;
-    } else if (list.length) {
-      // Exclusions would exhaust the whole candidate pool — better to reuse an
-      // excluded layout than to hand back no layout at all (which renders blank).
-      logger.warn?.('presentation_layout_pool_exhausted_by_exclusions', {
-        slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
-        phase,
-        excludeLayoutIds: [...excluded],
-        candidateCount: list.length,
-      });
-    }
+  const exclusionPrimary = applyLayoutExclusions(templates, excludeLayoutIds);
+  let list = exclusionPrimary.allowed;
+  const excluded = exclusionPrimary.excluded;
+  if (exclusionPrimary.exhausted) {
+    logger.warn?.('presentation_layout_pool_exhausted_by_exclusions', {
+      slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
+      phase,
+      excludeLayoutIds: [...excluded],
+      candidateCount: (Array.isArray(templates) ? templates : []).length,
+    });
   }
-  if (!list.length) {
+
+  let widenedRawInput = Array.isArray(widenedTemplates) ? widenedTemplates.filter(Boolean) : [];
+  if (excluded.size && widenedRawInput.length) {
+    widenedRawInput = applyLayoutExclusions(widenedRawInput, excludeLayoutIds).allowed;
+  }
+
+  if (!list.length && !widenedRawInput.length) {
     logger.warn?.('presentation_layout_pool_empty', {
       slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
       phase,
@@ -362,9 +387,22 @@ async function pickLayoutForGeneratedSlide({
     }
   }
 
-  const deckLayouts = list.map((t) => toDeckLayout(t));
+  let primaryRaw = list;
+  let widenedRaw = widenedRawInput;
+  if (primaryLayoutContentType) {
+    const split = splitPrimaryAndWidenedTemplates(list, primaryLayoutContentType);
+    primaryRaw = split.primaryTemplates.length ? split.primaryTemplates : list;
+    if (!widenedRaw.length) {
+      widenedRaw = applyLayoutExclusions(split.widenedTemplates, excludeLayoutIds).allowed;
+    }
+  }
+  const deckLayouts = primaryRaw.map((t) => toDeckLayout(t));
+  const primaryIds = new Set(deckLayouts.map((l) => l.id).filter(Boolean));
+  const widenedDeckLayouts = widenedRaw
+    .map((t) => toDeckLayout(t))
+    .filter((l) => l?.id && !primaryIds.has(l.id));
   const layoutsById = {};
-  for (const layout of deckLayouts) {
+  for (const layout of [...deckLayouts, ...widenedDeckLayouts]) {
     if (layout?.id) layoutsById[layout.id] = layout;
   }
 
@@ -384,12 +422,54 @@ async function pickLayoutForGeneratedSlide({
     searchText,
     arrangementArchetype: ctx?.outline?.arrangementArchetype || null,
     deprioritizeFullBleedClosing: isSplitHeroLayout(ctx?.titleLayoutId),
+    widenedLayouts: widenedDeckLayouts,
   });
-  ranked = promotePreferred(ranked, preferredLayoutId);
+  ranked = promotePreferred(ranked, preferredLayoutId, excluded);
 
   if (!ranked.length) {
-    const fallback = list[0];
-    return { layoutId: templateLayoutId(fallback) || null, template: fallback };
+    const safe = pickSafeLayoutFallback(profile, [...deckLayouts, ...widenedDeckLayouts], {
+      excludeLayoutIds: [...excluded],
+    });
+    if (safe?.id) {
+      const safeTemplate = resolveTemplate(list, safe.id) || resolveTemplate(widenedRaw, safe.id);
+      if (ctx && typeof ctx === 'object') {
+        if (!Array.isArray(ctx.layoutSelectionLog)) ctx.layoutSelectionLog = [];
+        ctx.layoutSelectionLog.push({
+          slideNumber: Number(slide?.order || outlineSlide?.order || profile?.slideNumber || 0) || null,
+          phase,
+          source: 'safe_fallback',
+          selectedLayoutId: safe.id,
+          candidateCount: list.length,
+        });
+      }
+      return {
+        layoutId: safe.id,
+        template: safeTemplate,
+        selection: {
+          selectedLayoutId: safe.id,
+          confidence: 0,
+          reason: 'No ranked candidates; using compatible safe fallback',
+          source: 'safe_fallback',
+          usedFallback: true,
+        },
+      };
+    }
+    logger.warn?.('presentation_layout_no_compatible_candidate', {
+      slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
+      phase,
+      candidateCount: list.length,
+    });
+    return {
+      layoutId: null,
+      template: null,
+      selection: {
+        selectedLayoutId: null,
+        confidence: 0,
+        reason: 'No layout passed hard compatibility filters',
+        source: 'no_compatible_layout',
+        usedFallback: true,
+      },
+    };
   }
 
   const layoutLocked = Boolean(outlineSlide?.layoutLocked);
@@ -447,6 +527,7 @@ async function pickLayoutForGeneratedSlide({
 }
 
 module.exports = {
+  applyLayoutExclusions,
   pickLayoutForGeneratedSlide,
   buildPresentationContext,
   templateLayoutId,

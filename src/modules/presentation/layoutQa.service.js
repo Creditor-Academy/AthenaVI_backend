@@ -200,9 +200,103 @@ function layoutNeedsComparison(slots) {
   );
 }
 
+function countFilledGroupItems(arr, pickText) {
+  if (!Array.isArray(arr)) return 0;
+  return arr.filter((item) => String(pickText(item) || '').trim().length > 0).length;
+}
+
+function validateGroupUnderfill(content, layoutSchema, issues) {
+  const contract = deriveContentContract(layoutSchema);
+  const g = contract.groups || {};
+
+  if (g.columns >= 2) {
+    const cols = content?.columns || content?.cards || content?.features || [];
+    const filled = countFilledGroupItems(cols, (col) => {
+      if (typeof col === 'string') return col;
+      return col?.title ?? col?.body ?? col?.text ?? '';
+    });
+    if (filled < g.columns) {
+      issues.push({
+        path: 'columns',
+        code: 'GROUP_UNDERFILL',
+        rule: 'group_underfill',
+        expected: g.columns,
+        actual: filled,
+        repairable: true,
+      });
+    }
+  }
+
+  if (g.bullets >= 2) {
+    const filled = countFilledGroupItems(content?.bullets, (b) =>
+      typeof b === 'string' ? b : b?.text ?? b?.body ?? ''
+    );
+    if (filled < g.bullets) {
+      issues.push({
+        path: 'bullets',
+        code: 'GROUP_UNDERFILL',
+        rule: 'group_underfill',
+        expected: g.bullets,
+        actual: filled,
+        repairable: true,
+      });
+    }
+  }
+
+  if (g.timeline >= 2) {
+    const timeline = content?.timeline || content?.milestones || content?.events || [];
+    const filled = countFilledGroupItems(timeline, (item) => {
+      if (typeof item === 'string') return item;
+      return item?.label ?? item?.detail ?? item?.title ?? '';
+    });
+    if (filled < g.timeline) {
+      issues.push({
+        path: 'timeline',
+        code: 'GROUP_UNDERFILL',
+        rule: 'group_underfill',
+        expected: g.timeline,
+        actual: filled,
+        repairable: true,
+      });
+    }
+  }
+}
+
+function validateMultiChartSlots(content, layoutSchema, issues) {
+  const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
+  const chartSlots = slots.filter(
+    (s) => isChartElementSlot(s.id, s.role) && /^CHART_\d+$/i.test(String(s.id || ''))
+  );
+  if (chartSlots.length <= 1) return;
+
+  for (const slot of chartSlots) {
+    const data = chartForSlot(slot.id, content);
+    const { labels, values } = normalizeChartSeries(data || {});
+    const numericValues = values.filter((v) => v != null && v !== '' && !Number.isNaN(Number(v)));
+    const valid =
+      labels.length >= 2 && numericValues.length >= 2 && numericValues.length === labels.length;
+    const illustrative =
+      content?.isIllustrative === true ||
+      content?.deckIllustrative === true ||
+      data?.isIllustrative === true;
+    if (!valid && !illustrative) {
+      issues.push({
+        path: slot.id,
+        code: 'MISSING_CHART_SLOT',
+        rule: 'missing_chart_slot',
+        repairable: false,
+        requiresLayoutRetry: true,
+      });
+    }
+  }
+}
+
 function validateStructuredFields(content, layoutSchema, issues) {
   const slots = Array.isArray(layoutSchema?.slots) ? layoutSchema.slots : [];
   if (!slots.length) return;
+
+  validateGroupUnderfill(content, layoutSchema, issues);
+  validateMultiChartSlots(content, layoutSchema, issues);
 
   if (layoutNeedsAgendaColumns(slots)) {
     const cols = content?.agenda?.columns;
@@ -531,20 +625,41 @@ function applyBulletLimits(items, slot, issues, path) {
 
 const { validateContentWithJoi } = require('./contentContract.schema');
 const {
-  validateContentForLayoutSoft,
   deriveContentContract,
+  collectRawArrayOverflowErrors,
+  collectPostNormalizeContractErrors,
 } = require('@athena/contracts/contentContract.js');
+const { chartForSlot, isChartElementSlot } = require('@athena/contracts/slotText.js');
 
-function validateSlideContract({ content, layoutSchema, phase = 'repaired' }) {
+function contractIssueRepairable(err) {
+  const code = String(err?.code || '');
+  if (code === 'ARRAY_OVERFLOW') return false;
+  if (code === 'MISSING_TITLE' || code === 'SLOT_CHAR_OVERFLOW') return true;
+  return code !== 'INVALID_SCHEMA';
+}
+
+function validateSlideContract({ content, layoutSchema, phase = 'repaired', skipRawOverflow = false }) {
   const issues = [];
   if (!layoutSchema?.slots?.length) return { valid: true, issues };
 
-  const soft = validateContentForLayoutSoft(content, layoutSchema);
-  for (const err of soft.errors || []) {
+  if (!skipRawOverflow) {
+    for (const err of collectRawArrayOverflowErrors(content, layoutSchema)) {
+      issues.push({
+        ...err,
+        source: 'contract',
+        repairable: false,
+        requiresLayoutRetry: true,
+        phase,
+      });
+    }
+  }
+
+  const postErrors = collectPostNormalizeContractErrors(content, layoutSchema);
+  for (const err of postErrors) {
     issues.push({
       ...err,
       source: 'contract',
-      repairable: true,
+      repairable: contractIssueRepairable(err),
       phase,
     });
   }
@@ -561,7 +676,13 @@ function validateSlideContract({ content, layoutSchema, phase = 'repaired' }) {
  * Validate / truncate slide content against layout schema slot caps.
  * @returns {{ content: object, issues: Array<object> }}
  */
-function validateSlide({ content, layoutSchema, includeContract = false, contractPhase = 'repaired' }) {
+function validateSlide({
+  content,
+  layoutSchema,
+  includeContract = false,
+  contractPhase = 'repaired',
+  rawOverflowSource = null,
+}) {
   const issues = [];
   const next = cloneContent(content);
   const schema = layoutSchema && typeof layoutSchema === 'object' ? layoutSchema : {};
@@ -638,10 +759,22 @@ function validateSlide({ content, layoutSchema, includeContract = false, contrac
   validateStructuredFields(next, schema, issues);
 
   if (includeContract) {
+    const overflowSource =
+      rawOverflowSource != null && typeof rawOverflowSource === 'object' ? rawOverflowSource : content;
+    for (const err of collectRawArrayOverflowErrors(overflowSource, schema)) {
+      issues.push({
+        ...err,
+        source: 'contract',
+        repairable: false,
+        requiresLayoutRetry: true,
+        phase: contractPhase,
+      });
+    }
     const contractCheck = validateSlideContract({
       content: next,
       layoutSchema: schema,
       phase: contractPhase,
+      skipRawOverflow: true,
     });
     issues.push(...contractCheck.issues);
   }

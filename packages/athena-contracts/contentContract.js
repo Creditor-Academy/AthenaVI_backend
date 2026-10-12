@@ -309,15 +309,82 @@ function isTextSlotRole(role) {
   return ['heading', 'subheading', 'body', 'caption', 'quote', 'stat', 'cta', 'eyebrow', 'label'].includes(r);
 }
 
-function countExcessArray(path, arr, max, errors) {
+function pushArrayOverflow(errors, path, arr, max) {
   if (!Array.isArray(arr) || max <= 0) return;
   if (arr.length > max) {
     errors.push({
       code: 'ARRAY_OVERFLOW',
       path,
       message: `${path} has ${arr.length} items but layout allows ${max}`,
+      actual: arr.length,
+      max,
     });
   }
+}
+
+/**
+ * Detect array/group overflows on raw content before normalizeContentForLayout can conceal them.
+ * @returns {Array<{ code: string, path: string, message: string, actual?: number, max?: number }>}
+ */
+function collectRawArrayOverflowErrors(content, schema) {
+  const errors = [];
+  if (!schema || !Array.isArray(schema.slots)) return errors;
+  const raw = content && typeof content === 'object' ? content : {};
+  const contract = deriveContentContract(schema);
+  const g = contract.groups || {};
+
+  pushArrayOverflow(errors, 'columns', raw.columns, g.columns);
+  pushArrayOverflow(errors, 'stats', raw.stats, g.stats);
+  pushArrayOverflow(errors, 'members', raw.members || raw.team || raw.people, g.members);
+  pushArrayOverflow(
+    errors,
+    'timeline',
+    raw.timeline || raw.milestones || raw.events,
+    g.timeline
+  );
+  pushArrayOverflow(errors, 'bullets', raw.bullets, g.bullets);
+  pushArrayOverflow(errors, 'items', raw.items, g.items);
+  pushArrayOverflow(errors, 'quotes', raw.quotes || raw.testimonials, g.quotes);
+  pushArrayOverflow(errors, 'plans', raw.plans, g.plans);
+
+  const comparisonRows = raw.comparison?.rows;
+  if (Array.isArray(comparisonRows)) {
+    pushArrayOverflow(errors, 'comparison.rows', comparisonRows, g.comparisonRows);
+  }
+
+  const table = raw.table;
+  if (table && g.tableCells > 0) {
+    const rowCount = Array.isArray(table.rows) ? table.rows.length : 0;
+    if (rowCount > 0) {
+      const colCount = Math.max(
+        rowCount,
+        ...(table.rows || []).map((r) => (Array.isArray(r) ? r.length : 0))
+      );
+      const cellEstimate = rowCount * Math.max(colCount, 1);
+      if (cellEstimate > g.tableCells) {
+        errors.push({
+          code: 'ARRAY_OVERFLOW',
+          path: 'table.rows',
+          message: `table.rows exceeds layout table cell capacity (${cellEstimate} > ${g.tableCells})`,
+          actual: cellEstimate,
+          max: g.tableCells,
+        });
+      }
+    }
+  }
+
+  const diagramCells =
+    raw.diagram?.cells || raw.cells || raw.steps || raw.quadrants || raw.funnel;
+  const stepLimit = Math.max(g.steps, g.quadrants, g.funnel);
+  if (Array.isArray(diagramCells) && stepLimit > 0) {
+    pushArrayOverflow(errors, 'diagram.cells', diagramCells, stepLimit);
+  }
+
+  return errors;
+}
+
+function contentFitsLayoutGroups(content, schema) {
+  return collectRawArrayOverflowErrors(content, schema).length === 0;
 }
 
 function collectContentValidationErrors(content, schema) {
@@ -331,15 +398,21 @@ function collectContentValidationErrors(content, schema) {
   }
 
   const contract = deriveContentContract(schema);
-  const normalized = normalizeContentForLayout(content, schema);
+  errors.push(...collectRawArrayOverflowErrors(content, schema));
+  errors.push(...collectPostNormalizeContractErrors(content, schema, contract));
 
-  countExcessArray('columns', normalized.columns, contract.groups.columns, errors);
-  countExcessArray('stats', normalized.stats, contract.groups.stats, errors);
-  countExcessArray('members', normalized.members, contract.groups.members, errors);
-  countExcessArray('timeline', normalized.timeline, contract.groups.timeline, errors);
-  countExcessArray('bullets', normalized.bullets, contract.groups.bullets, errors);
-  countExcessArray('items', normalized.items, contract.groups.items, errors);
-  countExcessArray('quotes', normalized.quotes, contract.groups.quotes, errors);
+  return {
+    valid: errors.length === 0,
+    layoutId: contract.layoutId,
+    errors,
+  };
+}
+
+function collectPostNormalizeContractErrors(content, schema, contractIn) {
+  const errors = [];
+  if (!schema || !Array.isArray(schema.slots)) return errors;
+  const contract = contractIn || deriveContentContract(schema);
+  const normalized = normalizeContentForLayout(content, schema);
 
   for (const slot of schema.slots) {
     if (!slot?.id || !isTextSlotRole(slot.role)) continue;
@@ -370,11 +443,7 @@ function collectContentValidationErrors(content, schema) {
     }
   }
 
-  return {
-    valid: errors.length === 0,
-    layoutId: contract.layoutId,
-    errors,
-  };
+  return errors;
 }
 
 function validateContentForLayoutSoft(content, schema) {
@@ -410,6 +479,9 @@ module.exports = {
   WORDS_PER_LINE,
   deriveContentContract,
   normalizeContentForLayout,
+  collectRawArrayOverflowErrors,
+  collectPostNormalizeContractErrors,
+  contentFitsLayoutGroups,
   validateContentForLayout,
   validateContentForLayoutSoft,
   repairContentForLayout,

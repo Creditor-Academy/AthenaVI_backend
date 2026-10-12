@@ -26,6 +26,7 @@ const {
   resolveLayoutCandidates,
   buildLayoutSearchText,
 } = require('./deckLayout/resolveLayoutCandidates');
+const { shouldReusePreselectedLayout } = require('./deckLayout/preselectedLayoutReuse');
 const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
 const {
   planDeckImageDistribution,
@@ -94,7 +95,8 @@ const { isCatalogPlaceholderText } = require('./catalogPlaceholder');
 const blueprintSeed = require('./blueprintSeed');
 const templateMediaService = require('../templates/templateMedia.service');
 const templateMediaDao = require('../templates/templateMedia.dao');
-const { AI_SLIDE_MAX } = require('./presentation.constants');
+const { AI_SLIDE_MAX, clampNarrativeSlideCount } = require('./presentation.constants');
+const { assertNarrativeBlueprint } = require('./narrativeBlueprintValidate.service');
 const generationFlowService = require('./generationFlow.service');
 const brandKitService = require('../brandKit/brandKit.service');
 const fontPairingService = require('./fontPairing.service');
@@ -516,9 +518,19 @@ function outlineLayoutIdForSlide(outlineSlide, slide) {
   ).trim();
 }
 
+function assertDeckOutlineBlueprint(outline, { packMode = false } = {}) {
+  try {
+    assertNarrativeBlueprint(outline, { packMode, strict: true });
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid narrative blueprint', 400);
+  }
+}
+
 function finalizeBlueprintOutline(outline, metas, policy, slideCount) {
   const target = slideCount || outline?.slideCount || outline?.slides?.length;
-  let slides = layoutCatalogPolicy.enforceSlideCount(outline.slides || [], target);
+  let slides = layoutCatalogPolicy.enforceSlideCount(outline.slides || [], target, {
+    allowPad: false,
+  });
   slides = layoutCatalogPolicy.coerceOutlineLayouts(slides, metas, {
     slideCount: target,
     imageType: policy?.imageType,
@@ -533,6 +545,16 @@ function finalizeBlueprintOutline(outline, metas, policy, slideCount) {
   slides = layoutCatalogPolicy.enforceNoAdjacentSameContentType(slides, {
     sourceText: outline?.sourcePrompt || '',
   });
+  if (!policy?.packBound) {
+    const {
+      applyProtectedBookends,
+      syncAgendaFromOutline,
+    } = require('./narrativeSlideBlueprints');
+    slides = syncAgendaFromOutline(
+      applyProtectedBookends(slides, target, { sourceText: outline?.sourcePrompt || '' }),
+      target
+    );
+  }
   return {
     ...outline,
     slides,
@@ -1412,14 +1434,26 @@ function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, out
   const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
   const total = Number(totalSlides) > 0 ? Number(totalSlides) : order;
   let type = String(contentType || 'bullet_list').toLowerCase();
+  const locked =
+    outlineSlide?.layoutLocked === true ||
+    outlineSlide?.layout_locked === true;
 
   if (order === 1) return 'title';
 
+  if (order === 2 && !locked) return 'agenda';
+
+  if (order === 2 && locked && type !== 'agenda') {
+    return type;
+  }
+
+  if (total >= 6 && order === total - 1 && !locked) {
+    if (['chart', 'diagram', 'timeline'].includes(type)) {
+      return 'bullet_list';
+    }
+  }
+
   // Last slide always closes the deck (unless user locked a non-closing layout elsewhere).
   if (order === total) {
-    const locked =
-      outlineSlide?.layoutLocked === true ||
-      outlineSlide?.layout_locked === true;
     if (!locked) return 'closing';
   }
 
@@ -1525,7 +1559,7 @@ function mergePackOutlineWithLlm(skeleton, llmData, { slideCount, density, local
       slides: mergedSlides,
       preferVisuals: skeleton.preferVisuals,
     },
-    { slideCount, density, locale, sourceText }
+    { slideCount, density, locale, sourceText, skipNarrativeBookends: true }
   );
 }
 
@@ -1563,7 +1597,7 @@ function toBool(value, fallback = false) {
   return fallback;
 }
 
-function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}) {
+function normalizeOutline(data, { slideCount, density, locale, sourceText, skipNarrativeBookends = false } = {}) {
   const slides = Array.isArray(data?.slides) ? data.slides : [];
   let normalizedSlides = slides
     .map((s, idx) => ({
@@ -1603,7 +1637,9 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     slideCount != null ? Math.min(AI_SLIDE_MAX, Math.max(1, Number(slideCount) || 12)) : null;
 
   if (requested) {
-    normalizedSlides = layoutCatalogPolicy.enforceSlideCount(normalizedSlides, requested);
+    normalizedSlides = layoutCatalogPolicy.enforceSlideCount(normalizedSlides, requested, {
+      allowPad: false,
+    });
   }
 
   if (normalizedSlides.length > 0) {
@@ -1613,13 +1649,36 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
     }
   }
 
-  const { applyRoleDefaultsToSlides } = require('./narrativeSlideBlueprints');
+  const {
+    applyRoleDefaultsToSlides,
+    applyProtectedBookends,
+    syncAgendaFromOutline,
+  } = require('./narrativeSlideBlueprints');
+  const narrativeTotal = requested || normalizedSlides.length;
+
   normalizedSlides = applyRoleDefaultsToSlides(normalizedSlides, {
     sourceText,
-    slideCount: requested || normalizedSlides.length,
+    slideCount: narrativeTotal,
+    skipBookends: skipNarrativeBookends,
   });
 
+  const bookendTypes = new Set(['title', 'agenda', 'closing']);
+
   normalizedSlides = normalizedSlides.map((s) => {
+    const order = Number(s.order) > 0 ? Number(s.order) : 0;
+    const total = narrativeTotal || normalizedSlides.length;
+    const isBookendOrder =
+      order === 1 ||
+      order === 2 ||
+      order === total ||
+      (total >= 6 && order === total - 1);
+    if (isBookendOrder && !skipNarrativeBookends) {
+      return {
+        ...s,
+        layoutId: s.layoutLocked ? s.layoutId || null : null,
+      };
+    }
+
     const signals = {
       title: s.title,
       summary: s.summary,
@@ -1635,7 +1694,8 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
       suggested = 'device_frames';
     } else if (
       looksLikeLinearProcessSlide(signals) &&
-      !['title', 'closing', 'chart', 'device_frames', 'team'].includes(String(suggested || ''))
+      !['title', 'agenda', 'closing', 'chart', 'device_frames', 'team'].includes(String(suggested || '')) &&
+      !bookendTypes.has(String(suggested || '').toLowerCase())
     ) {
       const beatN = Array.isArray(s.beats) ? s.beats.filter(Boolean).length : 0;
       suggested = beatN >= 5 ? 'timeline' : 'diagram';
@@ -1646,6 +1706,13 @@ function normalizeOutline(data, { slideCount, density, locale, sourceText } = {}
       layoutId: s.layoutLocked ? s.layoutId || null : null,
     };
   });
+
+  if (!skipNarrativeBookends && normalizedSlides.length) {
+    normalizedSlides = syncAgendaFromOutline(
+      applyProtectedBookends(normalizedSlides, narrativeTotal, { sourceText }),
+      narrativeTotal
+    );
+  }
 
   const sourcePrompt = sourceText != null ? String(sourceText).trim().slice(0, 8000) : data?.sourcePrompt || null;
 
@@ -2549,11 +2616,27 @@ function applyDefaultOverlayDecisions(content, layoutSchema) {
   };
 }
 
-function qaNeedsContentRepair(issues) {
+function qaNeedsLayoutRetry(issues) {
   if (!Array.isArray(issues) || !issues.length) return false;
   return issues.some(
     (issue) =>
+      issue.requiresLayoutRetry === true ||
+      (String(issue.code || '') === 'ARRAY_OVERFLOW' && issue.repairable === false)
+  );
+}
+
+function qaHasUnresolvedOverflow(issues) {
+  return qaNeedsLayoutRetry(issues);
+}
+
+function qaNeedsContentRepair(issues) {
+  if (!Array.isArray(issues) || !issues.length) return false;
+  if (qaHasUnresolvedOverflow(issues)) return false;
+  return issues.some(
+    (issue) =>
       issue.repairable === true ||
+      String(issue.code || '') === 'SLOT_CHAR_OVERFLOW' ||
+      String(issue.code || '') === 'MISSING_TITLE' ||
       issue.rule === 'required_structured' ||
       issue.rule === 'distinct_titles' ||
       issue.rule === 'column_title_matches_slide_title' ||
@@ -2573,6 +2656,123 @@ function qaNeedsContentRepair(issues) {
       issue.rule === 'timeline_missing_details' ||
       (issue.truncated === true && issue.rule === 'max_lines')
   );
+}
+
+function applyLayoutContentNormalizers(content, layoutSchema, ctx, outlineSlide, { preShape = false } = {}) {
+  let next = content && typeof content === 'object' ? content : {};
+  if (!layoutSchema?.slots?.length) return next;
+  if (preShape) next = runContentPreShape(next, layoutSchema);
+  next = normalizeMultiColumnContent(next, layoutSchema);
+  next = normalizeGalleryImageContent(next, layoutSchema, galleryPreShapeOptions(ctx, outlineSlide));
+  next = normalizeChartContent(next, layoutSchema);
+  next = normalizeTimelineContent(next, layoutSchema);
+  next = normalizeDiagramContent(next, layoutSchema);
+  next = normalizeDeviceContent(next, layoutSchema);
+  next = normalizeComparisonProsConsContent(next, layoutSchema);
+  return next;
+}
+
+async function pickFinalLayoutForSlideContent({
+  ctx,
+  slide,
+  outlineSlide,
+  content,
+  policy,
+  slideTotal,
+  neighbors,
+  preferVisuals,
+  visualNeed,
+  layoutDebug,
+  excludeLayoutIds = null,
+}) {
+  const finalProfile = toSlideContentProfile({
+    ...(content && typeof content === 'object' ? content : {}),
+    title: content?.title || outlineSlide?.title || '',
+    summary: outlineSlide?.summary || content?.summary || '',
+    purpose: outlineSlide.purpose || outlineSlide.intent || null,
+    suggestedContentType: outlineSlide.suggestedContentType || policy.layoutContentType,
+    slideNumber: Number(slide.order),
+    wizardDensity: ctx.density || null,
+  });
+  const { templates: finalCandidates, widenedTemplates: widenedCandidateTemplates } =
+    await resolveLayoutCandidates(policy.layoutContentType, {
+      profile: finalProfile,
+      outlineSlide,
+      resolveLayoutTemplates,
+      layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+    });
+  let templates = finalCandidates;
+  templates = filterTemplatesForSlideOrder(templates, slide.order, slideTotal);
+  if (ctx.fullBleedUsed) {
+    templates = templates.filter(
+      (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
+    );
+  }
+  if (policy.galleryExcludeLayoutIds?.length) {
+    const banned = new Set(policy.galleryExcludeLayoutIds.map(String));
+    templates = templates.filter(
+      (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
+    );
+  }
+  let mergedExclude =
+    excludeLayoutIds ||
+    (Number(slide.order) === slideTotal && ctx.titleLayoutId
+      ? closingLayoutExcludeIds(ctx.titleLayoutId)
+      : null);
+  const galleryExclude = mergeExcludeLayoutIds(
+    policy.galleryExcludeLayoutIds,
+    galleryAdjacentExcludeIds(ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null)
+  );
+  if (galleryExclude?.length) {
+    mergedExclude = mergeExcludeLayoutIds(mergedExclude, galleryExclude);
+  }
+  let preferredLayoutId =
+    policy.galleryPreferredLayoutId ||
+    resolvePreferredLayoutIdForSlide({
+      ctx,
+      slide,
+      outlineSlides: neighbors,
+      planned: ctx.plannedLayouts || {},
+      layoutContentType: policy.layoutContentType,
+      content,
+      usedLayoutIds: ctx.usedLayoutIds || new Set(),
+      preferVisuals,
+      slideOrder: slide.order,
+    });
+  if (Number(slide.order) === slideTotal) {
+    const closingPref = resolveClosingPreferredLayoutId({
+      ctx,
+      usedLayoutIds: ctx.usedLayoutIds || new Set(),
+      slideOrder: slide.order,
+      titleLayoutId: ctx.titleLayoutId,
+      contactIntent: outlineSuggestsContactIntent(outlineSlide, content),
+    });
+    if (closingPref) preferredLayoutId = closingPref;
+  }
+  templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
+  const pick = await pickLayoutForGeneratedSlide({
+    content,
+    templates,
+    widenedTemplates: widenedCandidateTemplates,
+    primaryLayoutContentType: policy.layoutContentType,
+    previousLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
+    usedLayoutIds: ctx.usedLayoutIds || null,
+    preferredLayoutId,
+    excludeLayoutIds: mergedExclude,
+    preferImageSlot:
+      preferVisuals &&
+      (Number(slide.order) === 1 ||
+        String(visualNeed || '').toLowerCase() === 'photo' ||
+        String(visualNeed || '').toLowerCase() === 'illustration'),
+    ctx,
+    slide,
+    outlineSlide,
+    totalSlides: slideTotal,
+    phase: 'final',
+    debug: layoutDebug,
+    theme: ctx.themeTokens || ctx.theme || null,
+  });
+  return { ...pick, excludeLayoutIds: mergedExclude };
 }
 
 async function planDeckLayouts(ctx, slides) {
@@ -3594,31 +3794,20 @@ async function processSlide(ctx, slide) {
     }
     if (!template && !willRebind) {
       const plannedEntry = ctx.plannedLayouts?.[Number(slide.order)];
-      const outlineType = String(outlineSlide.suggestedContentType || '').toLowerCase();
-      const outlineExplicit = Boolean(outlineSlide.suggestedContentType);
-      const plannedMatches =
-        plannedEntry?.template &&
-        plannedEntry?.layoutId &&
-        (String(plannedEntry.layoutContentType || '') === String(policy.layoutContentType) ||
-          /process_|diagram_process/i.test(String(plannedEntry.layoutId)));
-      const plannedMatchesOutline =
-        outlineExplicit &&
-        plannedEntry?.template &&
-        plannedEntry?.layoutId &&
-        (String(plannedEntry.layoutContentType || '').toLowerCase() === outlineType ||
-          /process_|diagram_process/i.test(String(plannedEntry.layoutId)));
-      const preselectedMatches =
-        preSelectedTemplate &&
-        preSelectedLayoutId &&
-        (String(preSelectedTemplate.contentType || preSelectedTemplate.schema?.content_type || '') ===
-          String(policy.layoutContentType) ||
-          /process_|diagram_process/i.test(String(preSelectedLayoutId)));
       const galleryBlocksReuse =
         policy.galleryPreferredLayoutId &&
         ((preSelectedLayoutId && isTextImageGridLayout(preSelectedLayoutId)) ||
           (plannedEntry?.layoutId && isTextImageGridLayout(plannedEntry.layoutId)));
-      const canReusePreselected =
-        !galleryBlocksReuse && (plannedMatches || plannedMatchesOutline || preselectedMatches);
+      const reuseTemplate = plannedEntry?.template || preSelectedTemplate;
+      const canReusePreselected = shouldReusePreselectedLayout({
+        content,
+        outlineSlide,
+        template: reuseTemplate,
+        policy,
+        slideOrder: Number(slide.order),
+        wizardDensity: ctx.density || null,
+        galleryBlocksReuse,
+      });
 
       if (canReusePreselected) {
         template = plannedEntry?.template || preSelectedTemplate;
@@ -3630,7 +3819,7 @@ async function processSlide(ctx, slide) {
           if (content && typeof content === 'object') {
             content.content_type = contentType;
           }
-        } else if (plannedMatchesOutline && !plannedMatches && plannedEntry?.layoutContentType) {
+        } else if (plannedEntry?.layoutContentType) {
           policy.layoutContentType = plannedEntry.layoutContentType;
           contentType = plannedEntry.layoutContentType;
           if (content && typeof content === 'object') {
@@ -3638,89 +3827,24 @@ async function processSlide(ctx, slide) {
           }
         }
       } else {
-        const finalProfile = toSlideContentProfile({
-          ...(content && typeof content === 'object' ? content : {}),
-          title: content?.title || outlineSlide?.title || '',
-          summary: outlineSlide?.summary || content?.summary || '',
-          purpose: outlineSlide.purpose || outlineSlide.intent || null,
-          suggestedContentType: outlineSlide.suggestedContentType || policy.layoutContentType,
-          slideNumber: Number(slide.order),
-          wizardDensity: ctx.density || null,
-        });
-        const { templates: finalCandidates } = await resolveLayoutCandidates(policy.layoutContentType, {
-          profile: finalProfile,
-          outlineSlide,
-          resolveLayoutTemplates,
-          layoutIdWhitelist: ctx.layoutIdWhitelist || null,
-        });
-        let templates = finalCandidates;
-        templates = filterTemplatesForSlideOrder(templates, slide.order, slideTotal);
-        if (ctx.fullBleedUsed) {
-          templates = templates.filter(
-            (t) => String(t.schema?.layout_id || t.variant || '') !== 'full_bg_image_overlay_v1'
-          );
-        }
-        if (policy.galleryExcludeLayoutIds?.length) {
-          const banned = new Set(policy.galleryExcludeLayoutIds.map(String));
-          templates = templates.filter(
-            (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
-          );
-        }
-        let excludeLayoutIds =
-          Number(slide.order) === slideTotal && ctx.titleLayoutId
-            ? closingLayoutExcludeIds(ctx.titleLayoutId)
-            : null;
-        const galleryExclude = mergeExcludeLayoutIds(
-          policy.galleryExcludeLayoutIds,
-          galleryAdjacentExcludeIds(ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null)
-        );
-        if (galleryExclude?.length) {
-          excludeLayoutIds = mergeExcludeLayoutIds(excludeLayoutIds, galleryExclude);
-        }
-        let preferredLayoutId =
-          policy.galleryPreferredLayoutId ||
-          resolvePreferredLayoutIdForSlide({
+        ctx.lastLayoutPickExclude = null;
+        const pickResult = await pickFinalLayoutForSlideContent({
           ctx,
           slide,
-          outlineSlides: neighbors,
-          planned: ctx.plannedLayouts || {},
-          layoutContentType: policy.layoutContentType,
+          outlineSlide,
           content,
-          usedLayoutIds: ctx.usedLayoutIds || new Set(),
+          policy,
+          slideTotal,
+          neighbors,
           preferVisuals,
-          slideOrder: slide.order,
+          visualNeed,
+          layoutDebug,
         });
-        if (Number(slide.order) === slideTotal) {
-          const closingPref = resolveClosingPreferredLayoutId({
-            ctx,
-            usedLayoutIds: ctx.usedLayoutIds || new Set(),
-            slideOrder: slide.order,
-            titleLayoutId: ctx.titleLayoutId,
-            contactIntent: outlineSuggestsContactIntent(outlineSlide, content),
-          });
-          if (closingPref) preferredLayoutId = closingPref;
+        ({ layoutId, template } = pickResult);
+        ctx.lastLayoutPickExclude = pickResult.excludeLayoutIds || null;
+        if (!template?.schema) {
+          throw new AppError('No compatible layout found for slide content', 422);
         }
-        templates = await ensurePreferredLayoutInTemplates(templates, preferredLayoutId);
-        ({ layoutId, template } = await pickLayoutForGeneratedSlide({
-          content,
-          templates,
-          previousLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
-          usedLayoutIds: ctx.usedLayoutIds || null,
-          preferredLayoutId,
-          excludeLayoutIds,
-          preferImageSlot:
-            preferVisuals &&
-            (Number(slide.order) === 1 ||
-              String(visualNeed || '').toLowerCase() === 'photo' ||
-              String(visualNeed || '').toLowerCase() === 'illustration'),
-          ctx,
-          slide,
-          outlineSlide,
-          totalSlides: slideTotal,
-          phase: 'final',
-          debug: layoutDebug,
-          theme: ctx.themeTokens || ctx.theme || null,
-        }));
         const typed = layoutContentTypeFromTemplate(template, policy.layoutContentType);
         if (typed) {
           policy.layoutContentType = typed;
@@ -3754,18 +3878,15 @@ async function processSlide(ctx, slide) {
       // Never block slide generation for art direction failures.
     }
 
+    const layoutChangedFromPreselect =
+      preSelectedLayoutId &&
+      layoutId &&
+      String(preSelectedLayoutId) !== String(layoutId);
+
     if (template?.schema) {
-      content = normalizeMultiColumnContent(content, template.schema);
-      content = normalizeGalleryImageContent(
-        content,
-        template.schema,
-        galleryPreShapeOptions(ctx, outlineSlide)
-      );
-      content = normalizeChartContent(content, template.schema);
-      content = normalizeTimelineContent(content, template.schema);
-      content = normalizeDiagramContent(content, template.schema);
-      content = normalizeDeviceContent(content, template.schema);
-      content = normalizeComparisonProsConsContent(content, template.schema);
+      content = applyLayoutContentNormalizers(content, template.schema, ctx, outlineSlide, {
+        preShape: layoutChangedFromPreselect,
+      });
     }
 
     if (template?.schema && layoutUsesPerSlotGalleryImages(template.schema)) {
@@ -3779,8 +3900,59 @@ async function processSlide(ctx, slide) {
     let qa = validateSlide({
       content,
       layoutSchema: template?.schema || null,
+      includeContract: Boolean(template?.schema?.slots?.length),
+      contractPhase: 'generated',
     });
     content = qa.content;
+
+    if (qaNeedsLayoutRetry(qa.issues) && template?.schema) {
+      ctx.layoutRetryBySlideId = ctx.layoutRetryBySlideId || {};
+      if (!ctx.layoutRetryBySlideId[slide.id]) {
+        ctx.layoutRetryBySlideId[slide.id] = true;
+        const rejectedLayoutId = layoutId;
+        const retryExclude = mergeExcludeLayoutIds(ctx.lastLayoutPickExclude, [rejectedLayoutId]);
+        const retryPick = await pickFinalLayoutForSlideContent({
+          ctx,
+          slide,
+          outlineSlide,
+          content,
+          policy,
+          slideTotal,
+          neighbors,
+          preferVisuals,
+          visualNeed,
+          layoutDebug,
+          excludeLayoutIds: retryExclude,
+        });
+        if (retryPick.template?.schema) {
+          layoutId = retryPick.layoutId;
+          template = retryPick.template;
+          ctx.lastLayoutPickExclude = retryPick.excludeLayoutIds || retryExclude;
+          ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
+          ctx.layoutIdByOrder[Number(slide.order)] = layoutId;
+          content = applyLayoutContentNormalizers(content, template.schema, ctx, outlineSlide, {
+            preShape: true,
+          });
+          qa = validateSlide({
+            content,
+            layoutSchema: template.schema,
+            includeContract: true,
+            contractPhase: 'generated',
+          });
+          content = qa.content;
+        }
+      }
+    }
+
+    if (qaHasUnresolvedOverflow(qa.issues)) {
+      if (content && typeof content === 'object') {
+        content.meta = content.meta && typeof content.meta === 'object' ? content.meta : {};
+        content.meta.generationWarnings = (qa.issues || []).filter(
+          (i) => String(i.code || '') === 'ARRAY_OVERFLOW'
+        );
+      }
+      throw new AppError('Slide content exceeds layout capacity after layout retry', 422);
+    }
 
     if (
       (qaNeedsContentRepair(qa.issues) ||
@@ -4012,6 +4184,28 @@ async function processSlide(ctx, slide) {
     });
     content = compiled.content;
     let elementsDoc = compiled.elementsDoc;
+
+    const compileBlockingIssues = (compiled.audit?.issues || []).filter(
+      (i) => i.repairable === false || i.requiresLayoutRetry === true
+    );
+    if (compileBlockingIssues.length) {
+      const prevMeta = content?.meta && typeof content.meta === 'object' ? content.meta : {};
+      const prevWarnings = Array.isArray(prevMeta.generationWarnings) ? prevMeta.generationWarnings : [];
+      content = {
+        ...content,
+        meta: {
+          ...prevMeta,
+          generationWarnings: [
+            ...prevWarnings,
+            ...compileBlockingIssues.map((i) => ({
+              code: i.code || i.rule || 'COMPILE_INTEGRITY',
+              path: i.path,
+              phase: 'compile',
+            })),
+          ],
+        },
+      };
+    }
 
     if (ctx.themeTokens?.palette?.bg) {
       elementsDoc.backgroundColor = ctx.themeTokens.palette.bg;
@@ -4337,7 +4531,7 @@ async function generateOutline({
 
   const outlinePrompt = getOutlinePrompt();
   const pack = await loadDeckPackForOutline(deck);
-  let effectiveSlideCount = slideCount;
+  let effectiveSlideCount = pack ? slideCount : clampNarrativeSlideCount(slideCount);
   let outline;
   let chargeResult;
 
@@ -4452,6 +4646,15 @@ async function generateOutline({
       sourceText,
       userPrompt: sourceText,
     });
+    const {
+      applyProtectedBookends,
+      syncAgendaFromOutline,
+    } = require('./narrativeSlideBlueprints');
+    outline.slides = syncAgendaFromOutline(
+      applyProtectedBookends(outline.slides, effectiveSlideCount, { sourceText }),
+      effectiveSlideCount
+    );
+    outline.slideCount = effectiveSlideCount;
 
     chargeResult = await presentationCredit.chargeOutlineReconcile({
       workspaceId,
@@ -4465,6 +4668,8 @@ async function generateOutline({
   }
 
   outline = finalizeBlueprintOutline(outline, filteredMetas, catalogPolicy, effectiveSlideCount);
+  outline.slideCount = outline.slides?.length || effectiveSlideCount;
+  assertDeckOutlineBlueprint(outline, { packMode: Boolean(pack) });
   if (catalogPolicy.imageType === 'none') {
     outline.preferVisuals = false;
   }
@@ -4521,6 +4726,7 @@ async function updateOutline({ presentationId, outline, workspaceId }) {
     throw new AppError(messages.PRESENTATION_ALREADY_GENERATING, 409);
   }
 
+  const packForUpdate = await loadDeckPackForOutline(deck);
   const normalized = normalizeOutline(
     {
       ...outline,
@@ -4537,8 +4743,11 @@ async function updateOutline({ presentationId, outline, workspaceId }) {
       density: outline.density,
       locale: outline.locale || deck.locale,
       sourceText: outline.sourcePrompt || deck.outline?.sourcePrompt || null,
+      skipNarrativeBookends: Boolean(packForUpdate),
     }
   );
+  normalized.slideCount = normalized.slides?.length || normalized.slideCount;
+  assertDeckOutlineBlueprint(normalized, { packMode: Boolean(packForUpdate) });
 
   const presentation = await presentationDao.updateProjectName(deck.projectId, normalized.title);
 
@@ -4605,6 +4814,7 @@ async function startGenerate({
   flowCtx.packSlides = packBrand.packSlides || flowCtx.packSlides || [];
   flowCtx.preferExistingPackLayout = Boolean(packBrand.packId);
   const isPackMode = Boolean(packBrand.packId && packBrand.packSlides?.length);
+  assertDeckOutlineBlueprint(deck.outline, { packMode: isPackMode });
 
   const resolvedDensity =
     flowCtx.density || density || deck.outline?.density || 'balanced';
@@ -5337,4 +5547,5 @@ module.exports = {
   detectPreferVisuals,
   applyVisualPolicy,
   assertEffectiveWizardTheme,
+  guardContentTypeForSlideOrder,
 };

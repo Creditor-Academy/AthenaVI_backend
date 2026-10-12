@@ -3,8 +3,27 @@
  * Roles map to content contracts; blueprints are examples for the outline LLM—not hardcoded slide order.
  */
 
+const { PPT_NARRATIVE_SLIDE_COUNTS } = require('./presentation.constants');
 const { promptLooksQuantitative, promptLooksProductUi } = require('./layoutCatalogPolicy');
 const { countProcessSteps } = require('./diagramPathPolicy.util');
+
+const BOOKEND_ROLES = Object.freeze(['hero_title', 'agenda_overview', 'summary_cta']);
+
+const INTRO_ROLE_POOL = Object.freeze([
+  'introduction',
+  'context_background',
+  'problem_statement',
+  'market_overview',
+  'pain_points',
+]);
+
+const SYNTHESIS_ROLE_POOL = Object.freeze([
+  'key_takeaways',
+  'results_impact',
+  'solution_overview',
+  'strategy_framework',
+  'key_insight',
+]);
 
 const NARRATIVE_ROLES = Object.freeze([
   'hero_title',
@@ -56,9 +75,9 @@ const BLUEPRINT_20 = [
 const BLUEPRINT_BY_COUNT = Object.freeze({
   5: [
     'hero_title',
-    'problem_statement',
+    'agenda_overview',
+    'introduction',
     'key_insight',
-    'solution_overview',
     'summary_cta',
   ],
   8: [
@@ -97,7 +116,6 @@ const BLUEPRINT_BY_COUNT = Object.freeze({
     'key_takeaways',
     'summary_cta',
   ],
-  15: BLUEPRINT_20.slice(0, 15),
   20: BLUEPRINT_20,
 });
 
@@ -155,21 +173,184 @@ function blueprintForSlideCount(slideCount) {
   const n = Number(slideCount) || 0;
   if (BLUEPRINT_BY_COUNT[n]) return BLUEPRINT_BY_COUNT[n].slice();
   if (n > 20) return BLUEPRINT_20.slice();
-  if (n > 15) return BLUEPRINT_20.slice(0, n);
-  if (n > 12) return BLUEPRINT_20.slice(0, Math.min(n, 15));
+  if (n > 12) return BLUEPRINT_20.slice(0, Math.min(n, 20));
   if (n > 10) return BLUEPRINT_BY_COUNT[12].slice(0, n);
   if (n > 8) return BLUEPRINT_BY_COUNT[10].slice(0, n);
   if (n > 5) return BLUEPRINT_BY_COUNT[8].slice(0, n);
   return BLUEPRINT_BY_COUNT[5].slice(0, Math.max(1, n));
 }
 
+function isBookendRole(role) {
+  const r = normalizeRole(role);
+  return r != null && BOOKEND_ROLES.includes(r);
+}
+
+function isIntroBandOrder(order, slideCount) {
+  const n = Number(slideCount) || 0;
+  const o = Number(order) || 0;
+  return n >= 4 && (o === 3 || o === 4);
+}
+
+function isMiddleOrder(order, slideCount) {
+  const n = Number(slideCount) || 0;
+  const o = Number(order) || 0;
+  if (o <= 2 || o >= n) return false;
+  if (n >= 6 && o === n - 1) return false;
+  return true;
+}
+
+function defaultIntroRoleForOrder(order) {
+  const idx = Math.max(0, Number(order) - 3);
+  return INTRO_ROLE_POOL[idx % INTRO_ROLE_POOL.length];
+}
+
+function defaultSynthesisRole(slide = {}) {
+  const existing = normalizeRole(slide.narrativeRole || slide.narrative_role);
+  if (existing && SYNTHESIS_ROLE_POOL.includes(existing)) return existing;
+  return 'key_takeaways';
+}
+
+function contentSlideOrdersForAgenda(slideCount) {
+  const n = Number(slideCount) || 0;
+  if (n <= 2) return [];
+  if (n === 5) return [3, 4];
+  if (n >= 6) {
+    const last = n - 2;
+    const orders = [];
+    for (let o = 3; o <= last; o += 1) orders.push(o);
+    return orders;
+  }
+  return [3];
+}
+
 /**
- * Format blueprint as prompt lines for outline LLM.
+ * Slide 2 agenda beats mirror planned content slide titles (not a rigid middle template).
+ */
+function syncAgendaFromOutline(slides, slideCount) {
+  const list = Array.isArray(slides) ? slides : [];
+  const n = Number(slideCount) || list.length;
+  if (!list.length || n < 2) return list;
+
+  const byOrder = new Map(
+    list.map((s, idx) => [Number(s.order) > 0 ? Number(s.order) : idx + 1, s])
+  );
+  const contentOrders = contentSlideOrdersForAgenda(n);
+  const beats = contentOrders
+    .map((o) => {
+      const slide = byOrder.get(o);
+      const title = String(slide?.title || '').trim();
+      return title || null;
+    })
+    .filter(Boolean);
+
+  return list.map((slide, idx) => {
+    const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
+    if (order !== 2) return slide;
+    const prevBeats = Array.isArray(slide.beats) ? slide.beats.filter(Boolean) : [];
+    const nextBeats = beats.length ? beats : prevBeats;
+    return {
+      ...slide,
+      beats: nextBeats,
+      narrativeRole: normalizeRole(slide.narrativeRole) || 'agenda_overview',
+      suggestedContentType: slide.suggestedContentType || 'agenda',
+    };
+  });
+}
+
+/**
+ * Protected bookends + soft intro band; middle narrative roles stay LLM-chosen when valid.
+ */
+function applyProtectedBookends(slides, slideCount, { sourceText = '', skipBookends = false } = {}) {
+  const list = Array.isArray(slides) ? slides : [];
+  const n = Number(slideCount) || list.length;
+  if (!list.length || skipBookends) {
+    return list.map((slide, idx) => ({
+      ...slide,
+      order: Number(slide.order) > 0 ? Number(slide.order) : idx + 1,
+    }));
+  }
+
+  return list.map((slide, idx) => {
+    const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
+    let role = normalizeRole(slide.narrativeRole || slide.narrative_role);
+    let suggested = String(slide.suggestedContentType || slide.content_type || '').toLowerCase();
+
+    if (order === 1) {
+      role = 'hero_title';
+      if (!slide.layoutLocked) suggested = 'title';
+    } else if (order === 2) {
+      role = 'agenda_overview';
+      if (!slide.layoutLocked) suggested = 'agenda';
+    } else if (n >= 6 && order === n - 1) {
+      role = defaultSynthesisRole({ ...slide, narrativeRole: role });
+      if (!slide.layoutLocked && ['chart', 'diagram', 'timeline'].includes(suggested)) {
+        suggested = roleToContentDefaults(role, { slide, sourceText }).suggestedContentType;
+      }
+    } else if (order === n) {
+      role = 'summary_cta';
+      if (!slide.layoutLocked) suggested = 'closing';
+    } else if (isIntroBandOrder(order, n)) {
+      if (!role || isBookendRole(role)) {
+        role = defaultIntroRoleForOrder(order);
+      }
+    } else if (isMiddleOrder(order, n)) {
+      if (isBookendRole(role)) role = null;
+      if (role && !NARRATIVE_ROLES.includes(role)) role = null;
+    }
+
+    const defaults = role ? roleToContentDefaults(role, { slide, sourceText }) : null;
+    if (!suggested && defaults) suggested = defaults.suggestedContentType;
+    if (order === 1) suggested = 'title';
+    if (order === 2 && !slide.layoutLocked) suggested = 'agenda';
+    if (order === n && !slide.layoutLocked) suggested = 'closing';
+
+    return {
+      ...slide,
+      order,
+      narrativeRole: role || slide.narrativeRole || undefined,
+      suggestedContentType: suggested || slide.suggestedContentType || 'image+text',
+      purpose: slide.purpose || defaults?.purpose || slide.purpose,
+      visual_need:
+        slide.visual_need ||
+        slide.visualNeed ||
+        defaults?.visual_need ||
+        undefined,
+    };
+  });
+}
+
+/**
+ * Format structural narrative guidance for the outline LLM (not a mandatory per-index role list).
  */
 function formatBlueprintExampleForPrompt(slideCount) {
-  const roles = blueprintForSlideCount(slideCount);
-  return roles
-    .map((role, i) => `${i + 1}. ${ROLE_LABELS[role] || role} (narrativeRole: ${role})`)
+  const n = Number(slideCount) || 10;
+  const example = blueprintForSlideCount(Math.min(n, 10));
+  const exampleLines = example
+    .slice(0, Math.min(example.length, 6))
+    .map((role, i) => `  ${i + 1}. ${ROLE_LABELS[role] || role} (narrativeRole: ${role})`)
+    .join('\n');
+
+  const synthesisLine =
+    n >= 6
+      ? `- Slide ${n - 1}: synthesis / key takeaways (narrativeRole from: ${SYNTHESIS_ROLE_POOL.slice(0, 4).join(', ')}) — prefer bullet_list, stat, quote, image+text; not chart/diagram as default`
+      : '- No separate synthesis slide (deck too short)';
+
+  return [
+    `Structure for ${n} slides:`,
+    '- Slide 1: title/cover (narrativeRole: hero_title, suggestedContentType: title)',
+    '- Slide 2: agenda/overview (narrativeRole: agenda_overview, suggestedContentType: agenda) — beats[] should list the titles of your main content slides',
+    n >= 4
+      ? '- Slides 3–4: intro band — pick roles from introduction/context/problem framing (topic-dependent; not duplicate bookends)'
+      : null,
+    `- Slides between intro and closing: YOU choose narrativeRole and content mix (charts/diagrams/comparisons allowed when the source warrants)`,
+    synthesisLine,
+    `- Slide ${n}: conclusion / CTA (narrativeRole: summary_cta, suggestedContentType: closing)`,
+    '',
+    'Example opening arc (adapt topics to source — middle slides are NOT fixed to this list):',
+    exampleLines,
+    example.length > 6 ? '  … flexible middle …' : null,
+  ]
+    .filter(Boolean)
     .join('\n');
 }
 
@@ -289,40 +470,22 @@ function alternateContentTypeForAdjacency({
 /**
  * Apply role defaults to slides missing suggestedContentType or narrativeRole hints.
  */
-function applyRoleDefaultsToSlides(slides, { sourceText = '', slideCount = null } = {}) {
-  const list = Array.isArray(slides) ? slides : [];
-  const blueprint = blueprintForSlideCount(slideCount || list.length);
-
-  return list.map((slide, idx) => {
-    const order = Number(slide.order) > 0 ? Number(slide.order) : idx + 1;
-    const role =
-      normalizeRole(slide.narrativeRole || slide.narrative_role) ||
-      blueprint[order - 1] ||
-      null;
-    const defaults = role ? roleToContentDefaults(role, { slide, sourceText }) : null;
-    let suggested = String(slide.suggestedContentType || slide.content_type || '').toLowerCase();
-    if (!suggested && defaults) suggested = defaults.suggestedContentType;
-    if (order === 1) suggested = 'title';
-    const total = slideCount || list.length;
-    if (order === total && !slide.layoutLocked) suggested = 'closing';
-
-    return {
-      ...slide,
-      order,
-      narrativeRole: role || slide.narrativeRole || undefined,
-      suggestedContentType: suggested || slide.suggestedContentType || 'image+text',
-      purpose: slide.purpose || defaults?.purpose || slide.purpose,
-      visual_need:
-        slide.visual_need ||
-        slide.visualNeed ||
-        defaults?.visual_need ||
-        undefined,
-    };
-  });
+function applyRoleDefaultsToSlides(
+  slides,
+  { sourceText = '', slideCount = null, skipBookends = false } = {}
+) {
+  const total = slideCount || (Array.isArray(slides) ? slides.length : 0);
+  let list = applyProtectedBookends(slides, total, { sourceText, skipBookends });
+  list = syncAgendaFromOutline(list, total);
+  return list;
 }
 
 module.exports = {
   NARRATIVE_ROLES,
+  PPT_NARRATIVE_SLIDE_COUNTS,
+  BOOKEND_ROLES,
+  INTRO_ROLE_POOL,
+  SYNTHESIS_ROLE_POOL,
   BLUEPRINT_BY_COUNT,
   BLUEPRINT_20,
   ROLE_LABELS,
@@ -332,5 +495,11 @@ module.exports = {
   roleToContentDefaults,
   alternateContentTypeForAdjacency,
   applyRoleDefaultsToSlides,
+  applyProtectedBookends,
+  syncAgendaFromOutline,
+  contentSlideOrdersForAgenda,
+  isBookendRole,
+  isIntroBandOrder,
+  isMiddleOrder,
   ADJACENCY_FALLBACK_TYPES,
 };

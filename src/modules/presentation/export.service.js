@@ -80,6 +80,14 @@ function resolveColor(value, palette, fallback = '111111') {
   if (key === 'secondary') return String(palette.secondary || palette.primary || fallback).replace(/^#/, '');
   if (key === 'accent') return String(palette.accent || palette.primary || fallback).replace(/^#/, '');
   if (key === 'text') return String(palette.text || fallback).replace(/^#/, '');
+  if (key === 'textOnImage') {
+    return String(palette.textOnImage || palette.onImageText || '#FFFFFF').replace(/^#/, '');
+  }
+  if (key === 'textOnImageMuted') {
+    return String(
+      palette.textOnImageMuted || palette.onImageMuted || palette.textOnImage || '#F1F5F9'
+    ).replace(/^#/, '');
+  }
   if (key === 'muted') return String(palette.muted || palette.text || fallback).replace(/^#/, '');
   if (key === 'bg') return String(palette.bg || 'FFFFFF').replace(/^#/, '');
   if (key === 'surface') return String(palette.surface || palette.bg || 'FFFFFF').replace(/^#/, '');
@@ -992,5 +1000,7 @@ module.exports = {
   processExport,
   getExport,
   renderSlideScreenshots,
+  buildPptxBuffer,
+  resolveColor,
   PRESIGN_EXPIRES_SEC,
 };

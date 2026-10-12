@@ -110,7 +110,7 @@ function buildUser(vars = {}) {
       Number(slideCount) <= 10 ? 2 : Number(slideCount) <= 16 ? 3 : 4
     } combined diagram+timeline slides. Never use the same suggestedContentType on two consecutive slides.`,
     '',
-    `Reference story arc for ${slideCount} slides (adapt to the source — roles and topics must match the prompt, not this template verbatim):`,
+    'Narrative blueprint (mandatory structure — middle slides are YOUR choice of roles/topics):',
     formatBlueprintExampleForPrompt(slideCount),
     '',
     'Source:',
@@ -133,8 +133,18 @@ function buildUser(vars = {}) {
     '- Closing (purpose: closing): wrap-up + specific offer CTA intent in summary/beats (verb + outcome; time/number when brief supports) — not "learn more"',
     '',
     'Rules:',
-    '- Strong narrative: title → optional agenda → problem (when the brief has friction) → one idea per body slide → closing',
-    '- Slide 1 MUST be contentType title. Headline = spoken brand promise or deck name from source (not "Overview"). Subtitle = tagline. layoutId MUST be a title layout with heading:yes. Never large_image_v1.',
+    '- Opening: slide 1 = title (narrativeRole hero_title); slide 2 = agenda (narrativeRole agenda_overview) with beats[] listing the titles of your main content slides',
+    Number(slideCount) >= 4
+      ? '- Slides 3–4: intro band — prefer introduction/context/problem framing roles; topic-dependent, not duplicate bookends'
+      : null,
+    Number(slideCount) >= 6
+      ? `- Slide ${Number(slideCount) - 1}: synthesis / key takeaways (not chart/diagram by default); slide ${slideCount} = closing only`
+      : Number(slideCount) === 5
+        ? '- Five-slide deck: slides 3–4 are flexible middle content; slide 5 = closing (no separate synthesis slide)'
+        : null,
+    '- Middle slides: choose narrativeRole and suggestedContentType freely (charts/diagrams/comparisons when the source warrants); do NOT pad with filler slides — return exactly the requested slide count',
+    '- suggestedContentType is a hint only; the engine picks layouts from catalog compatibility',
+    '- Slide 1 MUST be suggestedContentType title. Headline = spoken brand promise or deck name from source (not "Overview"). Subtitle = tagline. Do not pick final layoutId for unlocked slides.',
     '- Honor slide count, but prefer one story beat per slide (concept, vision, mission, audience…) rather than stuffing two arguments into one two-column slide.',
     '- title: headline that will appear on the slide (honor density title-word guidance above; never default to 2-word stubs for detailed)',
     '- subtitle: tagline / UPPERCASE-style kicker (1 line)',

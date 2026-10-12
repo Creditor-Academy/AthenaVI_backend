@@ -1,5 +1,23 @@
 /** AI outline / full-deck generate hard max */
 const AI_SLIDE_MAX = 20;
+/** Allowed AI narrative deck lengths (title + agenda + middle + closing [+ synthesis when N≥6]) */
+const PPT_NARRATIVE_SLIDE_COUNTS = Object.freeze([5, 8, 10, 12, 20]);
+
+function clampNarrativeSlideCount(count) {
+  const n = Number(count);
+  if (PPT_NARRATIVE_SLIDE_COUNTS.includes(n)) return n;
+  const target = Number.isFinite(n) && n > 0 ? n : 12;
+  let best = PPT_NARRATIVE_SLIDE_COUNTS[0];
+  let dist = Math.abs(best - target);
+  for (const c of PPT_NARRATIVE_SLIDE_COUNTS) {
+    const d = Math.abs(c - target);
+    if (d < dist) {
+      dist = d;
+      best = c;
+    }
+  }
+  return best;
+}
 /** Manual add / duplicate deck total hard max */
 const DECK_SLIDE_MAX = 40;
 /** Max freeform elements on one slide */
@@ -66,6 +84,8 @@ const {
 
 module.exports = {
   AI_SLIDE_MAX,
+  PPT_NARRATIVE_SLIDE_COUNTS,
+  clampNarrativeSlideCount,
   DECK_SLIDE_MAX,
   MAX_ELEMENTS_PER_SLIDE,
   CANVAS_WIDTH,

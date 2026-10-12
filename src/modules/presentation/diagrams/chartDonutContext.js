@@ -229,8 +229,9 @@ const hexLum = (hex) => {
 }
 
 const headingInk = (palette = {}) => {
-  const bg = palette.bg || palette.background || palette.slideBg
-    || (palette.colors && (palette.colors.bg || palette.colors.background)) || '#ffffff'
+  const p = palette && typeof palette === 'object' ? palette : {};
+  const bg = p.bg || p.background || p.slideBg
+    || (p.colors && (p.colors.bg || p.colors.background)) || '#ffffff'
   return hexLum(bg) < 0.45 ? '#F3F4F6' : '#111827'
 }
 
@@ -446,6 +447,16 @@ const specToChartDonutContextContent = (spec) => {
   return null
 }
 
+const { textForSlot } = require('@athena/contracts/slotText.js');
+const {
+  mapDonutContextMetrics,
+  textForDonutContextSlot,
+} = require('@athena/contracts/donutContextMetrics.js');
+const {
+  isCatalogPlaceholderText,
+  isLayoutEngineDefaultText,
+} = require('../catalogPlaceholder');
+
 const plainTextFromContent = (content = {}) => {
   if (typeof content.text === 'string' && content.text.trim()) return content.text
   if (Array.isArray(content.runs)) {
@@ -455,12 +466,20 @@ const plainTextFromContent = (content = {}) => {
   return ''
 }
 
-const filledContent = (el, slotId, style) => {
-  const sid = String(slotId || '')
+const filledContent = (el, slotId, style, slideContent = null, schema = null, previewOnly = false) => {
+  const sid = String(slotId || '').toUpperCase()
+  let text = ''
+  if (slideContent && schema) {
+    text = String(textForDonutContextSlot(sid, slideContent, schema, textForSlot) || '').trim()
+  }
   const existing = plainTextFromContent(el?.content)
-  const text = existing && existing.toLowerCase() !== 'double-click to edit'
-    ? existing
-    : (CDC_DEFAULTS[sid] || existing)
+  const existingOk =
+    existing &&
+    existing.toLowerCase() !== 'double-click to edit' &&
+    !isCatalogPlaceholderText(existing) &&
+    !isLayoutEngineDefaultText(existing)
+  if (!text && existingOk) text = existing
+  if (!text && previewOnly) text = CDC_DEFAULTS[sid] || existing || ''
   return {
     ...(el?.content || {}),
     ...style,
@@ -481,6 +500,7 @@ const newId = (prefix) => {
 
 const layoutChartDonutContext = (elements, schema, palette = {}, canvas = {}) => {
   if (!Array.isArray(elements)) return elements
+  const slideContent = canvas.slideContent || null
   const canvasW = canvas.width || 1920
   const canvasH = canvas.height || 1080
   const sx = canvasW / CDC_GEOM.viewW
@@ -512,37 +532,52 @@ const layoutChartDonutContext = (elements, schema, palette = {}, canvas = {}) =>
       role: prev?.role || role || 'body',
       layer: 12,
       placement: { x: box.x, y: box.y, width: box.width, height: box.height, rotation: 0, opacity: 1 },
-      content: filledContent(prev, slotId, style),
+      content: filledContent(prev, slotId, style, slideContent, schema, !slideContent),
     }
   }
 
+  const mappedMetrics = slideContent ? mapDonutContextMetrics(slideContent, schema, {}) : {}
+
   // Extract metric values to compute dynamic segment angles and labels
   const getMetricVal = (id, fallback) => {
+    const fromMap = mappedMetrics[`METRIC_${id}_VALUE`]
+    if (fromMap) {
+      const parsed = parseFloat(String(fromMap).replace(/[^\d.]/g, ''))
+      if (!Number.isNaN(parsed) && parsed > 0) return parsed
+    }
     const prev = bySlot.get(`METRIC_${id}_VALUE`)
     const txt = plainTextFromContent(prev?.content)
-    if (txt && txt.trim()) {
+    if (txt && txt.trim() && !isLayoutEngineDefaultText(txt)) {
       const parsed = parseFloat(txt.replace(/[^\d.]/g, ''))
       if (!isNaN(parsed) && parsed > 0) return parsed
     }
-    return fallback
+    return slideContent ? 0 : fallback
   }
 
   const valA = getMetricVal('A', 32)
   const valB = getMetricVal('B', 24)
   const valC = getMetricVal('C', 18)
   const valD = getMetricVal('D', 26)
-  const totalVal = valA + valB + valC + valD || 100
+  const totalVal = valA + valB + valC + valD
+  const safeTotal = totalVal > 0 ? totalVal : slideContent ? 0 : 100
 
-  const spanA = (valA / totalVal) * 360
-  const spanB = (valB / totalVal) * 360
-  const spanC = (valC / totalVal) * 360
-  const spanD = 360 - (spanA + spanB + spanC)
+  const spanA = safeTotal ? (valA / safeTotal) * 360 : 90
+  const spanB = safeTotal ? (valB / safeTotal) * 360 : 90
+  const spanC = safeTotal ? (valC / safeTotal) * 360 : 90
+  const spanD = safeTotal ? 360 - (spanA + spanB + spanC) : 90
 
+  const labelFor = (id, fallback) => {
+    const fromMap = mappedMetrics[`METRIC_${id}_LABEL`]
+    if (fromMap && !isLayoutEngineDefaultText(fromMap)) return fromMap
+    return slideContent ? `Segment ${id}` : fallback
+  }
+
+  const pct = (v) => (safeTotal ? Math.round((v / safeTotal) * 100) : 25)
   const dynamicSegments = [
-    { id: 'A', value: Math.round((valA / totalVal) * 100), startAngle: 0, endAngle: spanA, color: '#3B82F6', lightColor: '#60A5FA', darkColor: '#1D4ED8', label: 'Metric A' },
-    { id: 'B', value: Math.round((valB / totalVal) * 100), startAngle: spanA, endAngle: spanA + spanB, color: '#8B5CF6', lightColor: '#A78BFA', darkColor: '#6D28D9', label: 'Metric B' },
-    { id: 'C', value: Math.round((valC / totalVal) * 100), startAngle: spanA + spanB, endAngle: spanA + spanB + spanC, color: '#10B981', lightColor: '#34D399', darkColor: '#047857', label: 'Metric C' },
-    { id: 'D', value: Math.round((valD / totalVal) * 100), startAngle: spanA + spanB + spanC, endAngle: 360, color: '#64748B', lightColor: '#94A3B8', darkColor: '#334155', label: 'Metric D' },
+    { id: 'A', value: pct(valA), startAngle: 0, endAngle: spanA, color: '#3B82F6', lightColor: '#60A5FA', darkColor: '#1D4ED8', label: labelFor('A', 'Metric A') },
+    { id: 'B', value: pct(valB), startAngle: spanA, endAngle: spanA + spanB, color: '#8B5CF6', lightColor: '#A78BFA', darkColor: '#6D28D9', label: labelFor('B', 'Metric B') },
+    { id: 'C', value: pct(valC), startAngle: spanA + spanB, endAngle: spanA + spanB + spanC, color: '#10B981', lightColor: '#34D399', darkColor: '#047857', label: labelFor('C', 'Metric C') },
+    { id: 'D', value: pct(valD), startAngle: spanA + spanB + spanC, endAngle: 360, color: '#64748B', lightColor: '#94A3B8', darkColor: '#334155', label: labelFor('D', 'Metric D') },
   ]
 
   const next = [
@@ -615,6 +650,7 @@ module.exports = {
   CDC_DEFAULTS,
   isChartDonutContextLayout,
   isChartDonutContextRightLayout,
+  isChartDonutContextTextSlot,
   layoutChartDonutContext,
   chartDonutContextChromeSpecs,
   chartDonutContextRightChromeSpecs,

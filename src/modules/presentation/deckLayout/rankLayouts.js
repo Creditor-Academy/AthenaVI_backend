@@ -39,19 +39,26 @@ function rankLayouts(slide, layouts, options = {}) {
   const widened = Array.isArray(options.widenedLayouts)
     ? options.widenedLayouts.filter((l) => l && l.id)
     : [];
-  const pool = accepted.length ? accepted : widened.length ? widened : list;
-  const unconstrained = accepted.length === 0 && widened.length === 0 && list.length > 0;
+  const pool = accepted.length ? accepted : widened.length ? widened : [];
+  const noCompatiblePool = accepted.length === 0 && widened.length === 0 && list.length > 0;
+
+  if (!pool.length) {
+    if (options.debug && noCompatiblePool) {
+      console.warn('[rankLayouts] No compatible layouts in primary or widened pools');
+    }
+    return [];
+  }
 
   const scoreOptions = {
     ...options,
-    unconstrainedRankingPenalty: unconstrained ? -25 : 0,
+    unconstrainedRankingPenalty: 0,
   };
 
   const scored = pool.map((layout) => {
     const result = scoreLayout(profile, layout, scoreOptions);
-    if (unconstrained) {
+    if (!accepted.length && widened.length) {
       result.warnings = [
-        'No layouts passed hard filters; ranking unconstrained',
+        'Primary pool empty; ranking widened candidates only',
         ...(result.warnings || []),
       ];
     }
