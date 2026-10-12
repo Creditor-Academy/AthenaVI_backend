@@ -1,6 +1,7 @@
 const { toDeckLayout } = require('./toDeckLayout');
 const { toSlideContentProfile } = require('./toSlideContentProfile');
 const { rankLayouts } = require('./rankLayouts');
+const { buildLayoutSearchText } = require('./resolveLayoutCandidates');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
 const { layoutFamilyExcludeIds, isSplitHeroLayout } = require('../layoutSelector.service');
@@ -143,7 +144,8 @@ function profileFromContent({ content, outlineSlide, ctx, slide, presentationCon
       outlineSlide?.intent ||
       content?.purpose ||
       presentationContext?.purpose,
-    suggestedContentType: outlineSlide?.suggestedContentType || content?.content_type,
+    suggestedContentType:
+      outlineSlide?.suggestedContentType || content?.content_type || outlineSlide?.layoutContentType,
     narrativeRole: outlineSlide?.narrativeRole || outlineSlide?.narrative_role || null,
     slideNumber: presentationContext?.slideNumber || slide?.order,
     industry: presentationContext?.industry || wizard.industry,
@@ -373,11 +375,13 @@ async function pickLayoutForGeneratedSlide({
     String(previousLayoutId || '').trim() ||
     String(ctx?.layoutIdByOrder?.[Number(slide?.order) - 1] || '').trim() ||
     null;
+  const searchText = buildLayoutSearchText(ctx, outlineSlide, content);
   let ranked = rankLayouts(profile, deckLayouts, {
     topN: config.topN,
     previousLayoutIds: prev,
     adjacentLayoutId,
     debug,
+    searchText,
     arrangementArchetype: ctx?.outline?.arrangementArchetype || null,
     deprioritizeFullBleedClosing: isSplitHeroLayout(ctx?.titleLayoutId),
   });

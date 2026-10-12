@@ -57,6 +57,24 @@ function imageCountOf(input) {
   return 0;
 }
 
+function inferHasComparison(input) {
+  if (input.hasComparison != null) return Boolean(input.hasComparison);
+  const suggested = String(input.suggestedContentType || input.contentType || '').toLowerCase();
+  if (suggested === 'comparison') return true;
+  const blob = [
+    input.title,
+    input.summary,
+    input.body,
+    input.intent,
+    input.purpose,
+    Array.isArray(input.beats) ? input.beats.join(' ') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  if (/compare|comparison|versus|\bvs\b|side by side|pros and cons|tradeoff/i.test(blob)) return true;
+  return listLen(input.columns) >= 2 && /compare|versus|\bvs\b/i.test(blob);
+}
+
 function inferPurpose(input) {
   const raw = String(input.purpose || input.intent || input.slidePurpose || '').trim().toLowerCase();
   if (DECK_LAYOUT_SLIDE_PURPOSES.includes(raw)) return raw;
@@ -155,6 +173,7 @@ function toSlideContentProfile(input = {}) {
   const hasTable = input.hasTable != null ? Boolean(input.hasTable) : hasTablePayload(input.table);
   const hasQuote =
     input.hasQuote != null ? Boolean(input.hasQuote) : Boolean(strLen(input.quote) || input.hasQuote);
+  const hasComparison = inferHasComparison(input);
 
   const imageCount = imageCountOf(input);
 
@@ -199,6 +218,7 @@ function toSlideContentProfile(input = {}) {
     hasChart,
     hasTable,
     hasQuote,
+    hasComparison,
     density,
     wizardDensity: String(input.wizardDensity || '').toLowerCase() || undefined,
     allowPureImageGrid: input.allowPureImageGrid === true,
@@ -218,15 +238,17 @@ function toSlideContentProfile(input = {}) {
             ? 'text-heavy'
             : 'balanced',
     contentStructure:
-      hasChart || hasTable
-        ? 'data'
-        : cardCount >= 3
-          ? 'cards'
-          : bulletCount >= 3
-            ? 'list'
-            : imageCount > 0 && density !== 'high'
-              ? 'visual'
-              : 'narrative',
+      hasComparison
+        ? 'comparison'
+        : hasChart || hasTable
+          ? 'data'
+          : cardCount >= 3
+            ? 'cards'
+            : bulletCount >= 3
+              ? 'list'
+              : imageCount > 0 && density !== 'high'
+                ? 'visual'
+                : 'narrative',
     chartType: String(input.chartType || input.chart?.type || '').toLowerCase() || undefined,
     hasTimeline: Boolean(input.hasTimeline || listLen(input.timeline?.steps) || listLen(input.steps)),
     hasPricing: Boolean(input.hasPricing || listLen(input.plans) >= 2 || listLen(input.pricing?.tiers) >= 2),
@@ -249,6 +271,8 @@ function toSlideContentProfile(input = {}) {
     preferredStyles: asArray(input.preferredStyles).map((s) => String(s).toLowerCase()),
     preferredMoods: asArray(input.preferredMoods).map((s) => String(s).toLowerCase()),
     industry: input.industry ? String(input.industry).toLowerCase() : undefined,
+    title: strLen(input.title) ? String(input.title).trim() : undefined,
+    summary: strLen(input.summary) ? String(input.summary).trim() : undefined,
   };
 
   if (!profile.preferredStyles.length) delete profile.preferredStyles;

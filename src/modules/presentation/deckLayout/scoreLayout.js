@@ -8,6 +8,7 @@ const {
   ADJACENT_LAYOUT_PENALTY,
 } = require('./layoutScoring.weights');
 const { evaluateLayoutCompatibility } = require('./layoutCompatibility');
+const { slideTopicsFromProfile } = require('./layoutKeywordLexicon');
 const { scoreAiPricingLayoutPreference } = require('./pricingLayoutPolicy');
 const { scoreProblemLayoutPreference } = require('./problemLayoutPolicy');
 
@@ -235,6 +236,16 @@ function scoreDomainIntent(slide, layout, reasons) {
     boost += 3;
     reasons.push('Good fit for timeline/roadmap narrative');
   }
+  if (
+    slide.hasComparison &&
+    (layout?.layoutTopics?.includes?.('comparison') ||
+      layout?.contentTypes?.includes?.('comparison') ||
+      layout?.category === 'comparison' ||
+      /comparison|before_after|pros_cons/.test(id))
+  ) {
+    boost += 5;
+    reasons.push('Layout fits comparison narrative');
+  }
   if (slide.hasPricing && (purposes.includes('pricing') || layout?.category === 'pricing' || tags.includes('pricing'))) {
     boost += 4;
     reasons.push('Layout aligns with pricing comparison content');
@@ -402,6 +413,62 @@ function scoreIndustry(slide, layout, max) {
   return { points: Math.max(1, Math.round(max * 0.2)), skipped: false, reason: null };
 }
 
+const CAPACITY_OVERFLOW_FIELDS = new Set([
+  'maxTitleCharacters',
+  'maxSubtitleCharacters',
+  'maxBodyCharacters',
+  'maxBullets',
+  'maxCards',
+  'maxImages',
+  'maxMetrics',
+  'maxColumns',
+]);
+
+function softCompatibilityPenalty(penalties) {
+  let total = 0;
+  for (const p of penalties || []) {
+    if (p.kind !== 'softPenalty') continue;
+    total -= 6;
+    if (CAPACITY_OVERFLOW_FIELDS.has(p.field)) total -= 10;
+  }
+  return Math.max(-30, total);
+}
+
+function scoreKeywordMatch(slide, layout, options = {}) {
+  const maxWeight = Number(options.keywordMatchWeight) || 12;
+  const searchText = String(options.searchText || '');
+  const slideBlob = {
+    ...slide,
+    title: slide.title || slide._searchTitle || '',
+    summary: slide.summary || slide._searchSummary || '',
+  };
+  const { topics: slideTopics, tokens } = slideTopicsFromProfile(slideBlob, searchText);
+  const layoutTopics = Array.isArray(layout?.layoutTopics) ? layout.layoutTopics : [];
+  const layoutKeywords = new Set((layout?.keywords || []).map((k) => String(k).toLowerCase()));
+
+  let points = 0;
+  const reasons = [];
+  for (const topic of slideTopics) {
+    if (layoutTopics.includes(topic)) {
+      points += 6;
+      reasons.push(`Topic match: ${topic}`);
+    }
+  }
+  let aliasHits = 0;
+  for (const tok of tokens) {
+    if (layoutKeywords.has(String(tok).toLowerCase())) aliasHits += 1;
+  }
+  points += Math.min(8, aliasHits * 2);
+  points = Math.min(maxWeight, points);
+
+  return {
+    points,
+    reasons,
+    slideTopics,
+    layoutTopics,
+  };
+}
+
 /**
  * Score one DeckLayout against a SlideContentProfile (0–100).
  */
@@ -435,6 +502,15 @@ function scoreLayout(slide, layout, options = {}) {
   }
 
   let scaled = available > 0 ? Math.round((earned / available) * 100) : 0;
+  const softPenalty = softCompatibilityPenalty(compat.penalties);
+  if (softPenalty) {
+    scaled = clamp(scaled + softPenalty, 0, 100);
+  }
+  const keyword = scoreKeywordMatch(slide, layout, options);
+  if (keyword.points > 0) {
+    for (const r of keyword.reasons) reasons.push(r);
+  }
+  const unconstrainedPenalty = Number(options.unconstrainedRankingPenalty) || 0;
   const repetitionPenalty = repetitionPenaltyFor(layoutId, options.previousLayoutIds);
   if (repetitionPenalty) {
     warnings.push(
@@ -462,7 +538,14 @@ function scoreLayout(slide, layout, options = {}) {
     );
   }
   const score = clamp(
-    scaled + repetitionPenalty + adjacentPenalty + domainBoost + closingBoost + problemBoost,
+    scaled +
+      keyword.points +
+      unconstrainedPenalty +
+      repetitionPenalty +
+      adjacentPenalty +
+      domainBoost +
+      closingBoost +
+      problemBoost,
     0,
     100
   );
@@ -478,6 +561,9 @@ function scoreLayout(slide, layout, options = {}) {
     industryMatch: parts.industryMatch.skipped ? 0 : Number(parts.industryMatch.points) || 0,
     repetitionPenalty,
     adjacentPenalty,
+    softCompatibilityPenalty: softPenalty,
+    keywordMatch: keyword.points,
+    unconstrainedRankingPenalty: unconstrainedPenalty,
   };
 
   return {
@@ -517,6 +603,8 @@ function formatDebugLine(slide, result, weights) {
 
 module.exports = {
   scoreLayout,
+  scoreKeywordMatch,
+  softCompatibilityPenalty,
   confidenceFromScore,
   mergeWeights,
   formatDebugLine,

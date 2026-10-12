@@ -122,6 +122,42 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
     );
   }
 
+  if (/comparison_side_by_side/.test(id)) {
+    lines.push(
+      'Side-by-side comparison: REQUIRED meaningful left.title and right.title (not "Option A/B"). Each side needs left/right { title, bullets } with 3–5 distinct bullets OR a body paragraph. Optional comparison.left/right mirrors top-level left/right. Never use placeholder option labels.'
+    );
+  }
+
+  if (/comparison_table/.test(id) && !/pricing_comparison/.test(id)) {
+    lines.push(
+      'Comparison table layout: REQUIRED comparison.rows[] (or comparisonRows[]) with one object per table row: { leftTitle, leftBody, rightTitle, rightBody }. Fill LEFT_HEADER/RIGHT_HEADER via left.title and right.title. 3–5 rows minimum; no "Lorem ipsum" or generic option labels.'
+    );
+  }
+
+  if (/eight_short_texts_image|grid_text_image/.test(id)) {
+    lines.push(
+      'Point grid layout: REQUIRED columns[] with one { title, body } per POINT_n slot (maps POINT_n_TITLE / POINT_n_DESC). Up to 8 distinct short titles (≤4 words) and 1–2 line bodies — deck-specific, not generic SaaS capability labels.'
+    );
+  }
+
+  if (/^table_|table_single|table_data/.test(id) || (type === 'table' && /table/.test(id))) {
+    lines.push(
+      'Table layout: REQUIRED table.headers[] and table.rows[][] (or table.cells[][]) for CELL_r_c slots; optional table.rowLabels[] for ROW_n_LABEL. First row of cells maps to header row when headers omitted.'
+    );
+  }
+
+  if (/dual_metric|two_metric|metric_compare|metrics_dual/.test(id)) {
+    lines.push(
+      'Dual metrics layout: REQUIRED stats[] or metrics[] with exactly 2 entries { title, body or description, label?, value? } for METRIC_A_* and METRIC_B_* slots. No "Metric A/B" placeholder titles.'
+    );
+  }
+
+  if (/timeline_process|process_step|step_1_desc/.test(id)) {
+    lines.push(
+      'Process/timeline with step slots: REQUIRED timeline[] (or steps[]) — each { title, body, detail, label, year } as needed for step_n_title / step_n_desc slots. Every step needs substantive detail, not "Step 1" stubs.'
+    );
+  }
+
   if (/grid_six_images|grid_three_images|four_images_v1/.test(id)) {
     lines.push(
       'Gallery grid: REQUIRED items[] or columns[] with one DISTINCT short title (≤4 words) per image slot — e.g. menu items, product variants, or venue features. REQUIRED imagePrompts with keys IMAGE_1, IMAGE_2, … — one isolated photographic subject per slot (≤12 words), no collage.'

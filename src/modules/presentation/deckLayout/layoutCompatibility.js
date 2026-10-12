@@ -50,6 +50,39 @@ function imageRequired(slide) {
   return slide.imageCount > 0 && types.includes('image');
 }
 
+function hasComparisonRequired(slide) {
+  if (slide.hasComparison === true) return true;
+  const suggested = String(slide.suggestedContentType || '').toLowerCase();
+  if (suggested === 'comparison') return true;
+  if (slide.contentStructure === 'comparison') return true;
+  const types = Array.isArray(slide.contentTypes) ? slide.contentTypes : [];
+  if (types.includes('comparison')) return true;
+  const purpose = String(slide.purpose || '').toLowerCase();
+  if (purpose === 'competition') return true;
+  return false;
+}
+
+function layoutSupportsComparison(layout) {
+  const layoutId = String(layout?.id || layout?.schema?.layout_id || '').toLowerCase();
+  if (/comparison|before_after|pros_cons|versus|vs_/.test(layoutId)) return true;
+  if (layout?.category === 'comparison') return true;
+  const types = Array.isArray(layout?.contentTypes) ? layout.contentTypes : [];
+  if (types.includes('comparison')) return true;
+  const slots = Array.isArray(layout?.schema?.slots) ? layout.schema.slots : [];
+  let pros = 0;
+  let cons = 0;
+  let columns = 0;
+  for (const slot of slots) {
+    const sid = String(slot?.id || '').toLowerCase();
+    if (/^pros_/.test(sid)) pros += 1;
+    if (/^cons_/.test(sid)) cons += 1;
+    if (/^col_|^column_/.test(sid)) columns += 1;
+  }
+  if (pros >= 1 && cons >= 1) return true;
+  if (columns >= 2 && /compare|comparison/.test(layoutId)) return true;
+  return false;
+}
+
 function textCopyRequired(slide) {
   if (slide?.allowPureImageGrid === true) return false;
   const purpose = String(slide.purpose || '').toLowerCase();
@@ -77,6 +110,14 @@ function evaluateLayoutCompatibility(slide, layout) {
   const pushSoft = (field, message) => {
     penalties.push({ kind: 'softPenalty', field, message });
   };
+
+  if (hasComparisonRequired(slide) && !layoutSupportsComparison(layout)) {
+    return {
+      status: 'hardReject',
+      reasons: ['Layout cannot render two-sided comparison content'],
+      penalties,
+    };
+  }
 
   if (slide.hasChart && !isUnknownSupport(supported, 'chart') && supported.chart !== true) {
     return {
@@ -228,6 +269,8 @@ function evaluateLayoutCompatibility(slide, layout) {
 
 module.exports = {
   evaluateLayoutCompatibility,
+  hasComparisonRequired,
+  layoutSupportsComparison,
   cardsRequired,
   metricsRequired,
   imageRequired,

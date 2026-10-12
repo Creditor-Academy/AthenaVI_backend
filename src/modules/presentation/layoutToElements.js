@@ -9491,7 +9491,13 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   } else if (isTableTwoSameHeaderLayout(layoutSchema?.layout_id)) {
     next = applyElementsStyleLayout(next, layoutTableTwoSameHeader, layoutSchema, themeTokens, canvas);
   } else if (isEightShortTextsImageLayout(layoutSchema?.layout_id)) {
-    const laid = layoutEightShortTextsImage(next, layoutSchema, themeTokens?.palette || themeTokens, canvas);
+    const laid = layoutEightShortTextsImage(
+      next,
+      layoutSchema,
+      themeTokens?.palette || themeTokens,
+      canvas,
+      content
+    );
     next = Array.isArray(laid) ? { ...next, elements: laid } : laid;
   } else if (isIntroThreeParaIconsLayout(layoutSchema?.layout_id)) {
     next = applyElementsStyleLayout(next, layoutIntroThreeParaIcons, layoutSchema, themeTokens, canvas);
@@ -9607,6 +9613,13 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   next = applySplitImageEdgeFade(next, layoutSchema);
   next = applySlideTextSafeArea(next, layoutSchema, canvas);
 
+  if (content && layoutSchema?.slots?.length) {
+    next = rebindContentToElements(next, content, null, {
+      themeTokens,
+      layoutSchema,
+    });
+  }
+
   if (
     !isDiagramProcessStepsLayout(layoutSchema?.layout_id) &&
     !isDiagramCycleLayout(layoutSchema?.layout_id) &&
@@ -9665,6 +9678,8 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
       forceTextReplace ||
       !current ||
       isPackPlaceholderText(current) ||
+      isCatalogPlaceholderText(current) ||
+      /^option [ab]$/i.test(String(current || '').trim()) ||
       (treatWeakAsEmpty && blueprintSeed.isWeakText(current));
     if (mayReplace) {
       el.content = { ...(el.content || {}), text: value };

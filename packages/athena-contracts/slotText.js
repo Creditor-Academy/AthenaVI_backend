@@ -346,6 +346,109 @@ function sideOf(content, side) {
   };
 }
 
+function comparisonRowsOf(content) {
+  const cmp = content?.comparison;
+  if (cmp && Array.isArray(cmp.rows) && cmp.rows.length) return cmp.rows;
+  if (Array.isArray(content?.comparisonRows) && content.comparisonRows.length) {
+    return content.comparisonRows;
+  }
+  return [];
+}
+
+function comparisonTableRowAt(content, index) {
+  const rows = comparisonRowsOf(content);
+  const raw = rows[index];
+  if (!raw || typeof raw !== 'object') {
+    return { leftTitle: '', leftBody: '', rightTitle: '', rightBody: '' };
+  }
+  const leftTitle = String(
+    raw.leftTitle ?? raw.left_title ?? raw.left?.title ?? ''
+  ).trim();
+  const rightTitle = String(
+    raw.rightTitle ?? raw.right_title ?? raw.right?.title ?? ''
+  ).trim();
+  const leftBody = String(
+    raw.leftBody ??
+      raw.left_body ??
+      raw.left?.body ??
+      (Array.isArray(raw.left?.bullets) ? bulletBlock(itemsToTexts(raw.left.bullets)) : '')
+  ).trim();
+  const rightBody = String(
+    raw.rightBody ??
+      raw.right_body ??
+      raw.right?.body ??
+      (Array.isArray(raw.right?.bullets) ? bulletBlock(itemsToTexts(raw.right.bullets)) : '')
+  ).trim();
+  return { leftTitle, leftBody, rightTitle, rightBody };
+}
+
+function timelineStepAt(content, index) {
+  const list =
+    (Array.isArray(content?.timeline) && content.timeline.length ? content.timeline : null) ||
+    (Array.isArray(content?.milestones) && content.milestones.length ? content.milestones : null) ||
+    (Array.isArray(content?.steps) && content.steps.length ? content.steps : null) ||
+    objectListForKind('milestone', content);
+  const raw = list[index];
+  if (!raw) return { label: '', title: '', body: '', detail: '', year: '' };
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    const split = trimmed.split(/[:\-—–]\s*/);
+    return {
+      label: split[0] || trimmed,
+      title: split[0] || trimmed,
+      body: split.slice(1).join(' ').trim(),
+      detail: split.slice(1).join(' ').trim(),
+      year: /^\d{4}$/.test(split[0]) ? split[0] : '',
+    };
+  }
+  return {
+    label: String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? '').trim(),
+    title: String(raw.title ?? raw.name ?? raw.label ?? '').trim(),
+    body: String(raw.body ?? raw.text ?? raw.description ?? '').trim(),
+    detail: String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim(),
+    year: String(raw.year ?? raw.date ?? raw.period ?? '').trim(),
+  };
+}
+
+function tableDataOf(content) {
+  const table = content?.table;
+  if (!table || typeof table !== 'object') {
+    return { headers: [], rows: [], rowLabels: [] };
+  }
+  const headers = Array.isArray(table.headers) ? table.headers.map((h) => String(h ?? '').trim()) : [];
+  let rows = [];
+  if (Array.isArray(table.rows) && table.rows.length) {
+    rows = table.rows.map((row) =>
+      Array.isArray(row) ? row.map((c) => String(c ?? '').trim()) : [String(row ?? '').trim()]
+    );
+  } else if (Array.isArray(table.cells) && table.cells.length) {
+    rows = table.cells.map((row) =>
+      Array.isArray(row) ? row.map((c) => String(c ?? '').trim()) : [String(row ?? '').trim()]
+    );
+  }
+  const rowLabels = Array.isArray(table.rowLabels)
+    ? table.rowLabels.map((l) => String(l ?? '').trim())
+    : [];
+  return { headers, rows, rowLabels };
+}
+
+function dualMetricAt(content, sideIndex) {
+  const stats = Array.isArray(content?.stats)
+    ? content.stats
+    : Array.isArray(content?.metrics)
+      ? content.metrics
+      : [];
+  const raw = stats[sideIndex];
+  if (!raw) return { title: '', desc: '', label: '', value: '' };
+  if (typeof raw === 'string') return { title: raw, desc: '', label: '', value: raw };
+  return {
+    title: String(raw.title ?? raw.label ?? raw.name ?? '').trim(),
+    desc: String(raw.body ?? raw.description ?? raw.detail ?? raw.text ?? '').trim(),
+    label: String(raw.label ?? raw.caption ?? raw.subtitle ?? '').trim(),
+    value: String(raw.value ?? raw.number ?? '').trim(),
+  };
+}
+
 const PROS_CONS_ROW_COUNT = 5;
 
 function prosConsRowFromEntry(entry) {
@@ -602,9 +705,20 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
 
   const stepField = id.match(STEP_FIELD_RE);
   if (stepField) {
-    const cell = diagramCellAt(content, Number(stepField[1]) - 1);
+    const idx = Number(stepField[1]) - 1;
+    const field = stepField[2];
+    const timelineList =
+      (Array.isArray(content?.timeline) && content.timeline.length ? content.timeline : null) ||
+      (Array.isArray(content?.steps) && content.steps.length ? content.steps : null) ||
+      (Array.isArray(content?.milestones) && content.milestones.length ? content.milestones : null);
+    if (timelineList && timelineList.length > idx) {
+      const step = timelineStepAt(content, idx);
+      if (field === 'title') return step.title || step.label;
+      return step.body || step.detail;
+    }
+    const cell = diagramCellAt(content, idx);
     if (!cell) return '';
-    if (stepField[2] === 'title') {
+    if (field === 'title') {
       return String(cell.title ?? cell.label ?? cell.step ?? '').trim();
     }
     return String(cell.body ?? cell.text ?? cell.detail ?? '').trim();
@@ -711,6 +825,104 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     const col = agendaColumnAt(content, Number(agendaItem[1]) - 1);
     const items = Array.isArray(col?.items) ? col.items : [];
     return String(items[Number(agendaItem[2]) - 1] ?? '').trim();
+  }
+
+  const compRowSide = id.match(/^row_(\d+)_(left|right)_(title|body)$/);
+  if (compRowSide) {
+    const row = comparisonTableRowAt(content, Number(compRowSide[1]) - 1);
+    const side = compRowSide[2];
+    const field = compRowSide[3];
+    if (side === 'left') return field === 'title' ? row.leftTitle : row.leftBody;
+    return field === 'title' ? row.rightTitle : row.rightBody;
+  }
+
+  const pointField = id.match(/^point_(\d+)_(title|desc|num|card)$/);
+  if (pointField) {
+    const col = structuredColumnAt(content, Number(pointField[1]) - 1);
+    if (!col) return pointField[2] === 'num' ? String(pointField[1]).padStart(2, '0') : '';
+    if (pointField[2] === 'title') {
+      return uniqueColumnTitle(
+        col.title ?? col.heading ?? col.label,
+        col.body ?? col.text,
+        Number(pointField[1]) - 1,
+        content,
+        'Point'
+      );
+    }
+    if (pointField[2] === 'num') {
+      return String(pointField[1]).padStart(2, '0');
+    }
+    return String(col.body ?? col.text ?? itemToText(col)).trim();
+  }
+
+  const stepExtended = id.match(/^step_(\d+)_(title|body|desc|detail|label|year)$/);
+  if (stepExtended) {
+    const step = timelineStepAt(content, Number(stepExtended[1]) - 1);
+    const field = stepExtended[2];
+    if (field === 'title') return step.title || step.label;
+    if (field === 'label' || field === 'year') return step.label || step.year;
+    if (field === 'desc' || field === 'detail' || field === 'body') {
+      return step.detail || step.body;
+    }
+    return step.body || step.detail;
+  }
+
+  const cellSlot = id.match(/^cell_(\d+)_(\d+)$/);
+  if (cellSlot) {
+    const r = Number(cellSlot[1]);
+    const c = Number(cellSlot[2]);
+    const { headers, rows, rowLabels } = tableDataOf(content);
+    if (r === 1 && headers.length >= c) return headers[c - 1] || '';
+    const rowIndex = r - 1;
+    const row = rows[rowIndex];
+    if (Array.isArray(row) && row.length >= c) return row[c - 1] || '';
+    if (c === 1 && rowLabels[rowIndex]) return rowLabels[rowIndex];
+    return '';
+  }
+
+  const colHeader = id.match(/^col_(\d+)_header$/);
+  if (colHeader) {
+    const { headers } = tableDataOf(content);
+    return headers[Number(colHeader[1]) - 1] || '';
+  }
+
+  const rowLabel = id.match(/^row_(\d+)_label$/);
+  if (rowLabel) {
+    const { rowLabels, rows } = tableDataOf(content);
+    const idx = Number(rowLabel[1]) - 1;
+    if (rowLabels[idx]) return rowLabels[idx];
+    const row = rows[idx];
+    if (Array.isArray(row) && row[0]) return row[0];
+    return '';
+  }
+
+  const metricPanel = id.match(/^metric_([abcd])_(label|value|desc)$/);
+  if (metricPanel) {
+    const idx = 'abcd'.indexOf(metricPanel[1]);
+    const chart = content?.chart && typeof content.chart === 'object' ? content.chart : null;
+    const labels = chart?.labels || chart?.series?.[0]?.labels || [];
+    const values = chart?.series?.[0]?.values || chart?.values || chart?.data || [];
+    const stats = Array.isArray(content.stats) ? content.stats : Array.isArray(content.metrics) ? content.metrics : [];
+    const stat = stats[idx];
+    if (metricPanel[2] === 'label') {
+      return String(stat?.label ?? stat?.title ?? labels[idx] ?? '').trim();
+    }
+    if (metricPanel[2] === 'value') {
+      const raw = stat?.value ?? stat?.number ?? values[idx];
+      if (raw == null || raw === '') return '';
+      return String(raw).includes('%') ? String(raw) : `${raw}%`;
+    }
+    return String(stat?.body ?? stat?.description ?? stat?.text ?? '').trim();
+  }
+
+  const metricSide = id.match(/^metric_([ab])_(title|desc|label|value)$/);
+  if (metricSide) {
+    const idx = metricSide[1] === 'a' ? 0 : 1;
+    const m = dualMetricAt(content, idx);
+    if (metricSide[2] === 'title') return m.title || m.value;
+    if (metricSide[2] === 'value') return m.value || m.title;
+    if (metricSide[2] === 'desc') return m.desc;
+    return m.label || m.title;
   }
 
   const cardField = id.match(CARD_FIELD_RE);

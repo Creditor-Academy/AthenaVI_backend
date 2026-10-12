@@ -36,11 +36,19 @@ function rankLayouts(slide, layouts, options = {}) {
     else accepted.push(layout);
   }
 
-  const pool = accepted.length ? accepted : list;
-  const unconstrained = accepted.length === 0 && list.length > 0;
+  const widened = Array.isArray(options.widenedLayouts)
+    ? options.widenedLayouts.filter((l) => l && l.id)
+    : [];
+  const pool = accepted.length ? accepted : widened.length ? widened : list;
+  const unconstrained = accepted.length === 0 && widened.length === 0 && list.length > 0;
+
+  const scoreOptions = {
+    ...options,
+    unconstrainedRankingPenalty: unconstrained ? -25 : 0,
+  };
 
   const scored = pool.map((layout) => {
-    const result = scoreLayout(profile, layout, options);
+    const result = scoreLayout(profile, layout, scoreOptions);
     if (unconstrained) {
       result.warnings = [
         'No layouts passed hard filters; ranking unconstrained',

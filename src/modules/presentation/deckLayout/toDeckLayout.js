@@ -2,6 +2,7 @@ const {
   DECK_LAYOUT_CATEGORIES,
 } = require('./deckLayout.constants');
 const { applyLayoutMetadataOverride } = require('./layoutMetadataOverrides');
+const { deriveLayoutKeywords } = require('./deriveLayoutKeywords');
 
 const CHARS_PER_WORD = 6;
 const WORDS_PER_LINE = 12;
@@ -558,7 +559,9 @@ function toDeckLayout(input, options = {}) {
     elements: options.includeElements ? compileElements(schema) : [],
   };
 
-  return applyLayoutMetadataOverride(layout);
+  const withOverride = applyLayoutMetadataOverride(layout);
+  const { layoutTopics, keywords } = deriveLayoutKeywords(withOverride);
+  return { ...withOverride, layoutTopics, keywords };
 }
 
 module.exports = {

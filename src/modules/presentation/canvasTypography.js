@@ -51,24 +51,24 @@ function fontSizeForTextSlot(slot, placement, canvasWidth = CANVAS_REF_WIDTH) {
 }
 
 function resolveTypeScaleFontSize(role, typeScale = {}, slotId = '') {
+  const ts = typeScale && typeof typeScale === 'object' ? typeScale : {};
   const r = String(role || '').toLowerCase();
   const id = String(slotId || '').toLowerCase();
   if (/^(card|col|row|feature|bullet|item)_\d+_title$/.test(id)) {
     const size =
-      typeScale.subtitle ??
-      (typeScale.body != null ? Math.round(Number(typeScale.body) * 1.35) : null);
+      ts.subtitle ?? (ts.body != null ? Math.round(Number(ts.body) * 1.35) : null);
     return size != null && Number(size) > 0 ? Number(size) : null;
   }
   const map = {
-    heading: typeScale.title ?? typeScale.display,
-    quote: typeScale.subtitle ?? typeScale.title,
-    subheading: typeScale.subtitle,
-    body: typeScale.body,
-    caption: typeScale.caption,
-    stat_label: typeScale.caption,
-    eyebrow: typeScale.caption,
-    stat: typeScale.stat ?? typeScale.display,
-    cta: typeScale.subtitle,
+    heading: ts.title ?? ts.display,
+    quote: ts.subtitle ?? ts.title,
+    subheading: ts.subtitle,
+    body: ts.body,
+    caption: ts.caption,
+    stat_label: ts.caption,
+    eyebrow: ts.caption,
+    stat: ts.stat ?? ts.display,
+    cta: ts.subtitle,
   };
   const size = map[r];
   return size != null && Number(size) > 0 ? Number(size) : null;

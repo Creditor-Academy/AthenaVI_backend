@@ -39,6 +39,27 @@ function countPlanItemSlots(slots) {
   return max;
 }
 
+function countStepSlots(slots) {
+  const stepIds = new Set();
+  for (const slot of slots) {
+    const m = String(slot?.id || '').match(/^(?:step|STEP)_(\d+)_/i);
+    if (m) stepIds.add(m[1]);
+  }
+  return stepIds.size;
+}
+
+function countTableCellGrid(slots) {
+  let maxR = 0;
+  let maxC = 0;
+  for (const slot of slots) {
+    const m = String(slot?.id || '').match(/^CELL_(\d+)_(\d+)$/i);
+    if (!m) continue;
+    maxR = Math.max(maxR, Number(m[1]));
+    maxC = Math.max(maxC, Number(m[2]));
+  }
+  return maxR > 0 && maxC > 0 ? maxR * maxC : 0;
+}
+
 function roleOf(slot) {
   return String(slot?.role || '').trim().toLowerCase();
 }
@@ -96,12 +117,19 @@ function defaultLimitsForSlot(slot) {
 
 function deriveContentContract(schema) {
   const slots = Array.isArray(schema?.slots) ? schema.slots : [];
+  const pointCount = countSlotPattern(slots, /^POINT_(\d+)_/i);
+  const columnCount = countSlotPattern(slots, /^(?:CARD|COL|ROW|FEATURE)_(\d+)_/i);
+  const stepCount = countStepSlots(slots);
+  const hasDualMetrics = slots.some((s) => /^METRIC_A_/i.test(String(s?.id || '')))
+    && slots.some((s) => /^METRIC_B_/i.test(String(s?.id || '')));
+
   const groups = {
-    columns: countSlotPattern(slots, /^(?:CARD|COL|ROW|FEATURE)_(\d+)_/i),
+    columns: Math.max(columnCount, pointCount),
+    points: pointCount,
     stats: countSlotPattern(slots, /^STAT_(\d+)_/i),
     members: countSlotPattern(slots, /^MEMBER_(\d+)_/i),
     timeline: countSlotPattern(slots, /^MILESTONE_(\d+)_/i),
-    steps: countSlotPattern(slots, /^STEP_(\d+)_/i),
+    steps: Math.max(stepCount, countSlotPattern(slots, /^STEP_(\d+)_/i)),
     quadrants: countSlotPattern(slots, /^Q(\d+)_/i),
     funnel: countSlotPattern(slots, /^FUNNEL_(\d+)_/i),
     bullets: countSlotPattern(slots, /^BULLET_(\d+)/i),
@@ -111,6 +139,9 @@ function deriveContentContract(schema) {
     plans: countSlotPattern(slots, /^PLAN_(\d+)_/i),
     planItems: countPlanItemSlots(slots),
     pricingFeatures: countSlotPattern(slots, /^FEATURE_(\d+)$/i),
+    comparisonRows: countSlotPattern(slots, /^ROW_(\d+)_LEFT_/i),
+    tableCells: countTableCellGrid(slots),
+    dualMetrics: hasDualMetrics ? 2 : 0,
   };
 
   const slotMap = {};

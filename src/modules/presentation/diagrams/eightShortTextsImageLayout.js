@@ -3,6 +3,8 @@
  * Layout IDs: eight_short_texts_image_v1, eight_short_texts_image_right_v1
  */
 
+const { textForSlot } = require('@athena/contracts/slotText.js')
+
 const EIGHT_SHORT_TEXTS_IMAGE_GEOM = {
   viewW: 1000,
   viewH: 560,
@@ -98,7 +100,7 @@ function resolveStoredColor(el, fallback) {
   return fallback
 }
 
-function layoutEightShortTextsImage(docOrElements, schema = {}, palette = {}, canvas = {}) {
+function layoutEightShortTextsImage(docOrElements, schema = {}, palette = {}, canvas = {}, content = null) {
   const elements = Array.isArray(docOrElements) ? docOrElements : (docOrElements?.elements || [])
   const isRight = isEightShortTextsRightVariant(schema?.layout_id || schema?.id || schema?.layoutId, schema)
   const g = resolveEightShortTextsGeom(isRight)
@@ -115,8 +117,13 @@ function layoutEightShortTextsImage(docOrElements, schema = {}, palette = {}, ca
     if (sid) prevBySlot.set(sid, el)
   })
 
+  const hasGeneratedContent = content && typeof content === 'object'
+
   const getPrevText = (slotId, fallback) => {
-    const prev = prevBySlot.get(slotId)
+    if (hasGeneratedContent) {
+      return String(textForSlot(slotId, content, schema) || '').trim()
+    }
+    const prev = prevBySlot.get(String(slotId).toUpperCase())
     const txt = prev?.content?.text || prev?.text
     if (txt && String(txt).trim()) return String(txt).trim()
     return fallback

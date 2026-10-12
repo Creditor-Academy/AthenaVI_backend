@@ -22,14 +22,19 @@ const { isDeviceScreenSlotId } = require('./diagrams/deviceChrome.util');
 function runContentPreShape(content, layoutSchema) {
   if (!layoutSchema?.slots?.length) return content;
   let next = content;
+  next = normalizeComparisonSideContent(next, layoutSchema);
+  next = normalizeComparisonTableContent(next, layoutSchema);
+  next = normalizeComparisonProsConsContent(next, layoutSchema);
   next = normalizeMultiColumnContent(next, layoutSchema);
+  next = normalizePointGridContent(next, layoutSchema);
+  next = normalizeTableSlotContent(next, layoutSchema);
+  next = normalizeDualMetricContent(next, layoutSchema);
   next = normalizeGalleryImageContent(next, layoutSchema);
   next = normalizeChartContent(next, layoutSchema);
   next = normalizeTimelineContent(next, layoutSchema);
   next = normalizeDiagramContent(next, layoutSchema);
   next = normalizeDeviceContent(next, layoutSchema);
   next = normalizeAgendaContent(next, layoutSchema);
-  next = normalizeComparisonProsConsContent(next, layoutSchema);
   return next;
 }
 
@@ -104,6 +109,175 @@ function normalizeComparisonProsConsContent(content, layoutSchema) {
     left: { ...(cmp.left || next.left || {}), title: next.prosTitle },
     right: { ...(cmp.right || next.right || {}), title: next.consTitle },
   };
+  return next;
+}
+
+function layoutHasComparisonSides(slots) {
+  return (slots || []).some((s) => /^LEFT_(TITLE|BODY)$/i.test(String(s?.id || '')));
+}
+
+function layoutHasComparisonTableRows(slots) {
+  return (slots || []).some((s) => /^ROW_\d+_LEFT_/i.test(String(s?.id || '')));
+}
+
+function countPointSlots(slots) {
+  const nums = new Set();
+  for (const s of slots || []) {
+    const m = String(s?.id || '').match(/^POINT_(\d+)_/i);
+    if (m) nums.add(m[1]);
+  }
+  return nums.size;
+}
+
+function bulletsToSide(sideSrc, bullets) {
+  const src = sideSrc && typeof sideSrc === 'object' ? { ...sideSrc } : {};
+  if (!Array.isArray(src.bullets) || !src.bullets.length) {
+    if (Array.isArray(bullets) && bullets.length) src.bullets = bullets;
+  }
+  return src;
+}
+
+function normalizeComparisonSideContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  if (!layoutHasComparisonSides(layoutSchema.slots)) return content;
+
+  const next = { ...content };
+  const cmp = next.comparison && typeof next.comparison === 'object' ? { ...next.comparison } : {};
+  let left = { ...(next.left || cmp.left || {}) };
+  let right = { ...(next.right || cmp.right || {}) };
+
+  if (Array.isArray(next.columns) && next.columns.length >= 2) {
+    if (!left.title) left.title = String(next.columns[0]?.title ?? next.columns[0]?.heading ?? '').trim();
+    if (!right.title) right.title = String(next.columns[1]?.title ?? next.columns[1]?.heading ?? '').trim();
+    if (!left.bullets?.length && next.columns[0]?.body) {
+      left.bullets = [String(next.columns[0].body).trim()];
+    }
+    if (!right.bullets?.length && next.columns[1]?.body) {
+      right.bullets = [String(next.columns[1].body).trim()];
+    }
+  }
+
+  left = bulletsToSide(left, left.bullets);
+  right = bulletsToSide(right, right.bullets);
+
+  next.left = left;
+  next.right = right;
+  next.comparison = { ...cmp, left, right };
+  return next;
+}
+
+function normalizeComparisonTableContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  if (!layoutHasComparisonTableRows(layoutSchema.slots)) return content;
+
+  const next = { ...content };
+  const cmp = next.comparison && typeof next.comparison === 'object' ? { ...next.comparison } : {};
+  let rows = Array.isArray(cmp.rows) ? [...cmp.rows] : Array.isArray(next.comparisonRows) ? [...next.comparisonRows] : [];
+
+  let needed = 0;
+  for (const s of layoutSchema.slots) {
+    const m = String(s.id || '').match(/^ROW_(\d+)_LEFT_/i);
+    if (m) needed = Math.max(needed, Number(m[1]));
+  }
+  if (!needed) return content;
+
+  if (!rows.length && Array.isArray(next.columns) && next.columns.length >= needed * 2) {
+    rows = [];
+    for (let i = 0; i < needed; i += 1) {
+      const l = next.columns[i * 2] || {};
+      const r = next.columns[i * 2 + 1] || {};
+      rows.push({
+        leftTitle: String(l.title ?? l.heading ?? '').trim(),
+        leftBody: String(l.body ?? l.text ?? '').trim(),
+        rightTitle: String(r.title ?? r.heading ?? '').trim(),
+        rightBody: String(r.body ?? r.text ?? '').trim(),
+      });
+    }
+  }
+
+  while (rows.length < needed) {
+    rows.push({ leftTitle: '', leftBody: '', rightTitle: '', rightBody: '' });
+  }
+
+  next.comparison = { ...cmp, rows: rows.slice(0, needed) };
+  next.comparisonRows = next.comparison.rows;
+  return next;
+}
+
+function normalizePointGridContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const pointSlots = countPointSlots(layoutSchema.slots);
+  if (pointSlots < 2) return content;
+
+  const next = normalizeMultiColumnContent(content, {
+    ...layoutSchema,
+    slots: [
+      ...layoutSchema.slots,
+      ...Array.from({ length: pointSlots }, (_, i) => ({ id: `POINT_${i + 1}_TITLE` })),
+    ],
+  });
+
+  const needed = countPointSlots(layoutSchema.slots);
+  const cols = Array.isArray(next.columns)
+    ? [...next.columns]
+    : Array.isArray(next.cards)
+      ? [...next.cards]
+      : Array.isArray(next.features)
+        ? [...next.features]
+        : [];
+  while (cols.length < needed) cols.push({ title: '', body: '' });
+  next.columns = cols.slice(0, needed);
+  return next;
+}
+
+function normalizeTableSlotContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const hasCells = layoutSchema.slots.some((s) => /^CELL_\d+_\d+$/i.test(String(s?.id || '')));
+  if (!hasCells) return content;
+
+  const next = { ...content };
+  if (!next.table || typeof next.table !== 'object') next.table = {};
+
+  let headers = Array.isArray(next.table.headers) ? [...next.table.headers] : [];
+  const colHeaders = layoutSchema.slots.filter((s) => /^COL_\d+_HEADER$/i.test(String(s?.id || '')));
+  const colCount = colHeaders.length;
+  if (!headers.length && colCount > 0) {
+    headers = Array.from({ length: colCount }, (_, i) => `Column ${i + 1}`);
+  }
+
+  let rows = Array.isArray(next.table.rows)
+    ? next.table.rows.map((row) => (Array.isArray(row) ? [...row] : [String(row ?? '')]))
+    : Array.isArray(next.table.cells)
+      ? next.table.cells.map((row) => (Array.isArray(row) ? [...row] : [String(row ?? '')]))
+      : [];
+
+  const cellRows = layoutSchema.slots
+    .map((s) => String(s.id || '').match(/^CELL_(\d+)_(\d+)$/i))
+    .filter(Boolean);
+  const maxR = cellRows.reduce((m, c) => Math.max(m, Number(c[1])), 0);
+  const maxC = cellRows.reduce((m, c) => Math.max(m, Number(c[2])), 0);
+
+  while (rows.length < maxR) rows.push(Array.from({ length: maxC }, () => ''));
+  rows = rows.map((row) => {
+    const copy = [...row];
+    while (copy.length < maxC) copy.push('');
+    return copy.slice(0, maxC);
+  });
+
+  next.table = { ...next.table, headers, rows, cells: rows };
+  return next;
+}
+
+function normalizeDualMetricContent(content, layoutSchema) {
+  if (!content || typeof content !== 'object' || !layoutSchema?.slots?.length) return content;
+  const hasA = layoutSchema.slots.some((s) => /^METRIC_A_/i.test(String(s?.id || '')));
+  const hasB = layoutSchema.slots.some((s) => /^METRIC_B_/i.test(String(s?.id || '')));
+  if (!hasA || !hasB) return content;
+
+  const next = { ...content };
+  const stats = Array.isArray(next.stats) ? [...next.stats] : Array.isArray(next.metrics) ? [...next.metrics] : [];
+  while (stats.length < 2) stats.push({ title: '', body: '', label: '', value: '' });
+  next.stats = stats.slice(0, 2);
   return next;
 }
 
@@ -184,6 +358,7 @@ function normalizeMultiColumnContent(content, layoutSchema) {
   const slots = layoutSchema.slots;
   const needsColumns =
     slots.some((s) => /^(card|col|row)_\d+_(title|body)$/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^point_\d+_(title|desc)$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^bullet_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^body_\d+$/i.test(String(s.id || ''))) ||
     slots.some((s) => /^image_\d+_label$/i.test(String(s.id || ''))) ||
@@ -542,7 +717,9 @@ function normalizeTimelineContent(content, layoutSchema) {
   const slots = layoutSchema.slots;
   const layoutId = String(layoutSchema.layout_id || '');
   const isTimeline =
-    /timeline/i.test(layoutId) || slots.some((s) => /^milestone_/i.test(String(s.id || '')));
+    /timeline/i.test(layoutId) ||
+    slots.some((s) => /^milestone_/i.test(String(s.id || ''))) ||
+    slots.some((s) => /^step_\d+_/i.test(String(s.id || '')));
   if (!isTimeline) return content;
 
   const key = Array.isArray(content.timeline)
@@ -926,6 +1103,11 @@ module.exports = {
   normalizeDiagramContent,
   normalizeDeviceContent,
   normalizeComparisonProsConsContent,
+  normalizeComparisonSideContent,
+  normalizeComparisonTableContent,
+  normalizePointGridContent,
+  normalizeTableSlotContent,
+  normalizeDualMetricContent,
   layoutUsesPerSlotGalleryImages,
   isComparisonProsConsLayoutId,
   layoutNeedsDiagramCellsFromSchema,

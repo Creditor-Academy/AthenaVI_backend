@@ -105,6 +105,11 @@ function applyLayoutMetadataOverride(layout) {
     },
     supportedElements: { ...layout.supportedElements, ...overlay.supportedElements },
     extensions: overlay.extensions || layout.extensions,
+    keywordTopics: overlay.keywordTopics || layout.keywordTopics,
+    keywords: overlay.keywords
+      ? [...new Set([...(layout.keywords || []), ...overlay.keywords])]
+      : layout.keywords,
+    layoutTopics: layout.layoutTopics,
   };
 }
 

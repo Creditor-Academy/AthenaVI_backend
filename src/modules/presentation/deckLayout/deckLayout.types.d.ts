@@ -214,6 +214,11 @@ export interface DeckLayout {
   schema: DeckLayoutSchema;
   elements: CanvasElement[];
   extensions?: Record<string, unknown>;
+  /** Canonical topic ids for keyword scoring (derived). */
+  layoutTopics?: string[];
+  /** Search aliases and id tokens for slide copy matching (derived). */
+  keywords?: string[];
+  keywordTopics?: string[];
 }
 
 export interface DeckLayoutValidationResult {

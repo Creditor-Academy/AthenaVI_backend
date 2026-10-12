@@ -34,6 +34,50 @@ test('textForSlot binds PROS_1_TITLE and PROS_1_BODY from pros strings', () => {
   assert.equal(textForSlot('CONS_2_BODY', content, {}, null), 'menu locked');
 });
 
+test('textForSlot binds LEFT_BODY from comparison.left bullets', () => {
+  const content = {
+    title: 'Models compared',
+    comparison: {
+      left: { title: 'Franchise', bullets: ['Lower food cost', 'Training program', 'Marketing pool'] },
+      right: { title: 'Independent', bullets: ['Full menu freedom', 'Local sourcing', 'Own brand story'] },
+    },
+  };
+  assert.equal(textForSlot('LEFT_TITLE', content, {}, null), 'Franchise');
+  const leftBody = textForSlot('LEFT_BODY', content, {}, null);
+  assert.ok(leftBody.includes('Lower food cost'), leftBody);
+  assert.ok(leftBody.includes('Marketing pool'), leftBody);
+  assert.equal(textForSlot('RIGHT_TITLE', content, {}, null), 'Independent');
+});
+
+test('comparison_side_by_side_v1 compile replaces Option A/B placeholders', async () => {
+  const layoutSchema = schemaForLayoutId('comparison_side_by_side_v1');
+  const content = {
+    title: 'Franchise vs independent bakery',
+    left: {
+      title: 'Franchise network',
+      bullets: ['Buying power on flour and cheese', 'Proven store layout', 'Shared national campaigns'],
+    },
+    right: {
+      title: 'Independent operator',
+      bullets: ['Menu flexibility for local tastes', 'Direct supplier relationships', 'Neighborhood brand equity'],
+    },
+  };
+  const { elementsDoc } = await compileSlide({
+    layoutSchema,
+    content,
+    skipContentRepair: true,
+  });
+  const find = (slotId) =>
+    (elementsDoc?.elements || []).find(
+      (e) => String(e.slotId || '').toUpperCase() === slotId.toUpperCase()
+    );
+  const leftTitle = find('LEFT_TITLE');
+  const leftBody = find('LEFT_BODY');
+  assert.ok(leftTitle?.content?.text?.includes('Franchise network'), leftTitle?.content?.text);
+  assert.ok(leftBody?.content?.text?.includes('Buying power'), leftBody?.content?.text);
+  assert.ok(!/^option a$/i.test(String(leftTitle?.content?.text || '').trim()));
+});
+
 test('comparison_pros_cons_v1 compile fills row text slots', async () => {
   const layoutSchema = schemaForLayoutId('comparison_pros_cons_v1');
   const content = {

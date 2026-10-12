@@ -53,3 +53,8 @@ test('card title typography role and fallback sizes differ from body', () => {
   const bodySize = resolveTypeScaleFontSize('body', scale, 'CARD_1_BODY');
   assert.ok(titleSize > bodySize);
 });
+
+test('resolveTypeScaleFontSize accepts null typeScale without throwing', () => {
+  assert.equal(resolveTypeScaleFontSize('heading', null), null);
+  assert.equal(resolveTypeScaleFontSize('body', null, 'CARD_1_BODY'), null);
+});

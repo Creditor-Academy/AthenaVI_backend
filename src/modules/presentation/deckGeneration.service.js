@@ -22,6 +22,10 @@ const { pickLayoutForGeneratedSlide } = require('./deckLayout/pickLayoutForGener
 const { toDeckLayout } = require('./deckLayout/toDeckLayout');
 const { toSlideContentProfile } = require('./deckLayout/toSlideContentProfile');
 const { rankLayouts } = require('./deckLayout/rankLayouts');
+const {
+  resolveLayoutCandidates,
+  buildLayoutSearchText,
+} = require('./deckLayout/resolveLayoutCandidates');
 const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
 const {
   planDeckImageDistribution,
@@ -1114,6 +1118,15 @@ function applyVisualPolicy({
 
   if (need === 'none' || need === 'icon' || !need) {
     need = type === 'quote' || type === 'stat' ? 'illustration' : 'photo';
+  }
+
+  if (['comparison', 'timeline', 'diagram', 'stat'].includes(type)) {
+    return {
+      visualNeed: need,
+      contentType: type,
+      layoutContentType: type,
+      preferImageSlot: !['diagram', 'stat'].includes(type),
+    };
   }
 
   let layoutContentType = type;
@@ -2631,9 +2644,23 @@ async function planDeckLayouts(ctx, slides) {
     }
     contentTypeHistory.push(layoutContentType);
 
-    let templates = await resolveLayoutTemplates(layoutContentType, {
+    const galleryOverridesEarly = galleryPolicy?.profileOverrides || null;
+    const candidateProfile = toSlideContentProfile({
+      ...stubContent,
+      purpose: outlineSlide.purpose || outlineSlide.intent || null,
+      suggestedContentType: outlineSlide.suggestedContentType || layoutContentType,
+      slideNumber: Number(slide.order),
+      wizardDensity: ctx.density || null,
+      ...(galleryOverridesEarly ? { body: '', summary: '', bullets: [], allowPureImageGrid: true } : {}),
+      ...(galleryOverridesEarly?.imageCount ? { imageCount: galleryOverridesEarly.imageCount } : {}),
+    });
+    const { templates: widenedTemplates } = await resolveLayoutCandidates(layoutContentType, {
+      profile: candidateProfile,
+      outlineSlide,
+      resolveLayoutTemplates,
       layoutIdWhitelist: ctx.layoutIdWhitelist || null,
     });
+    let templates = widenedTemplates;
     templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
     if (fullBleedUsed) {
       templates = templates.filter(
@@ -2710,6 +2737,7 @@ async function planDeckLayouts(ctx, slides) {
         previousLayoutIds: [...usedLayoutIds],
         adjacentLayoutId: ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null,
         debug: false,
+        searchText: buildLayoutSearchText(ctx, outlineSlide, stubContent),
       });
       if (preferredLayoutId) {
         const idx = ranked.findIndex((r) => String(r.layoutId) === String(preferredLayoutId));
@@ -2851,9 +2879,20 @@ async function resolvePreGenerationLayout({
     }
   }
 
-  let templates = await resolveLayoutTemplates(layoutContentType, {
+  const preContentProfile = toSlideContentProfile({
+    ...stubContent,
+    purpose: outlineSlide.purpose || outlineSlide.intent || null,
+    suggestedContentType: outlineSlide.suggestedContentType || layoutContentType,
+    slideNumber: Number(slide.order),
+    wizardDensity: ctx.density || null,
+  });
+  const { templates: preContentTemplates } = await resolveLayoutCandidates(layoutContentType, {
+    profile: preContentProfile,
+    outlineSlide,
+    resolveLayoutTemplates,
     layoutIdWhitelist: ctx.layoutIdWhitelist || null,
   });
+  let templates = preContentTemplates;
   templates = filterTemplatesForSlideOrder(templates, slide.order, totalSlides);
   if (ctx.fullBleedUsed) {
     templates = templates.filter(
@@ -3599,9 +3638,22 @@ async function processSlide(ctx, slide) {
           }
         }
       } else {
-        let templates = await resolveLayoutTemplates(policy.layoutContentType, {
+        const finalProfile = toSlideContentProfile({
+          ...(content && typeof content === 'object' ? content : {}),
+          title: content?.title || outlineSlide?.title || '',
+          summary: outlineSlide?.summary || content?.summary || '',
+          purpose: outlineSlide.purpose || outlineSlide.intent || null,
+          suggestedContentType: outlineSlide.suggestedContentType || policy.layoutContentType,
+          slideNumber: Number(slide.order),
+          wizardDensity: ctx.density || null,
+        });
+        const { templates: finalCandidates } = await resolveLayoutCandidates(policy.layoutContentType, {
+          profile: finalProfile,
+          outlineSlide,
+          resolveLayoutTemplates,
           layoutIdWhitelist: ctx.layoutIdWhitelist || null,
         });
+        let templates = finalCandidates;
         templates = filterTemplatesForSlideOrder(templates, slide.order, slideTotal);
         if (ctx.fullBleedUsed) {
           templates = templates.filter(
