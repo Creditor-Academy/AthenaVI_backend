@@ -213,6 +213,7 @@ function serializeGeneration(row) {
     exportHeight: row.exportHeight,
     creditsCharged: row.creditsCharged,
     status: row.status,
+    feedback: row.feedback || null,
     createdAt: row.createdAt,
     asset: row.asset || null,
     downloadFormats: [...DOWNLOAD_FORMATS],
@@ -1305,6 +1306,26 @@ async function getGeneration({ workspace, generationId }) {
   return serializeGeneration(row);
 }
 
+async function setGenerationFeedback({ workspace, generationId, feedback }) {
+  const row = await imageGenDao.findById(generationId, workspace.id);
+  requireStudioGeneration(row, { notFoundIfWrongMode: true });
+  if (row.deletedAt) {
+    throw new AppError('Image not found', 404);
+  }
+  const value = feedback || null;
+  await imageGenDao.setFeedback(row.id, workspace.id, value);
+  return { id: row.id, feedback: value };
+}
+
+async function hideGenerations({ workspace, ids }) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (!unique.length) {
+    throw new AppError('Select at least one image', 400);
+  }
+  const result = await imageGenDao.hideGenerations(unique, workspace.id);
+  return { hidden: result.count };
+}
+
 async function listGenerations({ userId, workspace, query = {} }) {
   const modeFilter = STUDIO_MODES.includes(query.mode) ? query.mode : undefined;
   const rows = await imageGenDao.listGenerations({
@@ -1316,10 +1337,10 @@ async function listGenerations({ userId, workspace, query = {} }) {
     mode: modeFilter,
     threadId: query.threadId,
   });
+  const likedOnly = query.liked === true || query.liked === 'true';
   // When mode omitted, return every studio mode (filter out any legacy unknown modes)
-  const filtered = modeFilter
-    ? rows
-    : rows.filter((row) => STUDIO_MODES.includes(row.mode));
+  const filtered = (modeFilter ? rows : rows.filter((row) => STUDIO_MODES.includes(row.mode)))
+    .filter((row) => !likedOnly || row.feedback === 'LIKE');
   return filtered.map(serializeGeneration);
 }
 
@@ -1390,6 +1411,8 @@ module.exports = {
   getGeneration,
   getSharedGeneration,
   listGenerations,
+  setGenerationFeedback,
+  hideGenerations,
   downloadGeneration,
   serializeThread,
   DOWNLOAD_FORMATS,

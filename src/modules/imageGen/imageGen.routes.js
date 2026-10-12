@@ -241,6 +241,22 @@ router.post(
   imageGenController.tweak
 );
 
+router.patch(
+  '/workspaces/:workspaceId/generations/:generationId/feedback',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.setFeedbackSchema),
+  imageGenController.setGenerationFeedback
+);
+
+router.post(
+  '/workspaces/:workspaceId/generations/hide',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.hideGenerationsSchema),
+  imageGenController.hideGenerations
+);
+
 router.get(
   '/workspaces/:workspaceId/generations/:generationId/download',
   authMiddleware,

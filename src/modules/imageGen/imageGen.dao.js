@@ -46,6 +46,7 @@ function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode, thr
       ...(isPrivate && userId ? { userId } : {}),
       ...(mode ? { mode } : {}),
       ...(threadId ? { threadId } : {}),
+      deletedAt: null,
     },
     take: limit,
     skip: offset,
@@ -64,6 +65,20 @@ function listGenerations({ workspaceId, userId, isPrivate, take, skip, mode, thr
   });
 }
 
+function setFeedback(id, workspaceId, feedback) {
+  return prisma.imageGeneration.updateMany({
+    where: { id, workspaceId, deletedAt: null },
+    data: { feedback },
+  });
+}
+
+function hideGenerations(ids, workspaceId) {
+  return prisma.imageGeneration.updateMany({
+    where: { id: { in: ids }, workspaceId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+}
+
 function setThreadId(id, threadId) {
   return prisma.imageGeneration.update({
     where: { id },
@@ -77,5 +92,7 @@ module.exports = {
   findGlobalById,
   hasPublicTweak,
   listGenerations,
+  setFeedback,
+  hideGenerations,
   setThreadId,
 };

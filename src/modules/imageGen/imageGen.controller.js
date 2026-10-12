@@ -123,6 +123,23 @@ const deleteThread = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.IMAGE_GEN_THREAD_DELETED);
 });
 
+const setGenerationFeedback = asyncHandler(async (req, res) => {
+  const feedback = await imageGenService.setGenerationFeedback({
+    workspace: req.workspace,
+    generationId: req.params.generationId,
+    feedback: req.body.feedback,
+  });
+  return successResponse(req, res, { feedback }, 200, messages.IMAGE_GEN_FEEDBACK_SAVED);
+});
+
+const hideGenerations = asyncHandler(async (req, res) => {
+  const data = await imageGenService.hideGenerations({
+    workspace: req.workspace,
+    ids: req.body.ids,
+  });
+  return successResponse(req, res, data, 200, messages.IMAGE_GEN_HIDDEN);
+});
+
 const listGenerations = asyncHandler(async (req, res) => {
   const generations = await imageGenService.listGenerations({
     userId: req.user.id,
@@ -184,6 +201,8 @@ module.exports = {
   moveThread,
   deleteThread,
   listGenerations,
+  setGenerationFeedback,
+  hideGenerations,
   getGeneration,
   getSharedGeneration,
   download,

@@ -132,6 +132,21 @@ const listGenerationsSchema = Joi.object({
       .valid(...STUDIO_MODES)
       .optional(),
     threadId: Joi.string().uuid().optional(),
+    liked: Joi.boolean().optional(),
+  }),
+});
+
+const setFeedbackSchema = Joi.object({
+  params: generationParams,
+  body: Joi.object({
+    feedback: Joi.string().valid('LIKE', 'DISLIKE').allow(null).required(),
+  }),
+});
+
+const hideGenerationsSchema = Joi.object({
+  params: workspaceParams,
+  body: Joi.object({
+    ids: Joi.array().items(Joi.string().uuid()).min(1).max(100).required(),
   }),
 });
 
@@ -234,6 +249,8 @@ module.exports = {
   regenerateSchema,
   tweakSchema,
   listGenerationsSchema,
+  setFeedbackSchema,
+  hideGenerationsSchema,
   getGenerationSchema,
   estimateSchema,
   downloadSchema,

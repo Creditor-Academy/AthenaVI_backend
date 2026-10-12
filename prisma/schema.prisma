@@ -678,6 +678,8 @@ model ImageGeneration {
   exportHeight   Int?    @map("export_height")
   creditsCharged Int     @default(0) @map("credits_charged")
   status         String  @default("SUCCEEDED")
+  feedback       String? @map("feedback")
+  deletedAt      DateTime? @map("deleted_at")
   createdAt      DateTime @default(now()) @map("created_at")
 
   workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
