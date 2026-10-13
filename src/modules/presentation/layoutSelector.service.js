@@ -414,6 +414,10 @@ function filterTemplatesForSlideOrder(templates, slideOrder, totalSlides) {
     if (ct === 'closing' && order !== total) return false;
     return true;
   });
+  if (order === 1) {
+    // Cover slide: split left/right title layouts only.
+    return list.filter((t) => TITLE_SPLIT_LAYOUT_IDS.includes(String(t.schema?.layout_id || t.variant || t.id || '')));
+  }
   if (order === total) {
     list = filterTemplatesForClosingSlide(list);
   } else if (total >= 6 && order === total - 1) {
@@ -506,7 +510,11 @@ function selectLayout({
   };
 }
 
+/** Cover slide may only use these split (text one side, image other) title layouts. */
+const TITLE_SPLIT_LAYOUT_IDS = LAYOUT_FAMILIES.split_hero_title.slice();
+
 module.exports = {
+  TITLE_SPLIT_LAYOUT_IDS,
   selectLayout,
   filterTemplatesForSlideOrder,
   filterTemplatesForClosingSlide,

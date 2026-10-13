@@ -370,26 +370,26 @@ function pickFromPool(metas, predicate, used) {
   return list[0] || null;
 }
 
+const SPLIT_TITLE_IDS = [
+  'title_hero_left_fade_v1',
+  'title_hero_right_fade_v1',
+  'title_hero_left_blob_v1',
+  'title_hero_right_oval_v1',
+  'title_image_logo_v1',
+];
+
+// eslint-disable-next-line no-unused-vars
 function pickPreferredTitleLayout(metas, { visualsOn = true, used } = {}) {
   const usedSet = used instanceof Set ? used : new Set();
+  // Cover slide: split left/right title layouts only (mirrors layoutSelector TITLE_SPLIT_LAYOUT_IDS).
   const titles = (metas || []).filter(
-    (m) => m.contentType === 'title' && m.hasHeadingSlot && !m.captionOnly
+    (m) => m.contentType === 'title' && SPLIT_TITLE_IDS.includes(m.layoutId)
   );
   const unused = titles.filter((m) => !usedSet.has(m.layoutId));
   const pool = unused.length ? unused : titles;
-
-  if (visualsOn) {
-    return (
-      pool.find((m) => m.layoutId === 'title_fullbleed_v1') ||
-      pool.find((m) => /title_hero/.test(m.layoutId)) ||
-      pool.find((m) => m.imageSlotCount > 0) ||
-      pool[0] ||
-      null
-    );
-  }
   return (
-    pool.find((m) => m.layoutId === 'title_centered_v1') ||
-    pool.find((m) => m.imageSlotCount === 0) ||
+    pool.find((m) => m.layoutId === 'title_hero_left_fade_v1') ||
+    pool.find((m) => m.imageSlotCount > 0) ||
     pool[0] ||
     null
   );

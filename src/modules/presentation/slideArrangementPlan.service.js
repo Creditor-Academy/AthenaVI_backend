@@ -4,7 +4,7 @@
  */
 
 const { looksLikeLinearProcessSlide, looksLikeDeviceFramesSlide } = require('./diagramPathPolicy.util');
-const { closingLayoutExcludeIds, isSplitHeroLayout } = require('./layoutSelector.service');
+const { closingLayoutExcludeIds, isSplitHeroLayout, TITLE_SPLIT_LAYOUT_IDS } = require('./layoutSelector.service');
 const {
   normalizeRole,
   roleToContentDefaults,
@@ -357,7 +357,13 @@ function simpleDeckHash(ctx = {}) {
 function preferredLayoutForSlide(ctx, contentType, usedLayoutIds = new Set(), slideOrder = 0) {
   const archetypeId = ctx.outline?.arrangementArchetype || 'general';
   const archetype = ARCHETYPES[archetypeId] || ARCHETYPES.general;
-  const prefs = archetype.preferredLayouts?.[String(contentType || '').toLowerCase()] || [];
+  const type = String(contentType || '').toLowerCase();
+  let prefs = archetype.preferredLayouts?.[type] || [];
+  if (type === 'title') {
+    // Cover slide: split left/right title layouts only.
+    const split = prefs.filter((id) => TITLE_SPLIT_LAYOUT_IDS.includes(String(id)));
+    prefs = split.length ? split : TITLE_SPLIT_LAYOUT_IDS;
+  }
   const unused = prefs.filter((layoutId) => !usedLayoutIds.has(String(layoutId)));
   const pool = unused.length ? unused : prefs;
   if (!pool.length) return null;

@@ -465,6 +465,23 @@ async function pickIconForBullet(bulletText, themeTokens, usedIds) {
   }
 }
 
+/** Icons the layout already draws (STEP_n_ICON, CYCLE_ICON_n, *_INSIGHT_ICON, iconKey graphics …), in slot order. */
+function findExistingIconElements(elements = []) {
+  return (elements || [])
+    .filter((el) => {
+      if (!el || el.type === 'text' || el.type === 'textbox' || el.type === 'image') return false;
+      const sid = String(el.slotId || '');
+      if (/^LIST_ICON_/i.test(sid)) return false;
+      return el.type === 'icon' || el.role === 'list_icon' || /ICON/i.test(sid) || Boolean(el.content?.iconKey);
+    })
+    .sort(
+      (a, b) =>
+        slotIndexFromId(a.slotId) - slotIndexFromId(b.slotId) ||
+        (Number(a.placement?.y) || 0) - (Number(b.placement?.y) || 0) ||
+        (Number(a.placement?.x) || 0) - (Number(b.placement?.x) || 0)
+    );
+}
+
 async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTokens = null) {
   const targets = findListIconTargets(elementsDoc);
   if (targets.length < 2) return { doc: elementsDoc, added: 0 };
@@ -496,6 +513,53 @@ async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTo
 
   const palette = themeTokens?.palette || {};
   const usedIds = new Set();
+
+  // The layout already has icons → update those in place instead of adding more.
+  const existingIcons = findExistingIconElements(doc.elements);
+  if (existingIcons.length) {
+    let updated = 0;
+    const pairs = Math.min(existingIcons.length, targets.length);
+    for (let i = 0; i < pairs; i += 1) {
+      const pointText = pointTexts[i] || bulletTextAt(content, i);
+      if (!String(pointText || '').trim()) continue;
+      let graphic = null;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        graphic = await pickIconForBullet(pointText, themeTokens, usedIds);
+      } catch {
+        continue;
+      }
+      if (!graphic?.fileUrl) continue;
+      usedIds.add(graphic.id);
+      const idx = doc.elements.indexOf(existingIcons[i]);
+      const icon = doc.elements[idx];
+      doc.elements[idx] = {
+        ...icon,
+        type: 'graphic',
+        content: {
+          ...icon.content,
+          svg: undefined,
+          iconKey: undefined,
+          assetId: graphic.id,
+          src: graphic.fileUrl,
+          url: graphic.fileUrl,
+          previewUrl: graphic.previewUrl,
+          s3Key: graphic.s3Key || undefined,
+          colorMode: graphic.colorMode,
+          source: graphic.source || 'library',
+          colorOverrides:
+            graphic.colorMode === 'recolorable'
+              ? { primary: palette.primary || palette.accent || true }
+              : undefined,
+          alt: graphic.name,
+          fit: 'contain',
+        },
+      };
+      updated += 1;
+    }
+    return { doc: updated ? doc : elementsDoc, added: 0, updated };
+  }
+
   let added = 0;
   const take = Math.min(targets.length, 5);
 
@@ -616,7 +680,9 @@ async function maybeInjectSlideGraphics(elementsDoc, { content, visualNeed, them
   // 1) List/card column icons (SVGL brand logos when named; else Graphics Library)
   try {
     const listResult = await injectListIconsIntoElementsDoc(elementsDoc, content || {}, themeTokens);
-    if (listResult.added > 0) return listResult.doc;
+    if (listResult.added > 0 || listResult.updated > 0) return listResult.doc;
+    // Layout already has its own icons: never add a second set (synthetic retry below).
+    if (findExistingIconElements(elementsDoc?.elements).length) return elementsDoc;
   } catch {
     /* no corner fallback */
   }
@@ -634,7 +700,7 @@ async function maybeInjectSlideGraphics(elementsDoc, { content, visualNeed, them
           })),
         };
         const retry = await injectListIconsIntoElementsDoc(elementsDoc, synthetic, themeTokens);
-        if (retry.added > 0) return retry.doc;
+        if (retry.added > 0 || retry.updated > 0) return retry.doc;
       }
     } catch {
       /* ignore */
@@ -809,6 +875,7 @@ async function importGetIllustrationsIconPack({ packId, userId, publishAssets = 
 }
 
 module.exports = {
+  findExistingIconElements,
   serialize,
   createFromUpload,
   listAdmin,

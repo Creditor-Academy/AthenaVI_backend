@@ -2140,6 +2140,8 @@ function layoutSlotsToElements(
           borderRadius: slot.shape?.borderRadius,
         },
         role: role || (lower === 'accent' ? 'accent' : slotId),
+        // Icon placeholders keep their slot id so generation can fill them with a real icon.
+        ...(isIconSlot ? { slotId } : {}),
       });
       if (slot.layer == null) layer = Math.max(layer, slotLayer + 1);
       continue;

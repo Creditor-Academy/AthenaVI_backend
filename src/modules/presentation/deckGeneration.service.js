@@ -17,7 +17,13 @@ const {
 const presentationDao = require('./presentation.dao');
 const presentationCredit = require('./presentationCredit.service');
 const presentationRateLimit = require('./presentationRateLimit.service');
-const { filterTemplatesForSlideOrder, closingLayoutExcludeIds, isSplitHeroLayout, layoutFamilyExcludeIds } = require('./layoutSelector.service');
+const {
+  filterTemplatesForSlideOrder,
+  closingLayoutExcludeIds,
+  isSplitHeroLayout,
+  layoutFamilyExcludeIds,
+  TITLE_SPLIT_LAYOUT_IDS,
+} = require('./layoutSelector.service');
 const { pickLayoutForGeneratedSlide } = require('./deckLayout/pickLayoutForGeneratedSlide');
 const { toDeckLayout } = require('./deckLayout/toDeckLayout');
 const { toSlideContentProfile } = require('./deckLayout/toSlideContentProfile');
@@ -28,6 +34,7 @@ const {
 } = require('./deckLayout/resolveLayoutCandidates');
 const { ensureCompatibleLayout, UNIVERSAL_TEXT_LAYOUT_IDS } = require('./deckLayout/ensureLayoutPick');
 const { harmonizeDeckHeadings } = require('./artDirection/deckHeadingSize');
+const { findAdjacentDuplicates } = require('./deckLayout/adjacency');
 const { shouldReusePreselectedLayout } = require('./deckLayout/preselectedLayoutReuse');
 const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
 const {
@@ -1297,6 +1304,95 @@ function gallerySignalsFromSlide({ content, outlineSlide, layoutContentType, ctx
     visualIntent: outlineSlide?.visualIntent || outlineSlide?.visual_intent,
     wizardBrief: ctx?.wizardBrief || ctx?.sourceText || ctx?.outline?.sourcePrompt || '',
   };
+}
+
+/**
+ * Re-pick + recompile (existing content, no LLM call) any slide whose layout repeats the previous
+ * slide's. Runs sequentially after generation so each fix sees its final neighbours.
+ */
+async function fixAdjacentDuplicateLayouts(ctx, slides, outline) {
+  const ready = slides.filter((s) => s.status === 'READY' && s.content);
+  const total = slides.length;
+  const outlineSlides = Array.isArray(outline?.slides) ? outline.slides : [];
+  for (const dup of findAdjacentDuplicates(ready)) {
+    const slide = dup.slide;
+    const order = Number(slide.order);
+    const outlineSlide = outlineSlides.find((s) => Number(s.order) === order) || {};
+    if (isOutlineLayoutLocked(outlineSlide, slide)) continue;
+    const content = slide.content;
+    const contentType = String(content?.content_type || slide.contentType || '').toLowerCase() || null;
+    // eslint-disable-next-line no-await-in-loop
+    const picked = await ensureCompatibleLayout({
+      profile: toSlideContentProfile({ ...content, suggestedContentType: contentType, slideNumber: order }),
+      loadAllTemplates: (whitelist) => loadAllLayoutTemplatesCached(ctx, whitelist),
+      filterForOrder: (list) => filterTemplatesForSlideOrder(list, order, total),
+      layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+      hardExcludeLayoutIds: [dup.prevLayoutId, dup.nextLayoutId, slide.layoutId].filter(Boolean),
+      preferContentType: contentType,
+      strictOrderFilter: order === 1,
+      slideNumber: order,
+      logger,
+    });
+    if (!picked?.template?.schema) continue;
+    const normalized = applyLayoutContentNormalizers(content, picked.template.schema, ctx, outlineSlide, {
+      preShape: true,
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const compiled = await compileSlide({
+      layoutSchema: picked.template.schema,
+      content: normalized,
+      imageRef: slide.imageRef || null,
+      themeTokens: ctx.themeTokens || null,
+      themeRecolor: true,
+      skipContentRepair: true,
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const pickedType = layoutContentTypeFromTemplate(picked.template, contentType);
+    await presentationDao.updateSlide(slide.id, {
+      layoutId: picked.layoutId,
+      contentType: pickedType || slide.contentType || null,
+      elements: compiled.elementsDoc,
+      content: compiled.content || normalized,
+    });
+    slide.contentType = pickedType || slide.contentType;
+    slide.layoutId = picked.layoutId;
+    slide.elements = compiled.elementsDoc;
+    logger.info?.('presentation_adjacent_layout_fixed', {
+      slideNumber: order,
+      from: dup.prevLayoutId,
+      to: picked.layoutId,
+    });
+  }
+}
+
+/** Outline updated so each slide's planned type/layout matches what was actually generated. */
+function outlineSyncedWithSlides(outline, slides) {
+  if (!outline || !Array.isArray(outline.slides)) return null;
+  let changed = false;
+  const next = outline.slides.map((os) => {
+    const slide = slides.find((s) => Number(s.order) === Number(os.order) && s.status === 'READY');
+    if (!slide?.layoutId) return os;
+    const finalType = String(slide.content?.content_type || slide.contentType || '').toLowerCase() || null;
+    const patch = {};
+    if (!os.layoutLocked && os.layoutId !== slide.layoutId) patch.layoutId = slide.layoutId;
+    if (finalType && String(os.suggestedContentType || '').toLowerCase() !== finalType) {
+      patch.suggestedContentType = finalType;
+    }
+    if (!Object.keys(patch).length) return os;
+    changed = true;
+    return { ...os, ...patch };
+  });
+  return changed ? { ...outline, slides: next } : null;
+}
+
+/** Layout ids of the previous and next slide (final when known, otherwise planned). */
+function neighborLayoutIds(ctx, order) {
+  const ids = [];
+  for (const n of [order - 1, order + 1]) {
+    const id = ctx?.layoutIdByOrder?.[n] || ctx?.plannedLayouts?.[n]?.layoutId || null;
+    if (id) ids.push(String(id));
+  }
+  return ids.length ? ids : null;
 }
 
 function mergeExcludeLayoutIds(...lists) {
@@ -2726,11 +2822,15 @@ async function pickFinalLayoutForSlideContent({
       (t) => !banned.has(String(t.schema?.layout_id || t.variant || ''))
     );
   }
-  let mergedExclude =
-    excludeLayoutIds ||
-    (Number(slide.order) === slideTotal && ctx.titleLayoutId
-      ? closingLayoutExcludeIds(ctx.titleLayoutId)
-      : null);
+  // Never repeat the neighbouring slide's layout; merge (don't replace) caller + closing exclusions.
+  const neighbourIds = neighborLayoutIds(ctx, Number(slide.order));
+  let mergedExclude = mergeExcludeLayoutIds(
+    mergeExcludeLayoutIds(
+      excludeLayoutIds,
+      Number(slide.order) === slideTotal && ctx.titleLayoutId ? closingLayoutExcludeIds(ctx.titleLayoutId) : null
+    ),
+    neighbourIds
+  );
   const galleryExclude = mergeExcludeLayoutIds(
     policy.galleryExcludeLayoutIds,
     galleryAdjacentExcludeIds(ctx.layoutIdByOrder?.[Number(slide.order) - 1] || null)
@@ -2802,9 +2902,11 @@ async function pickFinalLayoutForSlideContent({
       }),
     layoutIdWhitelist: ctx.layoutIdWhitelist || null,
     excludeLayoutIds: mergedExclude,
-    hardExcludeLayoutIds: excludeLayoutIds,
+    hardExcludeLayoutIds: mergeExcludeLayoutIds(excludeLayoutIds, neighbourIds),
     slideNumber: Number(slide.order),
     logger,
+    preferContentType: policy.layoutContentType,
+    strictOrderFilter: Number(slide.order) === 1,
   });
   if (ensured?.template?.schema) {
     ctx.layoutSelectionLog = ctx.layoutSelectionLog || [];
@@ -3020,7 +3122,8 @@ async function planDeckLayouts(ctx, slides) {
         ? galleryPolicy.preferredLayoutId
         : null) ||
       ranked.find((r) => r.layoutId && !banned.has(String(r.layoutId)))?.layoutId ||
-      ranked[0]?.layoutId ||
+      // Relax the family ban only — never plan the exact same layout as the previous slide.
+      ranked.find((r) => r.layoutId && String(r.layoutId) !== String(prevPlannedId || ''))?.layoutId ||
       null;
     if (topLayoutId) {
       usedLayoutIds.add(String(topLayoutId));
@@ -3730,6 +3833,7 @@ async function processSlide(ctx, slide) {
       }
     }
 
+    let outlineChartDemoted = false;
     // Path B vs process layouts: linear how-it-works → diagram_template;
     // path_b without usable pathBSpec → diagram_template.
     if (!blueprintLayoutIdEarly) {
@@ -3758,6 +3862,7 @@ async function processSlide(ctx, slide) {
         preferVisuals,
       });
       if (chartGate.demoted) {
+        outlineChartDemoted = true;
         contentType = applyContentDistribution(chartGate.contentType, ctx);
         visualNeed = chartGate.visualNeed;
         policy.visualNeed = visualNeed;
@@ -3782,6 +3887,23 @@ async function processSlide(ctx, slide) {
         policy.galleryPreferredLayoutId = galleryPolicy.preferredLayoutId;
         policy.galleryExcludeLayoutIds = galleryPolicy.excludeLayoutIds;
       }
+    }
+
+    // Follow the outline (blueprint) slide type. Only the chart gate may override it, so a planned
+    // chart without real data never becomes a fabricated chart.
+    const outlinePlanType = String(outlineSlide?.suggestedContentType || '').trim().toLowerCase();
+    if (
+      !ctx.packBound &&
+      !blueprintLayoutIdEarly &&
+      outlinePlanType &&
+      Number(slide.order) > 1 &&
+      !(outlinePlanType === 'chart' && outlineChartDemoted) &&
+      guardContentTypeForSlideOrder(outlinePlanType, slide.order, slideTotal, outlineSlide) === outlinePlanType &&
+      contentType !== outlinePlanType
+    ) {
+      contentType = outlinePlanType;
+      delete policy.galleryPreferredLayoutId;
+      delete policy.galleryExcludeLayoutIds;
     }
 
     policy.layoutContentType = contentType;
@@ -3843,15 +3965,21 @@ async function processSlide(ctx, slide) {
         ((preSelectedLayoutId && isTextImageGridLayout(preSelectedLayoutId)) ||
           (plannedEntry?.layoutId && isTextImageGridLayout(plannedEntry.layoutId)));
       const reuseTemplate = plannedEntry?.template || preSelectedTemplate;
-      const canReusePreselected = shouldReusePreselectedLayout({
-        content,
-        outlineSlide,
-        template: reuseTemplate,
-        policy,
-        slideOrder: Number(slide.order),
-        wizardDensity: ctx.density || null,
-        galleryBlocksReuse,
-      });
+      const reuseId = String(plannedEntry?.layoutId || preSelectedLayoutId || '');
+      const reuseBreaksRules =
+        (neighborLayoutIds(ctx, Number(slide.order)) || []).includes(reuseId) ||
+        (Number(slide.order) === 1 && !TITLE_SPLIT_LAYOUT_IDS.includes(reuseId));
+      const canReusePreselected =
+        !reuseBreaksRules &&
+        shouldReusePreselectedLayout({
+          content,
+          outlineSlide,
+          template: reuseTemplate,
+          policy,
+          slideOrder: Number(slide.order),
+          wizardDensity: ctx.density || null,
+          galleryBlocksReuse,
+        });
 
       if (canReusePreselected) {
         template = plannedEntry?.template || preSelectedTemplate;
@@ -3994,7 +4122,12 @@ async function processSlide(ctx, slide) {
       const catalog = await loadAllLayoutTemplatesCached(ctx, null);
       const universal = UNIVERSAL_TEXT_LAYOUT_IDS.map((id) =>
         catalog.find((t) => String(t.schema?.layout_id || t.variant || '') === id)
-      ).find((t) => t?.schema && String(t.schema.layout_id) !== String(layoutId));
+      ).find(
+        (t) =>
+          t?.schema &&
+          String(t.schema.layout_id) !== String(layoutId) &&
+          !(neighborLayoutIds(ctx, Number(slide.order)) || []).includes(String(t.schema.layout_id))
+      );
       if (universal) {
         logger.warn?.('presentation_layout_overflow_universal_fallback', {
           slideNumber: Number(slide.order),
@@ -4475,6 +4608,14 @@ async function processDeckGeneration({
     const refreshed = await presentationDao.findDeckById(deckId);
     const slides = refreshed?.slides || [];
 
+    // Concurrent slides can still land on the same layout back to back — fix those sequentially.
+    try {
+      await fixAdjacentDuplicateLayouts(ctx, slides, refreshed?.outline);
+    } catch (err) {
+      logger.warn?.('presentation_adjacent_layout_fix_failed', { deckId, error: err?.message });
+    }
+    const syncedOutline = outlineSyncedWithSlides(refreshed?.outline, slides);
+
     // One heading size across the deck: shrink every heading to the smallest fitted size, and
     // remember it so later per-slide recompiles (layout change, regenerate) use the same size.
     let harmonizedThemeTokens = null;
@@ -4507,6 +4648,7 @@ async function processDeckGeneration({
       status,
       partial,
       ...(harmonizedThemeTokens ? { themeTokens: harmonizedThemeTokens } : {}),
+      ...(syncedOutline ? { outline: syncedOutline } : {}),
       generationMetrics: {
         ...priorMetrics,
         finishedAt: new Date().toISOString(),

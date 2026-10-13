@@ -62,6 +62,8 @@ async function ensureCompatibleLayout({
   hardExcludeLayoutIds = null,
   slideNumber = null,
   logger = null,
+  preferContentType = null,
+  strictOrderFilter = false,
 }) {
   const hardExclude = (hardExcludeLayoutIds || []).map(String);
   const softExclude = [...new Set([...(excludeLayoutIds || []).map(String), ...hardExclude])];
@@ -69,11 +71,23 @@ async function ensureCompatibleLayout({
 
   const prepare = (templates) => {
     const ordered = filterForOrder(templates || []);
-    // Slide-order filters must not empty the pool entirely.
-    return ordered.length ? ordered : templates || [];
+    // Slide-order filters must not empty the pool entirely (except strict rules, e.g. split cover).
+    return ordered.length || strictOrderFilter ? ordered : templates || [];
   };
 
   const steps = [];
+  // Keep the outline's slide type when any layout of that type is compatible.
+  const type = String(preferContentType || '').trim().toLowerCase();
+  if (type) {
+    const sameType = (list) =>
+      (list || []).filter((t) => String(t?.contentType || t?.schema?.content_type || '').toLowerCase() === type);
+    steps.push({
+      source: 'catalog_same_type',
+      whitelist: hasWhitelist ? layoutIdWhitelist : null,
+      exclude: softExclude,
+      narrow: sameType,
+    });
+  }
   if (hasWhitelist) steps.push({ source: 'catalog_whitelist', whitelist: layoutIdWhitelist, exclude: softExclude });
   steps.push({ source: 'catalog', whitelist: null, exclude: softExclude });
   steps.push({ source: 'catalog_relaxed', whitelist: null, exclude: hardExclude });
@@ -83,7 +97,8 @@ async function ensureCompatibleLayout({
     // eslint-disable-next-line no-await-in-loop
     const raw = await loadAllTemplates(step.whitelist);
     if (!step.whitelist) fullCatalog = raw;
-    const hit = pickFromPool(profile, prepare(raw), step.exclude);
+    const pool = prepare(raw);
+    const hit = pickFromPool(profile, step.narrow ? step.narrow(pool) : pool, step.exclude);
     if (hit) {
       if (step.source !== 'catalog_whitelist' && hasWhitelist) {
         logger?.warn?.('presentation_layout_whitelist_bypassed', {
@@ -98,6 +113,11 @@ async function ensureCompatibleLayout({
 
   // Unfiltered catalog: slide-order rules (e.g. closing-only pools) must not block the last resort.
   const catalog = fullCatalog || (await loadAllTemplates(null)) || [];
+  // Strict order rules (split cover) beat the universal text layout.
+  if (strictOrderFilter) {
+    const strict = filterForOrder(catalog).find((t) => !hardExclude.includes(templateId(t)));
+    if (strict) return { layoutId: templateId(strict), template: strict, source: 'strict_order_fallback' };
+  }
   for (const id of UNIVERSAL_TEXT_LAYOUT_IDS) {
     const template = catalog.find((t) => templateId(t) === id && !hardExclude.includes(id));
     if (template) {
