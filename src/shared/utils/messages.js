@@ -366,6 +366,8 @@ module.exports = {
   IMAGE_GEN_LIST_FETCHED: 'Image generations fetched',
   IMAGE_GEN_FEEDBACK_SAVED: 'Image feedback saved',
   IMAGE_GEN_HIDDEN: 'Images hidden from the library',
+  IMAGE_GEN_RESTORED: 'Images restored to the library',
+  IMAGE_GEN_PURGED: 'Images deleted',
   IMAGE_GEN_SPEC_INVALID: 'Infographic specification was invalid after generation',
   IMAGE_GEN_MODE_INVALID: 'Invalid mode. Supported modes: image, infographic, social, printable',
   IMAGE_GEN_SOCIAL_SPEC_INVALID: 'Social post specification was invalid after generation',

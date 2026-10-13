@@ -257,6 +257,22 @@ router.post(
   imageGenController.hideGenerations
 );
 
+router.post(
+  '/workspaces/:workspaceId/generations/restore',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.hideGenerationsSchema),
+  imageGenController.restoreGenerations
+);
+
+router.post(
+  '/workspaces/:workspaceId/generations/purge',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.hideGenerationsSchema),
+  imageGenController.purgeGenerations
+);
+
 router.get(
   '/workspaces/:workspaceId/generations/:generationId/download',
   authMiddleware,

@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const { generateForModel, editForModel } = require('../../shared/services/ai');
-const { getObjectBuffer, uploadFileToKey } = require('../s3/s3.service');
+const { getObjectBuffer, uploadFileToKey, deleteFile } = require('../s3/s3.service');
 const { persistWorkspaceAsset } = require('../asset/asset.service');
 const prisma = require('../../shared/config/prismaClient');
 const projectDao = require('../project/project.dao');
@@ -214,6 +214,7 @@ function serializeGeneration(row) {
     creditsCharged: row.creditsCharged,
     status: row.status,
     feedback: row.feedback || null,
+    deletedAt: row.deletedAt || null,
     createdAt: row.createdAt,
     asset: row.asset || null,
     downloadFormats: [...DOWNLOAD_FORMATS],
@@ -247,10 +248,11 @@ function serializeMessage(row) {
     role: row.role,
     type: row.type,
     content: row.content,
-    generationId: row.generationId || null,
+    generationId: generation?.id || row.generationId || null,
     creditsCharged: row.creditsCharged,
     createdAt: row.createdAt,
-    url: generation?.url || generation?.asset?.url || null,
+    deleted: Boolean(generation?.deletedAt),
+    url: generation?.deletedAt ? null : (generation?.url || generation?.asset?.url || null),
     asset: generation?.asset || null,
   };
 }
@@ -1326,7 +1328,88 @@ async function hideGenerations({ workspace, ids }) {
   return { hidden: result.count };
 }
 
+const TRASH_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function restoreGenerations({ workspace, ids }) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (!unique.length) {
+    throw new AppError('Select at least one image', 400);
+  }
+  const result = await prisma.imageGeneration.updateMany({
+    where: { id: { in: unique }, workspaceId: workspace.id, deletedAt: { not: null } },
+    data: { deletedAt: null },
+  });
+  return { restored: result.count };
+}
+
+async function purgeGenerations({ workspace, ids }) {
+  const unique = [...new Set((ids || []).filter(Boolean))];
+  if (!unique.length) {
+    throw new AppError('Select at least one image', 400);
+  }
+  const rows = await prisma.imageGeneration.findMany({
+    where: { id: { in: unique }, workspaceId: workspace.id, deletedAt: { not: null } },
+    select: { id: true, s3Key: true },
+  });
+  const idSet = rows.map((row) => row.id);
+  if (!idSet.length) return { deleted: 0 };
+
+  const threads = await prisma.imageGenThread.findMany({
+    where: {
+      workspaceId: workspace.id,
+      OR: [{ rootGenerationId: { in: idSet } }, { headGenerationId: { in: idSet } }],
+    },
+    select: { id: true, rootGenerationId: true, headGenerationId: true },
+  });
+
+  for (const thread of threads) {
+    const remaining = await prisma.imageGeneration.findFirst({
+      where: { threadId: thread.id, id: { notIn: idSet } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!remaining) {
+      await prisma.imageGenThread.delete({ where: { id: thread.id } });
+      continue;
+    }
+    await prisma.imageGenThread.update({
+      where: { id: thread.id },
+      data: {
+        ...(idSet.includes(thread.rootGenerationId) ? { rootGenerationId: remaining.id } : {}),
+        ...(idSet.includes(thread.headGenerationId) ? { headGenerationId: remaining.id } : {}),
+      },
+    });
+  }
+
+  const result = await prisma.imageGeneration.deleteMany({
+    where: { id: { in: idSet }, workspaceId: workspace.id, deletedAt: { not: null } },
+  });
+
+  for (const row of rows) {
+    if (!row.s3Key) continue;
+    try {
+      await deleteFile(row.s3Key);
+    } catch (err) {
+      // The image row is already gone. A missing file should not bring it back.
+    }
+  }
+
+  return { deleted: result.count };
+}
+
+async function purgeExpiredTrash(workspaceId) {
+  const cutoff = new Date(Date.now() - TRASH_KEEP_MS);
+  const rows = await prisma.imageGeneration.findMany({
+    where: { workspaceId, deletedAt: { lt: cutoff } },
+    select: { id: true },
+    take: 50,
+  });
+  if (!rows.length) return;
+  await purgeGenerations({ workspace: { id: workspaceId }, ids: rows.map((row) => row.id) });
+}
+
 async function listGenerations({ userId, workspace, query = {} }) {
+  await purgeExpiredTrash(workspace.id);
   const modeFilter = STUDIO_MODES.includes(query.mode) ? query.mode : undefined;
   const rows = await imageGenDao.listGenerations({
     workspaceId: workspace.id,
@@ -1336,6 +1419,7 @@ async function listGenerations({ userId, workspace, query = {} }) {
     skip: query.skip,
     mode: modeFilter,
     threadId: query.threadId,
+    trashed: query.trashed === true || query.trashed === 'true',
   });
   const likedOnly = query.liked === true || query.liked === 'true';
   // When mode omitted, return every studio mode (filter out any legacy unknown modes)
@@ -1413,6 +1497,8 @@ module.exports = {
   listGenerations,
   setGenerationFeedback,
   hideGenerations,
+  restoreGenerations,
+  purgeGenerations,
   downloadGeneration,
   serializeThread,
   DOWNLOAD_FORMATS,

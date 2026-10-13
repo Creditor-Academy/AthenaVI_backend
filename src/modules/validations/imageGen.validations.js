@@ -133,6 +133,7 @@ const listGenerationsSchema = Joi.object({
       .optional(),
     threadId: Joi.string().uuid().optional(),
     liked: Joi.boolean().optional(),
+    trashed: Joi.boolean().optional(),
   }),
 });
 

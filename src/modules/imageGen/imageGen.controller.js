@@ -140,6 +140,22 @@ const hideGenerations = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.IMAGE_GEN_HIDDEN);
 });
 
+const restoreGenerations = asyncHandler(async (req, res) => {
+  const data = await imageGenService.restoreGenerations({
+    workspace: req.workspace,
+    ids: req.body.ids,
+  });
+  return successResponse(req, res, data, 200, messages.IMAGE_GEN_RESTORED);
+});
+
+const purgeGenerations = asyncHandler(async (req, res) => {
+  const data = await imageGenService.purgeGenerations({
+    workspace: req.workspace,
+    ids: req.body.ids,
+  });
+  return successResponse(req, res, data, 200, messages.IMAGE_GEN_PURGED);
+});
+
 const listGenerations = asyncHandler(async (req, res) => {
   const generations = await imageGenService.listGenerations({
     userId: req.user.id,
@@ -203,6 +219,8 @@ module.exports = {
   listGenerations,
   setGenerationFeedback,
   hideGenerations,
+  restoreGenerations,
+  purgeGenerations,
   getGeneration,
   getSharedGeneration,
   download,

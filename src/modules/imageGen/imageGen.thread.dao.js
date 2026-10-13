@@ -47,6 +47,7 @@ function findById(id, workspaceId, { userId = null, isPrivate = false } = {}) {
               id: true,
               url: true,
               s3Key: true,
+              deletedAt: true,
               action: true,
               creditsCharged: true,
               createdAt: true,
