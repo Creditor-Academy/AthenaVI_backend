@@ -2,7 +2,7 @@
  * Four Images Text Mosaic
  * Layout ID: four_images_text_mosaic_v1
  *
- * Heading top-left; interlocking mosaic â€” one tall hero photo on the left,
+ * Heading top-left; interlocking mosaic — one tall hero photo on the left,
  * a landscape tile top-right, and two squares along the bottom-right.
  * Each photo has a caption band along its bottom edge.
  */

@@ -384,7 +384,7 @@ function normalizeMultiColumnContent(content, layoutSchema) {
       next.columns = items.map((item, index) => {
         if (typeof item === 'string') {
           const text = item.trim();
-          const split = text.split(/[:\-â€”â€“]\s*/);
+          const split = text.split(/[:\-—–]\s*/);
           return {
             title: split.length > 1 ? split[0].trim() : titleWordsFromBody(text, `Item ${index + 1}`),
             body: split.length > 1 ? split.slice(1).join(' ').trim() : text,
@@ -399,7 +399,7 @@ function normalizeMultiColumnContent(content, layoutSchema) {
     } else if (bullets.length >= 2) {
       next.columns = bullets.map((bullet, index) => {
         const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-        const split = text.split(/[:\-â€”â€“]\s*/);
+        const split = text.split(/[:\-—–]\s*/);
         const inlineTitle = split.length > 1 ? split[0].trim() : '';
         const body = split.length > 1 ? split.slice(1).join(' ').trim() : text;
         return {
@@ -590,7 +590,7 @@ function normalizeGalleryImageContent(content, layoutSchema, options = {}) {
       columns = items.slice(0, needed).map((item, index) => {
         if (typeof item === 'string') {
           const text = item.trim();
-          const split = text.split(/[:\-â€”â€“]\s*/);
+          const split = text.split(/[:\-—–]\s*/);
           return {
             title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
             body: split.slice(1).join(' ').trim() || text,
@@ -604,7 +604,7 @@ function normalizeGalleryImageContent(content, layoutSchema, options = {}) {
     } else if (bullets.length >= 2) {
       columns = bullets.slice(0, needed).map((bullet, index) => {
         const text = typeof bullet === 'string' ? bullet.trim() : String(bullet?.text ?? bullet?.label ?? '').trim();
-        const split = text.split(/[:\-â€”â€“]\s*/);
+        const split = text.split(/[:\-—–]\s*/);
         return {
           title: split[0]?.trim() || titleWordsFromBody(text, `Item ${index + 1}`),
           body: split.slice(1).join(' ').trim() || text,
@@ -667,8 +667,8 @@ function normalizeGalleryImageContent(content, layoutSchema, options = {}) {
       prompt = appendImageNegatives(
         [
           deckTheme ? `Same deck theme: ${deckTheme}` : null,
-          `${slotId}: single photograph of ONE subject for this cardâ€™s topic`,
-          `One isolated subject â€” ${subject}`,
+          `${slotId}: single photograph of ONE subject for this card’s topic`,
+          `One isolated subject — ${subject}`,
           `(variation ${index + 1})`,
         ]
           .filter(Boolean)
@@ -734,7 +734,7 @@ function normalizeTimelineContent(content, layoutSchema) {
     if (typeof item === 'string') {
       const trimmed = item.trim();
       const yearOnly = /^\d{4}$/.test(trimmed);
-      const split = trimmed.split(/[:\-â€”â€“]\s*/);
+      const split = trimmed.split(/[:\-—–]\s*/);
       const label = yearOnly ? trimmed : (split[0] || trimmed).trim();
       const inlineDetail = yearOnly ? '' : split.slice(1).join(' ').trim();
       const detail =
@@ -963,7 +963,7 @@ function normalizeDiagramContent(content, layoutSchema) {
     sourceBeats.filter(Boolean).length,
     0
   );
-  // Prefer matching layout slot count to real beats â€” do not invent filler steps from summary.
+  // Prefer matching layout slot count to real beats — do not invent filler steps from summary.
   const cellTarget =
     sourceCount > 0 && sourceCount < needed ? sourceCount : needed;
 

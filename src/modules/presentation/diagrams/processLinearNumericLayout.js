@@ -48,6 +48,9 @@ const PROCESS_LINEAR_NUMERIC_GEOM = {
   bodyH: 80,
 };
 
+const { themeProcessSteps, customProcessColor } = require('./processThemeColors');
+
+/** Legacy fixed palette — no longer applied; kept for exports/tests. Steps use theme colors. */
 const PROCESS_LINEAR_NUMERIC_DEFAULT_COLORS = [
   '#EAB308', // 1: Golden Yellow
   '#F59E0B', // 2: Warm Amber
@@ -199,7 +202,7 @@ function layoutProcessLinearNumeric(elements, schema, palette = {}, canvas = {})
     }
   }
   const stepCount = detectedCount >= 2 ? detectedCount : 5;
-  const steps = calculateProcessLinearNumericStepGeometries(stepCount);
+  const steps = themeProcessSteps(calculateProcessLinearNumericStepGeometries(stepCount), palette);
 
   const prevBySlot = new Map();
   safeElements.forEach((el) => {
@@ -238,7 +241,7 @@ function layoutProcessLinearNumeric(elements, schema, palette = {}, canvas = {})
       fontSize: 28,
       fontWeight: 800,
       colorRole: 'text',
-      color: prevHeading?.content?.color || '#1E293B',
+      color: prevHeading?.content?.color || palette?.text || '#1E293B',
       lineHeight: 1.15,
       clipToSlot: false,
     },
@@ -277,7 +280,7 @@ function layoutProcessLinearNumeric(elements, schema, palette = {}, canvas = {})
     const prevTitle = prevBySlot.get(`STEP_${n}_TITLE`);
     const prevBody = prevBySlot.get(`STEP_${n}_BODY`);
 
-    const badgeColor = prevShape?.content?.fill || prevShape?.content?.color || step.color;
+    const badgeColor = customProcessColor(prevShape?.content?.fill, prevShape?.content?.color) || step.color;
 
     const pinSvg = buildLinearNumericPinSvg(step);
     newElements.push({
@@ -310,7 +313,7 @@ function layoutProcessLinearNumeric(elements, schema, palette = {}, canvas = {})
     const textW = Math.round(g.titleW * scaleX);
     const textX = Math.round((step.cx - g.titleW / 2) * scaleX);
     const titleY = Math.round((g.spineY + g.titleOffsetY) * scaleY);
-    const titleColor = prevTitle?.content?.color || badgeColor;
+    const titleColor = customProcessColor(prevTitle?.content?.color) || badgeColor;
 
     newElements.push({
       id: prevTitle?.id || newId(`txt-step-${n}-title`),
@@ -360,7 +363,7 @@ function layoutProcessLinearNumeric(elements, schema, palette = {}, canvas = {})
         fontSize: 11,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevBody?.content?.color || '#64748B',
+        color: prevBody?.content?.color || palette?.muted || '#64748B',
         lineHeight: 1.45,
         clipToSlot: false,
       },

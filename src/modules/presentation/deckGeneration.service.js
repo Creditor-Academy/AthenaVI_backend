@@ -26,6 +26,8 @@ const {
   resolveLayoutCandidates,
   buildLayoutSearchText,
 } = require('./deckLayout/resolveLayoutCandidates');
+const { ensureCompatibleLayout, UNIVERSAL_TEXT_LAYOUT_IDS } = require('./deckLayout/ensureLayoutPick');
+const { harmonizeDeckHeadings } = require('./artDirection/deckHeadingSize');
 const { shouldReusePreselectedLayout } = require('./deckLayout/preselectedLayoutReuse');
 const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
 const {
@@ -212,7 +214,7 @@ async function assertDistinctSlotImageUrls({ ctx, slide, content, layoutSchema, 
             next[slotId] = ph.url;
             seenUrls.add(ph.url);
           }
-          // Do not append ?slot= to URLs â€” that breaks AWS signatures and causes broken images.
+          // Do not append ?slot= to URLs — that breaks AWS signatures and causes broken images.
           // Prefer a duplicate valid URL over a broken one.
         } catch {
           // Keep original URL (may duplicate sibling) rather than invalidate signatures.
@@ -495,6 +497,16 @@ function layoutContentTypeFromTemplate(template, fallback = null) {
 
 async function loadAllLayoutTemplates(layoutIdWhitelist = null) {
   return resolveLayoutTemplates(null, { layoutIdWhitelist });
+}
+
+/** Full catalog, loaded at most once per generation run per whitelist (layout fallback widening). */
+async function loadAllLayoutTemplatesCached(ctx, layoutIdWhitelist = null) {
+  const key = Array.isArray(layoutIdWhitelist) && layoutIdWhitelist.length ? layoutIdWhitelist.join('|') : '*';
+  ctx.allLayoutTemplatesCache = ctx.allLayoutTemplatesCache || new Map();
+  if (!ctx.allLayoutTemplatesCache.has(key)) {
+    ctx.allLayoutTemplatesCache.set(key, loadAllLayoutTemplates(layoutIdWhitelist));
+  }
+  return ctx.allLayoutTemplatesCache.get(key);
 }
 
 function isOutlineLayoutLocked(outlineSlide, slide) {
@@ -1304,7 +1316,7 @@ function coerceDiagramTypeHint(diagramType, visual) {
   if (typed) return typed;
   const v = String(visual || '').toLowerCase().trim();
   if (!v) return '';
-  // Short visual cues only (e.g. "swot", "funnel diagram") â€” long sentences fall through to heuristics.
+  // Short visual cues only (e.g. "swot", "funnel diagram") — long sentences fall through to heuristics.
   if (v.length > 48) return '';
   return v;
 }
@@ -1428,7 +1440,7 @@ function resolvePreferredLayoutIdForSlide({
 }
 
 /**
- * Slide 1 only â†’ title; slide N only â†’ closing; never title/closing elsewhere.
+ * Slide 1 only → title; slide N only → closing; never title/closing elsewhere.
  */
 function guardContentTypeForSlideOrder(contentType, slideOrder, totalSlides, outlineSlide = {}) {
   const order = Number(slideOrder) > 0 ? Number(slideOrder) : 1;
@@ -1743,7 +1755,7 @@ function slideTextForVision(content) {
         .join('; ')
     );
   }
-  return parts.join(' â€” ').slice(0, 1500);
+  return parts.join(' — ').slice(0, 1500);
 }
 
 function galleryPreShapeOptions(ctx, outlineSlide) {
@@ -1900,7 +1912,7 @@ async function enrichContentSlotImageUrls({ ctx, slide, content, layoutSchema, i
 
   if (slotIds.length > 1) {
     const assigned = slotIds.map((id) => slotImageUrls[id]).filter(Boolean);
-    // Same URL on every slot â†’ clear duplicates so we regenerate/stock/placeholder per slot.
+    // Same URL on every slot → clear duplicates so we regenerate/stock/placeholder per slot.
     // Keep the first assignment; clear the rest (do not wipe all).
     if (assigned.length === slotIds.length && new Set(assigned).size === 1) {
       slotIds.slice(1).forEach((id) => {
@@ -2255,7 +2267,7 @@ async function resolveSlideImage({
   if (need === 'path_b') {
     const resolvedSpec = pathBSpec || content?.pathBSpec || {};
     if (!hasUsablePathBSpec(resolvedSpec)) {
-      // Empty Path B spec â†’ treat as diagram_template (layout path); do not charge Path B.
+      // Empty Path B spec → treat as diagram_template (layout path); do not charge Path B.
       return {
         imageRef: withImageStatus(
           { source: 'none', visual_need: 'diagram_template', brief: brief || null },
@@ -2339,7 +2351,7 @@ async function resolveSlideImage({
     }
   }
 
-  // photo / illustration / default â†’ stock then Path A (brand + existing media handled above)
+  // photo / illustration / default → stock then Path A (brand + existing media handled above)
   const searchQuery =
     brief?.search_query || brief?.searchQuery || brief?.subject || content?.title || 'presentation visual';
 
@@ -2512,7 +2524,7 @@ async function resolveSlideImage({
           visionScore = vision.score;
           if (!vision.relevant) imageRef = null;
         } catch {
-          // ignore vision errors â€” keep image only when relevance was not evaluated
+          // ignore vision errors — keep image only when relevance was not evaluated
         }
       }
     }
@@ -2526,7 +2538,7 @@ async function resolveSlideImage({
         metadata: { slideId: slide.id, searchQuery },
       });
     } catch {
-      // unique race â€” ignore
+      // unique race — ignore
     }
 
     if (!duplicate) {
@@ -2772,6 +2784,38 @@ async function pickFinalLayoutForSlideContent({
     debug: layoutDebug,
     theme: ctx.themeTokens || ctx.theme || null,
   });
+  if (pick.template?.schema) {
+    return { ...pick, excludeLayoutIds: mergedExclude };
+  }
+
+  // Narrowed pool (content type / pack whitelist) had nothing compatible — widen to the whole
+  // catalog instead of failing the slide.
+  const banned = new Set((policy.galleryExcludeLayoutIds || []).map(String));
+  const ensured = await ensureCompatibleLayout({
+    profile: finalProfile,
+    loadAllTemplates: (whitelist) => loadAllLayoutTemplatesCached(ctx, whitelist),
+    filterForOrder: (list) =>
+      filterTemplatesForSlideOrder(list, slide.order, slideTotal).filter((t) => {
+        const id = String(t.schema?.layout_id || t.variant || '');
+        if (banned.has(id)) return false;
+        return !(ctx.fullBleedUsed && id === 'full_bg_image_overlay_v1');
+      }),
+    layoutIdWhitelist: ctx.layoutIdWhitelist || null,
+    excludeLayoutIds: mergedExclude,
+    hardExcludeLayoutIds: excludeLayoutIds,
+    slideNumber: Number(slide.order),
+    logger,
+  });
+  if (ensured?.template?.schema) {
+    ctx.layoutSelectionLog = ctx.layoutSelectionLog || [];
+    ctx.layoutSelectionLog.push({
+      slideNumber: Number(slide.order),
+      phase: 'final',
+      source: ensured.source,
+      selectedLayoutId: ensured.layoutId,
+    });
+    return { layoutId: ensured.layoutId, template: ensured.template, excludeLayoutIds: mergedExclude };
+  }
   return { ...pick, excludeLayoutIds: mergedExclude };
 }
 
@@ -2945,7 +2989,7 @@ async function planDeckLayouts(ctx, slides) {
           const hit = ranked.splice(idx, 1)[0];
           ranked.unshift(hit);
         } else if (idx < 0) {
-          // Preferred injected but not ranked (hard-reject) â€” still surface it first for process match.
+          // Preferred injected but not ranked (hard-reject) — still surface it first for process match.
           ranked.unshift({ layoutId: preferredLayoutId, score: 99 });
         }
       }
@@ -3206,9 +3250,9 @@ function generationHintsFromLayout(layoutSchema) {
     const chartSlot = slots.find((s) => String(s.role || '').toLowerCase() === 'chart');
     const slotChartType = chartSlot?.chartType || chartSlot?.chart_type || null;
     hints.chartDataStyle =
-      'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) â€” never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
+      'Provide 4-6 realistic numeric data points tied to the slide topic; labels must be topic-specific (years, categories, regions) — never Q1/Q2/Q3/Q4 unless the deck is explicitly quarterly. Values plausible integers or percentages.';
     hints.chartLayoutStyle =
-      'Analyze the data story first, then pick chart.type and layout: line/area for time series; donut/pie only when values represent parts of a whole (~100% total); bar for rankings or absolute comparisons; dual-chart only for two distinct metrics. One dataset per chart slot â€” never duplicate identical data.';
+      'Analyze the data story first, then pick chart.type and layout: line/area for time series; donut/pie only when values represent parts of a whole (~100% total); bar for rankings or absolute comparisons; dual-chart only for two distinct metrics. One dataset per chart slot — never duplicate identical data.';
     if (slotChartType) {
       hints.chartType = slotChartType.includes('line') ? 'line' : slotChartType.includes('donut') ? 'donut' : 'bar';
     } else if (!/exponential|line/i.test(layoutId)) {
@@ -3216,11 +3260,11 @@ function generationHintsFromLayout(layoutSchema) {
     }
   }
   if (imageSlots.length > 1) {
-    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (â‰¤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
+    hints.imagePromptStyle = `Fill imagePrompts with a UNIQUE concrete visual metaphor per slot (${imageSlots.map((s) => s.id).join(', ')}): short photographic subject (≤12 words), never quote title/body copy, never describe text-in-image. No duplicate subjects.`;
   }
   if (/para|cards_image|card_\d|grid_bento|grid_six|grid_three_asymmetric|grid_.*image|intro_four|intro_three|four_para|three_para|two_para|four_images|timeline_milestones_image/i.test(layoutId)) {
     hints.parallelStructure =
-      'Each column/card/gallery image needs a distinct title (â‰¤4 words) and optional body. Fill columns[] accordingly â€” titles map to IMAGE_n_LABEL captions.';
+      'Each column/card/gallery image needs a distinct title (≤4 words) and optional body. Fill columns[] accordingly — titles map to IMAGE_n_LABEL captions.';
   }
   if (/diagram_|swot|matrix|funnel|process_step/i.test(layoutId) || layoutNeedsDiagramCellsFromSchema(layoutSchema)) {
     hints.parallelStructure =
@@ -3247,7 +3291,7 @@ function generationHintsFromLayout(layoutSchema) {
       hints.parallelStructure = `Fill copy for slots: ${textSlots.join(', ')}. Use columns[] in L1,L2,L3,R1,R2,R3 order for FEATURE_* layouts; columns[0]/[1] for HEADING_L/R + BODY_L/R.`;
     }
     if (deviceImageSlots.length) {
-      hints.imagePromptStyle = `Fill imagePrompts for ${deviceImageSlots.join(', ')}: unique flat UI screenshots (â‰¤12 words), no device chrome in the image.`;
+      hints.imagePromptStyle = `Fill imagePrompts for ${deviceImageSlots.join(', ')}: unique flat UI screenshots (≤12 words), no device chrome in the image.`;
     }
   }
   if (ct === 'closing' || /closing|cta/i.test(layoutId)) {
@@ -3256,7 +3300,7 @@ function generationHintsFromLayout(layoutSchema) {
   }
   if (ct === 'title' || (layoutId.includes('title') && ct === 'title')) {
     hints.titleTone =
-      'Spoken headline (5â€“12 words), period OK â€” an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
+      'Spoken headline (5–12 words), period OK — an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
   }
   const hasEyebrow = slots.some((s) => {
     const role = String(s.role || '').toLowerCase();
@@ -3265,7 +3309,7 @@ function generationHintsFromLayout(layoutSchema) {
   });
   if (hasEyebrow) {
     hints.eyebrowFormat =
-      'Fill eyebrow/subtitle kicker as a short UPPERCASE role line (2â€“5 words), not a second headline.';
+      'Fill eyebrow/subtitle kicker as a short UPPERCASE role line (2–5 words), not a second headline.';
   }
   if (ct !== 'title' && ct !== 'closing' && ct !== 'chart' && ct !== 'device_frames') {
     hints.bodyVoice =
@@ -3686,8 +3730,8 @@ async function processSlide(ctx, slide) {
       }
     }
 
-    // Path B vs process layouts: linear how-it-works â†’ diagram_template;
-    // path_b without usable pathBSpec â†’ diagram_template.
+    // Path B vs process layouts: linear how-it-works → diagram_template;
+    // path_b without usable pathBSpec → diagram_template.
     if (!blueprintLayoutIdEarly) {
       const diagramPolicy = resolveDiagramVisualPolicy({
         visualNeed,
@@ -3945,13 +3989,39 @@ async function processSlide(ctx, slide) {
     }
 
     if (qaHasUnresolvedOverflow(qa.issues)) {
-      if (content && typeof content === 'object') {
+      // Still too much structured content: fall back to a universal heading + bullets layout
+      // (always fits after clamping) rather than failing the slide.
+      const catalog = await loadAllLayoutTemplatesCached(ctx, null);
+      const universal = UNIVERSAL_TEXT_LAYOUT_IDS.map((id) =>
+        catalog.find((t) => String(t.schema?.layout_id || t.variant || '') === id)
+      ).find((t) => t?.schema && String(t.schema.layout_id) !== String(layoutId));
+      if (universal) {
+        logger.warn?.('presentation_layout_overflow_universal_fallback', {
+          slideNumber: Number(slide.order),
+          rejectedLayoutId: layoutId,
+          selectedLayoutId: universal.schema.layout_id,
+        });
+        layoutId = universal.schema.layout_id;
+        template = universal;
+        ctx.layoutIdByOrder = ctx.layoutIdByOrder || {};
+        ctx.layoutIdByOrder[Number(slide.order)] = layoutId;
+        content = applyLayoutContentNormalizers(content, template.schema, ctx, outlineSlide, {
+          preShape: true,
+        });
+        qa = validateSlide({
+          content,
+          layoutSchema: template.schema,
+          includeContract: true,
+          contractPhase: 'generated',
+        });
+        content = qa.content;
+      }
+      if (qaHasUnresolvedOverflow(qa.issues) && content && typeof content === 'object') {
         content.meta = content.meta && typeof content.meta === 'object' ? content.meta : {};
         content.meta.generationWarnings = (qa.issues || []).filter(
           (i) => String(i.code || '') === 'ARRAY_OVERFLOW'
         );
       }
-      throw new AppError('Slide content exceeds layout capacity after layout retry', 422);
     }
 
     if (
@@ -4127,7 +4197,7 @@ async function processSlide(ctx, slide) {
         slideId: slide.id,
         error: imgErr.message,
       });
-      // Explicit failure â€” do not silently pretend there was no visual need
+      // Explicit failure — do not silently pretend there was no visual need
       imageRef = withImageStatus(
         { source: 'none', brief, visual_need: visualNeed },
         'failed',
@@ -4170,6 +4240,8 @@ async function processSlide(ctx, slide) {
       imageRef,
       canvasSize: { width: canvasSize.width, height: canvasSize.height },
       themeTokens: ctx.themeTokens || null,
+      // AI generation (incl. single-slide regenerate) themes diagram chrome; editor recompiles don't.
+      themeRecolor: true,
       designTokens,
       rebindBase,
       forceTextReplace: ctx.forceTextReplace,
@@ -4402,6 +4474,24 @@ async function processDeckGeneration({
 
     const refreshed = await presentationDao.findDeckById(deckId);
     const slides = refreshed?.slides || [];
+
+    // One heading size across the deck: shrink every heading to the smallest fitted size, and
+    // remember it so later per-slide recompiles (layout change, regenerate) use the same size.
+    let harmonizedThemeTokens = null;
+    try {
+      const { headingPx, updates } = harmonizeDeckHeadings(slides.filter((s) => s.status === 'READY'));
+      for (const update of updates) {
+        // eslint-disable-next-line no-await-in-loop
+        await presentationDao.updateSlide(update.slideId, { elements: update.elements });
+      }
+      if (headingPx) {
+        const tokens = refreshed?.themeTokens && typeof refreshed.themeTokens === 'object' ? refreshed.themeTokens : {};
+        harmonizedThemeTokens = { ...tokens, typeScale: { ...(tokens.typeScale || {}), deckHeading: headingPx } };
+      }
+    } catch (err) {
+      logger.warn?.('presentation_heading_harmonize_failed', { deckId, error: err?.message });
+    }
+
     const failedCount = slides.filter((s) => s.status === 'FAILED').length;
     const readyCount = slides.filter((s) => s.status === 'READY').length;
     const partial = failedCount > 0 && readyCount > 0;
@@ -4416,6 +4506,7 @@ async function processDeckGeneration({
     const updated = await presentationDao.updateDeck(deckId, {
       status,
       partial,
+      ...(harmonizedThemeTokens ? { themeTokens: harmonizedThemeTokens } : {}),
       generationMetrics: {
         ...priorMetrics,
         finishedAt: new Date().toISOString(),
@@ -5040,7 +5131,7 @@ async function regenerateSlide({
   slideId,
   userId,
   target = 'all',
-  overwriteManualEdits = true,
+  overwriteManualEdits = false,
   prompt = null,
 }) {
   const normalizedTarget =
@@ -5149,7 +5240,7 @@ async function regenerateSlide({
   };
 
   // For image-only, keep content and skip content LLM by marking duplicate-like path:
-  // processSlide always runs content; for image-only restore content after if wiped â€” we kept content when target=image.
+  // processSlide always runs content; for image-only restore content after if wiped — we kept content when target=image.
   setImmediate(async () => {
     try {
       const fresh = await presentationDao.findSlideById(slideId);

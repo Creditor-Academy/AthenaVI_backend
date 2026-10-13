@@ -54,6 +54,9 @@ const PROCESS_LINEAR_FOUR_CARDS_GEOM = {
   iconSize: 38,
 };
 
+const { themeProcessSteps, customProcessColor } = require('./processThemeColors');
+
+/** Legacy fixed palette — no longer applied; kept for exports/tests. Steps use theme colors. */
 const PROCESS_LINEAR_FOUR_CARDS_DEFAULT_COLORS = [
   '#E15537', // 1: Coral Red
   '#E08E1A', // 2: Amber Gold
@@ -238,7 +241,7 @@ function layoutProcessLinearFourCards(elements, schema, palette = {}, canvas = {
     }
   }
   const stepCount = detectedCount >= 2 ? detectedCount : 4;
-  const steps = calculateLinearFourCardsGeometries(stepCount);
+  const steps = themeProcessSteps(calculateLinearFourCardsGeometries(stepCount), palette);
 
   const prevBySlot = new Map();
   safeElements.forEach((el) => {
@@ -277,7 +280,7 @@ function layoutProcessLinearFourCards(elements, schema, palette = {}, canvas = {
       fontSize: 28,
       fontWeight: 800,
       colorRole: 'text',
-      color: prevHeading?.content?.color || '#0F172A',
+      color: prevHeading?.content?.color || palette?.text || '#0F172A',
       lineHeight: 1.15,
       clipToSlot: false,
     },
@@ -291,7 +294,7 @@ function layoutProcessLinearFourCards(elements, schema, palette = {}, canvas = {
     const prevTitle = prevBySlot.get(`STEP_${n}_TITLE`);
     const prevBody = prevBySlot.get(`STEP_${n}_BODY`);
 
-    const cardColor = prevCard?.content?.fill || prevCard?.content?.color || step.color;
+    const cardColor = customProcessColor(prevCard?.content?.fill, prevCard?.content?.color) || step.color;
 
     const cardSvg = buildLinearFourCardSvg(step);
     newElements.push({
@@ -383,7 +386,7 @@ function layoutProcessLinearFourCards(elements, schema, palette = {}, canvas = {
         fontSize: 11.5,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevBody?.content?.color || '#475569',
+        color: prevBody?.content?.color || palette?.muted || '#475569',
         lineHeight: 1.5,
         clipToSlot: false,
       },

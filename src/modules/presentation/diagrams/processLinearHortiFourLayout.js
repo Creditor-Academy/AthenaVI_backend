@@ -42,6 +42,9 @@ const PROCESS_LINEAR_HORTI_FOUR_GEOM = {
   bodyH: 64,
 };
 
+const { themeProcessSteps, customProcessColor } = require('./processThemeColors');
+
+/** Legacy fixed palette — no longer applied; kept for exports/tests. Steps use theme colors. */
 const PROCESS_LINEAR_HORTI_FOUR_DEFAULT_COLORS = [
   '#EE3B3B', // 1: Coral Red
   '#FB8C00', // 2: Amber Orange
@@ -218,7 +221,7 @@ function layoutProcessLinearHortiFour(elements, schema, palette = {}, canvas = {
     }
   }
   const stepCount = detectedCount >= 2 ? detectedCount : 4;
-  const steps = calculateProcessHortiFourStepGeometries(stepCount);
+  const steps = themeProcessSteps(calculateProcessHortiFourStepGeometries(stepCount), palette);
 
   const prevBySlot = new Map();
   safeElements.forEach((el) => {
@@ -257,7 +260,7 @@ function layoutProcessLinearHortiFour(elements, schema, palette = {}, canvas = {
       fontSize: 28,
       fontWeight: 800,
       colorRole: 'text',
-      color: prevHeading?.content?.color || '#1E293B',
+      color: prevHeading?.content?.color || palette?.text || '#1E293B',
       lineHeight: 1.15,
       clipToSlot: false,
     },
@@ -271,7 +274,7 @@ function layoutProcessLinearHortiFour(elements, schema, palette = {}, canvas = {
     const prevTitle = prevBySlot.get(`STEP_${n}_TITLE`);
     const prevBody = prevBySlot.get(`STEP_${n}_BODY`);
 
-    const shapeColor = prevShape?.content?.fill || prevShape?.content?.color || step.color;
+    const shapeColor = customProcessColor(prevShape?.content?.fill, prevShape?.content?.color) || step.color;
 
     const badgeSvg = buildProcessHortiFourStepSvg(step);
     newElements.push({
@@ -304,7 +307,7 @@ function layoutProcessLinearHortiFour(elements, schema, palette = {}, canvas = {
     const textW = Math.round(g.titleW * scaleX);
     const textX = Math.round((step.cx - g.titleW / 2) * scaleX);
     const titleY = Math.round((step.cy + g.titleOffsetY) * scaleY);
-    const titleColor = prevTitle?.content?.color || shapeColor;
+    const titleColor = customProcessColor(prevTitle?.content?.color) || shapeColor;
 
     newElements.push({
       id: prevTitle?.id || newId(`txt-step-${n}-title`),
@@ -355,7 +358,7 @@ function layoutProcessLinearHortiFour(elements, schema, palette = {}, canvas = {
         fontSize: 11.5,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevBody?.content?.color || '#64748B',
+        color: prevBody?.content?.color || palette?.muted || '#64748B',
         lineHeight: 1.45,
         clipToSlot: false,
       },

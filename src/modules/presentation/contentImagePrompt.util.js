@@ -29,7 +29,7 @@ const DEFAULT_TEXT_NEGATIVE_TERMS = [
 function shortVisualPhrase(text, maxWords = 8) {
   const raw = String(text || '').trim();
   if (!raw) return '';
-  const beforeBreak = raw.split(/[:â€”â€“|]/)[0].trim();
+  const beforeBreak = raw.split(/[:—–|]/)[0].trim();
   const source = beforeBreak && beforeBreak.split(/\s+/).filter(Boolean).length >= 2 ? beforeBreak : raw;
   const words = source.split(/\s+/).filter(Boolean);
   if (!words.length) return '';
@@ -119,7 +119,7 @@ function columnEntryAt(content = {}, index) {
   return col && typeof col === 'object' ? col : null;
 }
 
-/** Short visual noun phrase only â€” never paste paragraph body into image prompts. */
+/** Short visual noun phrase only — never paste paragraph body into image prompts. */
 function columnSubjectFromEntry(col) {
   if (!col || typeof col !== 'object') return null;
   const title = String(col.title ?? col.heading ?? col.label ?? '').trim();
@@ -232,16 +232,16 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
     const layoutId = String(layoutSchema?.layout_id || '');
     const kind = deviceScreenUiKind(id, layoutId);
     const uiLabel = kind === 'website' ? 'website UI screenshot' : 'mobile app UI screenshot';
-    if (base) return `${base} â€” ${uiLabel}`;
+    if (base) return `${base} — ${uiLabel}`;
   }
 
   if (/^(PHONE_IMAGE|WATCH_IMAGE)$/i.test(id)) {
     const base = shortVisualPhrase(String(content.title || '').trim(), 8);
-    if (base) return `${base} â€” mobile app UI screenshot`;
+    if (base) return `${base} — mobile app UI screenshot`;
   }
   if (/^(TABLET_IMAGE|LAPTOP_IMAGE)$/i.test(id)) {
     const base = shortVisualPhrase(String(content.title || '').trim(), 8);
-    if (base) return `${base} â€” website UI screenshot`;
+    if (base) return `${base} — website UI screenshot`;
   }
 
   if (/^(HERO_IMAGE|BACKGROUND_IMAGE)$/i.test(id)) {
@@ -257,7 +257,7 @@ function deriveSlotImagePromptBase(slotId, content = {}, layoutSchema = null, op
       if (slotIndex >= 0) {
         const fromCol = columnSubjectFromEntry(columnEntryAt(content, slotIndex));
         if (fromCol) return fromCol;
-        return `${content.title} â€” visual ${slotIndex + 1} of ${imageSlots.length}`;
+        return `${content.title} — visual ${slotIndex + 1} of ${imageSlots.length}`;
       }
     }
   }
@@ -332,13 +332,13 @@ function buildSlotImagePrompt(slotId, content = {}, layoutSchema = null, opts = 
         ? `${id}${layoutId ? ` of ${layoutId}` : ''}: establishing photograph matching the deck theme`
         : `${id}${layoutId ? ` of ${layoutId}` : ''}: isolated single subject photograph`,
     isMultiImageGrid
-      ? 'Gallery slot â€” ONE distinct visual metaphor of this cardâ€™s topic (not the cardâ€™s wording)'
+      ? 'Gallery slot — ONE distinct visual metaphor of this card’s topic (not the card’s wording)'
       : null,
     isMultiImageGrid && deckSnippet
       ? `Same brand/deck theme as: ${deckSnippet}; this slot illustrates: ${colTitleForTheme || subject} only.`
       : null,
     hasChart && !isHero
-      ? 'Slide already has a rendered chart â€” photograph a related real-world subject, not a chart graphic'
+      ? 'Slide already has a rendered chart — photograph a related real-world subject, not a chart graphic'
       : null,
     isDevice
       ? `UI screen content: ${subject}`

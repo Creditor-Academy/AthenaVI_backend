@@ -17,11 +17,15 @@ const {
 const { firstHexFromFill } = require('./canvasFill');
 const {
   bulletsFromContent,
-  fetchImageAsBase64,
+  fetchImageForPptx,
+  imageBufferToPptxImage,
+  svgMarkupToPngBuffer,
+  graphicTintColor,
   contentFlipFlags,
   slideHasElements,
   buildDeckHtml,
 } = require('./slideHtml');
+const { FONT_REF_WIDTH } = require('./textFit.util');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 
@@ -63,13 +67,23 @@ async function notifyExportFinished({
   }
 }
 
-function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT) {
+const DEFAULT_SLIDE_SIZE_IN = { w: PPTX_WIDTH_IN, h: PPTX_HEIGHT_IN };
+
+function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT, slideSize = DEFAULT_SLIDE_SIZE_IN) {
   return {
-    x: (Number(x) || 0) / canvasW * PPTX_WIDTH_IN,
-    y: (Number(y) || 0) / canvasH * PPTX_HEIGHT_IN,
-    w: Math.max(0.1, (Number(w) || 100) / canvasW * PPTX_WIDTH_IN),
-    h: Math.max(0.1, (Number(h) || 100) / canvasH * PPTX_HEIGHT_IN),
+    x: (Number(x) || 0) / canvasW * slideSize.w,
+    y: (Number(y) || 0) / canvasH * slideSize.h,
+    w: Math.max(0.1, (Number(w) || 100) / canvasW * slideSize.w),
+    h: Math.max(0.1, (Number(h) || 100) / canvasH * slideSize.h),
   };
+}
+
+/**
+ * Typography px (fontSize, spacing, corner radius) → PowerPoint points. These values are authored
+ * for the ~900px editor stage (FONT_REF_WIDTH), not the 1920 placement canvas.
+ */
+function stagePxToPt(px, slideSize = DEFAULT_SLIDE_SIZE_IN) {
+  return Math.max(1, Math.round(((Number(px) || 0) * slideSize.w * 72 / FONT_REF_WIDTH) * 10) / 10);
 }
 
 function resolveColor(value, palette, fallback = '111111') {
@@ -143,7 +157,9 @@ function shapeTypeForPptx(shape) {
   if (s === 'arrow-left' || s === 'left-arrow') return 'leftArrow';
   if (s === 'arrow-up' || s === 'up-arrow') return 'upArrow';
   if (s === 'arrow-down' || s === 'down-arrow') return 'downArrow';
-  // rounded-rect, pill, flow-process, unknown → rect
+  // rectRadius only applies to roundRect
+  if (s === 'rounded-rect' || s === 'pill') return 'roundRect';
+  // flow-process, unknown → rect
   return 'rect';
 }
 
@@ -169,10 +185,21 @@ function resolveExportFontFace(content, el, themeFonts = {}) {
   return themeFonts.body || themeFonts.subheading || themeFonts.heading || null;
 }
 
-async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors = [], themeFonts = {}) {
+async function addElementsToPptxSlide(
+  s,
+  slide,
+  palette,
+  textColor,
+  brandChartColors = [],
+  themeFonts = {},
+  slideSize = DEFAULT_SLIDE_SIZE_IN
+) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
   const canvasH = doc.canvas?.height || CANVAS_HEIGHT;
+  const toPt = (px) => stagePxToPt(px, slideSize);
+  // borderRadius is editor-stage px (like fontSize), not placement-canvas px.
+  const inPerPx = slideSize.w / FONT_REF_WIDTH;
   const elements = [...(doc.elements || [])].sort(
     (a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0)
   );
@@ -184,7 +211,8 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
       el.placement?.width,
       el.placement?.height,
       canvasW,
-      canvasH
+      canvasH,
+      slideSize
     );
     const content = el.content || {};
     const rotate = Number(el.placement?.rotation) || 0;
@@ -196,12 +224,13 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
         palette,
         textColor
       );
+      const fontSizePt = toPt(Number(content.fontSize) || 18);
       const textOpts = {
         x: box.x,
         y: box.y,
         w: box.w,
         h: box.h,
-        fontSize: Number(content.fontSize) || 18,
+        fontSize: fontSizePt,
         bold: content.bold === true || Number(content.fontWeight) >= 600,
         italic: content.italic === true,
         color: content.fill
@@ -212,18 +241,18 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
         rotate,
       };
       if (content.letterSpacing != null) {
-        // pptxgenjs: charSpacing roughly maps letter-spacing (em * fontSize)
-        textOpts.charSpacing = Math.round(Number(content.letterSpacing) * (Number(content.fontSize) || 18));
+        // pptxgenjs charSpacing / lineSpacing are in points: em × font size (pt)
+        textOpts.charSpacing = Math.round(Number(content.letterSpacing) * fontSizePt * 10) / 10;
       }
       if (content.lineHeight != null) {
-        textOpts.lineSpacing = Math.round(Number(content.lineHeight) * (Number(content.fontSize) || 18));
+        textOpts.lineSpacing = Math.round(Number(content.lineHeight) * fontSizePt);
       }
       const fontFace = resolveExportFontFace(content, el, themeFonts);
       if (Array.isArray(content.runs) && content.runs.length) {
         const runPayload = content.runs.map((run) => ({
           text: String(run.text || ''),
           options: {
-            fontSize: Number(content.fontSize) || 18,
+            fontSize: fontSizePt,
             bold: run.bold === true || Number(run.fontWeight) >= 600,
             italic: run.italic === true,
             color: firstHexFromFill(
@@ -250,11 +279,22 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
     } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
-      const b64 = await fetchImageAsBase64(url, key);
-      if (b64) {
+      // Inline SVG (compiled diagrams/graphics) takes precedence, matching the editor renderer.
+      const inlineSvgPng =
+        typeof content.svg === 'string' && content.svg.includes('<svg')
+          ? await svgMarkupToPngBuffer(content.svg, {
+              width: (Number(el.placement?.width) || 100) * 2,
+              height: (Number(el.placement?.height) || 100) * 2,
+              color: graphicTintColor(content, palette),
+            })
+          : null;
+      const image = inlineSvgPng
+        ? await imageBufferToPptxImage(inlineSvgPng)
+        : await fetchImageForPptx(url, key);
+      if (image) {
         const { flipH, flipV } = contentFlipFlags(content);
-        s.addImage({
-          data: b64,
+        const imageOpts = {
+          data: image.data,
           x: box.x,
           y: box.y,
           w: box.w,
@@ -262,7 +302,14 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
           rotate,
           flipH,
           flipV,
-        });
+        };
+        // Editor renders photos with object-fit: cover (default) — crop instead of stretching.
+        const fit = String(content.fit || (inlineSvgPng ? 'contain' : 'cover')).toLowerCase();
+        if (fit === 'cover' && image.width && image.height) {
+          imageOpts.h = box.w * (image.height / image.width);
+          imageOpts.sizing = { type: 'cover', w: box.w, h: box.h };
+        }
+        s.addImage(imageOpts);
       } else {
         s.addShape('rect', {
           x: box.x,
@@ -299,9 +346,11 @@ async function addElementsToPptxSlide(s, slide, palette, textColor, brandChartCo
         rotate,
       };
       if (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill') {
+        // pptxgenjs rectRadius is in inches, capped at half the shorter side.
+        const maxRadius = Math.min(box.w, box.h) / 2;
         const r = Number(content.borderRadius);
         shapeOpts.rectRadius =
-          content.shape === 'pill' ? 0.5 : Number.isFinite(r) ? Math.min(0.5, r / Math.min(box.w, box.h) / 72) : 0.1;
+          content.shape === 'pill' ? maxRadius : Math.min(maxRadius, (Number.isFinite(r) ? r : 16) * inPerPx);
       }
       if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
         shapeOpts.fill = {
@@ -498,10 +547,10 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
   const imageUrl = slide.imageRef?.url;
   const imageKey = slide.imageRef?.s3Key;
   if (imageUrl || imageKey) {
-    const b64 = await fetchImageAsBase64(imageUrl, imageKey);
-    if (b64) {
+    const image = await fetchImageForPptx(imageUrl, imageKey);
+    if (image) {
       s.addImage({
-        data: b64,
+        data: image.data,
         x: 8.4,
         y: 1.6,
         w: 4.4,
@@ -580,7 +629,10 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
       }
     }
     if (slideHasElements(slide)) {
-      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts);
+      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts, {
+        w: aspect.pptxWidthIn || PPTX_WIDTH_IN,
+        h: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
+      });
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
     }
@@ -637,15 +689,18 @@ async function withBrowserPage(fn, { args = [] } = {}) {
 }
 
 async function buildPdfBuffer(deck, opts = {}) {
+  const aspect = resolveAspectCanvas(deck.aspectRatio);
   return withBrowserPage(async (page) => {
-    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setViewport({ width: aspect.width, height: aspect.height });
     await page.setContent(await buildDeckHtml(deck, opts), {
       waitUntil: 'networkidle0',
       timeout: 60000,
     });
     const pdf = await page.pdf({
-      width: '13.333in',
-      height: '7.5in',
+      width: `${aspect.pptxWidthIn}in`,
+      height: `${aspect.pptxHeightIn}in`,
+      // Slides are laid out in canvas px; scale them to exactly fill the page (96 CSS px per inch).
+      scale: (aspect.pptxWidthIn * 96) / aspect.width,
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });

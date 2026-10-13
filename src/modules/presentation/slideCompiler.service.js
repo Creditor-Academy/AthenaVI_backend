@@ -47,6 +47,7 @@ async function compileSlide({
   outlineSlide = null,
   skipContentRepair = false,
   context = {},
+  themeRecolor = false,
 }) {
   const rawContent =
     content && typeof content === 'object' ? JSON.parse(JSON.stringify(content)) : {};
@@ -113,7 +114,8 @@ async function compileSlide({
     workingContent,
     themeTokens,
     canvas,
-    slideDesignPlan
+    slideDesignPlan,
+    { themeRecolor }
   );
 
   const integrity = scanCompiledContentIntegrity(elementsDoc, layoutSchema, workingContent, {
@@ -150,7 +152,8 @@ async function compileSlide({
       workingContent,
       themeTokens,
       canvas,
-      slideDesignPlan
+      slideDesignPlan,
+      { themeRecolor }
     );
     emptySlotFallback = true;
     const postReseedIntegrity = scanCompiledContentIntegrity(elementsDoc, layoutSchema, workingContent, {

@@ -22,6 +22,9 @@ const { resolveTextColor } = require('./artDirection/resolveTextColor');
 const { inferTypographyRole } = require('./artDirection/typographyRoles');
 const { repairElementsDoc } = require('./artDirection/validateDesign');
 const { fitTextElementsToBoxes } = require('./textFit.util');
+const { applyDeckHeadingSize } = require('./artDirection/deckHeadingSize');
+const { recolorDiagramToTheme } = require('./artDirection/themeRecolor');
+const { normalizeTextAndCards } = require('./artDirection/textHierarchy');
 const {
   normalizeContentForLayout,
   deriveContentContract,
@@ -531,6 +534,12 @@ const { isTimelineRoadmapLayout, layoutTimelineRoadmap } = require('./diagrams/t
 const { isTimelineRoadmapHorizontalLayout, layoutTimelineRoadmapHorizontal } = require('./diagrams/timelineRoadmapHorizontal');
 const { isTimelineHorizontalCardsLayout, layoutTimelineHorizontalCards } = require('./diagrams/timelineHorizontalCards');
 const { isTimelineMilestonesLayout, layoutTimelineMilestones } = require('./diagrams/timelineMilestones');
+const {
+  isTimelineLayoutId,
+  snapshotTimelineText,
+  countTimelineItems,
+  pruneTimelineToItemCount,
+} = require('./diagrams/timelineItemCount');
 const { isTimelineMilestonesCardsLayout, layoutTimelineMilestonesCards } = require('./diagrams/timelineMilestonesCards');
 const { isTimelineMilestonesImageLayout, layoutTimelineMilestonesImage } = require('./diagrams/timelineMilestonesImage');
 const { isTimelineMilestonesImageRightLayout, layoutTimelineMilestonesImageRight } = require('./diagrams/timelineMilestonesImageRight');
@@ -9201,7 +9210,15 @@ function applyElementsStyleLayout(doc, layoutFn, layoutSchema, themeTokens, canv
   return out || base;
 }
 
-function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize = {}, slideDesignPlan = null) {
+function finalizeElementsDoc(
+  doc,
+  layoutSchema,
+  content,
+  themeTokens,
+  canvasSize = {},
+  slideDesignPlan = null,
+  { themeRecolor = false } = {}
+) {
   if (!doc) return doc;
   const canvas = {
     width: canvasSize.width || doc.canvas?.width || CANVAS_WIDTH,
@@ -9216,6 +9233,9 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   if (hasShapeDecisions) {
     next = applyRuntimeShapeDecisions(next, layoutSchema, content, themeTokens, canvas);
   }
+
+  // Timeline compilers draw a fixed card count; remember which cards have real copy.
+  const timelineText = isTimelineLayoutId(layoutSchema?.layout_id) ? snapshotTimelineText(next) : null;
 
   if (isDiagramProcessStepsLayout(layoutSchema?.layout_id)) {
     next = layoutDiagramProcessSteps(next, layoutSchema, themeTokens, canvas);
@@ -9555,9 +9575,10 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   } else if (isGridImagesTextMosaicLayout(layoutSchema?.layout_id)) {
     next = layoutGridImagesTextMosaic(next, layoutSchema, themeTokens, canvas);
   } else if (isGridInsightsChartLayout(layoutSchema?.layout_id)) {
-    next = layoutGridInsightsChart(next, layoutSchema, themeTokens, canvas);
+    // These compilers take an elements array; passing the doc made them a silent no-op.
+    next = applyElementsStyleLayout(next, layoutGridInsightsChart, layoutSchema, themeTokens, canvas);
   } else if (isGridInsightsChartSplitLayout(layoutSchema?.layout_id)) {
-    next = layoutGridInsightsChartSplit(next, layoutSchema, themeTokens, canvas);
+    next = applyElementsStyleLayout(next, layoutGridInsightsChartSplit, layoutSchema, themeTokens, canvas);
   } else if (isGridMetricsMobileLayout(layoutSchema?.layout_id)) {
     next = layoutGridMetricsMobile(next, layoutSchema, themeTokens, canvas);
   } else if (isGridMetricsMasonryLayout(layoutSchema?.layout_id)) {
@@ -9633,6 +9654,10 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     };
   }
 
+  if (timelineText) {
+    next = pruneTimelineToItemCount(next, timelineText, countTimelineItems(timelineText));
+  }
+
   next = applyTextOverImageContrast(next, themeTokens, layoutSchema);
   next = applyReadableTextContrast(next, themeTokens, layoutSchema);
   next = applySplitImageEdgeFade(next, layoutSchema);
@@ -9660,6 +9685,12 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
     };
   }
 
+  // First generation only: map diagram chrome (SVG cards, icons, borders) onto the theme colors.
+  // Runs after every diagram builder (incl. donut context above).
+  if (themeRecolor) {
+    next = recolorDiagramToTheme(next, themeTokens);
+  }
+
   if (
     !isDiagramProcessStepsLayout(layoutSchema?.layout_id) &&
     !isDiagramCycleLayout(layoutSchema?.layout_id) &&
@@ -9670,6 +9701,14 @@ function finalizeElementsDoc(doc, layoutSchema, content, themeTokens, canvasSize
   }
   const { reconcileCompiledTextWithContent } = require('./contentIntegrity.util');
   next = reconcileCompiledTextWithContent(next, layoutSchema, content);
+
+  // One heading size across the deck (overrides per-layout/diagram hardcoded sizes).
+  next = applyDeckHeadingSize(next, { themeTokens, layoutSchema, canvas });
+
+  // First generation only: heading > card title > body > caption ramp, cards fit + center short text.
+  if (themeRecolor) {
+    next = normalizeTextAndCards(next, { themeTokens, layoutSchema, canvas });
+  }
 
   // Last step: shrink any text that would overflow its box so generated slides fit the page.
   return fitTextElementsToBoxes(next, canvas);

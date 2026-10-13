@@ -159,15 +159,19 @@ const sixCardSlide = toSlideContentProfile({
   contentTypes: ['title', 'cards'],
   title: 'Six team members',
 });
-const sixCapable = layouts.find((l) => (l.contentCapacity.maxCards || 0) >= 6 && l.supportedElements.cards);
-assert.ok(sixCapable, 'catalog has a layout with maxCards >= 6');
-const threeCapable = layouts.find(
-  (l) =>
-    (l.contentCapacity.maxCards || 0) === 3 &&
-    l.supportedElements.cards &&
-    l.category === sixCapable.category
+const findThreeCardSibling = (six) =>
+  layouts.find(
+    (l) =>
+      (l.contentCapacity.maxCards || 0) === 3 &&
+      l.supportedElements.cards &&
+      l.category === six.category
+  );
+// Pick a 6+ card layout that has a 3-card sibling in its category (first 6-card layout may be a table).
+const sixCapable = layouts.find(
+  (l) => (l.contentCapacity.maxCards || 0) >= 6 && l.supportedElements.cards && findThreeCardSibling(l)
 );
-assert.ok(threeCapable, 'catalog has a same-category layout with maxCards === 3');
+assert.ok(sixCapable, 'catalog has a maxCards >= 6 layout with a same-category maxCards === 3 sibling');
+const threeCapable = findThreeCardSibling(sixCapable);
 const sixScore = scoreLayout(sixCardSlide, sixCapable);
 const threeScore = scoreLayout(sixCardSlide, threeCapable);
 assert.ok(

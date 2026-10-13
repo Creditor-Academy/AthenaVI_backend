@@ -3,6 +3,7 @@ const { toSlideContentProfile } = require('./toSlideContentProfile');
 const { rankLayouts } = require('./rankLayouts');
 const { buildLayoutSearchText, splitPrimaryAndWidenedTemplates } = require('./resolveLayoutCandidates');
 const { pickSafeLayoutFallback } = require('./layoutSafeFallback');
+const { summarizeHardRejects } = require('./ensureLayoutPick');
 const { selectBestLayoutWithAI } = require('./selectBestLayoutWithAI');
 const { getLayoutAiSelectionConfig } = require('./layoutAiSelection.config');
 const { layoutFamilyExcludeIds, isSplitHeroLayout } = require('../layoutSelector.service');
@@ -458,6 +459,8 @@ async function pickLayoutForGeneratedSlide({
       slideNumber: Number(slide?.order || outlineSlide?.order || 0) || null,
       phase,
       candidateCount: list.length,
+      whitelistSize: Array.isArray(ctx?.layoutIdWhitelist) ? ctx.layoutIdWhitelist.length : 0,
+      hardRejects: summarizeHardRejects(profile, [...primaryRaw, ...widenedRaw]),
     });
     return {
       layoutId: null,

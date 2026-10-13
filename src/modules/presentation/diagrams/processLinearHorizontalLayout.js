@@ -45,6 +45,9 @@ const PROCESS_LINEAR_HORIZONTAL_GEOM = {
   bodyH: 96,
 };
 
+const { themeProcessSteps, customProcessColor } = require('./processThemeColors')
+
+/** Legacy fixed palette — no longer applied; kept for exports/tests. Steps use theme colors. */
 const PROCESS_LINEAR_HORIZONTAL_DEFAULT_COLORS = [
   '#F5A623', // 1: Warm Amber / Yellow
   '#FF793F', // 2: Vibrant Orange
@@ -221,7 +224,7 @@ function layoutProcessLinearHorizontal(elements = [], schema = {}, palette = {},
     }
   }
   const stepCount = detectedCount >= 2 ? detectedCount : 5;
-  const steps = calculateLinearHorizontalStepGeometries(stepCount);
+  const steps = themeProcessSteps(calculateLinearHorizontalStepGeometries(stepCount), palette);
 
   const prevBySlot = new Map();
   safeElements.forEach((el) => {
@@ -309,7 +312,7 @@ function layoutProcessLinearHorizontal(elements = [], schema = {}, palette = {},
     const prevTitle = prevBySlot.get(`STEP_${n}_TITLE`);
     const prevBody = prevBySlot.get(`STEP_${n}_BODY`);
 
-    const cardColor = prevCard?.content?.fill || prevCard?.content?.color || step.color;
+    const cardColor = customProcessColor(prevCard?.content?.fill, prevCard?.content?.color) || step.color;
 
     // 3A. Standalone Card Graphic
     const cardSvg = buildLinearHorizontalCardSvg(step);
@@ -396,7 +399,7 @@ function layoutProcessLinearHorizontal(elements = [], schema = {}, palette = {},
         fontSize: 13,
         fontWeight: 800,
         colorRole: 'primary',
-        color: prevTitle?.content?.color || cardColor,
+        color: customProcessColor(prevTitle?.content?.color) || cardColor,
         lineHeight: 1.15,
         clipToSlot: false,
       },
@@ -431,7 +434,7 @@ function layoutProcessLinearHorizontal(elements = [], schema = {}, palette = {},
         fontSize: 11,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevBody?.content?.color || '#64748B',
+        color: prevBody?.content?.color || palette?.muted || '#64748B',
         lineHeight: 1.45,
         clipToSlot: false,
       },

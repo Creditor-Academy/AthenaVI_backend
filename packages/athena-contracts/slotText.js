@@ -1,6 +1,6 @@
 ﻿'use strict';
 
-/** Where indexed slots (stat_1, member_2, â€¦) look for their list of entries. */
+/** Where indexed slots (stat_1, member_2, …) look for their list of entries. */
 const LIST_SOURCE_KEYS = {
   stat: ['stats', 'metrics'],
   metric: ['stats', 'metrics'],
@@ -27,11 +27,11 @@ const CARD_FIELD_RE = /^card_(\d+)_(title|body)$/;
 const COL_FIELD_RE = /^col_(\d+)_(title|body)$/;
 const ROW_FIELD_RE = /^row_(\d+)_(title|body)$/;
 const FEATURE_FIELD_RE = /^feature_(\d+)_(title|body|text)$/;
-/** Phone-highlights: FEATURE_L1_HEADING / FEATURE_R2_BODY â†’ columns[0..5] in L1,L2,L3,R1,R2,R3 order */
+/** Phone-highlights: FEATURE_L1_HEADING / FEATURE_R2_BODY → columns[0..5] in L1,L2,L3,R1,R2,R3 order */
 const FEATURE_SIDE_FIELD_RE = /^feature_([lr])(\d+)_(heading|body|title|text)$/;
 /** Phone-triple side copy: HEADING_L / BODY_R */
 const SIDE_HEADING_BODY_RE = /^(heading|body)_([lr])$/;
-const MILESTONE_PART_RE = /^milestone_(\d+)_(label|detail)$/;
+const MILESTONE_PART_RE = /^milestone_(\d+)_(label|detail|title|num|card|foot)$/;
 const QUADRANT_FIELD_RE = /^q(\d+)_(title|body)$/;
 const STEP_FIELD_RE = /^step_(\d+)_(title|body)$/;
 const FUNNEL_FIELD_RE = /^funnel_(\d+)_(title|body)$/;
@@ -46,7 +46,7 @@ const MAIN_TITLE_SLOT_RE = /^(main_title|title|headline|heading)$/;
 const INDEXED_BODY_SLOT_RE =
   /^(body|left_body|right_body|statement|lead|caption|footnote|intro|body_\d+|bullet_\d+|card_\d+_body|col_\d+_body|feature_\d+_(body|text)|agenda_col_\d+_item_\d+|item_\d+|bullet_\d+)$/;
 
-/** Coerce AI/slot payloads to plain text â€” never return objects (React cannot render them). */
+/** Coerce AI/slot payloads to plain text — never return objects (React cannot render them). */
 function coerceSlotText(value) {
   if (value == null) return '';
   if (typeof value === 'string') return value;
@@ -81,8 +81,11 @@ function itemsToTexts(value) {
   return value.map(itemToText).filter(Boolean);
 }
 
+/** Leading bullet glyph, plus the legacy mojibake form ("•") still present in saved decks. */
+const BULLET_PREFIX_RE = /^(?:•|•)\s*/;
+
 function bulletBlock(list) {
-  return list.map((line) => `â€¢ ${line}`).join('\n');
+  return list.map((line) => `• ${line}`).join('\n');
 }
 
 function stripMarkdownBold(text) {
@@ -94,36 +97,36 @@ function stripMarkdownBold(text) {
 function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
   const raw = typeof line === 'string' ? line.trim() : itemToText(line);
   if (!raw) return null;
-  const cleaned = raw.replace(/^â€¢\s*/, '');
+  const cleaned = raw.replace(BULLET_PREFIX_RE, '');
   const mdMatch = cleaned.match(/^\*\*(.+?)\*\*:\s*(.+)$/);
   if (mdMatch) {
     return [
-      { text: 'â€¢ ', colorRole: textRole },
+      { text: '• ', colorRole: textRole },
       { text: `${mdMatch[1]}:`, fontWeight: 700, colorRole: textRole },
       { text: ` ${stripMarkdownBold(mdMatch[2])}`, colorRole: mutedRole },
     ];
   }
   // **Label** without required colon (common AI variant)
-  const mdLoose = cleaned.match(/^\*\*(.+?)\*\*\s*[:\-â€”â€“]?\s*(.*)$/);
+  const mdLoose = cleaned.match(/^\*\*(.+?)\*\*\s*[:\-—–]?\s*(.*)$/);
   if (mdLoose && mdLoose[1]) {
     const label = mdLoose[1].trim();
     const detail = stripMarkdownBold(mdLoose[2] || '').trim();
     if (detail) {
       return [
-        { text: 'â€¢ ', colorRole: textRole },
+        { text: '• ', colorRole: textRole },
         { text: `${label}:`, fontWeight: 700, colorRole: textRole },
         { text: ` ${detail}`, colorRole: mutedRole },
       ];
     }
     return [
-      { text: 'â€¢ ', colorRole: textRole },
+      { text: '• ', colorRole: textRole },
       { text: label, fontWeight: 700, colorRole: textRole },
     ];
   }
   const colonMatch = cleaned.match(/^([^:]{2,40}):\s*(.+)$/);
   if (colonMatch) {
     return [
-      { text: 'â€¢ ', colorRole: textRole },
+      { text: '• ', colorRole: textRole },
       { text: `${colonMatch[1]}:`, fontWeight: 700, colorRole: textRole },
       { text: ` ${stripMarkdownBold(colonMatch[2])}`, colorRole: mutedRole },
     ];
@@ -133,13 +136,13 @@ function parseBulletLineRuns(line, mutedRole = 'muted', textRole = 'text') {
     const detail = String(line.text ?? line.body ?? '').trim();
     if (topic && detail) {
       return [
-        { text: 'â€¢ ', colorRole: textRole },
+        { text: '• ', colorRole: textRole },
         { text: `${topic}:`, fontWeight: 700, colorRole: textRole },
         { text: ` ${stripMarkdownBold(detail)}`, colorRole: mutedRole },
       ];
     }
   }
-  return [{ text: `â€¢ ${stripMarkdownBold(cleaned)}`, colorRole: mutedRole }];
+  return [{ text: `• ${stripMarkdownBold(cleaned)}`, colorRole: mutedRole }];
 }
 
 function buildBulletListRuns(content, onImage = false) {
@@ -172,7 +175,7 @@ function applyMarkdownRunsToPlainText(textContent, onImage = false) {
   lines.forEach((line, index) => {
     if (index > 0) runs.push({ text: '\n', colorRole: mutedRole });
     const trimmed = line.trim();
-    if (/^â€¢/.test(trimmed) || /^\*\*/.test(trimmed)) {
+    if (BULLET_PREFIX_RE.test(trimmed) || /^\*\*/.test(trimmed)) {
       const lineRuns = parseBulletLineRuns(trimmed, mutedRole, textRole);
       if (lineRuns) {
         runs.push(...lineRuns);
@@ -297,7 +300,7 @@ function structuredColumnAt(content, colIndex) {
   return null;
 }
 
-/** Map FEATURE_L1..L3,R1..R3 â†’ 0..5 */
+/** Map FEATURE_L1..L3,R1..R3 → 0..5 */
 function featureSideColumnIndex(side, num) {
   const n = Number(num) || 1;
   const s = String(side || '').toLowerCase();
@@ -459,7 +462,7 @@ function prosConsRowFromEntry(entry) {
   }
   const raw = typeof entry === 'string' ? entry.trim() : itemToText(entry);
   if (!raw) return { title: '', body: '' };
-  const cleaned = raw.replace(/^•\s*/, '').replace(/^â€¢\s*/, '');
+  const cleaned = raw.replace(BULLET_PREFIX_RE, '');
   const colonMatch = cleaned.match(/^([^:]{2,60}):\s*(.+)$/);
   if (colonMatch) {
     return {
@@ -549,6 +552,10 @@ const SYNTHETIC_REPAIR_PATTERNS = [
   /^Point \d+ about /i,
   /^Team member \d+$/i,
   /^Item \d+$/i,
+  /^Point \d+$/i,
+  /^Aspect \d+$/i,
+  /^Topic \d+$/i,
+  /^Segment [A-Z]$/i,
   /^Phase \d+$/i,
   /^Feature row \d+$/i,
   /^Included benefit \d+$/i,
@@ -585,7 +592,7 @@ function sampleChartDataset(index = 0, layoutId = '') {
   return sets[i % sets.length];
 }
 
-/** True only for real chart data slots â€” not CHART_HEADING / CHART_CAPTION / titles. */
+/** True only for real chart data slots — not CHART_HEADING / CHART_CAPTION / titles. */
 function isChartElementSlot(slotId, role) {
   if (String(role || '').toLowerCase() === 'chart') return true;
   const id = String(slotId || '').toUpperCase();
@@ -687,6 +694,35 @@ function uniqueColumnTitle(rawTitle, body, index, content, fallbackPrefix = 'Asp
 function textForSlot(slotId, content = {}, layoutSchema = null) {
   const id = String(slotId || '').toLowerCase();
   const bullets = bulletsOf(content);
+
+  // grid_insights_chart_*: insight labels, chart heading/caption, takeaway point.
+  const insightLabel = id.match(/^insight_label_(\d+)$/);
+  if (insightLabel) {
+    const i = Number(insightLabel[1]) - 1;
+    const insight = Array.isArray(content.insights) ? content.insights[i] : null;
+    const col = structuredColumnAt(content, i);
+    const stat = Array.isArray(content.stats) ? content.stats[i] : null;
+    return (
+      coerceSlotText(insight && typeof insight === 'object' ? insight.label ?? insight.title : insight).trim() ||
+      String(col?.title ?? col?.heading ?? col?.label ?? '').trim() ||
+      String(stat?.label ?? '').trim() ||
+      String(bullets[i] || '').trim()
+    );
+  }
+  if (id === 'chart_heading') {
+    return coerceSlotText(content.chart?.title || content.chartTitle || content.title).trim();
+  }
+  if (id === 'chart_caption') {
+    return coerceSlotText(content.caption || content.chart?.caption || content.chartCaption).trim();
+  }
+  if (id === 'point_heading') {
+    return coerceSlotText(content.takeaway?.title || content.takeaway?.heading || content.subtitle).trim();
+  }
+  if (id === 'point_body') {
+    return coerceSlotText(
+      content.takeaway?.body || content.takeaway?.text || content.body || content.summary
+    ).trim();
+  }
 
   const milestonePlain = id.match(/^milestone_(\d+)$/);
   if (milestonePlain) {
@@ -1088,10 +1124,21 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     if (typeof raw === 'string') {
       return milestonePart[2] === 'label' ? raw.trim() : '';
     }
-    if (milestonePart[2] === 'label') {
-      return String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? raw.title ?? '').trim();
+    // Field fallbacks mirror AthenaVI contentSlotMapping (milestone_N_*).
+    switch (milestonePart[2]) {
+      case 'label':
+        return String(raw.label ?? raw.date ?? raw.year ?? raw.period ?? raw.title ?? '').trim();
+      case 'title':
+        return String(raw.title ?? raw.phase ?? raw.heading ?? raw.name ?? raw.option ?? '').trim();
+      case 'num':
+        return String(raw.year ?? raw.num ?? '').trim();
+      case 'card':
+        return String(raw.card ?? raw.summary ?? raw.blurb ?? '').trim();
+      case 'foot':
+        return String(raw.focus ?? raw.caption ?? raw.footer ?? '').trim();
+      default:
+        return String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim();
     }
-    return String(raw.detail ?? raw.body ?? raw.text ?? raw.description ?? '').trim();
   }
 
   const itemSlot = id.match(ITEM_FIELD_RE);
@@ -1310,7 +1357,7 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     id.includes('title') &&
     !id.includes('subtitle') &&
     // Never flood indexed process/card/column/row slots with the slide title.
-    !/^metric_|^plan_|^col_|^card_|^row_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_|^pros_\d+_|^cons_\d+_/.test(
+    !/^metric_|^plan_|^col_|^card_|^row_|^feature_|^point_|^member_|^agenda_col_|^step_|^phase_|^item_|^milestone_|^pros_\d+_|^cons_\d+_/.test(
       id
     )
   ) {
@@ -1345,8 +1392,11 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
       if (layoutHasDedicatedColumnTitleSlots(layoutSchema)) {
         return body || itemToText(col) || '';
       }
-      if (title && body) return `${title}\n${body}`;
-      return body || title || itemToText(col);
+      // Pre-shape may synthesize titles ("Point 1") or echo the body as the title — never render those.
+      const usableTitle =
+        title && !isSyntheticRepairFingerprint(title) && title.toLowerCase() !== body.toLowerCase() ? title : '';
+      if (usableTitle && body) return `${usableTitle}\n${body}`;
+      return body || usableTitle || (title ? '' : itemToText(col));
     }
     if (bullets[idx]) return bullets[idx];
     return '';

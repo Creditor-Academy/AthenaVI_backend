@@ -2,7 +2,7 @@
  * Intro Four Para
  * Layout ID: intro_four_para_v1
  *
- * Intro heading plus a 2Ã—2 grid of numbered paragraph cards.
+ * Intro heading plus a 2×2 grid of numbered paragraph cards.
  * Distinct from Intro Three Para Icons and Four Para Image.
  */
 
@@ -13,10 +13,10 @@ function isIntroFourParaLayout(layoutId, schema) {
 
 const INTRO_FOUR_PARA_DEFAULTS = {
   INTRO: 'What we will cover',
-  ITEM_1: 'Introduction â€” context, audience, and the outcome this story is here to drive.',
-  ITEM_2: 'Problem and opportunity â€” where the current path breaks, and the opening it creates.',
-  ITEM_3: 'Solution and proof â€” the approach, evidence, and why it holds up under scrutiny.',
-  ITEM_4: 'Next steps â€” owners, timing, and the first decisions that move the work forward.',
+  ITEM_1: 'Introduction — context, audience, and the outcome this story is here to drive.',
+  ITEM_2: 'Problem and opportunity — where the current path breaks, and the opening it creates.',
+  ITEM_3: 'Solution and proof — the approach, evidence, and why it holds up under scrutiny.',
+  ITEM_4: 'Next steps — owners, timing, and the first decisions that move the work forward.',
 }
 
 const GEOM = {

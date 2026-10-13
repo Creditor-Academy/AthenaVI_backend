@@ -20,6 +20,7 @@ const {
 const { textForSlot, coerceSlotText } = require('../slotText.js')
 const { clampSlotText } = require('../textNormalize.js')
 const { getDeckLayout, listDeckLayouts } = require('../../../src/modules/presentation/deckLayout/index.js')
+const { runContentPreShape } = require('../../../src/modules/presentation/contentPreShape.util.js')
 
 const feMappingUrl = pathToFileURL(
   join(__dirname, '../../../../AthenaVI/src/utils/contentSlotMapping.js')
@@ -38,8 +39,9 @@ const fixtures = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/content-fixtures.json'), 'utf8')
 )
 
+// Mirrors the backend generation path: pre-shape, then normalize (FE does the same with its own pre-shape).
 function canonicalSlotTexts(content, schema) {
-  const normalized = normalizeContentForLayout(content, schema)
+  const normalized = normalizeContentForLayout(runContentPreShape(content, schema), schema)
   const contract = deriveContentContract(schema)
   const out = {}
   const slots = Array.isArray(schema?.slots) ? schema.slots : []

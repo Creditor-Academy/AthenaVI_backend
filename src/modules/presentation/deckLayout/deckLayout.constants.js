@@ -146,6 +146,10 @@ const DECK_LAYOUT_SLOT_ROLES = [
   'contact',
   'eyebrow',
   'divider',
+  // Used by seeded layouts (pill labels, inline SVG graphics, decorative shapes).
+  'badge',
+  'graphic',
+  'shape',
 ];
 
 const CANVAS_ELEMENT_TYPES = ELEMENT_TYPES;

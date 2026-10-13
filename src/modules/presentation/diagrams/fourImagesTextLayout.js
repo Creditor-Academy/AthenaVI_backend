@@ -2,7 +2,7 @@
  * Four Images Text
  * Layout ID: four_images_text_v1
  *
- * Heading top-left with accent bar; 2Ã—2 photo cards with a short label under each image.
+ * Heading top-left with accent bar; 2×2 photo cards with a short label under each image.
  */
 
 function isFourImagesTextLayout(layoutId, schema) {

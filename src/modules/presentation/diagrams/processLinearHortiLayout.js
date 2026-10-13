@@ -49,6 +49,9 @@ const PROCESS_LINEAR_HORTI_GEOM = {
   bodyH: 88,
 };
 
+const { themeProcessSteps, customProcessColor } = require('./processThemeColors');
+
+/** Legacy fixed palette — no longer applied; kept for exports/tests. Steps use theme colors. */
 const PROCESS_LINEAR_HORTI_DEFAULT_COLORS = [
   '#54B2C8', // 1: Cyan / Teal
   '#E85B4E', // 2: Coral Red
@@ -226,7 +229,7 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
     }
   }
   const stepCount = detectedCount >= 2 ? detectedCount : 5;
-  const steps = calculateProcessHortiStepGeometries(stepCount);
+  const steps = themeProcessSteps(calculateProcessHortiStepGeometries(stepCount), palette);
 
   const prevBySlot = new Map();
   safeElements.forEach((el) => {
@@ -265,7 +268,7 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
       fontSize: 26,
       fontWeight: 800,
       colorRole: 'text',
-      color: prevHeading?.content?.color || '#1E293B',
+      color: prevHeading?.content?.color || palette?.text || '#1E293B',
       lineHeight: 1.15,
       clipToSlot: false,
     },
@@ -302,7 +305,7 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
         fontSize: 12.5,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevSubtitle?.content?.color || '#64748B',
+        color: prevSubtitle?.content?.color || palette?.muted || '#64748B',
         lineHeight: 1.45,
         clipToSlot: false,
       },
@@ -318,8 +321,8 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
     const prevTitle = prevBySlot.get(`STEP_${n}_TITLE`);
     const prevBody = prevBySlot.get(`STEP_${n}_BODY`);
 
-    const shapeColor = prevShape?.content?.fill || prevShape?.content?.color || step.color;
-    const iconColor = prevIcon?.content?.fill || prevIcon?.content?.color || shapeColor;
+    const shapeColor = customProcessColor(prevShape?.content?.fill, prevShape?.content?.color) || step.color;
+    const iconColor = customProcessColor(prevIcon?.content?.fill, prevIcon?.content?.color) || shapeColor;
 
     // 3A. Standalone Badge Graphic
     const badgeSvg = buildProcessHortiStepSvg(step);
@@ -410,7 +413,7 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
         fontSize: 13,
         fontWeight: 800,
         colorRole: 'primary',
-        color: prevTitle?.content?.color || shapeColor,
+        color: customProcessColor(prevTitle?.content?.color) || shapeColor,
         lineHeight: 1.15,
         clipToSlot: false,
       },
@@ -446,7 +449,7 @@ function layoutProcessLinearHorti(elements = [], schema = {}, palette = {}, canv
         fontSize: 11,
         fontWeight: 400,
         colorRole: 'muted',
-        color: prevBody?.content?.color || '#64748B',
+        color: prevBody?.content?.color || palette?.muted || '#64748B',
         lineHeight: 1.45,
         clipToSlot: false,
       },

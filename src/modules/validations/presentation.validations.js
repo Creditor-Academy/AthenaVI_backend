@@ -643,7 +643,8 @@ const regenerateSlideSchema = Joi.object({
   }),
   body: Joi.object({
     target: Joi.string().valid('content', 'image', 'all', 'full').default('all'),
-    overwriteManualEdits: Joi.boolean().default(true),
+    // Opt-in: callers must explicitly confirm discarding manual edits (409 otherwise).
+    overwriteManualEdits: Joi.boolean().default(false),
     prompt: slideAiPromptField.optional(),
   })
     .default({})
@@ -657,7 +658,8 @@ const exportDeckSchema = Joi.object({
   }),
   body: Joi.object({
     format: Joi.string().valid('PPTX', 'PDF', 'PNG', 'JPEG').required(),
-    slideId: Joi.string().trim().optional(),
+    // null / '' = whole deck (export modal sends slideId: null)
+    slideId: Joi.string().trim().allow(null, '').optional(),
   }).required(),
 });
 

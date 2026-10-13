@@ -66,12 +66,30 @@ const isGridInsightsChartSplitLayout = (layoutId) => {
   return /grid_insights_chart_split_v1$/i.test(String(layoutId || ''))
 }
 
+/** Seed schema slot ids → this compiler's internal ids (legacy ids map to themselves). */
+const GICS_SLOT_ALIASES = {
+  INSIGHT_LABEL_1: 'INSIGHT_1',
+  INSIGHT_LABEL_2: 'INSIGHT_2',
+  INSIGHT_LABEL_3: 'INSIGHT_3',
+  CHART_HEADING: 'CHART_TITLE',
+  CHART_CAPTION: 'CHART_CAPTION',
+  POINT_HEADING: 'TAKEAWAY_TITLE',
+  POINT_BODY: 'TAKEAWAY_BODY',
+}
+const GICS_OUTPUT_IDS = Object.fromEntries(Object.entries(GICS_SLOT_ALIASES).map(([schemaId, id]) => [id, schemaId]))
+
+const gicsCanonicalSlot = (slotId) => {
+  const sid = String(slotId || '').toUpperCase()
+  return GICS_SLOT_ALIASES[sid] || sid
+}
+
 const isGridInsightsChartSplitSlot = (slotId) => {
-  const sid = String(slotId || '')
+  const sid = gicsCanonicalSlot(slotId)
   return sid === 'INSIGHT_1'
     || sid === 'INSIGHT_2'
     || sid === 'INSIGHT_3'
     || sid === 'CHART_TITLE'
+    || sid === 'CHART_CAPTION'
     || sid === 'TAKEAWAY_TITLE'
     || sid === 'TAKEAWAY_BODY'
 }
@@ -262,12 +280,13 @@ const plainTextFromContent = (content = {}) => {
   return ''
 }
 
-const filledContent = (el, slotId, style) => {
+/** Sample copy only for empty catalog previews — never for slides that carry generated content. */
+const filledContent = (el, slotId, style, useDefaults = true) => {
   const sid = String(slotId || '')
   const existing = plainTextFromContent(el?.content)
   const text = existing && existing.toLowerCase() !== 'double-click to edit'
     ? existing
-    : (GICS_DEFAULTS[sid] || existing)
+    : (useDefaults ? GICS_DEFAULTS[sid] || existing : existing)
   return {
     ...(el?.content || {}),
     ...style,
@@ -300,18 +319,23 @@ const layoutGridInsightsChartSplit = (elements, schema, palette = {}, canvas = {
   )
   
   const filtered = elements.filter((el) => !chromeRe.test(String(el.slotId || '')) && isGridInsightsChartSplitSlot(el.slotId))
-  const bySlot = new Map(filtered.map((el) => [String(el.slotId || ''), el]))
+  const bySlot = new Map(filtered.map((el) => [gicsCanonicalSlot(el.slotId), el]))
+
+  // The slide's real chart (BAR_CHART) — kept, never replaced by decorative bars.
+  const chartEl = elements.find((el) => el?.type === 'chart')
+  const hasSlideContent =
+    Boolean(chartEl) || filtered.some((el) => plainTextFromContent(el.content).trim())
 
   const placeText = (slotId, box, style, role) => {
-    const prev = bySlot.get(slotId) || bySlot.get(slotId.toUpperCase())
+    const prev = bySlot.get(slotId)
     return {
       id: prev?.id || newId('txt-gics'),
       type: 'text',
-      slotId,
+      slotId: prev?.slotId || GICS_OUTPUT_IDS[slotId] || slotId,
       role: prev?.role || role || 'body',
       layer: 12,
       placement: { x: box.x, y: box.y, width: box.width, height: box.height, rotation: 0, opacity: 1 },
-      content: filledContent(prev, slotId, style),
+      content: filledContent(prev, slotId, style, !hasSlideContent),
     }
   }
 
@@ -341,7 +365,41 @@ const layoutGridInsightsChartSplit = (elements, schema, palette = {}, canvas = {
     }, 'heading'),
   ]
 
-  const chrome = gridInsightsChartSplitChromeSpecs().map((spec) => {
+  const g = GICS_GEOM
+  const chartTop = g.chartTitleY + g.chartTitleH + 20
+  const captionEl = bySlot.get('CHART_CAPTION')
+  const hasCaption = Boolean(plainTextFromContent(captionEl?.content).trim())
+  if (chartEl) {
+    next.push({
+      ...chartEl,
+      layer: 6,
+      placement: {
+        ...(chartEl.placement || {}),
+        x: Math.round((g.chartX + g.chartPadding) * sx),
+        y: Math.round(chartTop * sy),
+        width: Math.round(g.chartBarsW * sx),
+        height: Math.round((g.chartY + g.chartH - chartTop - (hasCaption ? 56 : 24)) * sy),
+        rotation: 0,
+        opacity: 1,
+      },
+    })
+  }
+  if (hasCaption) {
+    next.push(
+      placeText('CHART_CAPTION', {
+        x: Math.round((g.chartX + g.chartPadding) * sx),
+        y: Math.round((g.chartY + g.chartH - 44) * sy),
+        width: Math.round(g.chartBarsW * sx),
+        height: Math.round(24 * sy),
+      }, {
+        align: 'center', verticalAlign: 'center', fontSize: 13, fontWeight: 400, color: '#94A3B8', clipToSlot: true, lineHeight: 1.2,
+      }, 'caption')
+    )
+  }
+
+  const chrome = gridInsightsChartSplitChromeSpecs()
+    .filter((spec) => !(chartEl && spec.kind === 'chartBars'))
+    .map((spec) => {
     const prev = prevBySlot.get(spec.slotId.toUpperCase())
     const graphic = specToGridInsightsChartSplitContent(spec)
     if (!graphic) return null

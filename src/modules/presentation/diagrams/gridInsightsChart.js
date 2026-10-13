@@ -78,8 +78,27 @@ const isGridInsightsChartLayout = (layoutId) => {
   return /grid_insights_chart_v1$/i.test(String(layoutId || ''))
 }
 
+/** Seed schema slot ids → this compiler's internal ids (legacy ids map to themselves). */
+const GIC_SLOT_ALIASES = {
+  INSIGHT_LABEL_1: 'INSIGHT_1',
+  INSIGHT_LABEL_2: 'INSIGHT_2',
+  INSIGHT_LABEL_3: 'INSIGHT_3',
+  CHART_HEADING: 'CHART_TITLE',
+  CHART_CAPTION: 'CHART_CAPTION',
+  POINT_HEADING: 'TAKEAWAY_TITLE',
+  POINT_BODY: 'TAKEAWAY_BODY',
+  POINT_IMAGE: 'TAKEAWAY_IMAGE',
+}
+/** Internal id → schema id used on output (keeps rebinds keyed by the seed schema). */
+const GIC_OUTPUT_IDS = Object.fromEntries(Object.entries(GIC_SLOT_ALIASES).map(([schemaId, id]) => [id, schemaId]))
+
+const gridInsightsCanonicalSlot = (slotId) => {
+  const sid = String(slotId || '').toUpperCase()
+  return GIC_SLOT_ALIASES[sid] || sid
+}
+
 const isGridInsightsChartSlot = (slotId) => {
-  const sid = String(slotId || '')
+  const sid = gridInsightsCanonicalSlot(slotId)
   return sid === 'INSIGHT_1'
     || sid === 'INSIGHT_2'
     || sid === 'INSIGHT_3'
@@ -273,12 +292,13 @@ const plainTextFromContent = (content = {}) => {
   return ''
 }
 
-const filledContent = (el, slotId, style) => {
+/** Sample copy only for empty catalog previews — never for slides that carry generated content. */
+const filledContent = (el, slotId, style, useDefaults = true) => {
   const sid = String(slotId || '')
   const existing = plainTextFromContent(el?.content)
   const text = existing && existing.toLowerCase() !== 'double-click to edit'
     ? existing
-    : (GIC_DEFAULTS[sid] || existing)
+    : (useDefaults ? GIC_DEFAULTS[sid] || existing : existing)
   return {
     ...(el?.content || {}),
     ...style,
@@ -311,34 +331,42 @@ const layoutGridInsightsChart = (elements, schema, palette = {}, canvas = {}) =>
   )
   
   const filtered = elements.filter((el) => !chromeRe.test(String(el.slotId || '')) && isGridInsightsChartSlot(el.slotId))
-  const bySlot = new Map(filtered.map((el) => [String(el.slotId || ''), el]))
-  
-  // Get existing image element
-  const imageSlots = elements.filter((el) => el.type === 'image' && el.slotId === 'TAKEAWAY_IMAGE')
-  const imageBySlot = new Map(imageSlots.map((el) => [String(el.slotId || ''), el]))
+  const bySlot = new Map(filtered.map((el) => [gridInsightsCanonicalSlot(el.slotId), el]))
+
+  // Get existing image element (schema POINT_IMAGE or legacy TAKEAWAY_IMAGE)
+  const imageSlots = elements.filter(
+    (el) => el.type === 'image' && gridInsightsCanonicalSlot(el.slotId) === 'TAKEAWAY_IMAGE'
+  )
+  const imageBySlot = new Map(imageSlots.map((el) => [gridInsightsCanonicalSlot(el.slotId), el]))
+
+  // The slide's real chart (BAR_CHART) — kept, never replaced by decorative bars.
+  const chartEl = elements.find((el) => el?.type === 'chart')
+  // Generated slides carry text or a chart → no sample copy; empty catalog previews keep defaults.
+  const hasSlideContent =
+    Boolean(chartEl) || filtered.some((el) => plainTextFromContent(el.content).trim())
 
   const placeText = (slotId, box, style, role) => {
-    const prev = bySlot.get(slotId) || bySlot.get(slotId.toUpperCase())
+    const prev = bySlot.get(slotId)
     return {
       id: prev?.id || newId('txt-gic'),
       type: 'text',
-      slotId,
+      slotId: prev?.slotId || GIC_OUTPUT_IDS[slotId] || slotId,
       role: prev?.role || role || 'body',
       layer: 12,
       placement: { x: box.x, y: box.y, width: box.width, height: box.height, rotation: 0, opacity: 1 },
-      content: filledContent(prev, slotId, style),
+      content: filledContent(prev, slotId, style, !hasSlideContent),
     }
   }
-  
+
   const placeImage = (slotId, x, y, w, h) => {
     const prev = imageBySlot.get(slotId)
     const hasImage = prev?.content?.url || prev?.content?.src
     const g = GIC_GEOM
-    
+
     return {
       id: prev?.id || newId('img-gic'),
       type: 'image',
-      slotId,
+      slotId: prev?.slotId || GIC_OUTPUT_IDS[slotId] || slotId,
       role: 'image',
       layer: 5,
       placement: {
@@ -396,7 +424,26 @@ const layoutGridInsightsChart = (elements, schema, palette = {}, canvas = {}) =>
     placeImage('TAKEAWAY_IMAGE', g.takeawayX + 20, g.takeawayY + g.takeawayImageY, g.takeawayImageW, g.takeawayImageH),
   ]
 
-  const chrome = gridInsightsChartChromeSpecs().map((spec) => {
+  // Real chart sits in the chart card between the title and caption.
+  if (chartEl) {
+    next.push({
+      ...chartEl,
+      layer: 6,
+      placement: {
+        ...(chartEl.placement || {}),
+        x: Math.round((g.chartX + 30) * sx),
+        y: Math.round((g.chartY + g.chartTitleY + g.chartTitleH + 10) * sy),
+        width: Math.round((g.chartW - 60) * sx),
+        height: Math.round((g.chartCaptionY - g.chartTitleY - g.chartTitleH - 20) * sy),
+        rotation: 0,
+        opacity: 1,
+      },
+    })
+  }
+
+  const chrome = gridInsightsChartChromeSpecs()
+    .filter((spec) => !(chartEl && spec.kind === 'chartBars'))
+    .map((spec) => {
     const prev = prevBySlot.get(spec.slotId.toUpperCase())
     const graphic = specToGridInsightsChartContent(spec)
     if (!graphic) return null
@@ -425,6 +472,8 @@ module.exports = {
   GIC_GEOM,
   GIC_COLORS,
   GIC_DEFAULTS,
+  GIC_SLOT_ALIASES,
+  gridInsightsCanonicalSlot,
   isGridInsightsChartLayout,
   isGridInsightsChartSlot,
   gridInsightsChartChromeSpecs,

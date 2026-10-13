@@ -35,7 +35,8 @@ function inferTypographyRole({ slot = {}, layoutSchema = {} } = {}) {
 
   if (slotRole === 'subheading') return 'subtitle';
   if (slotRole === 'caption' || slotRole === 'eyebrow' || slotRole === 'attribution') return 'caption';
-  if (slotRole === 'stat' || slotRole === 'stat_label') return 'metric';
+  if (slotRole === 'stat_label') return 'caption';
+  if (slotRole === 'stat') return 'metric';
   if (slotRole === 'quote') return 'sectionTitle';
 
   // Default: body-ish
@@ -44,5 +45,6 @@ function inferTypographyRole({ slot = {}, layoutSchema = {} } = {}) {
 
 module.exports = {
   inferTypographyRole,
+  isLikelyCoverLayout,
 };
 

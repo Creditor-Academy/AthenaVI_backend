@@ -3,9 +3,11 @@
  * Kept free of Puppeteer / credit / export-job concerns.
  */
 
+const sharp = require('sharp');
 const s3Service = require('../s3/s3.service');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
-const { CANVAS_WIDTH, CANVAS_HEIGHT } = require('./presentation.constants');
+const { CANVAS_WIDTH, CANVAS_HEIGHT, resolveAspectCanvas } = require('./presentation.constants');
+const { FONT_REF_WIDTH } = require('./textFit.util');
 const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
 const {
   cssFromFill,
@@ -24,18 +26,80 @@ function bulletsFromContent(content) {
   return [];
 }
 
-async function fetchImageAsBase64(url, s3Key) {
+async function fetchImageBuffer(url, s3Key) {
   try {
-    if (s3Key) {
-      const buffer = await s3Service.getObjectBuffer(s3Key);
-      return buffer.toString('base64');
-    }
+    if (s3Key) return await s3Service.getObjectBuffer(s3Key);
     if (!url || !/^https?:\/\//i.test(String(url))) return null;
-    const buffer = await downloadRemote(url, { maxBytes: 12 * 1024 * 1024 });
-    return buffer.toString('base64');
+    return await downloadRemote(url, { maxBytes: 12 * 1024 * 1024 });
   } catch {
     return null;
   }
+}
+
+async function fetchImageAsBase64(url, s3Key) {
+  const buffer = await fetchImageBuffer(url, s3Key);
+  return buffer ? buffer.toString('base64') : null;
+}
+
+/** Detect image MIME from magic bytes (S3 keys / URLs don't reliably carry the type). */
+function sniffImageMime(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image/png';
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'image/jpeg';
+  if (buffer.toString('ascii', 0, 4) === 'GIF8') return 'image/gif';
+  if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  const head = buffer.toString('utf8', 0, Math.min(buffer.length, 512)).trimStart();
+  if (head.startsWith('<svg') || (head.startsWith('<?xml') && head.includes('<svg'))) return 'image/svg+xml';
+  return null;
+}
+
+/**
+ * Rasterize inline SVG markup to PNG. librsvg (via sharp) never runs scripts or fetches
+ * remote resources, so stored SVG stays inert in PPTX/PDF export.
+ */
+async function svgMarkupToPngBuffer(svg, { width, height, color } = {}) {
+  if (typeof svg !== 'string' || !svg.includes('<svg')) return null;
+  const markup = color ? svg.replace(/currentColor/g, color) : svg;
+  try {
+    let img = sharp(Buffer.from(markup), { density: 144 });
+    if (width > 0 && height > 0) {
+      img = img.resize(Math.round(width), Math.round(height), {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      });
+    }
+    return await img.png().toBuffer();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * pptxgenjs image payload: `data` must be "<mime>;base64,..." or the image is silently dropped.
+ * SVG / WebP / unknown formats are rasterized to PNG, which PowerPoint renders everywhere.
+ */
+async function imageBufferToPptxImage(buffer) {
+  if (!buffer) return null;
+  let mime = sniffImageMime(buffer);
+  let out = buffer;
+  try {
+    if (!mime || mime === 'image/svg+xml' || mime === 'image/webp') {
+      out = await sharp(buffer, { density: 144 }).png().toBuffer();
+      mime = 'image/png';
+    }
+    const meta = await sharp(out).metadata();
+    return {
+      data: `${mime};base64,${out.toString('base64')}`,
+      width: meta.width || null,
+      height: meta.height || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchImageForPptx(url, s3Key) {
+  return imageBufferToPptxImage(await fetchImageBuffer(url, s3Key));
 }
 
 function contentFlipFlags(content = {}) {
@@ -118,13 +182,28 @@ function htmlChartInner(c, palette) {
  * Resolve image src for an element — optionally inlined as data URI.
  */
 async function resolveImageSrc(content, opts = {}) {
+  // Compiled diagrams/graphics carry inline SVG (same precedence as the editor's GraphicCanvasVisual).
+  if (typeof content?.svg === 'string' && content.svg.includes('<svg')) {
+    const png = await svgMarkupToPngBuffer(content.svg, {
+      width: opts.width,
+      height: opts.height,
+      color: opts.color,
+    });
+    if (png) return `data:image/png;base64,${png.toString('base64')}`;
+  }
   const url = content?.url || content?.src || null;
   const s3Key = content?.s3Key || opts.imageRef?.s3Key || null;
   if (opts.inlineImages) {
-    const b64 = await fetchImageAsBase64(url, s3Key);
-    if (b64) return `data:image/jpeg;base64,${b64}`;
+    const buffer = await fetchImageBuffer(url, s3Key);
+    if (buffer) return `data:${sniffImageMime(buffer) || 'image/jpeg'};base64,${buffer.toString('base64')}`;
   }
   return url || null;
+}
+
+/** Hex used to tint `currentColor` in inline graphic SVG (mirrors editor theme tinting). */
+function graphicTintColor(content, palette) {
+  const raw = content?.color || (content?.colorRole && palette[content.colorRole]) || palette.primary || '#111111';
+  return typeof raw === 'string' ? raw : '#111111';
 }
 
 /**
@@ -141,6 +220,9 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
     const sorted = [...(slide.elements.elements || [])].sort(
       (a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0)
     );
+    // fontSize / borderRadius are editor-stage px (~900 wide); this section is canvasW px wide.
+    const stageScale = canvasW / FONT_REF_WIDTH;
+    const stagePx = (value) => Math.round(Number(value) * stageScale * 10) / 10;
 
     const parts = [];
     for (const el of sorted) {
@@ -174,12 +256,18 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
           ? `font-family:${escapeHtml(c.fontFamily)},Arial,sans-serif;`
           : '';
         parts.push(
-          `<div style="${style};font-size:${Number(c.fontSize) || 18}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap;${ls}${lh}${fontFamily}">${htmlTextInner(c, palette, fallback)}</div>`
+          `<div style="${style};font-size:${stagePx(Number(c.fontSize) || 18)}px;font-weight:${c.bold || Number(c.fontWeight) >= 600 ? '700' : '400'};text-align:${escapeHtml(c.align || 'left')};white-space:pre-wrap;${ls}${lh}${fontFamily}">${htmlTextInner(c, palette, fallback)}</div>`
         );
         continue;
       }
       if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
-        const src = await resolveImageSrc(c, { inlineImages, imageRef: slide.imageRef });
+        const src = await resolveImageSrc(c, {
+          inlineImages,
+          imageRef: slide.imageRef,
+          width: Number(p.width) || 0,
+          height: Number(p.height) || 0,
+          color: graphicTintColor(c, palette),
+        });
         if (src) {
           parts.push(
             `<img src="${escapeHtml(src)}" alt="" style="${style};object-fit:${escapeHtml(c.fit || 'cover')}" />`
@@ -195,18 +283,18 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
         const bgCss = cssFromFill(c.fill, palette, palette.primary || '#0A84FF');
         const radius =
           c.borderRadius != null
-            ? `${c.borderRadius}px`
+            ? `${stagePx(c.borderRadius)}px`
             : String(c.shape || '').toLowerCase() === 'ellipse' ||
                 String(c.shape || '').toLowerCase() === 'circle'
               ? '50%'
               : String(c.shape || '').toLowerCase() === 'pill'
                 ? '999px'
                 : String(c.shape || '').toLowerCase() === 'rounded-rect'
-                  ? '16px'
+                  ? `${stagePx(16)}px`
                   : '0';
         const border =
           c.stroke || c.line
-            ? `border:${Number(c.strokeWidth) || 2}px solid ${escapeHtml(c.stroke || c.line)}`
+            ? `border:${stagePx(Number(c.strokeWidth) || 2)}px solid ${escapeHtml(c.stroke || c.line)}`
             : '';
         parts.push(
           `<div style="${style};background:${escapeHtml(bgCss)};border-radius:${radius};${border}"></div>`
@@ -263,6 +351,7 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
  * Full HTML document for one or more slides.
  */
 async function buildDeckHtml(deck, opts = {}) {
+  const aspect = resolveAspectCanvas(deck.aspectRatio);
   const palette = deck.themeTokens?.palette || {};
   const text = palette.text || '#111111';
   let slides = Array.isArray(opts.slides)
@@ -297,21 +386,22 @@ async function buildDeckHtml(deck, opts = {}) {
   <meta charset="utf-8" />
   ${fontLink}
   <style>
-    @page { size: 13.333in 7.5in; margin: 0; }
+    @page { size: ${aspect.pptxWidthIn}in ${aspect.pptxHeightIn}in; margin: 0; }
     body { margin: 0; font-family: ${fontFamilyCss}; color: ${escapeHtml(text)}; }
     .slide { page-break-after: always; }
     .slide span { background-repeat: no-repeat; }
+    /* Legacy (no elements) slides use canvas px like element slides, so PDF scale applies uniformly. */
     .slide.legacy {
-      width: 13.333in; height: 7.5in;
-      box-sizing: border-box; padding: 0.6in; display: flex; gap: 0.4in;
+      width: ${aspect.width}px; height: ${aspect.height}px;
+      box-sizing: border-box; padding: 86px; display: flex; gap: 58px;
       background: ${escapeHtml(palette.bg || '#ffffff')};
     }
     .legacy .text { flex: 1; }
-    .legacy .media { width: 4.5in; display: flex; align-items: center; justify-content: center; }
-    .legacy .media img { max-width: 100%; max-height: 5.5in; object-fit: contain; }
-    .legacy h1 { font-size: 36px; margin: 0 0 12px; }
-    .legacy h2 { font-size: 20px; margin: 0 0 16px; font-weight: normal; }
-    .legacy p, .legacy li { font-size: 18px; line-height: 1.4; }
+    .legacy .media { width: 40%; display: flex; align-items: center; justify-content: center; }
+    .legacy .media img { max-width: 100%; max-height: 80%; object-fit: contain; }
+    .legacy h1 { font-size: 54px; margin: 0 0 18px; }
+    .legacy h2 { font-size: 30px; margin: 0 0 24px; font-weight: normal; }
+    .legacy p, .legacy li { font-size: 27px; line-height: 1.4; }
   </style>
 </head>
 <body>${pages.join('\n')}</body>
@@ -321,6 +411,11 @@ async function buildDeckHtml(deck, opts = {}) {
 module.exports = {
   bulletsFromContent,
   fetchImageAsBase64,
+  fetchImageForPptx,
+  imageBufferToPptxImage,
+  svgMarkupToPngBuffer,
+  sniffImageMime,
+  graphicTintColor,
   contentFlipFlags,
   placementTransformCss,
   slideHasElements,

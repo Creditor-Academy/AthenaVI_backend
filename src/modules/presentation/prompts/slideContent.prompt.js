@@ -53,6 +53,16 @@ function buildSystem() {
   ].join(' ');
 }
 
+/** Number of milestone/step cards the layout draws (milestone_N_* / step_N_* slot ids). */
+function timelineSlotCount(slotConstraints) {
+  let max = 0;
+  for (const slot of Array.isArray(slotConstraints) ? slotConstraints : []) {
+    const m = String(slot?.id || '').match(/^(?:milestone|step)_(\d+)(?:_|$)/i);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max;
+}
+
 function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', narrative = {}) {
   const id = String(layoutId || '').toLowerCase();
   const type = String(suggestedType || '').toLowerCase();
@@ -111,8 +121,18 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
   }
 
   if (type === 'timeline' || /timeline/.test(id)) {
+    const slots = Number(narrative.timelineSlotCount) || 0;
+    const count = slots
+      ? `exactly ${slots} entries (this layout draws ${slots} cards — unused cards would show placeholder text)`
+      : 'at least 3 entries';
     lines.push(
-      'Timeline slide: REQUIRED timeline[] (or milestones[]) with at least 2 entries. Each entry MUST have label (year/phase) AND detail (1-2 lines describing the milestone). Never output year-only entries without detail.'
+      `Timeline slide: REQUIRED timeline[] with ${count}. Each entry MUST have label (year/phase), title (2-4 words) AND detail (1-2 lines describing the milestone). Never output year-only entries without detail; keep entries distinct and in chronological order.`
+    );
+  }
+
+  if (/grid_insights_chart/.test(id)) {
+    lines.push(
+      'Grid insights chart layout: REQUIRED insights[3] (short 2-4 word labels, one per insight card), chart { title, labels, series } for BAR_CHART, caption (one short line under the chart), and takeaway { title, body } (title ≤5 words, body 2-3 lines explaining the chart). Never use "Insight 1", "Revenue growth" or "Key takeaway" as literal copy.'
     );
   }
 
@@ -367,6 +387,7 @@ function buildUser(vars = {}) {
       purpose: vars.purpose,
       intent: vars.intent,
       narrativeRole: vars.narrativeRole,
+      timelineSlotCount: timelineSlotCount(vars.slotConstraints),
     }),
     Array.isArray(vars.layoutContext?.shapeHints) && vars.layoutContext.shapeHints.length
       ? `\nShape hints (suggestions only — you decide in shapeDecisions):\n${vars.layoutContext.shapeHints
