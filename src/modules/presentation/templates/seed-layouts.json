@@ -13714,7 +13714,7 @@
           "id": "COL_1_HEADER",
           "region": "cols 4-6, rows 3-4",
           "role": "heading",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13728,7 +13728,7 @@
           "id": "COL_2_HEADER",
           "region": "cols 6-8, rows 3-4",
           "role": "heading",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13742,7 +13742,7 @@
           "id": "COL_3_HEADER",
           "region": "cols 8-10, rows 3-4",
           "role": "heading",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13756,7 +13756,7 @@
           "id": "COL_4_HEADER",
           "region": "cols 10-12, rows 3-4",
           "role": "heading",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13770,7 +13770,7 @@
           "id": "ROW_1_LABEL",
           "region": "cols 1-4, rows 4-5",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13784,7 +13784,7 @@
           "id": "ROW_2_LABEL",
           "region": "cols 1-4, rows 5-6",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13798,7 +13798,7 @@
           "id": "ROW_3_LABEL",
           "region": "cols 1-4, rows 6-7",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13812,7 +13812,7 @@
           "id": "ROW_4_LABEL",
           "region": "cols 1-4, rows 7-8",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13826,7 +13826,7 @@
           "id": "ROW_5_LABEL",
           "region": "cols 1-4, rows 8-9",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -13840,7 +13840,7 @@
           "id": "ROW_6_LABEL",
           "region": "cols 1-4, rows 9-10",
           "role": "body",
-          "placeholder_text": "Add Text Here",
+          "placeholder_text": "",
           "layer": 12,
           "typography": {
             "fontSize": 14,
@@ -14203,61 +14203,61 @@
             "uppercase": false
           },
           "COL_1_HEADER": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "COL_2_HEADER": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "COL_3_HEADER": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "COL_4_HEADER": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "title",
             "bold": true,
             "uppercase": false
           },
           "ROW_1_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_2_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_3_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_4_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_5_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_6_LABEL": {
-            "text": "Add Text Here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
@@ -27276,7 +27276,7 @@
           "id": "ROW_1_LABEL",
           "region": "cols 1-3, rows 4-5",
           "role": "body",
-          "placeholder_text": "Add text here",
+          "placeholder_text": "",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -27291,7 +27291,7 @@
           "id": "ROW_2_LABEL",
           "region": "cols 1-3, rows 5-6",
           "role": "body",
-          "placeholder_text": "Add text here",
+          "placeholder_text": "",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -27306,7 +27306,7 @@
           "id": "ROW_3_LABEL",
           "region": "cols 1-3, rows 6-7",
           "role": "body",
-          "placeholder_text": "Add text here",
+          "placeholder_text": "",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -27321,7 +27321,7 @@
           "id": "ROW_4_LABEL",
           "region": "cols 1-3, rows 7-8",
           "role": "body",
-          "placeholder_text": "Add text here",
+          "placeholder_text": "",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -27336,7 +27336,7 @@
           "id": "ROW_5_LABEL",
           "region": "cols 1-3, rows 8-9",
           "role": "body",
-          "placeholder_text": "Add text here",
+          "placeholder_text": "",
           "layer": 10,
           "typography": {
             "fontSize": 14,
@@ -27413,31 +27413,31 @@
             "uppercase": false
           },
           "ROW_1_LABEL": {
-            "text": "Add text here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_2_LABEL": {
-            "text": "Add text here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_3_LABEL": {
-            "text": "Add text here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_4_LABEL": {
-            "text": "Add text here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false
           },
           "ROW_5_LABEL": {
-            "text": "Add text here",
+            "text": "",
             "variant": "body",
             "bold": false,
             "uppercase": false

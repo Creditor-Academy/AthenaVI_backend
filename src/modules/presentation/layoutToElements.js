@@ -25,6 +25,7 @@ const { fitTextElementsToBoxes } = require('./textFit.util');
 const { applyDeckHeadingSize } = require('./artDirection/deckHeadingSize');
 const { recolorDiagramToTheme } = require('./artDirection/themeRecolor');
 const { normalizeTextAndCards } = require('./artDirection/textHierarchy');
+const { cleanPlaceholders } = require('./artDirection/cleanPlaceholders');
 const {
   normalizeContentForLayout,
   deriveContentContract,
@@ -2375,7 +2376,8 @@ function blankCanvas(opts = {}) {
         rotation: 0,
         opacity: 1,
       },
-      content: { text: 'Double-click to edit', fontSize: 32, bold: false, align: 'center' },
+      // Empty on purpose — the editor shows its own hint; placeholder copy must never be saved.
+      content: { text: '', fontSize: 32, bold: false, align: 'center' },
       role: 'title',
     });
   }
@@ -9703,6 +9705,11 @@ function finalizeElementsDoc(
   }
   const { reconcileCompiledTextWithContent } = require('./contentIntegrity.util');
   next = reconcileCompiledTextWithContent(next, layoutSchema, content);
+
+  // First generation only: no placeholder copy and no leftover empty text boxes.
+  if (themeRecolor) {
+    next = cleanPlaceholders(next, { layoutSchema });
+  }
 
   // One heading size across the deck (overrides per-layout/diagram hardcoded sizes).
   next = applyDeckHeadingSize(next, { themeTokens, layoutSchema, canvas });
