@@ -486,6 +486,19 @@ async function injectListIconsIntoElementsDoc(elementsDoc, content = {}, themeTo
   const targets = findListIconTargets(elementsDoc);
   if (targets.length < 2) return { doc: elementsDoc, added: 0 };
 
+  // Cards drawn into one full-slide background graphic: an icon beside the text would land on or
+  // outside the card edge, so don't add list icons there.
+  const canvasArea =
+    (Number(elementsDoc?.canvas?.width) || 1920) * (Number(elementsDoc?.canvas?.height) || 1080);
+  const hasCardArtBackground = (elementsDoc?.elements || []).some((el) => {
+    if (el?.type !== 'graphic') return false;
+    const p = el.placement || {};
+    return (Number(p.width) || 0) * (Number(p.height) || 0) >= canvasArea * 0.9;
+  });
+  if (hasCardArtBackground && targets.every((t) => !/_TITLE$/i.test(String(t.slotId || '')))) {
+    return { doc: elementsDoc, added: 0 };
+  }
+
   // Prefer live canvas title text (what the user sees) over content.columns/bullets,
   // which are often empty or misaligned on image+text card layouts.
   const pointTexts = targets.map((el, i) => textFromTargetElement(el) || bulletTextAt(content, i));

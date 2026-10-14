@@ -54,7 +54,9 @@ test('generated content slides keep heading > card title > body (≥1.15×) on e
     if (tiers[2].length && tiers[3].length) {
       const t2 = Math.min(...tiers[2]);
       const t3 = Math.max(...tiers[3]);
-      if (t2 / t3 < 1.15 && t2 > 9) failures.push(`${t.schema.layout_id}: ${t2}/${t3}`);
+      // Titles never smaller than paragraphs; ≥1.15× unless the paragraph sits at the 14px
+      // readability floor and the title box can't grow (then the title is bold instead).
+      if (t2 < t3 || (t2 / t3 < 1.15 && t3 > 14 && t2 > 9)) failures.push(`${t.schema.layout_id}: ${t2}/${t3}`);
     }
     if (tiers[1].length && tiers[2].length && Math.max(...tiers[2]) >= tiers[1][0]) {
       failures.push(`${t.schema.layout_id}: card title ≥ heading`);

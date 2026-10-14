@@ -26,6 +26,7 @@ const { applyDeckHeadingSize } = require('./artDirection/deckHeadingSize');
 const { recolorDiagramToTheme } = require('./artDirection/themeRecolor');
 const { normalizeTextAndCards } = require('./artDirection/textHierarchy');
 const { cleanPlaceholders } = require('./artDirection/cleanPlaceholders');
+const { enforceReadableText } = require('./artDirection/readableText');
 const {
   normalizeContentForLayout,
   deriveContentContract,
@@ -9717,6 +9718,8 @@ function finalizeElementsDoc(
   // First generation only: heading > card title > body > caption ramp, cards fit + center short text.
   if (themeRecolor) {
     next = normalizeTextAndCards(next, { themeTokens, layoutSchema, canvas });
+    // Theme fonts per role, bold card titles, nothing below 14px (trim instead of shrinking).
+    next = enforceReadableText(next, { themeTokens, layoutSchema, canvas });
   }
 
   // Last step: shrink any text that would overflow its box so generated slides fit the page.

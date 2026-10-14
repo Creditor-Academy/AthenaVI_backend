@@ -130,6 +130,12 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
     );
   }
 
+  if (/four_para|three_para|two_para|eight_short|intro_.*para|para_.*image/.test(id)) {
+    lines.push(
+      'Compact card layout: each card holds a title AND its paragraph in one small box. Card title ≤4 words; card paragraph ≤18 words (one sentence). Longer copy will be cut, so write tight, specific lines.'
+    );
+  }
+
   if (/grid_insights_chart/.test(id)) {
     lines.push(
       'Grid insights chart layout: REQUIRED insights[3] (short 2-4 word labels, one per insight card), chart { title, labels, series } for BAR_CHART, caption (one short line under the chart), and takeaway { title, body } (title ≤5 words, body 2-3 lines explaining the chart). Never use "Insight 1", "Revenue growth" or "Key takeaway" as literal copy.'
