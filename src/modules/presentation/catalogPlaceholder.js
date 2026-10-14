@@ -25,6 +25,7 @@ const CATALOG_PLACEHOLDER_PATTERNS = [
   /^add (your )?text here\.?$/i,
   /^click to (add|edit)( text)?\.?$/i,
   /^type here\.?$/i,
+  /^point (one|two|three|four|five|six|seven|eight|\d+)$/i,
   /^option [ab]$/i,
   /^metric [ab]$/i,
   /^this is a sample description for metric/i,

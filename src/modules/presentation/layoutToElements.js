@@ -9708,7 +9708,7 @@ function finalizeElementsDoc(
 
   // First generation only: no placeholder copy and no leftover empty text boxes.
   if (themeRecolor) {
-    next = cleanPlaceholders(next, { layoutSchema });
+    next = cleanPlaceholders(next, { layoutSchema, canvas });
   }
 
   // One heading size across the deck (overrides per-layout/diagram hardcoded sizes).

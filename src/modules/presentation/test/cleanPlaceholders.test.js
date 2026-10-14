@@ -62,6 +62,53 @@ test('cleanPlaceholders blanks placeholder copy, drops empty boxes, keeps the he
   assert.deepStrictEqual(out.elements.map((el) => el.slotId), ['HEADING', 'CARD_1_BODY', 'CARD_1_BG']);
 });
 
+const { collapseEmptyCards } = require('../artDirection/cleanPlaceholders');
+
+function cardRow(texts, { svg = false } = {}) {
+  const els = [];
+  texts.forEach((text, i) => {
+    const x = 100 + i * 440;
+    els.push(
+      svg
+        ? { id: `bg${i}`, type: 'graphic', slotId: `CARD_${i + 1}_BG`, placement: { x, y: 300, width: 400, height: 300 }, content: { svg: '<svg viewBox="0 0 1 1"/>' } }
+        : { id: `bg${i}`, type: 'shape', slotId: `CARD_${i + 1}_BG`, placement: { x, y: 300, width: 400, height: 300 }, content: { shape: 'rect' } },
+      { id: `ic${i}`, type: 'graphic', slotId: `CARD_${i + 1}_ICON`, placement: { x: x + 20, y: 320, width: 60, height: 60 }, content: {} },
+      { id: `tx${i}`, type: 'text', slotId: `CARD_${i + 1}_BODY`, placement: { x: x + 20, y: 400, width: 360, height: 150 }, content: { text } }
+    );
+  });
+  return els;
+}
+
+test('empty cards are removed with their contents and the rest re-flow across the row', () => {
+  const out = collapseEmptyCards(cardRow(['Scheduling', 'Docs', '', '']), { layoutSchema: { layout_id: 'grid_cards_x' } });
+  assert.ok(!out.some((el) => /^(bg|ic|tx)[23]$/.test(el.id)), 'cards 3–4 and their icons removed');
+  const bgs = out.filter((el) => el.slotId?.endsWith('_BG')).map((el) => el.placement);
+  assert.strictEqual(bgs.length, 2);
+  assert.strictEqual(bgs[0].x, 100, 'row starts where it did');
+  assert.strictEqual(bgs[1].x + bgs[1].width, 100 + 3 * 440 + 400, 'row ends where it did');
+  assert.strictEqual(bgs[0].width, bgs[1].width, 'equal widths');
+  assert.strictEqual(bgs[1].x - (bgs[0].x + bgs[0].width), 40, 'original gap kept');
+  for (const i of [0, 1]) {
+    const bg = out.find((el) => el.id === `bg${i}`).placement;
+    const tx = out.find((el) => el.id === `tx${i}`).placement;
+    assert.ok(tx.x >= bg.x && tx.x + tx.width <= bg.x + bg.width, 'text stays inside its card');
+  }
+});
+
+test('non-stretchable SVG cards keep their width and are centred', () => {
+  const out = collapseEmptyCards(cardRow(['One', '', ''], { svg: true }), { layoutSchema: { layout_id: 'grid_cards_x' } });
+  const bg = out.find((el) => el.id === 'bg0').placement;
+  assert.strictEqual(bg.width, 400);
+  assert.strictEqual(bg.x, Math.round(100 + (2 * 440 + 400 - 400) / 2));
+});
+
+test('a row with every card empty is left alone; connected diagrams are skipped', () => {
+  const allEmpty = cardRow(['', '']);
+  assert.strictEqual(collapseEmptyCards(allEmpty, { layoutSchema: { layout_id: 'grid_cards_x' } }), allEmpty);
+  const funnel = cardRow(['A', '']);
+  assert.strictEqual(collapseEmptyCards(funnel, { layoutSchema: { layout_id: 'diagram_funnel_v1' } }), funnel);
+});
+
 test('editor path (no generation flag) is unchanged', async () => {
   const schema = LAYOUTS.find((t) => t.schema?.layout_id === 'table_with_description_v1')?.schema;
   const { elementsDoc } = await compileSlide({ layoutSchema: schema, content: CONTENT, themeTokens: THEME, skipContentRepair: true });

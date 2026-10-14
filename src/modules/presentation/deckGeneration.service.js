@@ -33,7 +33,7 @@ const {
   buildLayoutSearchText,
 } = require('./deckLayout/resolveLayoutCandidates');
 const { ensureCompatibleLayout, UNIVERSAL_TEXT_LAYOUT_IDS } = require('./deckLayout/ensureLayoutPick');
-const { harmonizeDeckHeadings } = require('./artDirection/deckHeadingSize');
+const { harmonizeDeckHeadings, harmonizeDeckTiers } = require('./artDirection/deckHeadingSize');
 const { findAdjacentDuplicates } = require('./deckLayout/adjacency');
 const { shouldReusePreselectedLayout } = require('./deckLayout/preselectedLayoutReuse');
 const { planDeckVisualRhythm } = require('./artDirection/deckVisualRhythm');
@@ -4620,14 +4620,36 @@ async function processDeckGeneration({
     // remember it so later per-slide recompiles (layout change, regenerate) use the same size.
     let harmonizedThemeTokens = null;
     try {
-      const { headingPx, updates } = harmonizeDeckHeadings(slides.filter((s) => s.status === 'READY'));
+      const ready = slides.filter((s) => s.status === 'READY');
+      const { headingPx, updates } = harmonizeDeckHeadings(ready);
+      const changedIds = new Set();
       for (const update of updates) {
-        // eslint-disable-next-line no-await-in-loop
-        await presentationDao.updateSlide(update.slideId, { elements: update.elements });
+        const s = ready.find((x) => x.id === update.slideId);
+        if (s) s.elements = update.elements;
+        changedIds.add(update.slideId);
       }
-      if (headingPx) {
+      // Card titles, paragraphs and captions: one size each across the deck.
+      const tierResult = harmonizeDeckTiers(ready);
+      for (const update of tierResult.updates) {
+        const s = ready.find((x) => x.id === update.slideId);
+        if (s) s.elements = update.elements;
+        changedIds.add(update.slideId);
+      }
+      for (const id of changedIds) {
+        const s = ready.find((x) => x.id === id);
+        // eslint-disable-next-line no-await-in-loop
+        if (s) await presentationDao.updateSlide(id, { elements: s.elements });
+      }
+      if (headingPx || Object.values(tierResult.tiers).some(Boolean)) {
         const tokens = refreshed?.themeTokens && typeof refreshed.themeTokens === 'object' ? refreshed.themeTokens : {};
-        harmonizedThemeTokens = { ...tokens, typeScale: { ...(tokens.typeScale || {}), deckHeading: headingPx } };
+        harmonizedThemeTokens = {
+          ...tokens,
+          typeScale: {
+            ...(tokens.typeScale || {}),
+            ...(headingPx ? { deckHeading: headingPx } : {}),
+            deckTiers: tierResult.tiers,
+          },
+        };
       }
     } catch (err) {
       logger.warn?.('presentation_heading_harmonize_failed', { deckId, error: err?.message });

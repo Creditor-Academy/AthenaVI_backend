@@ -16,7 +16,8 @@ const { isExemptLayout } = require('./deckHeadingSize');
 
 const CHAR_EM = 0.54;
 const MIN_PX = 9;
-const TIER2_ID_RE = /_(TITLE|HEADING|HEADER|NAME|LABEL)$/i;
+// _LABEL / _NAME are short labels (stat labels, member names), not card titles.
+const TIER2_ID_RE = /_(TITLE|HEADING|HEADER)$/i;
 const NO_RESIZE_LAYOUT_RE = /funnel|pyramid|cycle|venn|process_|timeline_|ribbon|hex|roadmap/i;
 const SKIP_ROLE_RE = /^(stat|metric|quote|cta)$/i;
 
@@ -96,27 +97,35 @@ function applyTypeRamp(elements, themeTokens, canvasW) {
   });
   const out = elements.slice();
   const cur = (i) => Number(out[i].content?.fontSize) || body;
+  // Deck-wide sizes harmonized after generation (harmonizeDeckTiers) — regenerated slides match.
+  const deck = ts.deckTiers || {};
+  const tag = (el, size, tier) => {
+    const sized = setSize(el, size);
+    return { ...sized, content: { ...sized.content, deckTier: tier } };
+  };
 
   // Tier 2: ≥ body×1.3, ≤ heading÷1.3; all tier-2 texts share the smallest fitted size.
   let t2 = null;
   if (byTier[2].length) {
     const hi = Math.floor(heading / 1.3);
-    const sizes = byTier[2].map((i) => fittedSize(out[i], Math.min(hi, Math.max(cur(i), body * 1.3)), canvasW));
+    const want = (i) => (Number(deck.t2) > 0 ? Math.min(hi, Number(deck.t2)) : Math.min(hi, Math.max(cur(i), body * 1.3)));
+    const sizes = byTier[2].map((i) => fittedSize(out[i], want(i), canvasW));
     t2 = Math.min(...sizes);
-    byTier[2].forEach((i) => { out[i] = setSize(out[i], t2); });
+    byTier[2].forEach((i) => { out[i] = tag(out[i], t2, 2); });
   }
   // Tier 3: ≥ body×0.85, ≤ tier2÷1.2.
   let t3 = null;
   if (byTier[3].length) {
     const cap = t2 ? Math.floor(t2 / 1.2) : Infinity;
-    const sizes = byTier[3].map((i) => fittedSize(out[i], Math.min(cap, Math.max(cur(i), body * 0.85)), canvasW));
+    const want = (i) => Math.min(cap, Number(deck.t3) > 0 ? Number(deck.t3) : Math.max(cur(i), body * 0.85));
+    const sizes = byTier[3].map((i) => fittedSize(out[i], want(i), canvasW));
     t3 = Math.max(MIN_PX, Math.min(cap, Math.min(...sizes)));
-    byTier[3].forEach((i) => { out[i] = setSize(out[i], t3); });
+    byTier[3].forEach((i) => { out[i] = tag(out[i], t3, 3); });
   }
   // Tier 4: ≤ body÷1.15 and below tier 3.
   if (byTier[4].length) {
-    const cap = Math.floor(Math.min(body / 1.15, t3 ? t3 / 1.1 : Infinity));
-    byTier[4].forEach((i) => { if (cur(i) > cap) out[i] = setSize(out[i], Math.max(MIN_PX, cap)); });
+    const cap = Math.floor(Math.min(Number(deck.t4) > 0 ? Number(deck.t4) : body / 1.15, t3 ? t3 / 1.1 : Infinity));
+    byTier[4].forEach((i) => { out[i] = tag(out[i], Math.max(MIN_PX, Math.min(cur(i), cap)), 4); });
   }
   return out;
 }
@@ -267,4 +276,4 @@ function normalizeTextAndCards(doc, { themeTokens = null, layoutSchema = null, c
   return { ...doc, elements };
 }
 
-module.exports = { normalizeTextAndCards, tierOf };
+module.exports = { normalizeTextAndCards, tierOf, NO_RESIZE_LAYOUT_RE };

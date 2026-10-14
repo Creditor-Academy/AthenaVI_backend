@@ -157,7 +157,53 @@ function harmonizeDeckHeadings(slides, { floor = MIN_DECK_HEADING_PX } = {}) {
   return { headingPx, updates };
 }
 
+/** Floors so one cramped slide can't shrink every card title / paragraph / caption in the deck. */
+const DECK_TIER_FLOORS = { 2: 18, 3: 14, 4: 12 };
+
+/**
+ * Deck-level pass for card titles (tier 2), paragraphs (tier 3) and captions (tier 4), tagged by
+ * textHierarchy (content.deckTier). Each tier gets one size across the deck — the smallest fitted
+ * size, not below its floor; tiers keep their ratios (body ≤ title÷1.2, caption ≤ body÷1.1).
+ * Only shrinks, so it can never cause overflow.
+ * @returns {{ tiers: { t2?: number, t3?: number, t4?: number }, updates: { slideId: string, elements: object }[] }}
+ */
+function harmonizeDeckTiers(slides) {
+  const list = (Array.isArray(slides) ? slides : []).filter((s) => Array.isArray(s?.elements?.elements));
+  const minOf = (tier) => {
+    const sizes = [];
+    for (const s of list) {
+      for (const el of s.elements.elements) {
+        if (el?.content?.deckTier === tier && Number(el.content.fontSize) > 0) sizes.push(Number(el.content.fontSize));
+      }
+    }
+    return sizes.length ? Math.min(...sizes) : null;
+  };
+  const target = {};
+  for (const tier of [2, 3, 4]) {
+    const min = minOf(tier);
+    if (min != null) target[tier] = Math.max(DECK_TIER_FLOORS[tier], min);
+  }
+  if (target[2] && target[3]) target[3] = Math.min(target[3], Math.floor(target[2] / 1.2));
+  if (target[3] && target[4]) target[4] = Math.min(target[4], Math.floor(target[3] / 1.1));
+  if (!Object.keys(target).length) return { tiers: {}, updates: [] };
+
+  const updates = [];
+  for (const s of list) {
+    let changed = false;
+    const elements = s.elements.elements.map((el) => {
+      const t = target[el?.content?.deckTier];
+      if (!t || !(Number(el.content.fontSize) > t)) return el;
+      changed = true;
+      return withFontSize(el, t);
+    });
+    if (changed) updates.push({ slideId: s.id, elements: { ...s.elements, elements } });
+  }
+  return { tiers: { t2: target[2], t3: target[3], t4: target[4] }, updates };
+}
+
 module.exports = {
+  DECK_TIER_FLOORS,
+  harmonizeDeckTiers,
   MIN_DECK_HEADING_PX,
   resolveDeckHeadingPx,
   applyDeckHeadingSize,
