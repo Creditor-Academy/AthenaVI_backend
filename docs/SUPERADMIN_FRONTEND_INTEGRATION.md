@@ -599,7 +599,13 @@ flowchart TD
 | Platform actions audit | `GET /api/superadmin/reports/credits/platform-actions` |
 | Platform access toggle | `PATCH /api/superadmin/users/:userId/platform-access` |
 | Platform alerts + HeyGen wallet | `GET /api/superadmin/alerts/summary` |
+| Early access queue | `GET /api/superadmin/early-access/requests` |
+| Early access status update | `PATCH .../early-access/requests/:requestId/status` with `{ "status": "under_review" }` |
+| Early access approve / reject | `POST .../early-access/requests/:requestId/approve` or `.../reject` |
 | HeyGen USD wallet | `GET /api/superadmin/heygen/account` |
+| Product email broadcast | `POST /api/superadmin/broadcasts/product-email` |
+| Product email broadcast history | `GET /api/superadmin/broadcasts/product-email` |
+| Broadcast detail + recipients | `GET .../broadcasts/product-email/:broadcastId`, `GET .../recipients` |
 
 ---
 
@@ -654,7 +660,8 @@ async function superadminFetch(path, options = {}) {
 - [ ] Storage upgrade queue: `GET /api/superadmin/storage/requests`; reject via POST
 - [ ] Workspace list before drilling into pool by `workspaceId`
 - [ ] Usage report uses extended `byFeature` / `topUsers` fields when building dashboards
-- [ ] Product email broadcast: `POST /api/superadmin/broadcasts/product-email` with `confirm: "send"`
+- [ ] Product email broadcast: `POST /api/superadmin/broadcasts/product-email` with `confirm: "send"` (save `broadcastId` from response)
+- [ ] Broadcast history UI: `GET /api/superadmin/broadcasts/product-email` + recipient log per broadcast
 - [ ] “Back to platform” is client-side navigation only
 
 ### General

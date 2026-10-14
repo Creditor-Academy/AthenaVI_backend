@@ -29,13 +29,15 @@ async function checkHeygenWalletAlert() {
 }
 
 async function getAlertsSummary(userId) {
-  const [unreadPlatformCount, heygenResult] = await Promise.all([
+  const [unreadPlatformCount, pendingEarlyAccessCount, heygenResult] = await Promise.all([
     inboxDao.countUnreadPlatformByUserId(userId),
+    superadminService.countPendingEarlyAccessRequests(),
     superadminService.getHeygenAccountBilling().catch(() => null),
   ]);
 
   return {
     unreadPlatformCount,
+    pendingEarlyAccessCount,
     heygenWallet: heygenResult?.wallet
       ? {
           remainingBalanceUsd: heygenResult.wallet.remainingBalanceUsd,

@@ -1,10 +1,13 @@
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+const {
+  brandName,
+  escapeHtml,
+  wrapEmailHtml,
+  infoPanel,
+  dataTable,
+  formatSubmittedAt,
+  sectionHeading,
+  BRAND,
+} = require('./emailLayout');
 
 function formatGb(bytes) {
   if (bytes == null) {
@@ -34,17 +37,6 @@ function formatUrgency(urgency) {
   };
 
   return labels[urgency] || urgency;
-}
-
-function formatSubmittedAt(isoString) {
-  try {
-    return new Date(isoString).toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-  } catch {
-    return isoString;
-  }
 }
 
 function buildStorageUpgradeRequestEmail({
@@ -90,76 +82,56 @@ ${workspaceText}
 Submitted: ${submittedLabel}
 Reference: ${requestId}`;
 
-  const subject = `[AthenaVI] Storage upgrade request — ${userEmail} — +${requestedAdditionalGb} GB`;
+  const subject = `[${brandName()}] Storage upgrade request — ${userEmail} — +${requestedAdditionalGb} GB`;
 
-  const workspaceHtml = hasWorkspace
-    ? `<tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Workspace</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">
-            <strong>${escapeHtml(workspaceName || 'Unnamed workspace')}</strong><br />
-            <span style="color:#4a5568;">${escapeHtml(formatGb(workspaceFootprintBytes))} used in this workspace</span>
-          </td>
-        </tr>`
-    : '';
+  const rows = [
+    {
+      label: 'From',
+      valueHtml: `<strong>${escapeHtml(displayName)}</strong><br />
+        <a href="mailto:${escapeHtml(userEmail)}" style="color:${BRAND.accent};text-decoration:none;">${escapeHtml(userEmail)}</a>`,
+    },
+    {
+      label: 'Requested',
+      valueHtml: `<strong style="font-size:18px;">+${escapeHtml(String(requestedAdditionalGb))} GB</strong>`,
+    },
+    { label: 'Priority', valueHtml: escapeHtml(urgencyLabel) },
+    {
+      label: 'Current usage',
+      valueHtml: `${escapeHtml(formatGb(currentUsedBytes))} used of ${escapeHtml(formatGb(currentLimitBytes))}`,
+    },
+    { label: 'Current plan', valueHtml: escapeHtml(planName) },
+  ];
 
-  const html = `
-  <div style="background-color:#f4f6f8;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:10px;padding:32px 28px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+  if (hasWorkspace) {
+    rows.push({
+      label: 'Workspace',
+      valueHtml: `<strong>${escapeHtml(workspaceName || 'Unnamed workspace')}</strong><br />
+        <span style="color:${BRAND.textMuted};">${escapeHtml(formatGb(workspaceFootprintBytes))} used in this workspace</span>`,
+    });
+  }
 
-      <p style="margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;">
-        AthenaVI · Admin notification
-      </p>
-      <h2 style="color:#2d3748;margin:0 0 20px;font-size:22px;">
-        Storage upgrade request
-      </h2>
+  rows.push({
+    label: 'Submitted',
+    valueHtml: escapeHtml(submittedLabel),
+  });
 
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;width:120px;">From</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">
-            <strong>${escapeHtml(displayName)}</strong><br />
-            <a href="mailto:${escapeHtml(userEmail)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(userEmail)}</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Requested</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">
-            <strong style="font-size:18px;">+${requestedAdditionalGb} GB</strong>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Priority</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(urgencyLabel)}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Current usage</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">
-            ${escapeHtml(formatGb(currentUsedBytes))} used of ${escapeHtml(formatGb(currentLimitBytes))}
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Current plan</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(planName)}</td>
-        </tr>
-        ${workspaceHtml}
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Submitted</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(submittedLabel)}</td>
-        </tr>
-      </table>
+  const bodyHtml = `
+    ${sectionHeading('Request details', { align: 'left' })}
+    ${dataTable(rows)}
+    ${infoPanel({
+      title: 'Reason',
+      contentHtml: `<p style="margin:0;color:${BRAND.textPrimary};font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(reason)}</p>`,
+    })}
+    <p style="margin:0;color:${BRAND.textLight};font-size:11px;text-align:left;">
+      Reference: ${escapeHtml(requestId)}
+    </p>`;
 
-      <div style="background:#f7fafc;border-left:4px solid #2563eb;border-radius:6px;padding:16px 18px;margin-bottom:24px;">
-        <p style="margin:0 0 8px;color:#718096;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;">
-          Reason
-        </p>
-        <p style="margin:0;color:#2d3748;font-size:15px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(reason)}</p>
-      </div>
-
-      <p style="margin:0;color:#a0aec0;font-size:11px;">
-        Reference: ${escapeHtml(requestId)}
-      </p>
-    </div>
-  </div>`;
+  const html = wrapEmailHtml({
+    preheader: `${userEmail} requested +${requestedAdditionalGb} GB storage (${urgencyLabel})`,
+    title: 'Storage upgrade request',
+    bodyHtml,
+    variant: 'admin',
+  });
 
   return { subject, text, html };
 }

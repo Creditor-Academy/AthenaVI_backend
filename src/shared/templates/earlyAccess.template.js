@@ -1,32 +1,30 @@
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function firstName(name) {
-  const trimmed = String(name || '').trim();
-  if (!trimmed) {
-    return 'there';
-  }
-  return trimmed.split(/\s+/)[0];
-}
+const {
+  escapeHtml,
+  brandName,
+  frontendUrl,
+  exploreUrl,
+  wrapEmailHtml,
+  infoPanel,
+  dataTable,
+  primaryButton,
+  secondaryLink,
+  formatSubmittedAt,
+  firstName,
+  sectionHeading,
+  bulletList,
+  whyChooseUsSection,
+  whyChooseUsSectionPreSignIn,
+  whyChooseUsText,
+  sectionDivider,
+  disclaimerText,
+  BRAND,
+} = require('./emailLayout');
 
 function formatOptionalLine(label, value) {
   if (!value) {
     return `${label}: —`;
   }
   return `${label}: ${value}`;
-}
-
-function formatSubmittedAt(isoString) {
-  try {
-    return new Date(isoString).toISOString();
-  } catch {
-    return isoString;
-  }
 }
 
 function buildEarlyAccessSuperadminNotificationEmail({
@@ -56,105 +54,198 @@ ${message || '—'}
 ========================================
 Request ID : ${requestId}
 Submitted  : ${submittedLabel}
-Source     : AthenaVI Early Access Form`;
+Source     : ${brandName()} Early Access Form`;
 
   const subject = `Early Access Request - ${name}`;
 
-  const html = `
-  <div style="background-color:#f4f6f8;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:10px;padding:32px 28px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-      <p style="margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;">
-        AthenaVI · Admin notification
-      </p>
-      <h2 style="color:#2d3748;margin:0 0 20px;font-size:22px;">New Early Access Request</h2>
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;width:100px;">Name</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;"><strong>${escapeHtml(name)}</strong></td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Email</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">
-            <a href="mailto:${escapeHtml(email)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(email)}</a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Company</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(company || '—')}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Role</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(role || '—')}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#718096;font-size:14px;vertical-align:top;">Use Case</td>
-          <td style="padding:8px 0;color:#2d3748;font-size:14px;">${escapeHtml(useCase || '—')}</td>
-        </tr>
-      </table>
-      <div style="background:#f7fafc;border-left:4px solid #2563eb;border-radius:6px;padding:16px 18px;margin-bottom:24px;">
-        <p style="margin:0 0 8px;color:#718096;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.03em;">Message</p>
-        <p style="margin:0;color:#2d3748;font-size:15px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(message || '—')}</p>
-      </div>
-      <p style="margin:0 0 4px;color:#a0aec0;font-size:11px;">Request ID: ${escapeHtml(requestId)}</p>
-      <p style="margin:0 0 4px;color:#a0aec0;font-size:11px;">Submitted: ${escapeHtml(submittedLabel)}</p>
-      <p style="margin:0;color:#a0aec0;font-size:11px;">Source: AthenaVI Early Access Form</p>
-    </div>
-  </div>`;
+  const bodyHtml = `
+    ${sectionHeading('New request details')}
+    ${dataTable([
+      { label: 'Name', valueHtml: `<strong>${escapeHtml(name)}</strong>` },
+      {
+        label: 'Email',
+        valueHtml: `<a href="mailto:${escapeHtml(email)}" style="color:${BRAND.accent};text-decoration:none;">${escapeHtml(email)}</a>`,
+      },
+      { label: 'Company', valueHtml: escapeHtml(company || '—') },
+      { label: 'Role', valueHtml: escapeHtml(role || '—') },
+      { label: 'Use Case', valueHtml: escapeHtml(useCase || '—') },
+    ])}
+    ${infoPanel({
+      title: 'Message',
+      contentHtml: `<p style="margin:0;color:${BRAND.textPrimary};font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(message || '—')}</p>`,
+    })}
+    <p style="margin:0;color:${BRAND.textLight};font-size:11px;line-height:1.6;text-align:center;">
+      Request ID: ${escapeHtml(requestId)} &bull; Submitted: ${escapeHtml(submittedLabel)}
+    </p>`;
+
+  const html = wrapEmailHtml({
+    preheader: `New early access request from ${name} (${email})`,
+    title: 'New Early Access Request',
+    bodyHtml,
+    variant: 'admin',
+  });
 
   return { subject, text, html };
 }
 
 function buildEarlyAccessConfirmationEmail({ name, email, company, role, useCase }) {
   const greetingName = firstName(name);
+  const home = frontendUrl();
+  const explore = exploreUrl();
 
-  const text = `Hi ${greetingName},
+  const text = `Hello, ${greetingName}!
 
-Thanks for requesting early access to Athena VI!
+Your request is in good hands
 
 We've received your request and our team will personally review your details.
 You'll hear back from us at ${email} within 1-3 business days.
+
+${whyChooseUsText()}
 
 What you submitted:
   ${formatOptionalLine('Company', company)}
   ${formatOptionalLine('Role', role)}
   ${formatOptionalLine('Use Case', useCase)}
 
-In the meantime, feel free to explore:
-  https://athenavi.com/products
-  https://athenavi.com/use-cases
+  • Personal review — our team reads every early access request.
+  • Priority onboarding — approved members get guided setup and support.
+  • Full platform access — AI avatars, workspaces, and studio-quality renders.
 
-The Athena VI Team`;
+Open Virtual Studio: ${home}
+Explore products: ${explore}
 
-  const subject = "You're on the Athena VI early access list";
+The ${brandName()} Team`;
 
-  const html = `
-  <div style="background-color:#f4f6f8;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:10px;padding:32px 28px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-      <h2 style="color:#2d3748;margin:0 0 16px;font-size:22px;">Hi ${escapeHtml(greetingName)},</h2>
-      <p style="margin:0 0 16px;color:#2d3748;font-size:15px;line-height:1.6;">
-        Thanks for requesting early access to Athena VI!
-      </p>
-      <p style="margin:0 0 16px;color:#2d3748;font-size:15px;line-height:1.6;">
-        We've received your request and our team will personally review your details.
-        You'll hear back from us at <strong>${escapeHtml(email)}</strong> within 1-3 business days.
-      </p>
-      <div style="background:#f7fafc;border-radius:6px;padding:16px 18px;margin-bottom:20px;">
-        <p style="margin:0 0 8px;color:#718096;font-size:12px;font-weight:bold;text-transform:uppercase;">What you submitted</p>
-        <p style="margin:0 0 4px;color:#2d3748;font-size:14px;">Company: ${escapeHtml(company || '—')}</p>
-        <p style="margin:0 0 4px;color:#2d3748;font-size:14px;">Role: ${escapeHtml(role || '—')}</p>
-        <p style="margin:0;color:#2d3748;font-size:14px;">Use Case: ${escapeHtml(useCase || '—')}</p>
-      </div>
-      <p style="margin:0 0 8px;color:#2d3748;font-size:15px;">In the meantime, feel free to explore:</p>
-      <p style="margin:0 0 4px;font-size:14px;"><a href="https://athenavi.com/products" style="color:#2563eb;">https://athenavi.com/products</a></p>
-      <p style="margin:0 0 20px;font-size:14px;"><a href="https://athenavi.com/use-cases" style="color:#2563eb;">https://athenavi.com/use-cases</a></p>
-      <p style="margin:0;color:#718096;font-size:14px;">The Athena VI Team</p>
-    </div>
-  </div>`;
+  const subject = `You're on the ${brandName()} early access list`;
+
+  const bodyHtml = `
+    ${sectionHeading('Your request is in good hands', { align: 'left' })}
+    <p style="margin:0 0 24px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
+      We&rsquo;ve received your request and our team will personally review your details.
+      You&rsquo;ll hear back from us at <strong>${escapeHtml(email)}</strong> within 1&ndash;3 business days.
+    </p>
+    ${whyChooseUsSectionPreSignIn()}
+    ${sectionDivider()}
+    ${infoPanel({
+      title: 'What you submitted',
+      contentHtml: `
+        <p style="margin:0 0 6px;color:${BRAND.textPrimary};font-size:14px;">Company: ${escapeHtml(company || '—')}</p>
+        <p style="margin:0 0 6px;color:${BRAND.textPrimary};font-size:14px;">Role: ${escapeHtml(role || '—')}</p>
+        <p style="margin:0;color:${BRAND.textPrimary};font-size:14px;">Use Case: ${escapeHtml(useCase || '—')}</p>`,
+    })}
+    ${bulletList([
+      '<strong>Personal review</strong> &mdash; our team reads every early access request.',
+      '<strong>Priority onboarding</strong> &mdash; approved members get guided setup and support.',
+      '<strong>Full platform access</strong> &mdash; AI avatars, workspaces, and studio-quality renders.',
+    ])}
+    <p style="margin:16px 0 0;color:${BRAND.textMuted};font-size:14px;text-align:left;">
+      Ready to explore? We&rsquo;d love to show you around.
+    </p>
+    ${primaryButton({ href: home, label: `Open ${brandName()}`, fullWidth: true })}
+    ${secondaryLink({ href: explore, label: 'Explore products & use cases', align: 'left' })}`;
+
+  const html = wrapEmailHtml({
+    preheader: `We received your early access request and will reply within 1-3 business days.`,
+    heroGreeting: `Hello, ${escapeHtml(greetingName)}!`,
+    headerAlign: 'left',
+    bodyHtml,
+    variant: 'user',
+  });
 
   return { subject, text, html };
+}
+
+function getStatusEmailCopy(dbStatus) {
+  const brand = brandName();
+  const copies = {
+    PENDING: {
+      subject: `Your ${brand} early access request is pending`,
+      headline: 'Request received',
+      body: `Thanks for your interest in ${brand}. Your early access request is pending and queued for our team.`,
+    },
+    UNDER_REVIEW: {
+      subject: `Your ${brand} early access request is under review`,
+      headline: 'Under review',
+      body: 'Our team has started reviewing your early access request. We will email you when the status changes again.',
+    },
+    IN_DISCUSSION: {
+      subject: `Your ${brand} early access request is in discussion`,
+      headline: 'In discussion',
+      body: 'Your early access request is being discussed with our team. We may reach out if we need more details.',
+    },
+    APPROVED: {
+      subject: `Your ${brand} early access request was approved`,
+      headline: 'Approved',
+      body: `Great news — your early access request has been approved. You can now sign up and start using ${brand}.`,
+    },
+    REJECTED: {
+      subject: `Update on your ${brand} early access request`,
+      headline: 'Not approved at this time',
+      body: `Thank you for your interest in ${brand}. After review, we are unable to approve your early access request right now.`,
+    },
+  };
+  return copies[dbStatus] || copies.PENDING;
+}
+
+function buildEarlyAccessStatusUpdateEmail({ name, email, requestId, status }) {
+  const dbStatus = String(status).toUpperCase().replace(/-/g, '_');
+  const copy = getStatusEmailCopy(dbStatus);
+  const greetingName = firstName(name);
+  const signupUrl = `${frontendUrl()}/register`;
+  const statusLabel = dbStatus.replace(/_/g, ' ').toLowerCase();
+  const brand = brandName();
+
+  const approvedExtra =
+    dbStatus === 'APPROVED' ? `\n\nSign up here: ${signupUrl}` : '';
+
+  const text = `Hi ${greetingName},
+
+${copy.body}
+
+${whyChooseUsText()}
+
+Request ID: ${requestId}
+Status: ${statusLabel}
+${approvedExtra}
+
+If you have questions, reply to this email.
+
+The ${brand} Team`;
+
+  const approvedButton =
+    dbStatus === 'APPROVED'
+      ? primaryButton({ href: signupUrl, label: `Sign up to ${brand}`, fullWidth: true })
+      : '';
+
+  const bodyHtml = `
+    ${sectionHeading(copy.headline, { align: 'left' })}
+    <p style="margin:0 0 24px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
+      ${escapeHtml(copy.body)}
+    </p>
+    ${whyChooseUsSectionPreSignIn()}
+    ${sectionDivider()}
+    ${infoPanel({
+      title: 'Request details',
+      contentHtml: `
+        <p style="margin:0 0 6px;color:${BRAND.textPrimary};font-size:14px;">Request ID: ${escapeHtml(requestId)}</p>
+        <p style="margin:0;color:${BRAND.textPrimary};font-size:14px;text-transform:capitalize;">Status: ${escapeHtml(statusLabel)}</p>`,
+    })}
+    ${approvedButton}
+    ${disclaimerText('If you have questions, reply to this email.')}`;
+
+  const html = wrapEmailHtml({
+    preheader: `${copy.headline} — your early access request status has been updated.`,
+    heroGreeting: `Hi ${escapeHtml(greetingName)},`,
+    headerAlign: 'left',
+    bodyHtml,
+    variant: 'user',
+  });
+
+  return { subject: copy.subject, text, html };
 }
 
 module.exports = {
   buildEarlyAccessSuperadminNotificationEmail,
   buildEarlyAccessConfirmationEmail,
+  buildEarlyAccessStatusUpdateEmail,
 };

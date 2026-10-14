@@ -310,6 +310,79 @@ const sendProductEmailBroadcast = asyncHandler(async (req, res) => {
   return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCAST_SENT);
 });
 
+const listProductEmailBroadcasts = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const result = await superadminBroadcastService.listProductEmailBroadcasts({ page, limit });
+  return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCASTS_FETCHED);
+});
+
+const getProductEmailBroadcast = asyncHandler(async (req, res) => {
+  const broadcast = await superadminBroadcastService.getProductEmailBroadcast(
+    req.params.broadcastId
+  );
+  return successResponse(req, res, { broadcast }, 200, messages.PRODUCT_EMAIL_BROADCAST_FETCHED);
+});
+
+const listProductEmailBroadcastRecipients = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const result = await superadminBroadcastService.listProductEmailBroadcastRecipients({
+    broadcastId: req.params.broadcastId,
+    page,
+    limit,
+    status: req.query.status,
+  });
+  return successResponse(
+    req,
+    res,
+    result,
+    200,
+    messages.PRODUCT_EMAIL_BROADCAST_RECIPIENTS_FETCHED
+  );
+});
+
+const listEarlyAccessRequests = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+  const result = await superadminService.listEarlyAccessRequests(
+    page,
+    limit,
+    req.query.status
+  );
+  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUESTS_FETCHED);
+});
+
+const getEarlyAccessRequest = asyncHandler(async (req, res) => {
+  const result = await superadminService.getEarlyAccessRequest(req.params.requestId);
+  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_FETCHED);
+});
+
+const approveEarlyAccessRequest = asyncHandler(async (req, res) => {
+  const result = await superadminService.approveEarlyAccessRequest({
+    requestId: req.params.requestId,
+    reviewerId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_APPROVED);
+});
+
+const rejectEarlyAccessRequest = asyncHandler(async (req, res) => {
+  const result = await superadminService.rejectEarlyAccessRequest({
+    requestId: req.params.requestId,
+    reviewerId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_REJECTED);
+});
+
+const updateEarlyAccessRequestStatus = asyncHandler(async (req, res) => {
+  const result = await superadminService.updateEarlyAccessRequestStatus({
+    requestId: req.params.requestId,
+    status: req.body.status,
+    reviewerId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_STATUS_UPDATED);
+});
+
 module.exports = {
   grantUserCredits,
   revokeUserCredits,
@@ -335,4 +408,12 @@ module.exports = {
   rejectStorageUpgradeRequest,
   getAlertsSummary,
   sendProductEmailBroadcast,
+  listProductEmailBroadcasts,
+  getProductEmailBroadcast,
+  listProductEmailBroadcastRecipients,
+  listEarlyAccessRequests,
+  getEarlyAccessRequest,
+  approveEarlyAccessRequest,
+  rejectEarlyAccessRequest,
+  updateEarlyAccessRequestStatus,
 };

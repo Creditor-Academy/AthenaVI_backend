@@ -1,5 +1,6 @@
 const prisma = require('../../shared/config/prismaClient');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
+const { formatWorkspaceDisplayName } = require('../../shared/utils/workspaceDisplayName');
 
 const getWorkspaceCredits = async (workspaceId) => {
   return prisma.workspace.findUnique({
@@ -321,7 +322,12 @@ const aggregateUsageReport = async ({ from, to, workspaceId, userId, topLimit = 
     topWorkspaceIds.length
       ? prisma.workspace.findMany({
           where: { id: { in: topWorkspaceIds } },
-          select: { id: true, name: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            owner: { select: { id: true, email: true, name: true } },
+          },
         })
       : [],
   ]);
@@ -346,7 +352,11 @@ const aggregateUsageReport = async ({ from, to, workspaceId, userId, topLimit = 
     const workspace = workspaceDataMap.get(id);
     return {
       workspaceId: id,
-      name: workspace?.name || null,
+      name: workspace
+        ? formatWorkspaceDisplayName(workspace)
+        : null,
+      type: workspace?.type || null,
+      owner: workspace?.owner || null,
       totalUsageAc: stats.totalUsageAc,
       transactionCount: stats.transactionCount,
     };

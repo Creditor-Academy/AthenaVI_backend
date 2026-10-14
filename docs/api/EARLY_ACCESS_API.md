@@ -91,10 +91,12 @@ Suggested `useCase` values: `Corporate Training`, `Educational Content`, `Market
 
 ## Side effects on success
 
-1. Row inserted into `early_access_requests` with status `PENDING`.
+1. Row inserted into `early_access_requests` with status `pending`.
 2. **Email** to platform superadmin inbox (`PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL`, fallback `PLATFORM_SUPERADMIN_EMAILS`).
-3. **Confirmation email** to the applicant.
+3. **Status email** to the applicant (`pending`).
 4. **In-app inbox** notification (`PLATFORM_EARLY_ACCESS_REQUEST`) for platform superadmin user accounts.
+
+On each later status change (`under_review`, `in_discussion`, `approved`, `rejected`), the applicant receives another status email. Superadmin updates via `PATCH /api/superadmin/early-access/requests/:requestId/status` (see [`SUPERADMIN_API.md`](SUPERADMIN_API.md)).
 
 Requires SMTP (`SMTP_*`) and superadmin notification email configuration (same as storage upgrade requests).
 

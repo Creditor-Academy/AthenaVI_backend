@@ -149,11 +149,11 @@ pipeline {
                 fi
 
                 echo ""
-                echo "========== Running Pods =========="
+                echo "========== Running Pods ========="
                 kubectl get pods
 
                 echo ""
-                echo "========== Deployments =========="
+                echo "========== Deployments ========="
                 kubectl get deployment
 
                 echo ""
@@ -161,11 +161,11 @@ pipeline {
                 kubectl get svc
 
                 echo ""
-                echo "========== Rollout History =========="
+                echo "========== Rollout History ========="
                 kubectl rollout history deployment/backend
 
                 echo ""
-                echo "========== Current Image =========="
+                echo "========== Current Image ========="
                 kubectl get deployment backend \
                 -o=jsonpath='{.spec.template.spec.containers[0].image}'
 
@@ -183,13 +183,13 @@ pipeline {
 
         success {
 
-            echo "========================================"
+            echo "===================================="
             echo "Backend CI/CD Pipeline Completed Successfully"
             echo "Docker Image Built Successfully"
             echo "Docker Image Pushed to Amazon ECR"
             echo "Prisma Migrations Applied Successfully"
             echo "Backend Successfully Deployed to Amazon EKS"
-            echo "========================================"
+            echo "===================================="
         }
 
         failure {

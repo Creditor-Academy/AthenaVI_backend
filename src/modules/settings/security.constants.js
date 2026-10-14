@@ -8,8 +8,11 @@ function getDeletionGraceMs() {
   return ACCOUNT_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 }
 
+const DEFAULT_LOGIN_ALERTS = true;
+
 module.exports = {
   ACCOUNT_DELETION_CONFIRMATION,
   ACCOUNT_DELETION_GRACE_DAYS,
+  DEFAULT_LOGIN_ALERTS,
   getDeletionGraceMs,
 };

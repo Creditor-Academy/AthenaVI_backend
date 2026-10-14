@@ -16,6 +16,7 @@ Frontend may need to know:
 - **Stock media (Pexels + Unsplash + Pixabay)** – `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY` (at least one required for `/api/stock/*`). Optional `STOCK_PHOTO_MAX_BYTES` (default 15 MB), `STOCK_VIDEO_MAX_BYTES` (default 100 MB). See [`STOCK_API.md`](STOCK_API.md).
 - **Auth / rate limits** – `SALT_ROUNDS` (default **10**), `LOGIN_RATE_LIMIT_ACCOUNT` (default **10** failures per window), `LOGIN_RATE_LIMIT_IP` (default **30**), `LOGIN_RATE_LIMIT_WINDOW_SEC` (default **900** = 15 min), `TRUST_PROXY_HOPS` (set to proxy hop count in production; defaults to **1** when `NODE_ENV=production`).
 - **Email normalization** – Before deploy, run `node scripts/normalize-user-emails.js` (with appropriate `.env`) if existing users may have mixed-case emails.
+- **Email branding** – Optional `EMAIL_BRAND_NAME` (default **Virtual Studio**). Default logo: `https://testing-vi.s3.us-east-1.amazonaws.com/Copilot_20260703_145052.png` (override with `EMAIL_LOGO_URL`). Optional `EMAIL_EXPLORE_URL` (default `{FRONTEND_URL}/products`). Set **`FRONTEND_URL`** to `https://virtualstudio.lmsathena.com` in production for correct links.
 
 ---
 

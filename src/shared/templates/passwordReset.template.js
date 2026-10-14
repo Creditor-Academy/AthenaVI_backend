@@ -1,56 +1,50 @@
-const resetPasswordTemplate = (resetLink, expiryMinutes = 15) => {
-  return `
-  <div style="background-color:#f4f6f8;padding:40px 0;font-family:Arial,Helvetica,sans-serif;">
-    
-    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;padding:40px 30px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+const {
+  brandName,
+  escapeHtml,
+  wrapEmailHtml,
+  primaryButton,
+  disclaimerText,
+  fallbackUrlBlock,
+  sectionHeading,
+  BRAND,
+} = require('./emailLayout');
 
-      <h2 style="color:#2d3748;margin-bottom:10px;">
-        Reset Your Password
-      </h2>
+function buildPasswordResetEmail(resetLink, expiryMinutes = 15) {
+  const subject = 'Reset your password';
 
-      <p style="color:#4a5568;font-size:15px;margin-bottom:25px;">
-        We received a request to reset your password. Click the button below to create a new one.
-      </p>
+  const text = `Reset your password
 
-      <a href="${resetLink}" 
-        style="
-          display:inline-block;
-          padding:12px 24px;
-          background-color:#2563eb;
-          color:#ffffff;
-          text-decoration:none;
-          font-weight:bold;
-          border-radius:6px;
-          font-size:14px;
-        ">
-        Reset Password
-      </a>
+We received a request to reset your password. Open the link below to create a new one:
 
-      <p style="color:#4a5568;font-size:14px;margin-top:25px;">
-        This link will expire in <strong>${expiryMinutes} minutes</strong>.
-      </p>
+${resetLink}
 
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;" />
+This link will expire in ${expiryMinutes} minutes.
 
-      <p style="color:#718096;font-size:12px;">
-        If the button doesn't work, copy and paste this link into your browser:
-      </p>
+If you did not request a password reset, you can safely ignore this email.
 
-      <p style="word-break:break-all;font-size:12px;color:#2563eb;">
-        ${resetLink}
-      </p>
+— ${brandName()}`;
 
-      <p style="color:#718096;font-size:12px;margin-top:20px;">
-        If you did not request a password reset, you can safely ignore this email.
-      </p>
+  const bodyHtml = `
+    ${sectionHeading('Create a new password', { align: 'left' })}
+    <p style="margin:0 0 20px;color:${BRAND.textPrimary};font-size:15px;line-height:1.65;text-align:left;">
+      We received a request to reset your password. Click the button below to create a new one.
+    </p>
+    ${primaryButton({ href: resetLink, label: 'Reset password', fullWidth: true })}
+    <p style="margin:0;color:${BRAND.textMuted};font-size:14px;text-align:left;">
+      This link will expire in <strong>${escapeHtml(String(expiryMinutes))} minutes</strong>.
+    </p>
+    ${fallbackUrlBlock(resetLink)}
+    ${disclaimerText('If you did not request a password reset, you can safely ignore this email.')}`;
 
-      <p style="color:#a0aec0;font-size:11px;margin-top:10px;">
-        © ${new Date().getFullYear()} AthenaVI. All rights reserved.
-      </p>
+  const html = wrapEmailHtml({
+    preheader: `Reset your ${brandName()} password. Link expires in ${expiryMinutes} minutes.`,
+    heroGreeting: 'Reset your password',
+    headerAlign: 'left',
+    bodyHtml,
+    variant: 'user',
+  });
 
-    </div>
-  </div>
-  `;
-};
+  return { subject, text, html };
+}
 
-module.exports = resetPasswordTemplate;
+module.exports = buildPasswordResetEmail;

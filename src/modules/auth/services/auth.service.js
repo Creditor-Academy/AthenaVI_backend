@@ -11,8 +11,8 @@ const sessionService = require('../../sessions/session.service');
 const { signAccessToken } = require('../../../shared/utils/jwt');
 const passwordResetService = require('../services/passwordReset.service');
 const logger = require('../../../shared/utils/logger');
-const otpTemplate = require('../../../shared/templates/otp.template');
-const resetPasswordTemplate = require('../../../shared/templates/passwordReset.template');
+const buildOtpEmail = require('../../../shared/templates/otp.template');
+const buildPasswordResetEmail = require('../../../shared/templates/passwordReset.template');
 const googleOAuth = require('../services/googleOAuth.service');
 const inboxService = require('../../inbox/inbox.service');
 const { normalizeEmail } = require('../../../shared/utils/normalizeEmail');
@@ -65,10 +65,12 @@ async function sendOtp(email) {
 
     const otp = crypto.randomInt(100000, 999999).toString();
     await otpService.storeOtp(normalizedEmail, otp);
+    const otpEmail = buildOtpEmail(otp);
     await sendEmail({
       to: normalizedEmail,
-      subject: 'OTP Verification',
-      html: otpTemplate(otp),
+      subject: otpEmail.subject,
+      text: otpEmail.text,
+      html: otpEmail.html,
     });
   } finally {
     await otpService.releaseOtpLock(normalizedEmail);
@@ -346,13 +348,15 @@ async function sendPasswordResetEmail(email) {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
   try {
+    const resetEmail = buildPasswordResetEmail(
+      resetUrl,
+      passwordResetService.RESET_TOKEN_EXPIRY_MINUTES
+    );
     await sendEmail({
       to: user.email,
-      subject: 'Password Reset',
-      html: resetPasswordTemplate(
-        resetUrl,
-        passwordResetService.RESET_TOKEN_EXPIRY_MINUTES
-      ),
+      subject: resetEmail.subject,
+      text: resetEmail.text,
+      html: resetEmail.html,
     });
   } catch (err) {
     logger.error('Password reset email failed', {

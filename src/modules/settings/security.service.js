@@ -4,9 +4,11 @@ const messages = require('../../shared/utils/messages');
 const authDao = require('../auth/auth.dao');
 const authService = require('../auth/services/auth.service');
 const securityDao = require('./security.dao');
+const settingsDao = require('./settings.dao');
 const {
   ACCOUNT_DELETION_CONFIRMATION,
   ACCOUNT_DELETION_GRACE_DAYS,
+  DEFAULT_LOGIN_ALERTS,
   getDeletionGraceMs,
 } = require('./security.constants');
 
@@ -36,9 +38,39 @@ const getSecuritySettings = async (userId) => {
     throw new AppError(messages.USER_NOT_FOUND, 404);
   }
 
+  const settings = await settingsDao.findByUserId(userId);
+
   return {
     hasPassword: Boolean(user.password),
     canChangePassword: Boolean(user.password),
+    loginAlerts: settings?.loginAlerts ?? DEFAULT_LOGIN_ALERTS,
+    accountDeletion: buildAccountDeletionStatus(user),
+  };
+};
+
+const updateSecuritySettings = async (userId, payload) => {
+  const user = await securityDao.findSecurityByUserId(userId);
+
+  if (!user) {
+    throw new AppError(messages.USER_NOT_FOUND, 404);
+  }
+
+  const updateData = {};
+
+  if (payload.loginAlerts !== undefined) {
+    updateData.loginAlerts = payload.loginAlerts;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(messages.NO_VALID_FIELDS_PROVIDED, 400);
+  }
+
+  const settings = await settingsDao.upsertSettings(userId, updateData);
+
+  return {
+    hasPassword: Boolean(user.password),
+    canChangePassword: Boolean(user.password),
+    loginAlerts: settings.loginAlerts,
     accountDeletion: buildAccountDeletionStatus(user),
   };
 };
@@ -117,6 +149,7 @@ const recoverAccountIfPending = async (user) => {
 
 module.exports = {
   getSecuritySettings,
+  updateSecuritySettings,
   changePassword,
   requestAccountDeletion,
   recoverAccountIfPending,
