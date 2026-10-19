@@ -66,6 +66,8 @@ stub('shared/services/ai/moderation.service.js', { async moderateText() {} });
 stub('shared/config/prismaClient.js', {
   folder: { async findFirst() { return { id: 'folder-1' }; } },
   imageGeneration: {
+    // listGenerations purges expired trash first; these fixtures never trash anything.
+    async findMany() { return []; },
     async update({ where, data }) {
       Object.assign(db.generations.get(where.id), data);
     },

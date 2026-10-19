@@ -184,6 +184,8 @@ module.exports = {
   CANVAS_MOVED: 'Canvas moved successfully',
   CANVAS_DELETED: 'Canvas deleted successfully',
   CANVAS_NOT_FOUND: 'Canvas not found',
+  CANVAS_REVISION_CONFLICT:
+    'This design was changed somewhere else since you opened it. Load the latest version or keep yours.',
   VIDEO_SCENE_ASSIGNEE_UPDATED: 'Scene assignee updated successfully',
   VIDEO_SCENE_ASSIGN_TEAM_ONLY: 'Scene assignment is only available in team workspaces',
   VIDEO_SCENE_ASSIGNEE_NOT_MEMBER: 'Assignee must be a member of this workspace',

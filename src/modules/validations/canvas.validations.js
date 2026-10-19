@@ -122,6 +122,8 @@ const saveCanvasDataSchema = Joi.object({
   }),
   body: Joi.object({
     data: canvasDataSchema.required(),
+    /** Revision the client last loaded or saved; omit for last-write-wins (older clients). */
+    baseRevision: Joi.number().integer().min(0).optional(),
   }),
 });
 
