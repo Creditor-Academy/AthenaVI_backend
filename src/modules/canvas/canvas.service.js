@@ -4,43 +4,15 @@ const projectDao = require('../project/project.dao');
 const projectStorageService = require('../project/projectStorage.service');
 const { enrichProject, enrichProjects } = require('../project/project.format');
 
-const CANVAS_TYPE = 'CANVAS';
+const {
+  CANVAS_TYPE,
+  readRevision,
+  isRevisionConflict,
+  normalizeCanvasData,
+} = require('./canvas.data');
 
-function buildDefaultCanvasData(size) {
-  const width = Number(size?.width) > 0 ? Number(size.width) : 1080;
-  const height = Number(size?.height) > 0 ? Number(size.height) : 1080;
-
-  return {
-    version: 1,
-    docTitle: null,
-    size: { width, height },
-    canvases: [
-      {
-        id: `canvas-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        width,
-        height,
-        background: '#FFFFFF',
-        elements: [],
-      },
-    ],
-  };
-}
-
-function normalizeCanvasData(data, fallbackSize) {
-  if (!data || !Array.isArray(data.canvases) || data.canvases.length === 0) {
-    return buildDefaultCanvasData(fallbackSize || data?.size);
-  }
-
-  return {
-    version: data.version || 1,
-    docTitle: data.docTitle ?? null,
-    size: data.size || {
-      width: data.canvases[0].width,
-      height: data.canvases[0].height,
-    },
-    canvases: data.canvases,
-  };
-}
+/** Attempts at the conditional write before giving up on unrelated concurrent row updates. */
+const SAVE_WRITE_ATTEMPTS = 3;
 
 async function assertFolderInWorkspace(folderId, workspaceId) {
   const folder = await projectDao.findFolderById(folderId);
@@ -61,7 +33,7 @@ async function assertCanvasInWorkspace(workspaceId, canvasId) {
 const createCanvas = async (workspaceId, userId, { name, folderId, data, thumbnail }) => {
   await assertFolderInWorkspace(folderId, workspaceId);
 
-  const normalizedData = normalizeCanvasData(data);
+  const normalizedData = normalizeCanvasData(data, { revision: 1 });
 
   const project = await projectDao.createProject({
     name,
@@ -107,14 +79,32 @@ const updateCanvasMeta = async (workspaceId, canvasId, userId, payload) => {
   return enrichProject(updated);
 };
 
-const saveCanvasData = async (workspaceId, canvasId, userId, data) => {
-  await assertCanvasInWorkspace(workspaceId, canvasId);
-  const normalizedData = normalizeCanvasData(data);
+/**
+ * Save the full document. When `baseRevision` is given, the save is refused with 409 if
+ * someone else saved since that revision, so two tabs never silently overwrite each other.
+ * Clients that omit it (older builds) keep last-write-wins.
+ */
+const saveCanvasData = async (workspaceId, canvasId, userId, data, { baseRevision } = {}) => {
+  for (let attempt = 0; attempt < SAVE_WRITE_ATTEMPTS; attempt += 1) {
+    const project = await assertCanvasInWorkspace(workspaceId, canvasId);
+    const storedRevision = readRevision(project.data);
+    if (isRevisionConflict(baseRevision, storedRevision)) {
+      throw new AppError(messages.CANVAS_REVISION_CONFLICT, 409);
+    }
 
-  await projectDao.updateProject(canvasId, {
-    data: normalizedData,
-    updatedBy: userId,
-  });
+    const normalizedData = normalizeCanvasData(data, { revision: storedRevision + 1 });
+    // `updatedAt` pins the row we just read: any write in between (another save, or an
+    // unrelated rename/move) makes this match nothing, and we re-check the revision.
+    const written = await projectDao.updateProjectIfUnchanged(canvasId, project.updatedAt, {
+      data: normalizedData,
+      updatedBy: userId,
+    });
+    if (written) break;
+    if (attempt === SAVE_WRITE_ATTEMPTS - 1) {
+      throw new AppError(messages.CANVAS_REVISION_CONFLICT, 409);
+    }
+  }
+
   await projectStorageService.recalculateProjectStorage(canvasId);
   const refreshed = await projectDao.findProjectById(workspaceId, canvasId);
   if (!refreshed) {
