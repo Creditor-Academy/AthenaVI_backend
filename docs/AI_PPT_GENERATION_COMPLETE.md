@@ -2,6 +2,8 @@
 
 This document explains **how Athena VI generates AI presentations**, end to end: data model, every product entry path, every LLM/image step, layout compile vs rebind, credits, jobs, and what the frontend should poll.
 
+**Policy (scoring, QA/repair, Path A vs Path B, credits):** [`ENGINE_POLICY.md`](ENGINE_POLICY.md). Tests named there are the contract; this file is the implementation guide.
+
 Gap analysis (layout selection, content contract, slot mapping, validation): [`AI_PPT_GENERATION_AUDIT.md`](AI_PPT_GENERATION_AUDIT.md).
 
 It is written from the **backend implementation** (`src/modules/presentation/`). HTTP contracts stay in [`docs/api/PRESENTATION_API.md`](api/PRESENTATION_API.md). Frontend wiring stays in [`PRESENTATION_FRONTEND_INTEGRATION.md`](PRESENTATION_FRONTEND_INTEGRATION.md). Credits: [`PRESENTATION_CREDITS_FRONTEND.md`](PRESENTATION_CREDITS_FRONTEND.md). Prompt files: [`PRESENTATION_PROMPTS.md`](PRESENTATION_PROMPTS.md).

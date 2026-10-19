@@ -39,6 +39,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | Doc | Use when |
 |-----|----------|
 | [FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md](../FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) | **All-in-one** — PPT + Image Gen + Brand Kit (superadmin → user, APIs, flows; self-contained) |
+| [ENGINE_POLICY.md](../ENGINE_POLICY.md) | **Engine policy** — scoring, QA/repair, Path A vs Path B, charge-on-success (tests are the contract) |
 | [AI_PPT_GENERATION_COMPLETE.md](../AI_PPT_GENERATION_COMPLETE.md) | **How AI PPT generation works** — every path, outline/generate/images/layouts/credits |
 | [IMAGE_GEN_COMPLETE.md](../IMAGE_GEN_COMPLETE.md) | **How Image Gen works** — pipelines, data model, credits + Infographics |
 | [INFOGRAPHIC_MODE_PRD.md](../INFOGRAPHIC_MODE_PRD.md) | Infographic mode PRD (locked decisions + eval) |
