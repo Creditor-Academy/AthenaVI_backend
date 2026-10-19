@@ -1,0 +1,211 @@
+{
+  "id": "title_hero_right_fade_v1",
+  "name": "Split Hero",
+  "description": "Large headline and supporting text on the left with a dominant image on the right.",
+  "version": 1,
+  "category": "hero",
+  "slidePurposes": [
+    "cover",
+    "introduction",
+    "product"
+  ],
+  "contentTypes": [
+    "title",
+    "subtitle",
+    "image"
+  ],
+  "tags": [
+    "hero",
+    "premium",
+    "minimal",
+    "image-led"
+  ],
+  "contentType": "title",
+  "contentCapacity": {
+    "maxTitleCharacters": 80,
+    "maxSubtitleCharacters": 140,
+    "maxBodyCharacters": 0,
+    "maxBullets": 0,
+    "maxCards": 0,
+    "maxImages": 1,
+    "maxMetrics": 0,
+    "maxColumns": 2,
+    "density": "low"
+  },
+  "composition": {
+    "structure": "split",
+    "imagePosition": "right",
+    "textPosition": "left",
+    "alignment": "left",
+    "visualWeight": "image-heavy"
+  },
+  "style": {
+    "designStyles": [
+      "modern",
+      "minimal",
+      "premium"
+    ],
+    "moods": [
+      "professional",
+      "premium",
+      "confident"
+    ],
+    "industries": [
+      "technology",
+      "business",
+      "startup"
+    ]
+  },
+  "supportedElements": {
+    "title": true,
+    "subtitle": true,
+    "body": false,
+    "bullets": false,
+    "image": true,
+    "icons": false,
+    "metrics": false,
+    "chart": false,
+    "table": false,
+    "cards": false,
+    "quote": false
+  },
+  "elements": [
+    {
+      "id": "slot-MAIN_TITLE",
+      "slotId": "MAIN_TITLE",
+      "type": "text",
+      "layer": 10,
+      "placement": {
+        "x": 160,
+        "y": 180,
+        "width": 800,
+        "height": 232,
+        "rotation": 0,
+        "opacity": 1
+      },
+      "content": {
+        "text": "Presentation title",
+        "fontSize": 48,
+        "bold": true,
+        "fontWeight": 800,
+        "align": "left",
+        "colorRole": "text",
+        "lineHeight": 1.15
+      },
+      "role": "heading"
+    },
+    {
+      "id": "slot-SUBTITLE",
+      "slotId": "SUBTITLE",
+      "type": "text",
+      "layer": 10,
+      "placement": {
+        "x": 160,
+        "y": 398,
+        "width": 800,
+        "height": 232,
+        "rotation": 0,
+        "opacity": 1
+      },
+      "content": {
+        "text": "Tagline or company name",
+        "fontSize": 22,
+        "bold": false,
+        "fontWeight": 400,
+        "align": "left",
+        "colorRole": "muted",
+        "lineHeight": 1.4
+      },
+      "role": "subheading"
+    },
+    {
+      "id": "slot-HERO_IMAGE",
+      "slotId": "HERO_IMAGE",
+      "type": "image",
+      "layer": 2,
+      "placement": {
+        "x": 800,
+        "y": 0,
+        "width": 1120,
+        "height": 900,
+        "rotation": 0,
+        "opacity": 1
+      },
+      "content": {
+        "url": null,
+        "fit": "cover",
+        "alt": "Hero image",
+        "borderRadius": 0,
+        "edgeFade": {
+          "side": "left",
+          "width": 0.3
+        }
+      },
+      "role": "image"
+    }
+  ],
+  "schema": {
+    "layout_id": "title_hero_right_fade_v1",
+    "content_type": "title",
+    "schemaVersion": 2,
+    "grid": "12-col",
+    "shapePolicy": "ai_decides",
+    "slots": [
+      {
+        "id": "MAIN_TITLE",
+        "region": "cols 2-6, rows 3-5",
+        "role": "heading",
+        "placeholder_text": "Presentation title",
+        "layer": 10,
+        "typography": {
+          "fontSize": 48,
+          "fontWeight": 800,
+          "colorRole": "text",
+          "align": "left",
+          "lineHeight": 1.15
+        },
+        "max_lines": 2
+      },
+      {
+        "id": "SUBTITLE",
+        "region": "cols 2-6, rows 5-7",
+        "role": "subheading",
+        "placeholder_text": "Tagline or company name",
+        "layer": 10,
+        "typography": {
+          "fontSize": 22,
+          "fontWeight": 400,
+          "colorRole": "muted",
+          "align": "left",
+          "lineHeight": 1.4
+        },
+        "max_lines": 2
+      },
+      {
+        "id": "HERO_IMAGE",
+        "region": "cols 6-12, rows 1-10",
+        "role": "image",
+        "layer": 2,
+        "fit": "cover",
+        "imageStyle": "hero"
+      }
+    ],
+    "preview": {
+      "mode": null,
+      "slots": {
+        "MAIN_TITLE": {
+          "text": "Presentation title",
+          "variant": "title",
+          "bold": true
+        },
+        "SUBTITLE": {
+          "text": "Tagline or company name",
+          "variant": "subheading"
+        },
+        "HERO_IMAGE": {
+          "variant": "image"
+        }
+      }
+    }
+  }
+}

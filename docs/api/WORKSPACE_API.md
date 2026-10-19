@@ -12,6 +12,59 @@ All workspace routes require **`Authorization: Bearer <access_token>`**. Some ro
 
 **Folders** for a workspace are documented under **`/api/workspaces/:workspaceId/folders`** (see **Folders** below in this section).
 
+**Brand Kits** (Canva-style workspace branding) live under **`/api/workspaces/:workspaceId/brand-kits`** — see [BRAND_KIT_API.md](BRAND_KIT_API.md). Presentation deck packs: `GET .../presentation-deck-packs` in [PRESENTATION_API.md](PRESENTATION_API.md).
+
+### Workspace library (Videos / PPT / Images)
+
+FE tabs for workspace content. **Images** here means **Image Gen chats** (not `/api/assets` and not every hop).
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Path** | `/api/workspaces/:workspaceId/library` |
+| **Auth** | Bearer + member |
+
+**Query**
+
+| Param | Required | Notes |
+|-------|----------|--------|
+| `category` | no | Omit for tab counts. One of `video` \| `presentation` \| `image` to list items. |
+| `folderId` | no | Filter video / presentation / **image chats** to one folder |
+| `take` / `skip` | no | Pagination for `category=image` (1–100 / ≥0) |
+| `assignedTo` | no | `me` — filter video/presentation to current user’s assignee (mutually exclusive with `assigneeId` / `unassigned`) |
+| `assigneeId` | no | Filter video/presentation to that user uuid |
+| `unassigned` | no | `true` — only projects with no assignee |
+
+Assignment filters apply to **video** and **presentation** lists and to those tab **counts**. They are ignored for `category=image`.
+
+**Without `category` (200)** – tab badges:
+
+```json
+{
+  "categories": [
+    { "id": "video", "label": "Videos", "projectType": "VIDEO", "count": 3 },
+    { "id": "presentation", "label": "Presentations", "projectType": "PRESENTATION", "count": 2 },
+    { "id": "image", "label": "Images", "count": 10 }
+  ]
+}
+```
+
+**With `category` (200)** – `data.category` + `data.items`. Each item includes `kind` / `category` matching the tab.
+
+| `category` | Items are |
+|------------|-----------|
+| `video` | VIDEO projects (same shape as project list) |
+| `presentation` | PRESENTATION projects + `deckStatus`, `slideCount`, `aspectRatio`, … |
+| `image` | Image Gen **chats** (same shape as `GET /api/image-gen/.../threads`) |
+
+Aliases (same filters, existing domain paths):
+
+- Videos: `GET .../projects?type=VIDEO`
+- PPT: `GET .../presentations` or `GET .../projects?type=PRESENTATION`
+- Images: `GET /api/image-gen/workspaces/:workspaceId/threads?folderId=`
+
+Each image item includes `id` / `threadId`, `title`, `folderId`, `head.url`, `head.generationId` (View / Download / Open chat). Hops stay on `GET .../generations?threadId=`.
+
 Each user has exactly one **private** workspace (created on registration). Users can create additional **team** workspaces.
 
 ---
@@ -417,6 +470,7 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
         "email": "jane@example.com"
       },
       "projectCount": 3,
+      "imageThreadCount": 2,
       "sizeBytes": 52428800,
       "lastActivityAt": "2026-05-20T14:30:00.000Z"
     }
@@ -431,8 +485,9 @@ Nested routes under **`/api/workspaces/:workspaceId/folders`**. All routes below
 | `lastModifiedAt` | When the folder record was last updated (e.g. rename). |
 | `lastModifiedBy` | User who last updated folder metadata. |
 | `projectCount` | Number of projects in the folder. |
+| `imageThreadCount` | Number of Image Gen chats in the folder. |
 | `sizeBytes` | Sum of each project’s `storageBytes` in this folder (see projects). Shared assets referenced by multiple projects may be counted more than once. |
-| `lastActivityAt` | Latest `updatedAt` among projects in the folder (editor saves), or `null` if empty. |
+| `lastActivityAt` | Latest `updatedAt` among projects **or image chats** in the folder, or `null` if empty. |
 
 ---
 
@@ -596,6 +651,7 @@ Supports the **Create Video** wizard (**canvas size** → **details**) in one ca
 | `aspectRatio` or `canvasSize` | No | From canvas step: `16:9` \| `9:16` \| `1:1` \| `4:5` \| `custom` |
 | `customWidth`, `customHeight` | If `custom` | Pixel size when canvas is **Custom** |
 | `data` or `projectState` | No | Full editor JSON; omit for empty `scenes` + canvas preset only |
+| `templateId` | No | Active **VIDEO_SCENE** or **VIDEO_PACK** template id — bootstraps scenes. Pack loads **all** scenes; scene template loads one. Cannot combine with non-empty `scenes`. Not for presentations (`/presentations`). |
 | `thumbnail`, `duration`, `status` | No | Unchanged |
 
 Use **either** `data` **or** `projectState` for the editor payload (not both). Canvas presets set `videoSettings.width` / `height` when not overridden in `data.videoSettings`:
@@ -607,6 +663,24 @@ Use **either** `data` **or** `projectState` for the editor payload (not both). C
 | `1:1` | 1080 × 1080 |
 | `4:5` | 1080 × 1350 |
 | `custom` | `customWidth` × `customHeight` |
+
+**Video templates (VIDEO editor only)**
+
+List active blueprints: `GET /api/workspaces/:workspaceId/video-templates`  
+Query `type=VIDEO_SCENE` \| `VIDEO_PACK` (omit = both).  
+Get one: `GET /api/workspaces/:workspaceId/video-templates/:templateId`  
+
+**List/get gallery fields** (PPT-pack parity): each template includes `media[]` (presigned), `previewImageUrl` / `thumbnailUrl` / `preview.imageUrl` (from `TemplateMedia` `preview` or `scene:1`), plus for packs `packId` and `sceneCount`. Canvas-published templates bake media into `TemplateMedia` under `videos/_system/...` with slotHints `scene:{n}`, `element:{id}`, `preview`.
+
+Append **one** scene to an existing VIDEO project: `POST .../projects/:projectId/scenes/from-template` with `{ "templateId" }` (**VIDEO_SCENE only**). Apply refreshes element URLs from `TemplateMedia`.  
+Create project from pack: `POST .../projects` with `templateId` of a `VIDEO_PACK`.
+
+Presentation / PPT layouts use `/presentations` and `DECK_LAYOUT` / `DECK_PACK` — do not mix.
+
+**Presentation deck packs**
+
+List: `GET /api/workspaces/:workspaceId/presentation-deck-packs` (summary — no `schema.slides`).  
+Get one: `GET /api/workspaces/:workspaceId/presentation-deck-packs/:packId` (full `schema`, `slidePreviews[]`, presigned `media[]`).
 
 **Wizard example (canvas + details)**
 
@@ -660,6 +734,8 @@ Saved `data.meta` includes `aspectRatio` and `tags` when provided.
 **Query (optional)**
 
 - `folderId` – filter projects inside one folder
+- `type` – `VIDEO` \| `PRESENTATION` (omit = both). Prefer workspace **library** for FE tabs: [Workspace library](#workspace-library-videos--ppt--images).
+- **Assignment filters** (mutually exclusive): `assignedTo=me` \| `assigneeId=<user-uuid>` \| `unassigned=true`
 
 **Response (200)** – `data.projects`: array ordered by `lastModifiedAt` desc. List responses **omit** `data` (editor JSON); use get-by-id for full editor state.
 
@@ -671,6 +747,64 @@ Each project includes:
 | `lastModifiedAt` | `updatedAt` of the project row. |
 | `lastModifiedBy` | User who last saved metadata or editor state (`updatedBy`). System-only rehydration on load does not change `lastModifiedBy`. |
 | `storageBytes` | Denormalized footprint: editor JSON size + referenced workspace `Asset.size` values + HeyGen/render/cache S3 sizes for this project. |
+| `assignee` | Current TEAM assignee user summary, or `null` if unassigned. |
+| `assignedBy` | User who last assigned, or `null`. |
+| `assignedAt` | When assignment was set, or `null`. |
+| `assignedToId` / `assignedById` | Raw user ids (same as nested summaries). |
+
+---
+
+### Assign project (TEAM only)
+
+Workflow metadata — does **not** change who can open or edit the project. Applies to both **VIDEO** and **PRESENTATION** projects (`presentationId` === `projectId`). Use the same endpoint for PPT.
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/assignee` |
+| **Auth** | Bearer |
+| **Role** | OWNER or ADMIN |
+| **Workspace** | `TEAM` only (**400** on PRIVATE) |
+
+**Request body**
+
+```json
+{ "assigneeId": "user-uuid" }
+```
+
+or unassign:
+
+```json
+{ "assigneeId": null }
+```
+
+Picker source: `GET /api/workspaces/:id/members` → use `members[].user.id` (not membership row `id`).
+
+**Rules**
+
+- Assignee must be a current member of this workspace (**400** otherwise). Self-assign allowed.
+- Idempotent: same assignee as current → **200**, no `assignedAt` bump, no inbox write.
+- On success, new assignee gets inbox `PROJECT_ASSIGNED`; previous assignee gets `PROJECT_UNASSIGNED` when reassigned/cleared (skipped if actor === target).
+- Leaving the workspace clears that user’s assignments on projects in the same transaction.
+
+**Response (200)** – `data.project`: summary (no editor `data`) with hydrated `assignee` / `assignedBy` / `assignedAt`.
+
+---
+
+### Assign scene (TEAM only, VIDEO)
+
+Per-scene sibling of project assignment. Scenes are objects inside `Project.data.scenes[]` (not DB rows), keyed by `sceneId` (or `id`).
+
+| | |
+|---|---|
+| **Method** | `PATCH` |
+| **Path** | `/api/workspaces/:workspaceId/projects/:projectId/scenes/:sceneId/assignee` |
+| **Role** | OWNER or ADMIN |
+| **Workspace** | `TEAM` only; project must be `VIDEO` (**400** otherwise); unknown scene → **404** |
+
+Body `{ "assigneeId": "<member user.id>" | null }`. Same rules/notifications as project assignment (`SCENE_ASSIGNED` / `SCENE_UNASSIGNED`). Response `data.scene` with hydrated `assignee` / `assignedBy` / `assignedAt`.
+
+**Server-owned fields:** `assignedToId`, `assignedById`, `assignedAt` on scenes can only be changed through this route. `PATCH .../projects/:projectId/data` re-applies the stored values by scene key and strips client-sent `assignee` / `assignedBy` / `assigned*`, so an editor autosave can never revert or forge an assignment. Removing a member from the workspace clears their scene assignments.
 
 ---
 

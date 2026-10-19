@@ -1,0 +1,5 @@
+$kind: http-request
+description: Single broadcast by id.
+url: "{{baseUrl}}/api/superadmin/broadcasts/product-email/{{broadcastId}}"
+method: GET
+order: 14000

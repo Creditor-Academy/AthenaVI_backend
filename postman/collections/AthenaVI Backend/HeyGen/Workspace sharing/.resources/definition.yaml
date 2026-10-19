@@ -1,0 +1,3 @@
+$kind: collection
+description: Share your avatar group or private voice with a TEAM workspace (`/api/workspaces/:workspaceId/heygen/...`). Requires avatar/voice owner for POST share.
+order: 18000

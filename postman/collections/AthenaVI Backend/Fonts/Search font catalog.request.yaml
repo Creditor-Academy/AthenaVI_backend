@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/fonts/catalog?q=playfair&limit=40"
+method: GET
+queryParams:
+  q: playfair
+  limit: "40"
+order: 1100

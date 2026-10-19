@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/inbox/{{notificationId}}"
+method: DELETE
+order: 7000

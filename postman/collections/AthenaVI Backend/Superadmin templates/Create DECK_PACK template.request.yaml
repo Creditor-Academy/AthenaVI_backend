@@ -1,0 +1,96 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/templates"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "type": "DECK_PACK",
+      "name": "Company Meeting — Clean (sample)",
+      "contentType": "pack",
+      "variant": "company_meeting_clean_sample",
+      "isActive": true,
+      "schema": {
+        "schemaVersion": 2,
+        "pack_id": "company_meeting_clean_sample",
+        "themeId": "clean_light",
+        "aspectRatio": "16:9",
+        "meta": {
+          "name": "Company Meeting — Clean (sample)",
+          "useCase": "company_meeting",
+          "tone": "clear, professional"
+        },
+        "narrative": {
+          "arc": "meeting_policy_targets_challenges_close",
+          "summary": "Open, agenda, policy, thank you."
+        },
+        "slides": [
+          {
+            "order": 1,
+            "layout_id": "title_hero_image_v3",
+            "contentType": "title",
+            "intent": "Open the meeting",
+            "designTokens": {
+              "backgroundStyle": "gradient",
+              "imagePosition": "right-half",
+              "textContrast": "high"
+            },
+            "generationHints": {
+              "maxTitleWords": 4,
+              "imagePromptStyle": "clean corporate photography, bright office"
+            },
+            "placeholder": {
+              "title": "Company Meeting",
+              "subtitle": "Your Company",
+              "imagePrompt": "bright modern conference room, soft natural light, no text"
+            }
+          },
+          {
+            "order": 2,
+            "layout_id": "closing_thank_you_image_v3",
+            "contentType": "closing",
+            "intent": "Thank the audience",
+            "designTokens": {
+              "backgroundStyle": "gradient",
+              "imagePosition": "full-bleed",
+              "textContrast": "high"
+            },
+            "generationHints": {
+              "maxTitleWords": 3
+            },
+            "placeholder": {
+              "title": "Thank You",
+              "imagePrompt": "warm teamwork in a bright office, no text overlay"
+            }
+          }
+        ],
+        "generationDefaults": {
+          "preferVisuals": true,
+          "imageStyle": "clean corporate photography, bright office, natural light",
+          "imageType": "ai",
+          "slideOrder": "fixed",
+          "layoutWhitelist": [
+            "title_hero_image_v3",
+            "closing_thank_you_image_v3"
+          ]
+        },
+        "preview": {
+          "label": "Company Meeting sample",
+          "slideCount": 2,
+          "tags": ["meeting"]
+        }
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.template && j.data.template.id;
+        if (id) pm.collectionVariables.set("deckPackTemplateId", id);
+      }
+    language: text/javascript
+order: 4010

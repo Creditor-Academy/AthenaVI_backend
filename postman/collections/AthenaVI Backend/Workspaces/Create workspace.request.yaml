@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "My Team Workspace"
+    }
+order: 1000

@@ -1,0 +1,194 @@
+[
+  {
+    "name": "Title card",
+    "contentType": "title",
+    "variant": "centered",
+    "schema": {
+      "version": 1,
+      "videoSettings": { "width": 1920, "height": 1080, "fps": 30, "backgroundColor": "#0B1220" },
+      "scene": {
+        "name": "Title card",
+        "durationInFrames": 90,
+        "layout": "title_centered",
+        "background": { "type": "solid", "value": "#0B1220" },
+        "elements": [
+          {
+            "id": "title_text",
+            "type": "text",
+            "layer": 1,
+            "startFrame": 0,
+            "durationInFrames": 90,
+            "placement": { "x": 240, "y": 420, "width": 1440, "height": 160, "opacity": 1 },
+            "content": { "text": "Your title here", "fontSize": 72, "color": "#F8FAFC", "align": "center" }
+          },
+          {
+            "id": "subtitle_text",
+            "type": "text",
+            "layer": 2,
+            "startFrame": 15,
+            "durationInFrames": 75,
+            "placement": { "x": 360, "y": 600, "width": 1200, "height": 80, "opacity": 1 },
+            "content": { "text": "Supporting line", "fontSize": 32, "color": "#94A3B8", "align": "center" }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Avatar left + text",
+    "contentType": "avatar_text",
+    "variant": "left",
+    "schema": {
+      "version": 1,
+      "videoSettings": { "width": 1920, "height": 1080, "fps": 30 },
+      "scene": {
+        "name": "Avatar left + text",
+        "durationInFrames": 180,
+        "layout": "avatar_left_text",
+        "background": { "type": "solid", "value": "#111827" },
+        "elements": [
+          {
+            "id": "avatar_main",
+            "type": "avatar",
+            "layer": 1,
+            "startFrame": 0,
+            "durationInFrames": 180,
+            "role": "presenter",
+            "placement": { "x": 80, "y": 140, "width": 720, "height": 800, "opacity": 1 },
+            "content": { "placeholder": true }
+          },
+          {
+            "id": "body_title",
+            "type": "text",
+            "layer": 2,
+            "startFrame": 0,
+            "durationInFrames": 180,
+            "placement": { "x": 880, "y": 220, "width": 920, "height": 100, "opacity": 1 },
+            "content": { "text": "Key message", "fontSize": 48, "color": "#F9FAFB", "align": "left" }
+          },
+          {
+            "id": "body_copy",
+            "type": "text",
+            "layer": 3,
+            "startFrame": 10,
+            "durationInFrames": 170,
+            "placement": { "x": 880, "y": 360, "width": 920, "height": 400, "opacity": 1 },
+            "content": { "text": "Explain the point in two or three short sentences.", "fontSize": 28, "color": "#D1D5DB", "align": "left" }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Full-bleed avatar",
+    "contentType": "avatar",
+    "variant": "full_bleed",
+    "schema": {
+      "version": 1,
+      "videoSettings": { "width": 1920, "height": 1080, "fps": 30 },
+      "scene": {
+        "name": "Full-bleed avatar",
+        "durationInFrames": 150,
+        "layout": "avatar_full",
+        "background": { "type": "solid", "value": "#000000" },
+        "elements": [
+          {
+            "id": "avatar_full",
+            "type": "avatar",
+            "layer": 1,
+            "startFrame": 0,
+            "durationInFrames": 150,
+            "role": "presenter",
+            "placement": { "x": 480, "y": 0, "width": 960, "height": 1080, "opacity": 1 },
+            "content": { "placeholder": true }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Bullets + avatar",
+    "contentType": "bullet_avatar",
+    "variant": "right_avatar",
+    "schema": {
+      "version": 1,
+      "videoSettings": { "width": 1920, "height": 1080, "fps": 30 },
+      "scene": {
+        "name": "Bullets + avatar",
+        "durationInFrames": 210,
+        "layout": "bullets_avatar_right",
+        "background": { "type": "solid", "value": "#0F172A" },
+        "elements": [
+          {
+            "id": "bullets_title",
+            "type": "text",
+            "layer": 1,
+            "startFrame": 0,
+            "durationInFrames": 210,
+            "placement": { "x": 100, "y": 160, "width": 1000, "height": 90, "opacity": 1 },
+            "content": { "text": "Agenda", "fontSize": 52, "color": "#F8FAFC", "align": "left" }
+          },
+          {
+            "id": "bullets_body",
+            "type": "text",
+            "layer": 2,
+            "startFrame": 0,
+            "durationInFrames": 210,
+            "placement": { "x": 100, "y": 280, "width": 1000, "height": 520, "opacity": 1 },
+            "content": {
+              "text": "• Point one\n• Point two\n• Point three",
+              "fontSize": 34,
+              "color": "#E2E8F0",
+              "align": "left"
+            }
+          },
+          {
+            "id": "avatar_side",
+            "type": "avatar",
+            "layer": 3,
+            "startFrame": 0,
+            "durationInFrames": 210,
+            "role": "presenter",
+            "placement": { "x": 1180, "y": 180, "width": 640, "height": 720, "opacity": 1 },
+            "content": { "placeholder": true }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Closing CTA",
+    "contentType": "closing",
+    "variant": "cta",
+    "schema": {
+      "version": 1,
+      "videoSettings": { "width": 1920, "height": 1080, "fps": 30 },
+      "scene": {
+        "name": "Closing CTA",
+        "durationInFrames": 120,
+        "layout": "closing_cta",
+        "background": { "type": "solid", "value": "#1E3A5F" },
+        "elements": [
+          {
+            "id": "cta_title",
+            "type": "text",
+            "layer": 1,
+            "startFrame": 0,
+            "durationInFrames": 120,
+            "placement": { "x": 240, "y": 380, "width": 1440, "height": 120, "opacity": 1 },
+            "content": { "text": "Thank you", "fontSize": 68, "color": "#FFFFFF", "align": "center" }
+          },
+          {
+            "id": "cta_sub",
+            "type": "text",
+            "layer": 2,
+            "startFrame": 20,
+            "durationInFrames": 100,
+            "placement": { "x": 360, "y": 540, "width": 1200, "height": 80, "opacity": 1 },
+            "content": { "text": "Call to action or contact", "fontSize": 30, "color": "#BFDBFE", "align": "center" }
+          }
+        ]
+      }
+    }
+  }
+]

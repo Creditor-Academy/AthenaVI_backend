@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/invite"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "teammate@example.com",
+      "role": "MEMBER"
+    }
+order: 6000

@@ -1,0 +1,16 @@
+$kind: http-request
+description: |
+  Release Present lock. sendBeacon uses leaveToken without Authorization;
+  this request sends Bearer as the keepalive backup (leaveToken also accepted).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/presence/leave"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "leaveToken": "{{presentLeaveToken}}"
+    }
+order: 2000

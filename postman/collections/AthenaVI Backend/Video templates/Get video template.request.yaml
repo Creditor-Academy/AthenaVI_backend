@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/video-templates/{{videoTemplateId}}"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 2000

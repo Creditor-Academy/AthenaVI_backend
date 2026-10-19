@@ -1,0 +1,61 @@
+const WIZARD_TONES = [
+  'Professional',
+  'Creative',
+  'Academic',
+  'Persuasive',
+  'Casual',
+  'Authoritative',
+  'Friendly',
+  'Bold',
+  'Inspirational',
+  'Technical',
+  'Empathetic',
+  'Formal',
+  'Storytelling',
+  'Data-driven',
+  'Conversational',
+];
+
+const WIZARD_AUDIENCES = [
+  'Investors',
+  'Customers',
+  'Internal Team',
+  'Students',
+  'General Public',
+  'Executives',
+  'Board / Leadership',
+  'Prospects',
+  'Employees',
+  'Developers / Technical',
+  'Sales Team',
+  'Partners',
+  'Media / Press',
+  'Healthcare',
+  'Government',
+  'Community / Non-profit',
+];
+
+const WIZARD_PURPOSES = [
+  'Persuade',
+  'Inform',
+  'Educate',
+  'Inspire',
+  'Report',
+  'Pitch / Sell',
+  'Train / Onboard',
+  'Announce / Launch',
+  'Propose',
+  'Analyze',
+  'Recruit',
+  'Celebrate',
+  'Document',
+  'Advocate',
+  'Review / Retrospective',
+  'Plan / Strategy',
+];
+
+module.exports = {
+  WIZARD_TONES,
+  WIZARD_AUDIENCES,
+  WIZARD_PURPOSES,
+};

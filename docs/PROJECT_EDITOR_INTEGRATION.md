@@ -3,7 +3,7 @@
 This guide is for the **scene-based video editor** (React/Vite). It explains how to integrate with Athena VI backend project APIs, HeyGen avatar clips, save/load round-trips, and common pitfalls seen in production.
 
 **Canonical HTTP contracts** (every path, status code, field): [`docs/api/README.md`](api/README.md) · [Workspace / projects](api/WORKSPACE_API.md) · [HeyGen project videos](api/HEYGEN_PROJECT_VIDEOS_API.md) · [Credits (billing UX)](./CREDITS_FRONTEND_INTEGRATION.md)  
-**Postman examples**: [`postman/AthenaVI_Backend.postman_collection.json`](../postman/AthenaVI_Backend.postman_collection.json)
+**Postman examples**: [`postman/collections/AthenaVI Backend/`](../postman/collections/AthenaVI%20Backend/) (v3 YAML Local Mode)
 
 ---
 
@@ -96,12 +96,20 @@ sequenceDiagram
 | Action | Method | Path |
 |--------|--------|------|
 | Create project | `POST` | `/api/workspaces/:workspaceId/projects` |
-| List projects | `GET` | `/api/workspaces/:workspaceId/projects?folderId=` |
+| List projects | `GET` | `/api/workspaces/:workspaceId/projects?folderId=&assignedTo=me` |
 | Get project (editor load) | `GET` | `/api/workspaces/:workspaceId/projects/:projectId` |
 | Update metadata | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId` |
+| **Assign / unassign** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/assignee` (OWNER/ADMIN, TEAM) |
 | **Save editor state** | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/data` |
 | Move folder | `PATCH` | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` |
 | Delete project | `DELETE` | `/api/workspaces/:workspaceId/projects/:projectId` |
+| List video templates | `GET` | `/api/workspaces/:workspaceId/video-templates?type=VIDEO_SCENE\|VIDEO_PACK` |
+| Get video template | `GET` | `/api/workspaces/:workspaceId/video-templates/:templateId` |
+| Append scene from template | `POST` | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` |
+
+### TEAM assignment (workflow, not ACL)
+
+On TEAM workspaces, OWNER/ADMIN can assign a project to any member. List/detail cards include `assignee`, `assignedBy`, `assignedAt` (or `null`). Filters: `assignedTo=me`, `assigneeId=<uuid>`, `unassigned=true` (mutually exclusive). Assignment does **not** restrict who can open or edit. New projects stay unassigned. Picker: `GET .../members` → `user.id`.
 
 ### Create project (wizard)
 
@@ -112,13 +120,66 @@ POST /api/workspaces/:workspaceId/projects
   "title": "Untitled Video",
   "folderId": "folder-uuid",
   "aspectRatio": "16:9",
-  "tags": ["Presentation"]
+  "tags": ["Professional"]
 }
 ```
 
-Response `201`: `data.project.id` → store as **`projectId`**.
+Response `201`: `data.project.id` → store as **`projectId`**. Project `type` is **`VIDEO`**.
 
 Optional: send initial `data` or `projectState` with `videoSettings` and `scenes: []`.
+
+Optional **video template** (VIDEO editor only — not PPT):
+
+```json
+{
+  "title": "From template",
+  "folderId": "folder-uuid",
+  "aspectRatio": "16:9",
+  "templateId": "cuid-of-VIDEO_SCENE-or-VIDEO_PACK"
+}
+```
+
+- `VIDEO_SCENE` → one scene; `VIDEO_PACK` → all pack scenes.
+- Do **not** send non-empty `data.scenes` together with `templateId` (400).
+- Applied scenes include `templateId` stamp for traceability.
+- Element `s3Key`/`url` are refreshed from durable `TemplateMedia` (presigned) on apply.
+- Presentation decks use `/presentations` + `DECK_LAYOUT` / `DECK_PACK` — never these video template APIs.
+
+### Public video template picker
+
+```http
+GET /api/workspaces/:workspaceId/video-templates
+GET /api/workspaces/:workspaceId/video-templates?type=VIDEO_SCENE
+GET /api/workspaces/:workspaceId/video-templates?type=VIDEO_PACK
+```
+
+Each item includes gallery fields (same idea as presentation deck packs):
+
+| Field | Notes |
+|-------|--------|
+| `id`, `name`, `type`, `contentType`, `variant` | Catalog identity |
+| `packId`, `sceneCount` | Set for `VIDEO_PACK` |
+| `previewImageUrl`, `thumbnailUrl` | From `TemplateMedia` `preview` / `scene:1` |
+| `preview.imageUrl` | Nested alias for FE pickers |
+| `media[]` | Presigned `url` per baked asset |
+| `schema` | Full blueprint (scene or pack) |
+
+**Superadmin authoring (public catalog):** design in the scene editor → publish:
+
+- One scene → `POST /api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template`
+- Whole project → `POST /api/superadmin/projects/:projectId/publish-as-video-pack`
+
+Publish copies media into system S3 + `TemplateMedia` (`scene:{n}`, `element:{id}`, `preview`) and sets `meta.authoredVia: "canvas"`.
+
+### Append scene from video template
+
+```json
+POST /api/workspaces/:workspaceId/projects/:projectId/scenes/from-template
+
+{ "templateId": "cuid-of-VIDEO_SCENE-template" }
+```
+
+**VIDEO_SCENE only** (packs use create with `templateId`). Rejects `Project.type === PRESENTATION` (400). Free to apply (no `ppt_*` credits). Media URLs rehydrated from `TemplateMedia` on apply.
 
 ### Update metadata only
 
@@ -347,7 +408,7 @@ Map your editor **Text Properties** panel to the save payload as follows. Send *
 | UI panel field | JSON path | Type / values | Notes |
 |----------------|-----------|---------------|--------|
 | **Content** (text body) | `content.text` | string | Required for text elements |
-| **Font family** | `style.fontFamily` | string | e.g. `"Inter"`, `"Inter, system-ui, sans-serif"` |
+| **Font family** | `style.fontFamily` | string | Prefer a family from `GET /api/fonts/catalog` (e.g. `"Inter"` or `"Playfair Display"`). CSS stacks like `"Inter, system-ui, sans-serif"` still work; Remotion loads the first named family. |
 | **Font size** | `style.fontSize` | number | Pixels, e.g. `32` (not `"32px"` string) |
 | **Font weight** | `style.fontWeight` | number or string | UI label → API: Light `300`, Regular `400`, Medium `500`, Semi Bold `600`, Bold `700`, Extra Bold `800`, Black `900` |
 | **Font style** | `style.fontStyle` | string | `"normal"` \| `"italic"` |

@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 2000

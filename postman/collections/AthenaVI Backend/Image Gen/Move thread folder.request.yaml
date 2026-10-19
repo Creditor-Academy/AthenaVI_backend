@@ -1,0 +1,11 @@
+$kind: http-request
+name: Move thread folder
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}/move-folder"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "folderId": "{{folderId}}"
+    }
+order: 3500

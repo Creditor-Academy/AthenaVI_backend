@@ -1,0 +1,7 @@
+$kind: http-request
+description: Full DECK_PACK schema + slidePreviews for drill-down grid (uses deckPackId from list)
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentation-deck-packs/{{deckPackId}}"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 1160

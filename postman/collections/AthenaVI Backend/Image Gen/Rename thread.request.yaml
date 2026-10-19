@@ -1,0 +1,11 @@
+$kind: http-request
+name: Rename thread
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}"
+method: PATCH
+body:
+  type: json
+  data: |-
+    {
+      "title": "Launch visual"
+    }
+order: 3450

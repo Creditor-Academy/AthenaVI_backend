@@ -1,0 +1,32 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "social",
+      "folderId": "{{folderId}}",
+      "formatId": "youtube-thumbnail",
+      "styleHint": "bold, high contrast, dark background",
+      "prompt": "Thumbnail for my video about launching an online course in a single weekend using AI avatars"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        const threadId = j && j.data && j.data.thread && j.data.thread.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+        if (threadId) {
+          pm.collectionVariables.set("imageGenThreadId", threadId);
+          pm.environment.set("imageGenThreadId", threadId);
+        }
+      }
+    language: text/javascript
+order: 3100

@@ -1,0 +1,5 @@
+$kind: http-request
+description: 302 redirect to Google for the superadmin portal. Use a browser or disable redirect following to inspect.
+url: "{{baseUrl}}/api/auth/superadmin/google"
+method: GET
+order: 10100

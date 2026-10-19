@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/stock/workspaces/{{workspaceId}}/import"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "provider": "pixabay",
+      "externalId": "{{stockExternalId}}",
+      "mediaType": "photo",
+      "name": "Pixabay photo"
+    }
+order: 10000

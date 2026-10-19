@@ -1,0 +1,14 @@
+$kind: http-request
+description: Increments storageLimit by additionalBytes (any positive integer). Example body adds 100 GiB.
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/grant"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "additionalBytes": {{additionalStorageBytes}},
+      "reason": "Custom enterprise allocation"
+    }
+order: 10000

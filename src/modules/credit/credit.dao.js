@@ -192,6 +192,8 @@ const listUsersWithCredits = async ({ page, limit, search }) => {
         storageLimit: true,
         storageUsed: true,
         isPlatformSuperadmin: true,
+        pausedAt: true,
+        pauseReason: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },

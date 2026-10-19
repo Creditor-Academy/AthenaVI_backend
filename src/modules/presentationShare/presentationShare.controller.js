@@ -1,0 +1,218 @@
+const asyncHandler = require('../../shared/utils/asyncHandler');
+const { successResponse } = require('../../shared/utils/apiResponse');
+const messages = require('../../shared/utils/messages');
+const shareService = require('./presentationShare.service');
+const rateLimit = require('./presentationShare.rateLimit.service');
+
+const VIEW_CACHE_MAX_AGE_SEC =
+  Number(process.env.PPT_SHARE_VIEW_CACHE_MAX_AGE_SEC) >= 0
+    ? Number(process.env.PPT_SHARE_VIEW_CACHE_MAX_AGE_SEC)
+    : 30;
+
+/* =========================
+   Owner (Bearer + workspace member)
+========================= */
+
+const enableShareViewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.enableShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_VIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ENABLED);
+});
+
+const enableShareReviewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.enableShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ENABLED);
+});
+
+const getShare = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.getShare({ workspaceId, presentationId });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_FETCHED);
+});
+
+const patchShareViewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const { enabled } = req.body;
+  const data = await shareService.updateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_VIEWER,
+    enabled,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_UPDATED);
+});
+
+const patchShareReviewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const { enabled } = req.body;
+  const data = await shareService.updateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
+    enabled,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_UPDATED);
+});
+
+const rotateShareViewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.rotateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_VIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ROTATED);
+});
+
+const rotateShareReviewer = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const data = await shareService.rotateShareForRole({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    ip: req.ip,
+    role: shareService.ROLE_REVIEWER,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_ROTATED);
+});
+
+/* =========================
+   Public capability token
+========================= */
+
+const getPublicPresentation = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  await rateLimit.assertViewAllowed({ ip: req.ip, tokenHash: shareService.hashToken(token) });
+
+  const { etag, data } = await shareService.getPublicPresentation(token);
+
+  res.set('ETag', etag);
+  res.set('Cache-Control', `private, max-age=${VIEW_CACHE_MAX_AGE_SEC}`);
+
+  if (req.headers['if-none-match'] === etag) {
+    return res.status(304).end();
+  }
+
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_VIEW_FETCHED);
+});
+
+const getPublicSession = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.getPublicSession({ token, user: req.user || null });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_SESSION_FETCHED);
+});
+
+const heartbeatPresence = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { viewerSessionId, slideIndex } = req.body;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.heartbeatPresence({
+    token,
+    user: req.user || null,
+    viewerSessionId,
+    slideIndex,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_FETCHED);
+});
+
+const listPresence = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.listPresence({ token, user: req.user || null });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_FETCHED);
+});
+
+const leavePresence = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.leavePresence({
+    token,
+    user: req.user || null,
+    viewerSessionId: req.query.viewerSessionId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_LEFT);
+});
+
+
+/* =========================
+   Member Present (Bearer + workspace member)
+========================= */
+
+const memberHeartbeatPresence = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const { slideIndex, presenting } = req.body;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const data = await shareService.memberHeartbeatPresence({
+    workspaceId,
+    presentationId,
+    user: req.user,
+    slideIndex,
+    presenting,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_FETCHED);
+});
+
+const memberLeavePresence = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  res.set('Cache-Control', 'no-store');
+  await rateLimit.assertPresenceAllowed({ ip: req.ip });
+
+  const leaveToken =
+    (req.body && req.body.leaveToken) ||
+    (req.query && req.query.leaveToken) ||
+    null;
+
+  const data = await shareService.memberLeavePresence({
+    workspaceId,
+    presentationId,
+    user: req.user || null,
+    leaveToken,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_SHARE_PRESENCE_LEFT);
+});
+module.exports = {
+  enableShareViewer,
+  enableShareReviewer,
+  getShare,
+  patchShareViewer,
+  patchShareReviewer,
+  rotateShareViewer,
+  rotateShareReviewer,
+  getPublicPresentation,
+  getPublicSession,
+  heartbeatPresence,
+  listPresence,
+  leavePresence,
+  memberHeartbeatPresence,
+  memberLeavePresence,
+};

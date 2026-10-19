@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments/{{commentId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "body": "Updated comment text.",
+      "mentionedUserIds": []
+    }
+order: 4000

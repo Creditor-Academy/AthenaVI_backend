@@ -15,6 +15,10 @@ const {
   AUDIO_PLAYBACK_RATE_MAX,
   normalizeAudioSettings,
 } = require('../../shared/utils/audioSettings');
+const {
+  assignmentListQueryJoi,
+  withAssignmentOxor,
+} = require('../project/project.assignment');
 
 const uuidParam = Joi.string().uuid().required();
 
@@ -366,11 +370,19 @@ const createProjectSchema = Joi.object({
     status: Joi.string()
       .valid(...PROJECT_STATUSES)
       .optional(),
+    templateId: Joi.string().trim().min(1).optional(),
   })
     .or('name', 'title')
     .custom((value, helpers) => {
       if (value.projectState && value.data) {
         return helpers.message('Provide either data or projectState, not both');
+      }
+      const scenes =
+        value.projectState?.scenes || value.data?.scenes || [];
+      if (value.templateId && Array.isArray(scenes) && scenes.length > 0) {
+        return helpers.message(
+          'Cannot use templateId together with a non-empty data.scenes / projectState.scenes'
+        );
       }
       const aspect = value.aspectRatio || value.canvasSize;
       if (aspect === 'custom') {
@@ -399,15 +411,42 @@ const listProjectsSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
   }),
-  query: Joi.object({
-    folderId: Joi.string().uuid().optional(),
-  }),
+  query: withAssignmentOxor(
+    Joi.object({
+      folderId: Joi.string().uuid().optional(),
+      type: Joi.string().valid('VIDEO', 'PRESENTATION', 'CANVAS').optional(),
+      ...assignmentListQueryJoi(Joi),
+    }),
+    Joi
+  ),
 });
 
 const projectByIdSchema = Joi.object({
   params: Joi.object({
     workspaceId: uuidParam,
     projectId: uuidParam,
+  }),
+});
+
+const setProjectAssigneeSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: uuidParam,
+    projectId: uuidParam,
+  }),
+  body: Joi.object({
+    assigneeId: Joi.string().uuid().allow(null).required(),
+  }),
+});
+
+const setSceneAssigneeSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: uuidParam,
+    projectId: uuidParam,
+    // Scene ids are client-generated (`scene_<id>`), not UUIDs.
+    sceneId: Joi.string().trim().min(1).required(),
+  }),
+  body: Joi.object({
+    assigneeId: Joi.string().uuid().allow(null).required(),
   }),
 });
 
@@ -461,6 +500,8 @@ module.exports = {
   createProjectSchema,
   listProjectsSchema,
   projectByIdSchema,
+  setProjectAssigneeSchema,
+  setSceneAssigneeSchema,
   updateProjectSchema,
   saveProjectDataSchema,
   moveProjectFolderSchema,

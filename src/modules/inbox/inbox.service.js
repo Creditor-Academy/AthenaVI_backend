@@ -15,6 +15,9 @@ const {
   serializeNotification,
   CATEGORIES,
 } = require('./inbox.notificationTypes');
+const { buildProjectAssignmentMetadata } = require('../project/project.assignment');
+const { buildSlideAssignmentMetadata } = require('../presentation/slideAssignment');
+const { buildSceneAssignmentMetadata } = require('../project/sceneAssignment');
 
 function buildInvitationActionUrl(token) {
   return `${process.env.FRONTEND_URL}/invitations/accept/${token}`;
@@ -616,34 +619,6 @@ async function notifyPlatformStorageUpgradeRequest({
   });
 }
 
-async function notifyPlatformEarlyAccessRequest({
-  requestId,
-  name,
-  email,
-  company,
-  role,
-  useCase,
-}) {
-  const { listPlatformSuperadminUserIds } = require('../../shared/services/platformSuperadmin.service');
-  const adminUserIds = await listPlatformSuperadminUserIds();
-
-  return notifyMany(adminUserIds, {
-    type: 'PLATFORM_EARLY_ACCESS_REQUEST',
-    referenceId: `early_access_${requestId}`,
-    title: 'Early access request',
-    message: `${name} (${email}) requested early access.`,
-    metadata: {
-      requestId,
-      name,
-      email,
-      company: company || null,
-      role: role || null,
-      useCase: useCase || null,
-      scope: 'platform',
-    },
-  });
-}
-
 async function notifyStorageUpgradeRejected({ userId, requestedAdditionalGb, reviewNote }) {
   return notifyUser({
     userId,
@@ -723,6 +698,286 @@ async function notifyProjectComment({
       metadata: { ...baseMetadata, audience: 'project_owner' },
     });
   }
+}
+
+/**
+ * Comment fan-out for a PRESENTATION project. Separate from notifyProjectComment because a
+ * comment can come from a share-link guest (no user id) and because the deep link points at
+ * the presentation editor rather than the video project route.
+ *
+ * @param {object} params
+ * @param {object} params.comment        the created/updated PresentationComment row
+ * @param {object} params.project        presentation project (needs `createdBy`, `name`)
+ * @param {string} params.authorName     display name, already resolved for guests
+ * @param {string|null} params.authorUserId  null when a guest posted
+ * @param {string[]} params.newMentionIds    member ids to notify about a mention
+ * @param {string|null} params.parentAuthorId  root author, so replies reach the person replied to
+ */
+async function notifyPresentationComment({
+  comment,
+  project,
+  workspace,
+  authorName,
+  authorUserId,
+  newMentionIds,
+  parentAuthorId,
+  isCreate,
+}) {
+  const presentationName = project.name || 'your presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const notified = new Set([authorUserId].filter(Boolean));
+  const base = process.env.FRONTEND_URL || '';
+
+  const baseMetadata = {
+    workspaceId: comment.workspaceId,
+    projectId: comment.projectId,
+    presentationId: comment.projectId,
+    slideId: comment.slideId || null,
+    commentId: comment.id,
+    projectName: presentationName,
+    workspaceName,
+    authorId: authorUserId,
+    authorName,
+    // Set explicitly: the generic builder resolves projectId to the video editor route.
+    actionUrl: `${base}/workspaces/${comment.workspaceId}/presentations/${comment.projectId}`,
+  };
+
+  const preview =
+    comment.body.length > 120 ? `${comment.body.slice(0, 117)}...` : comment.body;
+
+  const mentionIds = (newMentionIds || []).filter((id) => !notified.has(id));
+  if (mentionIds.length) {
+    await notifyMany(mentionIds, {
+      type: 'PRESENTATION_COMMENT_MENTION',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `${authorName} mentioned you in ${presentationName}`,
+      message: preview,
+      metadata: { ...baseMetadata, audience: 'mention' },
+    });
+    mentionIds.forEach((id) => notified.add(id));
+  }
+
+  if (!isCreate) {
+    return;
+  }
+
+  // A reply should reach the person being replied to, not only the deck owner.
+  if (parentAuthorId && !notified.has(parentAuthorId)) {
+    await notifyUser({
+      userId: parentAuthorId,
+      type: 'PRESENTATION_COMMENT_ADDED',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `New reply on ${presentationName}`,
+      message: `${authorName} replied to your comment in ${workspaceName}.`,
+      metadata: { ...baseMetadata, audience: 'thread_author' },
+    });
+    notified.add(parentAuthorId);
+  }
+
+  if (project.createdBy && !notified.has(project.createdBy)) {
+    await notifyUser({
+      userId: project.createdBy,
+      type: 'PRESENTATION_COMMENT_ADDED',
+      referenceId: comment.id,
+      workspaceId: comment.workspaceId,
+      title: `New comment on ${presentationName}`,
+      message: `${authorName} commented on your presentation in ${workspaceName}.`,
+      metadata: { ...baseMetadata, audience: 'project_owner' },
+    });
+  }
+}
+
+/**
+ * Notify the new assignee that a project was assigned to them.
+ * referenceId = projectId so reassignment upserts the same inbox row.
+ */
+async function notifyProjectAssigned({ project, workspace, actor }) {
+  const assigneeId = project.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project.name || 'a project';
+  const workspaceName = workspace?.name || 'workspace';
+  const kind = project.type === 'PRESENTATION' ? 'presentation' : 'video';
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'PROJECT_ASSIGNED',
+    referenceId: project.id,
+    workspaceId: project.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${projectName}`,
+    message: `You were assigned the ${kind} "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildProjectAssignmentMetadata({ project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned (or reassigned away).
+ */
+async function notifyProjectUnassigned({
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project.name || 'a project';
+  const workspaceName = workspace?.name || 'workspace';
+  const kind = project.type === 'PRESENTATION' ? 'presentation' : 'video';
+
+  const message = reassignedToId
+    ? `${actorName} reassigned the ${kind} "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from the ${kind} "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'PROJECT_UNASSIGNED',
+    referenceId: project.id,
+    workspaceId: project.workspaceId || workspace?.id,
+    title: `Unassigned from ${projectName}`,
+    message,
+    metadata: {
+      ...buildProjectAssignmentMetadata({ project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
+}
+
+/**
+ * Notify the new assignee that a slide was assigned to them.
+ * referenceId = slideId so reassignment upserts the same inbox row.
+ */
+async function notifySlideAssigned({ slide, project, workspace, actor }) {
+  const assigneeId = slide.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const slideLabel = slide.order != null ? `Slide ${slide.order + 1}` : 'a slide';
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'SLIDE_ASSIGNED',
+    referenceId: slide.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${slideLabel} in ${projectName}`,
+    message: `You were assigned ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildSlideAssignmentMetadata({ slide, project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned from a slide (or reassigned away).
+ */
+async function notifySlideUnassigned({
+  slide,
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a presentation';
+  const workspaceName = workspace?.name || 'workspace';
+  const slideLabel = slide.order != null ? `Slide ${slide.order + 1}` : 'a slide';
+
+  const message = reassignedToId
+    ? `${actorName} reassigned ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from ${slideLabel.toLowerCase()} of "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'SLIDE_UNASSIGNED',
+    referenceId: slide.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `Unassigned from ${slideLabel} of ${projectName}`,
+    message,
+    metadata: {
+      ...buildSlideAssignmentMetadata({ slide, project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
+}
+
+/**
+ * Notify the new assignee that a video scene was assigned to them.
+ * referenceId = sceneId so reassignment upserts the same inbox row.
+ */
+async function notifySceneAssigned({ scene, project, workspace, actor }) {
+  const assigneeId = scene.assignedToId;
+  if (!assigneeId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a video';
+  const workspaceName = workspace?.name || 'workspace';
+  const sceneLabel = scene.name || (scene.order != null ? `Scene ${scene.order + 1}` : 'a scene');
+
+  return notifyUser({
+    userId: assigneeId,
+    type: 'SCENE_ASSIGNED',
+    referenceId: scene.sceneId || scene.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `${actorName} assigned you ${sceneLabel} in ${projectName}`,
+    message: `You were assigned ${sceneLabel} of "${projectName}" in ${workspaceName}.`,
+    metadata: {
+      ...buildSceneAssignmentMetadata({ scene, project, workspace, actor }),
+      audience: 'assignee',
+    },
+  });
+}
+
+/**
+ * Notify the previous assignee they were unassigned from a scene (or reassigned away).
+ */
+async function notifySceneUnassigned({
+  scene,
+  project,
+  workspace,
+  actor,
+  unassignedUserId,
+  reassignedToId = null,
+}) {
+  if (!unassignedUserId) return null;
+
+  const actorName = actor?.name || 'Someone';
+  const projectName = project?.name || 'a video';
+  const workspaceName = workspace?.name || 'workspace';
+  const sceneLabel = scene.name || (scene.order != null ? `Scene ${scene.order + 1}` : 'a scene');
+
+  const message = reassignedToId
+    ? `${actorName} reassigned ${sceneLabel} of "${projectName}" in ${workspaceName}.`
+    : `${actorName} unassigned you from ${sceneLabel} of "${projectName}" in ${workspaceName}.`;
+
+  return notifyUser({
+    userId: unassignedUserId,
+    type: 'SCENE_UNASSIGNED',
+    referenceId: scene.sceneId || scene.id,
+    workspaceId: project?.workspaceId || workspace?.id,
+    title: `Unassigned from ${sceneLabel} of ${projectName}`,
+    message,
+    metadata: {
+      ...buildSceneAssignmentMetadata({ scene, project, workspace, actor }),
+      audience: 'previous_assignee',
+      reassignedToId,
+    },
+  });
 }
 
 function buildUnreadByCategory(unreadRows) {
@@ -842,10 +1097,16 @@ module.exports = {
   notifyPlatformHeygenWalletLow,
   clearPlatformHeygenWalletLow,
   notifyPlatformStorageUpgradeRequest,
-  notifyPlatformEarlyAccessRequest,
   notifyStorageUpgradeRejected,
   notifyCreditsWorkspaceRevoke,
   notifyProjectComment,
+  notifyPresentationComment,
+  notifyProjectAssigned,
+  notifyProjectUnassigned,
+  notifySlideAssigned,
+  notifySlideUnassigned,
+  notifySceneAssigned,
+  notifySceneUnassigned,
   listInbox,
   getUnreadCount,
   getNotification,

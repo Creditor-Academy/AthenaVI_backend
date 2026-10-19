@@ -1,0 +1,14 @@
+$kind: http-request
+description: "Sets absolute limit to tier: free | plus_10gb | pro_50gb. Approves latest pending upgrade request if any."
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/grant"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tierId": "{{storageTierId}}",
+      "reason": "Manual tier upgrade"
+    }
+order: 9000

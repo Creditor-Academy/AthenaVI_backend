@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/graphics/{{graphicId}}"
+method: GET
+order: 3000

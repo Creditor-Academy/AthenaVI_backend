@@ -1,0 +1,5 @@
+$kind: http-request
+description: feature = voice_clone | voice_design | voice_preview | avatar_create. Optional text for preview.
+url: "{{baseUrl}}/api/credits/me/estimate?feature=voice_preview&text=Hello%20from%20Athena"
+method: GET
+order: 600

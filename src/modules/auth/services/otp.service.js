@@ -1,4 +1,4 @@
-const { redisClient } = require('../../../shared/config/redis');
+const { redisClient, assertRedisReady } = require('../../../shared/config/redis');
 const AppError = require('../../../shared/utils/AppError');
 const messages = require('../../../shared/utils/messages');
 
@@ -25,6 +25,7 @@ const VERIFY_OTP_SCRIPT = `
 `;
 
 const acquireOtpLock = async (email) => {
+  assertRedisReady();
   const locked = await redisClient.set(lockKey(email), '1', { NX: true, EX: LOCK_TTL });
 
   if (!locked) {
@@ -33,10 +34,16 @@ const acquireOtpLock = async (email) => {
 };
 
 const releaseOtpLock = async (email) => {
-  await redisClient.del(lockKey(email));
+  try {
+    if (!redisClient.isOpen) return;
+    await redisClient.del(lockKey(email));
+  } catch {
+    // Best-effort unlock when Redis is unavailable
+  }
 };
 
 const checkResendLimit = async (email) => {
+  assertRedisReady();
   const count = await redisClient.incr(resendKey(email));
 
   if (count === 1) {
@@ -49,6 +56,7 @@ const checkResendLimit = async (email) => {
 };
 
 const storeOtp = async (email, otp) => {
+  assertRedisReady();
   await redisClient.del(attemptsKey(email));
   await redisClient.set(otpKey(email), otp, { EX: OTP_TTL });
 };
@@ -75,6 +83,7 @@ const incrementOtpAttempts = async (email) => {
 };
 
 const verifyOtp = async ({ email, otp }) => {
+  assertRedisReady();
   const attemptCount = await redisClient.get(attemptsKey(email));
   if (attemptCount && Number(attemptCount) >= MAX_OTP_VERIFY_ATTEMPTS) {
     throw new AppError(messages.TOO_MANY_OTP_VERIFY_ATTEMPTS, 429);

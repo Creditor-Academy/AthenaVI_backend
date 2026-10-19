@@ -1,0 +1,5 @@
+$kind: http-request
+description: Platform capabilities for the portal toggle (isPlatformSuperadmin). Call after login.
+url: "{{baseUrl}}/api/user/capabilities"
+method: GET
+order: 1500

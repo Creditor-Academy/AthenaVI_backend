@@ -1,0 +1,7 @@
+$kind: http-request
+description: Reopen a resolved root so replies are accepted again.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments/{{presentationCommentId}}/unresolve"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 6000

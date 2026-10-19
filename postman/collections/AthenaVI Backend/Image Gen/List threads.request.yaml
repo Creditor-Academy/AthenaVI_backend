@@ -1,0 +1,25 @@
+$kind: http-request
+name: List threads
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads"
+method: GET
+queryParams:
+  folderId: "{{folderId}}"
+  take: "20"
+  skip: "0"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const threads = j && j.data && j.data.threads;
+        if (Array.isArray(threads) && threads[0] && threads[0].id) {
+          pm.collectionVariables.set("imageGenThreadId", threads[0].id);
+          pm.environment.set("imageGenThreadId", threads[0].id);
+          if (threads[0].head && threads[0].head.generationId) {
+            pm.collectionVariables.set("generationId", threads[0].head.generationId);
+            pm.environment.set("generationId", threads[0].head.generationId);
+          }
+        }
+      }
+    language: text/javascript
+order: 3200

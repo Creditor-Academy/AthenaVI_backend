@@ -1,0 +1,15 @@
+$kind: http-request
+description: One level only. parentId must be an unresolved root; the reply inherits the root's slideId. Max 50 replies per root.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Agreed - trimming it now.",
+      "parentId": "{{presentationCommentId}}"
+    }
+order: 3000

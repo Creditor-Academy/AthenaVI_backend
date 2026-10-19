@@ -1,0 +1,9 @@
+$kind: http-request
+description: Metadata only (Content-Length, Content-Type) before streaming.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos/{{heygenVideoId}}/stream"
+method: HEAD
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 5900

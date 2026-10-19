@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/invitations/accept"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "token": "invitation-jwt-or-token"
+    }
+order: 9000

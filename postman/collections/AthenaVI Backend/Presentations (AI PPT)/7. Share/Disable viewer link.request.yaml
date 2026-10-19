@@ -1,0 +1,14 @@
+$kind: http-request
+description: Disable keeps the same token; re-enable revives the shared URL. Presence room is not cleared.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share/viewer"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "enabled": false
+    }
+order: 3000

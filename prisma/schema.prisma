@@ -62,14 +62,43 @@ enum InboxNotificationType {
   PROJECT_COMMENT_ADDED
   PROJECT_COMMENT_MENTION
   PLATFORM_EARLY_ACCESS_REQUEST
+  PRESENTATION_EXPORT_COMPLETED
+  PRESENTATION_EXPORT_FAILED
+  PRESENTATION_GENERATION_COMPLETED
+  PRESENTATION_GENERATION_FAILED
+  PRESENTATION_COMMENT_ADDED
+  PRESENTATION_COMMENT_MENTION
+  PROJECT_ASSIGNED
+  PROJECT_UNASSIGNED
+  SLIDE_ASSIGNED
+  SLIDE_UNASSIGNED
+  SCENE_ASSIGNED
+  SCENE_UNASSIGNED
 }
 
-enum EarlyAccessRequestStatus {
-  PENDING
-  UNDER_REVIEW
-  IN_DISCUSSION
-  APPROVED
-  REJECTED
+enum ProjectType {
+  VIDEO
+  PRESENTATION
+  CANVAS
+}
+
+enum PresentationShareRole {
+  VIEWER
+  REVIEWER
+}
+
+/// Editor-set slide progress for reviewers (not generation status).
+enum SlideProgressStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TemplateType {
+  VIDEO_SCENE
+  DECK_LAYOUT
+  DECK_PACK
+  VIDEO_PACK
 }
 
 enum StorageUpgradeRequestStatus {
@@ -99,6 +128,10 @@ model User {
   deletionRequestedAt DateTime? @map("deletion_requested_at")
   deletionScheduledAt DateTime? @map("deletion_scheduled_at")
 
+  // Admin-imposed service suspension: the user cannot sign in while pausedAt is set.
+  pausedAt    DateTime? @map("paused_at")
+  pauseReason String?   @map("pause_reason")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -110,6 +143,10 @@ model User {
   creditTransactions  CreditTransaction[]
   storageTransactions StorageTransaction[]
   uploadedAssets      Asset[]              @relation("AssetUploader")
+  imageGenerations    ImageGeneration[]
+  imageGenContexts    ImageGenContext[]
+  imageGenThreads     ImageGenThread[]
+  imageGenMessages    ImageGenMessage[]
 
   ownedWorkspaces      Workspace[]       @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
@@ -122,9 +159,17 @@ model User {
   inboxNotifications UserInboxNotification[]
   storageUpgradeRequests StorageUpgradeRequest[]
   projectComments ProjectComment[] @relation("ProjectCommentAuthor")
+  presentationComments PresentationComment[] @relation("PresentationCommentAuthor")
   sentInvitations Invitation[] @relation("InvitationInvitedBy")
   productEmailBroadcastsSent ProductEmailBroadcast[] @relation("ProductEmailBroadcastSentBy")
   productEmailBroadcastRecipients ProductEmailBroadcastRecipient[]
+  emailTemplates EmailTemplate[] @relation("EmailTemplateCreatedBy")
+  presentationShareLinks  PresentationShareLink[]  @relation("PresentationShareCreatedBy")
+  presentationShareAudits PresentationShareAudit[] @relation("PresentationShareAuditActor")
+  assignedProjects        Project[]                @relation("ProjectAssignee")
+  projectsAssignedByMe    Project[]                @relation("ProjectAssignedBy")
+  assignedSlides          Slide[]                  @relation("SlideAssignee")
+  slidesAssignedByMe      Slide[]                  @relation("SlideAssignedBy")
 
   @@index([deletionScheduledAt])
   @@map("users")
@@ -180,6 +225,12 @@ model Workspace {
   sceneRenderCaches  SceneRenderCache[]
   heygenWorkspaceShares HeygenWorkspaceShare[]
   projectComments    ProjectComment[]
+  presentationComments PresentationComment[]
+  imageGenerations   ImageGeneration[]
+  imageGenContexts   ImageGenContext[]
+  imageGenThreads    ImageGenThread[]
+  brandKits          WorkspaceBrandKit[]
+  presentationShareLinks PresentationShareLink[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -399,6 +450,7 @@ model Folder {
   updatedBy   String?
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   projects    Project[]
+  imageGenThreads ImageGenThread[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -414,24 +466,41 @@ model Project {
   createdBy   String
   updatedBy   String?
 
+  type          ProjectType @default(VIDEO)
   data          Json // 🔥 whole editor state (autosave)
   thumbnail     String? // preview image
+  /// When `thumbnail` was last captured from the rendered deck. Null = never captured.
+  /// `updatedAt` cannot answer this: it moves on unrelated writes.
+  thumbnailUpdatedAt DateTime? @map("thumbnail_updated_at")
   duration      Int? // optional
   status        String  @default("draft") // draft | rendering | completed
   storageBytes  BigInt  @default(0)
+
+  /// TEAM workflow assignee (not ACL). Null = unassigned.
+  assignedToId String?   @map("assigned_to_id")
+  assignedById String?   @map("assigned_by_id")
+  assignedAt   DateTime? @map("assigned_at")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   folder            Folder             @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  assignedTo        User?              @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy        User?              @relation("ProjectAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
   heygenResponses    HeygenResponse[]
   speechGenerations  SpeechGeneration[]
   projectRenders     ProjectRender[]
   sceneRenderCaches  SceneRenderCache[]
   comments           ProjectComment[]
+  presentationComments PresentationComment[]
+  deck               Deck?
+  shareLinks         PresentationShareLink[]
 
   @@index([updatedBy])
+  @@index([type])
+  @@index([assignedToId])
+  @@index([workspaceId, assignedToId])
 }
 
 model ProjectComment {
@@ -441,6 +510,11 @@ model ProjectComment {
   authorId         String    @map("author_id")
   body             String
   mentionedUserIds String[]  @map("mentioned_user_ids")
+  /// Null for a root thread; set for a reply. Only one level of nesting is allowed.
+  parentId         String?   @map("parent_id")
+  /// Roots only. Workspace members resolve / reopen, same as presentation comments.
+  resolvedAt       DateTime? @map("resolved_at")
+  resolvedBy       String?   @map("resolved_by")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   deletedAt        DateTime? @map("deleted_at")
@@ -448,9 +522,12 @@ model ProjectComment {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   author    User      @relation("ProjectCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent    ProjectComment?  @relation("ProjectCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ProjectComment[] @relation("ProjectCommentReplies")
 
   @@index([projectId, createdAt])
   @@index([workspaceId])
+  @@index([parentId])
   @@map("project_comments")
 }
 
@@ -467,7 +544,7 @@ model Asset {
   url String
   key String
 
-  source          String @default("upload") // upload | stock
+  source          String @default("upload") // upload | stock | ai_gen
   stockProvider   String?
   stockExternalId String?
   stockMetadata   Json?
@@ -475,11 +552,154 @@ model Asset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  uploader  User      @relation("AssetUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploader         User              @relation("AssetUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  imageGenerations ImageGeneration[]
 
   @@unique([workspaceId, stockProvider, stockExternalId])
   @@index([workspaceId, uploadedBy])
+}
+
+model ImageGenContext {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  userId      String    @map("user_id")
+  status      String    @default("READY")
+  inlineText  String?   @map("inline_text") @db.Text
+  derived     Json
+  expiresAt   DateTime  @map("expires_at")
+  pinnedAt    DateTime? @map("pinned_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files       ImageGenContextFile[]
+  generations ImageGeneration[]
+  threads     ImageGenThread[]
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, userId])
+  @@index([expiresAt])
+  @@map("image_gen_contexts")
+}
+
+model ImageGenContextFile {
+  id            String  @id @default(uuid())
+  contextId     String  @map("context_id")
+  source        String // upload | asset
+  assetId       String? @map("asset_id")
+  name          String
+  mimeType      String  @map("mime_type")
+  s3Key         String  @map("s3_key")
+  role          String // document | reference_image
+  extractedText String? @map("extracted_text") @db.Text
+  imageSummary  String? @map("image_summary") @db.Text
+
+  context ImageGenContext @relation(fields: [contextId], references: [id], onDelete: Cascade)
+
+  @@index([contextId])
+  @@map("image_gen_context_files")
+}
+
+model ImageGenThread {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @map("workspace_id")
+  folderId           String   @map("folder_id")
+  userId             String   @map("user_id")
+  title              String
+  rootGenerationId   String   @map("root_generation_id")
+  headGenerationId   String   @map("head_generation_id")
+  contextId          String?  @map("context_id")
+  modelId            String?  @map("model_id")
+  formatId           String?  @map("format_id")
+  styleId            String?  @map("style_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder         Folder           @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context        ImageGenContext? @relation(fields: [contextId], references: [id], onDelete: SetNull)
+  rootGeneration ImageGeneration  @relation("ThreadRoot", fields: [rootGenerationId], references: [id], onDelete: Restrict)
+  headGeneration ImageGeneration  @relation("ThreadHead", fields: [headGenerationId], references: [id], onDelete: Restrict)
+  generations    ImageGeneration[] @relation("ThreadHops")
+  messages       ImageGenMessage[]
+
+  @@unique([rootGenerationId])
+  @@index([workspaceId, folderId, updatedAt])
+  @@index([workspaceId, userId])
+  @@index([folderId])
+  @@index([headGenerationId])
+  @@index([contextId])
+  @@map("image_gen_threads")
+}
+
+model ImageGenMessage {
+  id             String   @id @default(uuid())
+  threadId       String   @map("thread_id")
+  userId         String   @map("user_id")
+  role           String
+  type           String
+  content        String   @db.Text
+  generationId   String?  @map("generation_id")
+  creditsCharged Int      @default(0) @map("credits_charged")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  thread     ImageGenThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation ImageGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@index([generationId])
+  @@map("image_gen_messages")
+}
+
+model ImageGeneration {
+  id             String  @id @default(uuid())
+  workspaceId    String  @map("workspace_id")
+  userId         String  @map("user_id")
+  mode           String
+  modelId        String  @map("model_id")
+  formatId       String? @map("format_id")
+  styleId        String? @map("style_id")
+  prompt         String  @db.Text
+  revisedPrompt  String? @map("revised_prompt") @db.Text
+  request        Json?
+  parentId       String? @map("parent_id")
+  rootId         String? @map("root_id")
+  action         String
+  assetId        String? @map("asset_id")
+  contextId      String? @map("context_id")
+  threadId       String? @map("thread_id")
+  s3Key          String  @map("s3_key")
+  url            String
+  openaiSize     String? @map("openai_size")
+  exportWidth    Int?    @map("export_width")
+  exportHeight   Int?    @map("export_height")
+  creditsCharged Int     @default(0) @map("credits_charged")
+  status         String  @default("SUCCEEDED")
+  feedback       String? @map("feedback")
+  deletedAt      DateTime? @map("deleted_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     Asset?           @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  context   ImageGenContext? @relation(fields: [contextId], references: [id], onDelete: SetNull)
+  thread    ImageGenThread?  @relation("ThreadHops", fields: [threadId], references: [id], onDelete: SetNull)
+  parent    ImageGeneration? @relation("ImageGenChain", fields: [parentId], references: [id], onDelete: SetNull)
+  children  ImageGeneration[] @relation("ImageGenChain")
+  messages  ImageGenMessage[]
+  threadRootFor ImageGenThread[] @relation("ThreadRoot")
+  threadHeadFor ImageGenThread[] @relation("ThreadHead")
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, userId])
+  @@index([rootId])
+  @@index([assetId])
+  @@index([contextId])
+  @@index([threadId])
+  @@map("image_generations")
 }
 
 model HeygenResponse {
@@ -660,21 +880,314 @@ model HeygenWorkspaceShare {
   @@map("heygen_workspace_shares")
 }
 
-model EarlyAccessRequest {
-  id         String                   @id @db.VarChar(20)
-  name       String                   @db.VarChar(100)
-  email      String                   @unique @db.VarChar(254)
-  company    String?                  @db.VarChar(150)
-  role       String?                  @db.VarChar(100)
-  useCase    String?                  @map("use_case") @db.VarChar(100)
-  message    String?                  @db.Text
-  status     EarlyAccessRequestStatus @default(PENDING)
-  createdAt  DateTime                 @default(now()) @map("created_at")
-  reviewedAt DateTime?                @map("reviewed_at")
-  reviewerId String?                  @map("reviewer_id") @db.VarChar(50)
+model Deck {
+  id                  String   @id @default(cuid())
+  projectId           String   @unique
+  themeTokens         Json
+  outline             Json?
+  status              String   @default("DRAFT") // DRAFT | GENERATING | READY | FAILED
+  aspectRatio         String   @default("16:9")
+  locale              String   @default("en")
+  promptBundleVersion String?
+  generationMetrics   Json?
+  partial             Boolean  @default(false)
+  creditsChargedSoFar Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  @@index([status, createdAt])
-  @@map("early_access_requests")
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slides  Slide[]
+  exports DeckExport[]
+
+  @@index([status])
+  @@map("decks")
+}
+
+model Slide {
+  id             String              @id @default(cuid())
+  deckId         String
+  order          Int
+  contentType    String?
+  layoutId       String?
+  content        Json?
+  imageRef       Json?
+  /// Freeform canvas: { version, canvas: { width, height }, elements: [...] }
+  elements       Json?
+  status         String              @default("PENDING") // PENDING | GENERATING | READY | FAILED
+  /// Editor workflow progress for reviewers. Null = no status. Not generation status.
+  progressStatus SlideProgressStatus? @map("progress_status")
+  manuallyEdited Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  /// TEAM workflow assignee (not ACL). Null = unassigned. Mirrors Project's assignee model,
+  /// scoped to one slide instead of the whole deck.
+  assignedToId String?   @map("assigned_to_id")
+  assignedById String?   @map("assigned_by_id")
+  assignedAt   DateTime? @map("assigned_at")
+
+  deck       Deck                  @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  jobs       SlideGenerationJob[]
+  comments   PresentationComment[]
+  assignedTo User?                 @relation("SlideAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy User?                 @relation("SlideAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([deckId, order])
+  @@index([assignedToId])
+  @@map("slides")
+}
+
+/// Slide-threaded comments on a PRESENTATION project. Authored either by a workspace member
+/// (`authorId`) or by a named guest arriving through a `/p/:token` share link
+/// (`guestSessionId` + `guestDisplayName`) — exactly one of the two, enforced in the service.
+model PresentationComment {
+  id               String    @id @default(uuid())
+  projectId        String    @map("project_id")
+  workspaceId      String    @map("workspace_id")
+  /// Null once the slide is gone (full regenerate / manual delete): the thread is orphaned,
+  /// visible in the editor only. Never cascade — that would wipe every comment on regenerate.
+  slideId          String?   @map("slide_id")
+  /// Null for a root thread; set for a reply. Only one level of nesting is allowed.
+  parentId         String?   @map("parent_id")
+  authorId         String?   @map("author_id")
+  guestSessionId   String?   @map("guest_session_id")
+  guestDisplayName String?   @map("guest_display_name")
+  body             String
+  mentionedUserIds String[]  @map("mentioned_user_ids")
+  /// Roots only. Members resolve; guests cannot.
+  resolvedAt       DateTime? @map("resolved_at")
+  resolvedBy       String?   @map("resolved_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workspace Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  slide     Slide?                @relation(fields: [slideId], references: [id], onDelete: SetNull)
+  parent    PresentationComment?  @relation("PresentationCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PresentationComment[] @relation("PresentationCommentReplies")
+  author    User?                 @relation("PresentationCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, slideId, createdAt])
+  @@index([parentId])
+  @@index([workspaceId])
+  @@index([guestSessionId])
+  @@map("presentation_comments")
+}
+
+model Template {
+  id          String       @id @default(cuid())
+  type        TemplateType
+  name        String
+  contentType String?
+  variant     String?
+  schema      Json
+  version     Int          @default(1)
+  isActive    Boolean      @default(true)
+  createdBy   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  media TemplateMedia[]
+
+  @@index([type, contentType, isActive])
+  @@map("templates")
+}
+
+model TemplateMedia {
+  id        String   @id @default(cuid())
+  templateId String  @map("template_id")
+  kind      String // photo | preview | graphic
+  slotHint  String?  @map("slot_hint") // e.g. slide:1 | image | preview
+  name      String?
+  s3Key     String   @map("s3_key")
+  mimeType  String?  @map("mime_type")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, slotHint])
+  @@index([templateId, kind])
+  @@map("template_media")
+}
+
+enum GraphicType {
+  decorative
+  illustration
+  icon
+  abstract
+  pattern
+}
+
+enum GraphicColorMode {
+  recolorable
+  fixed
+}
+
+enum GraphicStatus {
+  draft
+  published
+  archived
+}
+
+/// Platform SVG catalog curated by Superadmin (not workspace Asset).
+model GraphicAsset {
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  fileUrl      String           @map("file_url")
+  s3Key        String           @map("s3_key")
+  previewUrl   String           @map("preview_url")
+  previewS3Key String?          @map("preview_s3_key")
+  type         GraphicType
+  category     String
+  tags         String[]         @default([])
+  style        String?
+  moods        String[]         @default([])
+  usage        String[]         @default([])
+  colorMode    GraphicColorMode @map("color_mode")
+  containsText Boolean          @default(false) @map("contains_text")
+  status       GraphicStatus    @default(draft)
+  createdBy    String           @map("created_by")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  @@index([status, type])
+  @@index([status, category])
+  @@index([createdAt])
+  @@map("graphic_asset")
+}
+
+model WorkspaceBrandKit {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  isDefault   Boolean  @default(false) @map("is_default")
+  data        Json
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  media     BrandKitMedia[]
+
+  @@index([workspaceId, isDefault])
+  @@map("workspace_brand_kits")
+}
+
+model BrandKitMedia {
+  id         String   @id @default(cuid())
+  brandKitId String   @map("brand_kit_id")
+  kind       String // logo | photo | graphic | mockup
+  role       String? // logos: primary|secondary|icon|light|dark
+  name       String?
+  assetId    String?  @map("asset_id")
+  s3Key      String   @map("s3_key")
+  mimeType   String?  @map("mime_type")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  brandKit WorkspaceBrandKit @relation(fields: [brandKitId], references: [id], onDelete: Cascade)
+
+  @@index([brandKitId, kind])
+  @@map("brand_kit_media")
+}
+
+model SlideGenerationJob {
+  id            String   @id @default(cuid())
+  slideId       String
+  jobType       String // CONTENT | IMAGE_PATH_A | IMAGE_PATH_B | VALIDATION | CLASSIFY | IMAGE_BRIEF
+  status        String   @default("PENDING") // PENDING | RUNNING | SUCCEEDED | FAILED
+  requestHash   String
+  promptVersion String?
+  model         String?
+  usage         Json?
+  visionScore   Float?
+  error         String?
+  creditCharged Boolean  @default(false)
+  latencyMs     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  slide Slide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+
+  @@unique([requestHash])
+  @@index([slideId, jobType])
+  @@map("slide_generation_jobs")
+}
+
+model DeckExport {
+  id            String   @id @default(cuid())
+  deckId        String
+  format        String // PPTX | PDF
+  status        String   @default("QUEUED") // QUEUED | RENDERING | READY | FAILED
+  s3Key         String?
+  error         String?
+  creditCharged Boolean  @default(false)
+  creditsCharged Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId, status])
+  @@map("deck_exports")
+}
+
+model PresentationImageCache {
+  id        String   @id @default(cuid())
+  briefHash String   @unique
+  s3Key     String
+  url       String?
+  source    String // stock | ai_gen | path_b
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("presentation_image_cache")
+}
+
+model PresentationShareLink {
+  id          String                @id @default(uuid())
+  projectId   String                @map("project_id")
+  workspaceId String                @map("workspace_id")
+  tokenHash   String                @unique @map("token_hash")
+  /// Raw capability token for owner redisplay (GET/PATCH). Public resolve still uses tokenHash only.
+  token       String?               @map("token")
+  tokenPrefix String                @map("token_prefix")
+  role        PresentationShareRole
+  enabled     Boolean               @default(true)
+  createdBy   String?               @map("created_by")
+  revokedAt   DateTime?             @map("revoked_at")
+  rotateCount Int                   @default(0) @map("rotate_count")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  project       Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workspace     Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUser User?                    @relation("PresentationShareCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  audits        PresentationShareAudit[]
+
+  @@unique([projectId, role])
+  @@index([workspaceId])
+  @@index([createdBy])
+  @@map("presentation_share_links")
+}
+
+model PresentationShareAudit {
+  id          String   @id @default(uuid())
+  shareId     String   @map("share_id")
+  actorUserId String?  @map("actor_user_id")
+  action      String // CREATED | ROTATED | DISABLED | ENABLED
+  ip          String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  share PresentationShareLink @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  actor User?                 @relation("PresentationShareAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([shareId, createdAt])
+  @@index([actorUserId])
+  @@map("presentation_share_audits")
 }
 
 model ProductEmailBroadcast {
@@ -714,4 +1227,22 @@ model ProductEmailBroadcastRecipient {
   @@index([broadcastId])
   @@index([userId])
   @@map("product_email_broadcast_recipients")
+}
+
+model EmailTemplate {
+  id            String   @id @default(uuid())
+  name          String
+  subject       String   @default("")
+  htmlBody      String   @map("html_body") @db.Text
+  textBody      String?  @map("text_body") @db.Text
+  type          String   @default("html") // html | design | text
+  createdByUserId String @map("created_by_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  createdBy User @relation("EmailTemplateCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUserId])
+  @@index([createdAt])
+  @@map("email_templates")
 }

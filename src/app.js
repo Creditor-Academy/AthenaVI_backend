@@ -1,6 +1,7 @@
 const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
 const errorHandler = require('./middlewares/errorHandler');
 const { connectRedis } = require("./shared/config/redis");
 const { createCorsMiddleware, logCorsConfig } = require('./shared/config/cors');
@@ -19,16 +20,37 @@ logCorsConfig();
 
 (async () => {
   try {
-    await connectRedis();
-    console.log("All services connected");
+    const redisOk = await connectRedis();
+    if (redisOk) {
+      console.log('All services connected');
+    } else {
+      console.warn('API started without Redis (see REDIS_URL / REDIS_OPTIONAL)');
+    }
   } catch (err) {
-    console.error("Startup error:", err);
+    console.error('Startup error:', err);
     process.exit(1);
   }
 })();
 
 app.use(createCorsMiddleware());
 app.use(helmet());
+/**
+ * Deck render payloads (slide element JSON) compress ~8-10x. Already-compressed bodies and the
+ * S3 passthroughs (s3.service streamObjectToResponse / streamRemoteUrlToResponse) are skipped:
+ * compressing them wastes CPU and breaks byte-range playback.
+ */
+app.use(
+  compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      const contentType = String(res.getHeader('Content-Type') || '');
+      if (!contentType) return false;
+      if (/^(video|audio|image)\//i.test(contentType)) return false;
+      if (/(zip|pdf|octet-stream|gzip)/i.test(contentType)) return false;
+      return compression.filter(req, res);
+    },
+  })
+);
 /** Base64 voice clone payloads exceed Express's default (~100kb). Override with JSON_BODY_LIMIT (e.g. 32mb). */
 const jsonBodyLimit =
   (process.env.JSON_BODY_LIMIT && String(process.env.JSON_BODY_LIMIT).trim()) || '32mb';
@@ -56,7 +78,10 @@ const assetRoutes = require('./modules/asset/asset.routes');
 const heygenRoutes = require('./modules/heygen/heygen.routes');
 const superadminRoutes = require('./modules/superadmin/superadmin.routes');
 const stockRoutes = require('./modules/stock/stock.routes');
-const earlyAccessRoutes = require('./modules/earlyAccess/earlyAccess.routes');
+const fontsRoutes = require('./modules/fonts/fonts.routes');
+const imageGenRoutes = require('./modules/imageGen/imageGen.routes');
+const presentationSharePublicRoutes = require('./modules/presentationShare/presentationShare.public.routes');
+const graphicsRoutes = require('./modules/graphics/graphics.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -65,8 +90,12 @@ app.use('/api/credits', creditRoutes);
 app.use("/api/assets", assetRoutes);
 app.use('/api/heygen', heygenRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/fonts', fontsRoutes);
+app.use('/api/image-gen', imageGenRoutes);
 app.use('/api/superadmin', superadminRoutes);
-app.use('/api/early-access', earlyAccessRoutes);
+/** Public view-only presentation links: the capability token in the path is the permission. */
+app.use('/api/p', presentationSharePublicRoutes);
+app.use('/api/graphics', graphicsRoutes);
 app.use(errorHandler);
 
 module.exports = app;

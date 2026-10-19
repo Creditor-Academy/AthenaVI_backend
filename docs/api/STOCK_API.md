@@ -161,7 +161,7 @@ Show `asset.stockMetadata.attribution` in the UI where required.
 
 - [Assets API](ASSETS_API.md) — list uploads + stock imports (`source=upload|stock|all`)
 - [Stock frontend integration](../STOCK_FRONTEND_INTEGRATION.md)
-- [Postman collection](../../postman/AthenaVI_Backend.postman_collection.json) — **Stock** folder
+- [Postman collection](../../postman/collections/AthenaVI%20Backend/) — **Stock** folder (v3 YAML)
 
 ---
 

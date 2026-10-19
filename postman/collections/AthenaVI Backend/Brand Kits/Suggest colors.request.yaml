@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/suggest/colors"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+body:
+  type: json
+  content: |-
+    {
+      "tone": "Professional, confident",
+      "tagline": "Empowering Executive Decks",
+      "brandKitId": "{{brandKitId}}",
+      "mediaId": "{{brandKitMediaId}}"
+    }
+order: 1100

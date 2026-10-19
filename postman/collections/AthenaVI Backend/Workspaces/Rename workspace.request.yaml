@@ -1,0 +1,13 @@
+$kind: http-request
+description: OWNER only. Body name is 3-100 characters.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Renamed workspace"
+    }
+order: 3500

@@ -1,0 +1,25 @@
+$kind: http-request
+description: Start a thread on a slide. Send slideId OR parentId, never both. mentionedUserIds must be workspace members (max 20).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Can we shorten this headline?",
+      "slideId": "{{slideId}}",
+      "mentionedUserIds": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j.data && j.data.comment && j.data.comment.id;
+        if (id) pm.collectionVariables.set("presentationCommentId", id);
+      }
+    language: text/javascript
+order: 2000

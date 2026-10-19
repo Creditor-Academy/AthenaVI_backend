@@ -1,0 +1,111 @@
+const Joi = require('joi');
+const { DECK_SLIDE_MAX } = require('../presentation/presentation.constants');
+
+const workspaceIdParam = Joi.string().uuid().required();
+const presentationIdParam = Joi.string().required();
+
+/** base64url capability token (32 random bytes -> 43 chars); range allows future rotation sizes. */
+const shareTokenParam = Joi.string()
+  .trim()
+  .min(16)
+  .max(128)
+  .pattern(/^[A-Za-z0-9_-]+$/)
+  .required();
+
+const viewerSessionIdField = Joi.string()
+  .trim()
+  .min(8)
+  .max(64)
+  .pattern(/^[A-Za-z0-9_-]+$/)
+  .required();
+
+const slideIndexField = Joi.number().integer().min(0).max(10000).default(0);
+
+const shareByPresentationSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+});
+
+const patchShareSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    enabled: Joi.boolean().required(),
+  }).required(),
+});
+
+const publicShareTokenSchema = Joi.object({
+  params: Joi.object({
+    token: shareTokenParam,
+  }),
+});
+
+/** `displayName` is intentionally absent: identity is server-computed, never client-supplied. */
+const publicPresenceHeartbeatSchema = Joi.object({
+  params: Joi.object({
+    token: shareTokenParam,
+  }),
+  body: Joi.object({
+    viewerSessionId: viewerSessionIdField,
+    slideIndex: slideIndexField,
+  }).required(),
+});
+
+const publicPresenceLeaveSchema = Joi.object({
+  params: Joi.object({
+    token: shareTokenParam,
+  }),
+  query: Joi.object({
+    viewerSessionId: viewerSessionIdField,
+  }),
+});
+
+
+const leaveTokenField = Joi.string()
+  .trim()
+  .min(16)
+  .max(128)
+  .pattern(/^[A-Za-z0-9_-]+$/);
+
+/** Member Present heartbeat. Auth is workspace membership (OWNER|ADMIN|MEMBER). */
+const memberPresenceHeartbeatSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    slideIndex: Joi.number().integer().min(0).max(DECK_SLIDE_MAX - 1).default(0),
+    presenting: Joi.boolean().default(false),
+  }).required(),
+});
+
+/** leaveToken (sendBeacon) and/or Bearer same user. */
+const memberPresenceLeaveSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    leaveToken: leaveTokenField.optional(),
+  }).default({}),
+  query: Joi.object({
+    leaveToken: leaveTokenField.optional(),
+  }).default({}),
+});
+
+/** Guest sendBeacon alias for DELETE presence (query unchanged). */
+const publicPresenceLeavePostSchema = publicPresenceLeaveSchema;
+module.exports = {
+  shareByPresentationSchema,
+  patchShareSchema,
+  publicShareTokenSchema,
+  publicPresenceHeartbeatSchema,
+  publicPresenceLeaveSchema,
+  publicPresenceLeavePostSchema,
+  memberPresenceHeartbeatSchema,
+  memberPresenceLeaveSchema,
+};

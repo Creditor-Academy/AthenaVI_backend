@@ -1,5 +1,7 @@
 const prisma = require('../../shared/config/prismaClient');
 const { FEATURE } = require('../../shared/config/creditPricing');
+const { IMAGE_GEN_FEATURE } = require('../../shared/config/imageGenCreditPricing');
+const { BRAND_KIT_FEATURE } = require('../../shared/config/brandKitCreditPricing');
 
 const FEATURE_LABELS = Object.freeze({
   [FEATURE.HEYGEN_VIDEO]: 'Scene avatar video',
@@ -9,7 +11,38 @@ const FEATURE_LABELS = Object.freeze({
   [FEATURE.VOICE_DESIGN]: 'Voice design',
   [FEATURE.AVATAR_CREATE]: 'Avatar creation',
   [FEATURE.VOICE_PREVIEW]: 'Speech preview',
+  ppt_outline: 'Presentation outline',
+  ppt_slide_content: 'Presentation slide content',
+  ppt_image_path_a: 'Presentation image',
+  ppt_image_path_b: 'Presentation diagram',
+  ppt_export: 'Presentation export',
+  ppt_image_cache_hit: 'Presentation image (cached)',
+  [IMAGE_GEN_FEATURE.GPT_IMAGE]: 'AI image generation',
+  [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 'AI image generation (HD)',
+  [IMAGE_GEN_FEATURE.DALL_E_3]: 'AI image generation (DALL·E 3)',
+  [IMAGE_GEN_FEATURE.TWEAK]: 'AI image tweak',
+  [IMAGE_GEN_FEATURE.INFOGRAPHIC]: 'AI infographic',
+  [IMAGE_GEN_FEATURE.SOCIAL]: 'AI social post',
+  [IMAGE_GEN_FEATURE.PRINTABLE]: 'AI printable',
+  [BRAND_KIT_FEATURE.SUGGEST_COLORS]: 'Brand kit color suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_FONTS]: 'Brand kit font suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_VOICE]: 'Brand kit voice suggestion',
+  [BRAND_KIT_FEATURE.SUGGEST_IMAGE_STYLE]: 'Brand kit image style suggestion',
+  [BRAND_KIT_FEATURE.LOGO_VARIANTS]: 'Brand kit logo variants',
+  [BRAND_KIT_FEATURE.LOGO_MOCKUP]: 'Brand kit logo mockup',
+  [BRAND_KIT_FEATURE.GUIDELINE_GENERATE]: 'Brand guideline deck',
 });
+
+function isPptFeature(feature) {
+  return typeof feature === 'string' && feature.startsWith('ppt_');
+}
+
+function buildPptDisplayName(featureLabel, presentationName) {
+  if (presentationName) {
+    return `${featureLabel} — “${presentationName}”`;
+  }
+  return featureLabel;
+}
 
 function truncateText(value, max = 120) {
   if (value == null) return null;
@@ -279,8 +312,31 @@ function buildUsageDetail(tx, ctx) {
         voiceId: meta.voiceId || tx.reference || null,
         previewText: meta.previewText || null,
       };
-    default:
+    default: {
+      if (isPptFeature(feature)) {
+        const deckId = meta.deckId || tx.reference || null;
+        const deck = deckId ? ctx.deckById.get(deckId) : null;
+        const projectId = meta.projectId || deck?.projectId || null;
+        const presentationName =
+          meta.presentationName ||
+          meta.projectName ||
+          deck?.project?.name ||
+          (projectId ? ctx.projectById.get(projectId)?.name : null) ||
+          null;
+        const featureLabel = FEATURE_LABELS[feature] || 'Presentation';
+        const displayName = buildPptDisplayName(featureLabel, presentationName);
+        return {
+          ...base,
+          label: displayName,
+          displayName,
+          deckId,
+          projectId,
+          presentationName,
+          where: presentationName ? `Presentation: ${presentationName}` : null,
+        };
+      }
       return base;
+    }
   }
 }
 
@@ -296,6 +352,7 @@ async function loadEnrichmentContext(transactions) {
   const speechGenerationIds = [];
   const renderIds = [];
   const projectIds = [];
+  const deckIds = [];
   const workspaceIds = [];
 
   for (const tx of transactions) {
@@ -312,10 +369,14 @@ async function loadEnrichmentContext(transactions) {
     } else if (meta.feature === FEATURE.REMOTION_EXPORT) {
       renderIds.push(meta.renderId || tx.reference);
       if (meta.projectId) projectIds.push(meta.projectId);
+    } else if (isPptFeature(meta.feature)) {
+      if (meta.deckId) deckIds.push(meta.deckId);
+      else if (tx.reference) deckIds.push(tx.reference);
+      if (meta.projectId) projectIds.push(meta.projectId);
     }
   }
 
-  const [heygenRows, speechRows, renderRows] = await Promise.all([
+  const [heygenRows, speechRows, renderRows, deckRows] = await Promise.all([
     heygenVideoIds.length
       ? prisma.heygenResponse.findMany({
           where: { id: { in: uniqueIds(heygenVideoIds) } },
@@ -346,6 +407,16 @@ async function loadEnrichmentContext(transactions) {
           select: { id: true, projectId: true },
         })
       : [],
+    deckIds.length
+      ? prisma.deck.findMany({
+          where: { id: { in: uniqueIds(deckIds) } },
+          select: {
+            id: true,
+            projectId: true,
+            project: { select: { id: true, name: true } },
+          },
+        })
+      : [],
   ]);
 
   for (const row of heygenRows) {
@@ -355,6 +426,9 @@ async function loadEnrichmentContext(transactions) {
     if (row.projectId) projectIds.push(row.projectId);
   }
   for (const row of renderRows) {
+    if (row.projectId) projectIds.push(row.projectId);
+  }
+  for (const row of deckRows) {
     if (row.projectId) projectIds.push(row.projectId);
   }
 
@@ -383,6 +457,7 @@ async function loadEnrichmentContext(transactions) {
     heygenById: new Map(heygenRows.map((row) => [row.id, row])),
     speechById: new Map(speechRows.map((row) => [row.id, row])),
     renderById: new Map(renderRows.map((row) => [row.id, row])),
+    deckById: new Map(deckRows.map((row) => [row.id, row])),
     projectById: new Map(projects.map((row) => [row.id, row])),
     workspaceById: new Map(workspaces.map((row) => [row.id, row])),
   };

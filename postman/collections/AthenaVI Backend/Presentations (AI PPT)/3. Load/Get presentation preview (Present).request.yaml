@@ -1,0 +1,33 @@
+$kind: http-request
+description: Present loads the full deck in one page (limit max DECK_SLIDE_MAX=40). Member responses include speakerNotes.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/preview?offset=0&limit=40"
+method: GET
+params:
+  query:
+    - key: offset
+      value: "0"
+    - key: limit
+      value: "40"
+      description: Present full-deck page (max 40)
+headers:
+  Authorization: Bearer {{accessToken}}
+  If-None-Match: "{{presentationPreviewEtag}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const etag = pm.response.headers.get("ETag");
+        if (etag) pm.collectionVariables.set("presentationPreviewEtag", etag);
+        const j = pm.response.json();
+        const data = (j && j.data) || {};
+        const slides = data.slides;
+        if (Array.isArray(slides) && slides[0]) {
+          pm.collectionVariables.set("slideId", slides[0].id);
+          pm.collectionVariables.set(
+            "hasSpeakerNotes",
+            String(Object.prototype.hasOwnProperty.call(slides[0], "speakerNotes"))
+          );
+        }
+      }
+    language: text/javascript
+order: 910

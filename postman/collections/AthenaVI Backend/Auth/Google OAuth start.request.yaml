@@ -1,0 +1,5 @@
+$kind: http-request
+description: 302 redirect to Google; use a browser or disable redirect following to inspect.
+url: "{{baseUrl}}/api/auth/google"
+method: GET
+order: 10000

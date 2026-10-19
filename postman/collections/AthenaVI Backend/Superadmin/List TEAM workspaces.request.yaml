@@ -1,0 +1,5 @@
+$kind: http-request
+description: TEAM workspaces with credit pools. Optional search.
+url: "{{baseUrl}}/api/superadmin/workspaces?page=1&limit=20"
+method: GET
+order: 3000

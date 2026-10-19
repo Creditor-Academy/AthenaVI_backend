@@ -1,0 +1,13 @@
+$kind: http-request
+description: Call this when user clicks Select in UI. It records the chosen voiceId for the current user so it shows up in `GET /api/heygen/voices?type=private`.
+url: "{{baseUrl}}/api/heygen/voices/select"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "voiceId": "{{voiceId}}"
+    }
+order: 15000

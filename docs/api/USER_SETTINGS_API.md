@@ -2,7 +2,9 @@
 
 Base path: **`/api/user/settings`**
 
-All routes require **`Authorization: Bearer <access_token>`**. Settings are stored per authenticated user in `user_settings`. Additional tabs (security, billing) will be added under this base path later.
+All routes require **`Authorization: Bearer <access_token>`**. Settings are stored per authenticated user in `user_settings`.
+
+There is **no** `/api/user/settings/ppt` (GET or PATCH). Presentation density, theme, and locale live on the deck (`POST .../outline`, `POST .../theme`, `POST .../generate`). Clients that call `/settings/ppt` receive **404**.
 
 ---
 

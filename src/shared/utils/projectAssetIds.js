@@ -19,6 +19,22 @@ function extractAssetId(source) {
   return null;
 }
 
+function collectElementAssetIds(elements, assetIds) {
+  for (const element of elements || []) {
+    const content = element.content;
+    const assetId = extractAssetId(content);
+    if (assetId) {
+      assetIds.add(assetId);
+    }
+
+    const fill = content && typeof content === 'object' ? content.fill : null;
+    const fillAssetId = extractAssetId(fill);
+    if (fillAssetId) {
+      assetIds.add(fillAssetId);
+    }
+  }
+}
+
 function collectAssetIds(projectData) {
   const assetIds = new Set();
 
@@ -28,19 +44,18 @@ function collectAssetIds(projectData) {
       assetIds.add(backgroundAssetId);
     }
 
-    for (const element of scene.elements || []) {
-      const content = element.content;
-      const assetId = extractAssetId(content);
-      if (assetId) {
-        assetIds.add(assetId);
-      }
+    collectElementAssetIds(scene.elements, assetIds);
+  }
 
-      const fill = content && typeof content === 'object' ? content.fill : null;
-      const fillAssetId = extractAssetId(fill);
-      if (fillAssetId) {
-        assetIds.add(fillAssetId);
-      }
+  // Design-canvas documents (Project.type === 'CANVAS'): pages under `canvases[]`
+  // instead of video `scenes[]`, each with its own flat `elements[]`.
+  for (const page of projectData?.canvases || []) {
+    const backgroundAssetId = extractAssetId(page.background);
+    if (backgroundAssetId) {
+      assetIds.add(backgroundAssetId);
     }
+
+    collectElementAssetIds(page.elements, assetIds);
   }
 
   return [...assetIds];

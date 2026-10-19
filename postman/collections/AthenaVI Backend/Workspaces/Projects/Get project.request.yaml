@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns `data.project` including editor `data` JSON. When HeyGen clips exist but avatar elements lack `heygenVideoId`, the server merges ids from `heygen_responses` (and may restore a placeholder avatar element) and persists repairs to the DB.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}"
+method: GET
+order: 4000

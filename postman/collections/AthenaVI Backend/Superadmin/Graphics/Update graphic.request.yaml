@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/graphics/{{graphicId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Corner flourish (updated)",
+      "category": "ornaments",
+      "style": "minimal"
+    }
+order: 4000

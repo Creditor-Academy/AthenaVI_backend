@@ -2,8 +2,14 @@ const express = require('express');
 const validate = require('../../middlewares/validate.middleware');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const { requirePlatformSuperadmin } = require('../../middlewares/requirePlatformSuperadmin');
+const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
 const superadminController = require('./superadmin.controller');
+const templateAdminController = require('../templates/templateAdmin.controller');
+const templatePublishController = require('../templates/templatePublish.controller');
+const graphicsController = require('../graphics/graphics.controller');
 const superadminValidation = require('../validations/superadmin.validations');
+const videoTemplateValidation = require('../validations/videoTemplate.validations');
+const graphicsValidation = require('../graphics/graphics.validations');
 
 const router = express.Router();
 
@@ -13,6 +19,30 @@ router.get(
   '/users',
   validate(superadminValidation.listUsersQuerySchema),
   superadminController.listUsers
+);
+
+router.post(
+  '/users',
+  validate(superadminValidation.createUserBodySchema),
+  superadminController.createUser
+);
+
+router.post(
+  '/users/:userId/pause',
+  validate(superadminValidation.pauseUserBodySchema),
+  superadminController.pauseUser
+);
+
+router.post(
+  '/users/:userId/resume',
+  validate(superadminValidation.userIdParamsSchema),
+  superadminController.resumeUser
+);
+
+router.delete(
+  '/users/:userId',
+  validate(superadminValidation.deleteUserBodySchema),
+  superadminController.deleteUser
 );
 
 router.patch(
@@ -133,36 +163,6 @@ router.get(
 
 router.get('/heygen/account', superadminController.getHeygenAccount);
 
-router.get(
-  '/early-access/requests',
-  validate(superadminValidation.earlyAccessRequestsQuerySchema),
-  superadminController.listEarlyAccessRequests
-);
-
-router.get(
-  '/early-access/requests/:requestId',
-  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
-  superadminController.getEarlyAccessRequest
-);
-
-router.post(
-  '/early-access/requests/:requestId/approve',
-  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
-  superadminController.approveEarlyAccessRequest
-);
-
-router.post(
-  '/early-access/requests/:requestId/reject',
-  validate(superadminValidation.earlyAccessRequestIdParamsSchema),
-  superadminController.rejectEarlyAccessRequest
-);
-
-router.patch(
-  '/early-access/requests/:requestId/status',
-  validate(superadminValidation.earlyAccessUpdateStatusBodySchema),
-  superadminController.updateEarlyAccessRequestStatus
-);
-
 router.get('/alerts/summary', superadminController.getAlertsSummary);
 
 router.get(
@@ -183,10 +183,172 @@ router.get(
   superadminController.listProductEmailBroadcastRecipients
 );
 
+
+// Email Templates (CRM style)
+router.get(
+  '/email-templates',
+  validate(superadminValidation.listEmailTemplatesQuerySchema),
+  superadminController.listEmailTemplates
+);
+
+router.post(
+  '/email-templates',
+  validate(superadminValidation.createEmailTemplateBodySchema),
+  superadminController.createEmailTemplate
+);
+
+router.get(
+  '/email-templates/:templateId',
+  validate(superadminValidation.emailTemplateIdParamsSchema),
+  superadminController.getEmailTemplate
+);
+
+router.patch(
+  '/email-templates/:templateId',
+  validate(superadminValidation.updateEmailTemplateBodySchema),
+  superadminController.updateEmailTemplate
+);
+
+router.delete(
+  '/email-templates/:templateId',
+  validate(superadminValidation.emailTemplateIdParamsSchema),
+  superadminController.deleteEmailTemplate
+);
+
+router.post(
+  '/broadcasts/product-email/:broadcastId/resend',
+  validate(superadminValidation.resendProductEmailBroadcastBodySchema),
+  superadminController.resendProductEmailBroadcast
+);
+
 router.post(
   '/broadcasts/product-email',
   validate(superadminValidation.productEmailBroadcastBodySchema),
   superadminController.sendProductEmailBroadcast
+);
+
+router.get(
+  '/templates',
+  validate(videoTemplateValidation.listTemplatesAdminSchema),
+  templateAdminController.listTemplates
+);
+
+router.post(
+  '/templates',
+  validate(videoTemplateValidation.createTemplateAdminBodySchema),
+  templateAdminController.createTemplate
+);
+
+router.get(
+  '/templates/:templateId',
+  validate(videoTemplateValidation.templateIdAdminParamsSchema),
+  templateAdminController.getTemplate
+);
+
+router.patch(
+  '/templates/:templateId',
+  validate(videoTemplateValidation.updateTemplateAdminSchema),
+  templateAdminController.updateTemplate
+);
+
+router.get(
+  '/templates/:templateId/media',
+  validate(videoTemplateValidation.templateIdAdminParamsSchema),
+  templateAdminController.listTemplateMedia
+);
+
+router.post(
+  '/templates/:templateId/media',
+  uploadAssetS3.single('file'),
+  validate(videoTemplateValidation.uploadTemplateMediaAdminSchema),
+  templateAdminController.uploadTemplateMedia
+);
+
+router.delete(
+  '/templates/:templateId/media/:mediaId',
+  validate(videoTemplateValidation.templateMediaIdAdminParamsSchema),
+  templateAdminController.deleteTemplateMedia
+);
+
+router.post(
+  '/presentations/:presentationId/publish-as-pack',
+  validate(videoTemplateValidation.publishPresentationAsPackSchema),
+  templatePublishController.publishPresentationAsPack
+);
+
+router.post(
+  '/projects/:projectId/scenes/:sceneId/publish-as-template',
+  validate(videoTemplateValidation.publishProjectSceneAsTemplateSchema),
+  templatePublishController.publishProjectSceneAsTemplate
+);
+
+router.post(
+  '/projects/:projectId/publish-as-video-pack',
+  validate(videoTemplateValidation.publishProjectAsVideoPackSchema),
+  templatePublishController.publishProjectAsVideoPack
+);
+
+router.get(
+  '/graphics',
+  validate(graphicsValidation.listGraphicsQuerySchema),
+  graphicsController.listAdmin
+);
+
+router.get('/graphics/getillustrations/meta', graphicsController.getIllustrationsMeta);
+
+router.get(
+  '/graphics/getillustrations/free',
+  validate(graphicsValidation.getIllustrationsFreeQuerySchema),
+  graphicsController.listGetIllustrationsFree
+);
+
+router.post(
+  '/graphics/getillustrations/icon-packs/:packId/save',
+  validate(graphicsValidation.importGetIllustrationsIconPackSchema),
+  graphicsController.importGetIllustrationsIconPack
+);
+
+router.post(
+  '/graphics',
+  uploadAssetS3.single('file'),
+  validate(graphicsValidation.createGraphicSchema),
+  graphicsController.create
+);
+
+router.get(
+  '/graphics/:id',
+  validate(graphicsValidation.idParams),
+  graphicsController.getAdmin
+);
+
+router.patch(
+  '/graphics/:id',
+  validate(graphicsValidation.updateGraphicSchema),
+  graphicsController.update
+);
+
+router.post(
+  '/graphics/:id/publish',
+  validate(graphicsValidation.idParams),
+  graphicsController.publish
+);
+
+router.post(
+  '/graphics/:id/unpublish',
+  validate(graphicsValidation.idParams),
+  graphicsController.unpublish
+);
+
+router.post(
+  '/graphics/:id/archive',
+  validate(graphicsValidation.idParams),
+  graphicsController.archive
+);
+
+router.delete(
+  '/graphics/:id',
+  validate(graphicsValidation.idParams),
+  graphicsController.remove
 );
 
 module.exports = router;

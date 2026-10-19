@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { clearUserFromSceneAssignments } = require('./sceneAssignment');
 
 const projectListSelect = {
   id: true,
@@ -7,6 +8,10 @@ const projectListSelect = {
   folderId: true,
   createdBy: true,
   updatedBy: true,
+  assignedToId: true,
+  assignedById: true,
+  assignedAt: true,
+  type: true,
   thumbnail: true,
   duration: true,
   status: true,
@@ -24,11 +29,13 @@ const findFolderById = async (folderId) => {
   });
 };
 
-const listProjects = async ({ workspaceId, folderId }) => {
+const listProjects = async ({ workspaceId, folderId, type, assignmentWhere = {} }) => {
   return prisma.project.findMany({
     where: {
       workspaceId,
       ...(folderId ? { folderId } : {}),
+      ...(type ? { type } : {}),
+      ...assignmentWhere,
     },
     select: projectListSelect,
     orderBy: { updatedAt: 'desc' },
@@ -87,6 +94,79 @@ const deleteProject = async (projectId) => {
   });
 };
 
+/**
+ * Clear assignment fields when a workspace member leaves.
+ * - If they were assignee: clear assignee + assignedBy + assignedAt
+ * - If they were only assignedBy: clear assignedById only
+ */
+const clearAssignmentsForUser = async (workspaceId, userId, tx = prisma) => {
+  await tx.project.updateMany({
+    where: { workspaceId, assignedToId: userId },
+    data: {
+      assignedToId: null,
+      assignedById: null,
+      assignedAt: null,
+    },
+  });
+  await tx.project.updateMany({
+    where: {
+      workspaceId,
+      assignedById: userId,
+      NOT: { assignedToId: userId },
+    },
+    data: { assignedById: null },
+  });
+};
+
+/**
+ * Scene assignees live inside Project.data.scenes[] (JSON), so the updateMany above can't
+ * reach them. Clear them for a departed member on VIDEO projects in the workspace.
+ */
+const clearSceneAssignmentsForUser = async (workspaceId, userId, tx = prisma) => {
+  const videos = await tx.project.findMany({
+    where: { workspaceId, type: 'VIDEO' },
+    select: { id: true, data: true },
+  });
+  for (const video of videos) {
+    const scenes = video.data && Array.isArray(video.data.scenes) ? video.data.scenes : null;
+    if (!scenes) continue;
+    const result = clearUserFromSceneAssignments(scenes, userId);
+    if (!result.changed) continue;
+    await tx.project.update({
+      where: { id: video.id },
+      data: { data: { ...video.data, scenes: result.scenes } },
+    });
+  }
+};
+
+const findCoverSourcesByIds = async (ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+  return prisma.project.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true,
+      type: true,
+      data: true,
+      thumbnail: true,
+      deck: {
+        select: {
+          slides: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: {
+              id: true,
+              order: true,
+              imageRef: true,
+              content: true,
+              elements: true,
+            },
+          },
+        },
+      },
+    },
+  });
+};
+
 const findAssetsByIds = async (workspaceId, assetIds) => {
   if (!assetIds.length) {
     return [];
@@ -113,6 +193,9 @@ module.exports = {
   createProject,
   updateProject,
   deleteProject,
+  clearAssignmentsForUser,
+  clearSceneAssignmentsForUser,
   findAssetsByIds,
+  findCoverSourcesByIds,
   transaction,
 };

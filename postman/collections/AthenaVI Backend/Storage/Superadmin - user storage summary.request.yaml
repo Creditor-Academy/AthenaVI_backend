@@ -1,0 +1,5 @@
+$kind: http-request
+description: Requires platform superadmin. Same shape as Get my storage for target userId.
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage"
+method: GET
+order: 8000

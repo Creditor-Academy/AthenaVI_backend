@@ -1,0 +1,19 @@
+$kind: http-request
+description: Returns data.viewer + data.reviewer with copyable url/token per link type.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const data = j && j.data;
+        const viewerToken = data && data.viewer && data.viewer.token;
+        const reviewerToken = data && data.reviewer && data.reviewer.token;
+        if (viewerToken) pm.collectionVariables.set("presentationViewerToken", viewerToken);
+        if (reviewerToken) pm.collectionVariables.set("presentationReviewerToken", reviewerToken);
+      }
+    language: text/javascript
+order: 2000

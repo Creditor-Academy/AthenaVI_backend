@@ -1,0 +1,36 @@
+$kind: http-request
+description: HeyGen `POST /v3/voices/clone`. Records clone voice id for your user. Poll **Get voice by id** until complete. Test script saves `voiceId` when present.
+url: "{{baseUrl}}/api/heygen/voices/clone"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "voice_name": "My cloned voice",
+      "audio": {
+        "type": "asset_id",
+        "asset_id": "REPLACE_WITH_ASSET_ID_FROM_UPLOAD"
+      },
+      "remove_background_noise": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const outer = j.data;
+        const d = outer && typeof outer === 'object' && outer.data !== undefined ? outer.data : outer;
+        const firstId = (row) => (row && (row.voice_id || row.id)) || null;
+        const fromArr = (arr) => (Array.isArray(arr) && arr[0] ? firstId(arr[0]) : null);
+        let vid = d && (d.voice_id || d.id);
+        if (!vid && Array.isArray(d)) vid = fromArr(d);
+        if (!vid && d) {
+          vid = fromArr(d.voices) || fromArr(d.suggestions) || fromArr(d.voice_list)
+            || fromArr(d.list) || fromArr(d.items) || fromArr(d.results) || fromArr(d.data);
+        }
+        if (vid) pm.collectionVariables.set('voiceId', String(vid));
+      } catch (e) {}
+    language: text/javascript
+order: 16000

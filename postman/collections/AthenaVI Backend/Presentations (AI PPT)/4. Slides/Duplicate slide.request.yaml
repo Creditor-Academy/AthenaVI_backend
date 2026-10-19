@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/duplicate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 3000

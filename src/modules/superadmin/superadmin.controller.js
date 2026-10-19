@@ -3,8 +3,48 @@ const { successResponse } = require('../../shared/utils/apiResponse');
 const messages = require('../../shared/utils/messages');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
 const superadminService = require('./superadmin.service');
+const { createUserByAdmin: createAdminUser } = require('./superadminUserCreate.service');
+const userLifecycle = require('./superadminUserLifecycle.service');
 const superadminAlertsService = require('./superadminAlerts.service');
 const superadminBroadcastService = require('./superadminBroadcast.service');
+
+const createUser = asyncHandler(async (req, res) => {
+  const { name, email, password, sendWelcomeEmail } = req.body;
+  const result = await createAdminUser({
+    name,
+    email,
+    password,
+    sendWelcomeEmail,
+    createdByUserId: req.user.id,
+  });
+  return successResponse(req, res, result, 201, messages.USER_CREATED_BY_ADMIN);
+});
+
+const pauseUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.pauseUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+    reason: req.body?.reason,
+  });
+  return successResponse(req, res, result, 200, messages.USER_PAUSED);
+});
+
+const resumeUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.resumeUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+  });
+  return successResponse(req, res, result, 200, messages.USER_RESUMED);
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  const result = await userLifecycle.deleteUser({
+    targetUserId: req.params.userId,
+    actorId: req.user.id,
+    confirmEmail: req.body.confirmEmail,
+  });
+  return successResponse(req, res, result, 200, messages.USER_DELETED_BY_ADMIN);
+});
 
 const grantUserCredits = asyncHandler(async (req, res) => {
   const { userId } = req.params;
@@ -342,48 +382,58 @@ const listProductEmailBroadcastRecipients = asyncHandler(async (req, res) => {
   );
 });
 
-const listEarlyAccessRequests = asyncHandler(async (req, res) => {
+const createEmailTemplate = asyncHandler(async (req, res) => {
+  const result = await superadminBroadcastService.createEmailTemplate({
+    ...req.body,
+    createdByUserId: req.user.id,
+  });
+  return successResponse(req, res, { template: result }, 201, messages.EMAIL_TEMPLATE_CREATED);
+});
+
+const listEmailTemplates = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
-  const result = await superadminService.listEarlyAccessRequests(
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const result = await superadminBroadcastService.listEmailTemplates({
     page,
     limit,
-    req.query.status
+    search: req.query.search,
+    type: req.query.type,
+  });
+  return successResponse(req, res, result, 200, messages.EMAIL_TEMPLATES_FETCHED);
+});
+
+const getEmailTemplate = asyncHandler(async (req, res) => {
+  const template = await superadminBroadcastService.getEmailTemplate(req.params.templateId);
+  return successResponse(req, res, { template }, 200, messages.EMAIL_TEMPLATE_FETCHED);
+});
+
+const updateEmailTemplate = asyncHandler(async (req, res) => {
+  const template = await superadminBroadcastService.updateEmailTemplate(
+    req.params.templateId,
+    req.body
   );
-  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUESTS_FETCHED);
+  return successResponse(req, res, { template }, 200, messages.EMAIL_TEMPLATE_UPDATED);
 });
 
-const getEarlyAccessRequest = asyncHandler(async (req, res) => {
-  const result = await superadminService.getEarlyAccessRequest(req.params.requestId);
-  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_FETCHED);
+const deleteEmailTemplate = asyncHandler(async (req, res) => {
+  await superadminBroadcastService.deleteEmailTemplate(req.params.templateId);
+  return successResponse(req, res, null, 200, messages.EMAIL_TEMPLATE_DELETED);
 });
 
-const approveEarlyAccessRequest = asyncHandler(async (req, res) => {
-  const result = await superadminService.approveEarlyAccessRequest({
-    requestId: req.params.requestId,
-    reviewerId: req.user.id,
+const resendProductEmailBroadcast = asyncHandler(async (req, res) => {
+  const result = await superadminBroadcastService.resendBroadcastProductEmail({
+    broadcastId: req.params.broadcastId,
+    emails: req.body.emails,
+    sentByUserId: req.user.id,
   });
-  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_APPROVED);
-});
-
-const rejectEarlyAccessRequest = asyncHandler(async (req, res) => {
-  const result = await superadminService.rejectEarlyAccessRequest({
-    requestId: req.params.requestId,
-    reviewerId: req.user.id,
-  });
-  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_REJECTED);
-});
-
-const updateEarlyAccessRequestStatus = asyncHandler(async (req, res) => {
-  const result = await superadminService.updateEarlyAccessRequestStatus({
-    requestId: req.params.requestId,
-    status: req.body.status,
-    reviewerId: req.user.id,
-  });
-  return successResponse(req, res, result, 200, messages.EARLY_ACCESS_REQUEST_STATUS_UPDATED);
+  return successResponse(req, res, result, 200, messages.PRODUCT_EMAIL_BROADCAST_RESENT);
 });
 
 module.exports = {
+  createUser,
+  pauseUser,
+  resumeUser,
+  deleteUser,
   grantUserCredits,
   revokeUserCredits,
   getUserCredits,
@@ -411,9 +461,10 @@ module.exports = {
   listProductEmailBroadcasts,
   getProductEmailBroadcast,
   listProductEmailBroadcastRecipients,
-  listEarlyAccessRequests,
-  getEarlyAccessRequest,
-  approveEarlyAccessRequest,
-  rejectEarlyAccessRequest,
-  updateEarlyAccessRequestStatus,
+  createEmailTemplate,
+  listEmailTemplates,
+  getEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+  resendProductEmailBroadcast,
 };

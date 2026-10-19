@@ -1,0 +1,714 @@
+const prisma = require('../../shared/config/prismaClient');
+
+const slidesOrderedInclude = {
+  slides: {
+    orderBy: { order: 'asc' },
+  },
+};
+
+/**
+ * Create a PRESENTATION Project and linked Deck in one transaction.
+ * Does not call video project create helpers.
+ */
+async function createPresentationProject({
+  workspaceId,
+  folderId,
+  name,
+  createdBy,
+  themeTokens,
+  aspectRatio = '16:9',
+  locale = 'en',
+}) {
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        name,
+        workspaceId,
+        folderId,
+        createdBy,
+        updatedBy: createdBy,
+        type: 'PRESENTATION',
+        status: 'draft',
+        data: { presentation: { version: 1 } },
+      },
+      include: {
+        folder: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    const deck = await tx.deck.create({
+      data: {
+        projectId: project.id,
+        themeTokens: themeTokens || {},
+        status: 'DRAFT',
+        aspectRatio,
+        locale,
+        outline: null,
+      },
+      include: slidesOrderedInclude,
+    });
+
+    return { project, deck };
+  });
+}
+
+/**
+ * Clone a PRESENTATION Project + Deck + Slides in one transaction.
+ * Copies deck content only — assignees, comments, share links, exports and the stored
+ * cover are intentionally NOT carried over (the copy starts as a fresh, unassigned deck).
+ * Media S3 keys are shared with the source, same as slide duplication.
+ */
+async function duplicatePresentationProject({ sourceProjectId, name, createdBy }) {
+  return prisma.$transaction(async (tx) => {
+    const sourceProject = await tx.project.findUnique({ where: { id: sourceProjectId } });
+    const sourceDeck = await tx.deck.findUnique({
+      where: { projectId: sourceProjectId },
+      include: slidesOrderedInclude,
+    });
+    if (!sourceProject || !sourceDeck) return null;
+
+    const project = await tx.project.create({
+      data: {
+        name,
+        workspaceId: sourceProject.workspaceId,
+        folderId: sourceProject.folderId,
+        createdBy,
+        updatedBy: createdBy,
+        type: 'PRESENTATION',
+        status: 'draft',
+        data: sourceProject.data ?? { presentation: { version: 1 } },
+      },
+      include: {
+        folder: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    const deck = await tx.deck.create({
+      data: {
+        projectId: project.id,
+        themeTokens: sourceDeck.themeTokens ?? {},
+        outline: sourceDeck.outline ?? undefined,
+        status: sourceDeck.status,
+        aspectRatio: sourceDeck.aspectRatio,
+        locale: sourceDeck.locale,
+        promptBundleVersion: sourceDeck.promptBundleVersion,
+        generationMetrics: sourceDeck.generationMetrics ?? undefined,
+        partial: sourceDeck.partial,
+      },
+    });
+
+    if (sourceDeck.slides.length) {
+      await tx.slide.createMany({
+        data: sourceDeck.slides.map((slide) => ({
+          deckId: deck.id,
+          order: slide.order,
+          contentType: slide.contentType,
+          layoutId: slide.layoutId,
+          content: slide.content ?? undefined,
+          imageRef: slide.imageRef ?? undefined,
+          elements: slide.elements ?? undefined,
+          status: slide.status,
+          progressStatus: slide.progressStatus,
+          manuallyEdited: slide.manuallyEdited,
+        })),
+      });
+    }
+
+    const fullDeck = await tx.deck.findUnique({
+      where: { id: deck.id },
+      include: slidesOrderedInclude,
+    });
+    return { project, deck: fullDeck };
+  });
+}
+
+async function findDeckByProjectId(projectId) {
+  return prisma.deck.findUnique({
+    where: { projectId },
+    include: slidesOrderedInclude,
+  });
+}
+
+/**
+ * List PRESENTATION projects for a workspace (summary cards for FE library).
+ */
+async function listPresentations({ workspaceId, folderId, assignmentWhere = {} }) {
+  return prisma.project.findMany({
+    where: {
+      workspaceId,
+      type: 'PRESENTATION',
+      ...(folderId ? { folderId } : {}),
+      ...assignmentWhere,
+    },
+    select: {
+      id: true,
+      name: true,
+      workspaceId: true,
+      folderId: true,
+      createdBy: true,
+      updatedBy: true,
+      assignedToId: true,
+      assignedById: true,
+      assignedAt: true,
+      type: true,
+      thumbnail: true,
+      duration: true,
+      status: true,
+      storageBytes: true,
+      createdAt: true,
+      updatedAt: true,
+      folder: {
+        select: { id: true, name: true },
+      },
+      deck: {
+        select: {
+          id: true,
+          status: true,
+          aspectRatio: true,
+          locale: true,
+          partial: true,
+          _count: { select: { slides: true } },
+          slides: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: {
+              id: true,
+              order: true,
+              // Cover fallback when the deck has no captured thumbnail yet
+              imageRef: true,
+              content: true,
+              elements: true,
+              updatedAt: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+}
+
+async function findDeckById(deckId) {
+  return prisma.deck.findUnique({
+    where: { id: deckId },
+    include: slidesOrderedInclude,
+  });
+}
+
+async function updateDeck(deckId, data) {
+  return prisma.deck.update({
+    where: { id: deckId },
+    data,
+    include: slidesOrderedInclude,
+  });
+}
+
+async function updateProjectName(projectId, name) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { name },
+    select: { id: true, name: true, type: true, folderId: true, workspaceId: true },
+  });
+}
+
+/**
+ * @param {string} deckId
+ * @param {Array<object>} slidesData
+ */
+async function createSlides(deckId, slidesData) {
+  if (!Array.isArray(slidesData) || slidesData.length === 0) {
+    return [];
+  }
+
+  await prisma.slide.createMany({
+    data: slidesData.map((slide) => ({
+      deckId,
+      order: slide.order,
+      contentType: slide.contentType ?? null,
+      layoutId: slide.layoutId ?? null,
+      content: slide.content ?? null,
+      imageRef: slide.imageRef ?? null,
+      elements: slide.elements ?? null,
+      status: slide.status || 'PENDING',
+      manuallyEdited: slide.manuallyEdited === true,
+    })),
+  });
+
+  return prisma.slide.findMany({
+    where: { deckId },
+    orderBy: { order: 'asc' },
+  });
+}
+
+async function createOneSlide(slide) {
+  return prisma.slide.create({
+    data: {
+      deckId: slide.deckId,
+      order: slide.order,
+      contentType: slide.contentType ?? null,
+      layoutId: slide.layoutId ?? null,
+      content: slide.content ?? null,
+      imageRef: slide.imageRef ?? null,
+      elements: slide.elements ?? null,
+      status: slide.status || 'READY',
+      progressStatus: slide.progressStatus ?? null,
+      manuallyEdited: slide.manuallyEdited === true,
+    },
+  });
+}
+
+async function updateSlide(slideId, data) {
+  return prisma.slide.update({
+    where: { id: slideId },
+    data,
+  });
+}
+
+async function findSlideById(slideId) {
+  return prisma.slide.findUnique({
+    where: { id: slideId },
+  });
+}
+
+async function deleteSlideById(slideId) {
+  return prisma.slide.delete({
+    where: { id: slideId },
+  });
+}
+
+/**
+ * Clear slide assignment fields when a workspace member leaves.
+ * Mirrors project.dao.clearAssignmentsForUser; Slide has no direct workspaceId
+ * column, so scoping goes through deck -> project.
+ * - If they were assignee: clear assignee + assignedBy + assignedAt
+ * - If they were only assignedBy: clear assignedById only
+ */
+async function clearSlideAssignmentsForUser(workspaceId, userId, tx = prisma) {
+  await tx.slide.updateMany({
+    where: { assignedToId: userId, deck: { project: { workspaceId } } },
+    data: {
+      assignedToId: null,
+      assignedById: null,
+      assignedAt: null,
+    },
+  });
+  await tx.slide.updateMany({
+    where: {
+      assignedById: userId,
+      NOT: { assignedToId: userId },
+      deck: { project: { workspaceId } },
+    },
+    data: { assignedById: null },
+  });
+}
+
+async function deleteSlidesByDeckId(deckId) {
+  return prisma.slide.deleteMany({
+    where: { deckId },
+  });
+}
+
+/**
+ * Increment order for all slides with order >= fromOrder by delta.
+ */
+async function shiftSlideOrders(deckId, fromOrder, delta) {
+  const slides = await prisma.slide.findMany({
+    where: { deckId, order: { gte: fromOrder } },
+    orderBy: { order: delta > 0 ? 'desc' : 'asc' },
+  });
+  for (const s of slides) {
+    await prisma.slide.update({
+      where: { id: s.id },
+      data: { order: s.order + delta },
+    });
+  }
+}
+
+async function resequenceSlideOrders(deckId) {
+  const slides = await prisma.slide.findMany({
+    where: { deckId },
+    orderBy: { order: 'asc' },
+  });
+  let order = 1;
+  for (const s of slides) {
+    if (s.order !== order) {
+      await prisma.slide.update({ where: { id: s.id }, data: { order } });
+    }
+    order += 1;
+  }
+}
+
+async function reorderSlides(deckId, slideIds) {
+  return prisma.$transaction(async (tx) => {
+    // Temporary high orders to avoid unique conflicts if any composite unique existed
+    for (let i = 0; i < slideIds.length; i += 1) {
+      await tx.slide.update({
+        where: { id: slideIds[i] },
+        data: { order: 10_000 + i },
+      });
+    }
+    for (let i = 0; i < slideIds.length; i += 1) {
+      await tx.slide.update({
+        where: { id: slideIds[i] },
+        data: { order: i + 1 },
+      });
+    }
+  });
+}
+
+async function createJob(data) {
+  return prisma.slideGenerationJob.create({
+    data,
+  });
+}
+
+async function updateJob(jobId, data) {
+  return prisma.slideGenerationJob.update({
+    where: { id: jobId },
+    data,
+  });
+}
+
+async function findJobByRequestHash(requestHash) {
+  return prisma.slideGenerationJob.findUnique({
+    where: { requestHash },
+  });
+}
+
+/** Reuses slide_generation_jobs for content-repair audit (jobType CONTENT_REPAIR, usage JSON). */
+async function recordContentRepairJob({
+  slideId,
+  phase,
+  layoutId,
+  status,
+  usage,
+  latencyMs,
+  requestHash,
+}) {
+  const data = {
+    slideId,
+    jobType: 'CONTENT_REPAIR',
+    status: status === 'WARN' ? 'SUCCEEDED' : status === 'REPAIRED' ? 'SUCCEEDED' : 'SUCCEEDED',
+    requestHash,
+    usage: {
+      ...(usage && typeof usage === 'object' ? usage : {}),
+      phase,
+      layoutId,
+      auditStatus: status,
+    },
+    latencyMs: latencyMs ?? null,
+    creditCharged: false,
+  };
+
+  return prisma.slideGenerationJob.upsert({
+    where: { requestHash },
+    create: data,
+    update: {
+      usage: data.usage,
+      latencyMs: data.latencyMs,
+      status: data.status,
+    },
+  });
+}
+
+async function findExport(exportId) {
+  return prisma.deckExport.findUnique({
+    where: { id: exportId },
+  });
+}
+
+async function createExport(data) {
+  return prisma.deckExport.create({
+    data,
+  });
+}
+
+async function updateExport(exportId, data) {
+  return prisma.deckExport.update({
+    where: { id: exportId },
+    data,
+  });
+}
+
+async function findActiveTemplatesByContentType(contentType) {
+  const where = {
+    type: 'DECK_LAYOUT',
+    isActive: true,
+  };
+  if (Array.isArray(contentType) && contentType.length) {
+    where.contentType = { in: contentType };
+  } else if (contentType) {
+    where.contentType = contentType;
+  }
+  return prisma.template.findMany({
+    where,
+    orderBy: [{ contentType: 'asc' }, { variant: 'asc' }, { version: 'desc' }],
+  });
+}
+
+async function findActiveDeckPacks() {
+  return prisma.template.findMany({
+    where: { type: 'DECK_PACK', isActive: true },
+    orderBy: [{ name: 'asc' }, { version: 'desc' }],
+  });
+}
+
+async function findLayoutsByLayoutIds(layoutIds) {
+  const ids = Array.isArray(layoutIds) ? [...new Set(layoutIds.filter(Boolean))] : [];
+  if (!ids.length) return [];
+  const all = await prisma.template.findMany({
+    where: { type: 'DECK_LAYOUT', isActive: true },
+  });
+  const wanted = new Set(ids);
+  return all.filter((t) => wanted.has(t.schema?.layout_id));
+}
+
+async function findTemplateById(templateId) {
+  return prisma.template.findUnique({
+    where: { id: templateId },
+  });
+}
+
+async function upsertTemplate(template) {
+  const {
+    id,
+    type = 'DECK_LAYOUT',
+    name,
+    contentType,
+    variant,
+    schema,
+    version = 1,
+    isActive = true,
+    createdBy,
+  } = template;
+
+  if (id) {
+    return prisma.template.upsert({
+      where: { id },
+      create: {
+        id,
+        type,
+        name,
+        contentType: contentType ?? null,
+        variant: variant ?? null,
+        schema,
+        version,
+        isActive,
+        createdBy,
+      },
+      update: {
+        type,
+        name,
+        contentType: contentType ?? null,
+        variant: variant ?? null,
+        schema,
+        version,
+        isActive,
+      },
+    });
+  }
+
+  return prisma.template.create({
+    data: {
+      type,
+      name,
+      contentType: contentType ?? null,
+      variant: variant ?? null,
+      schema,
+      version,
+      isActive,
+      createdBy,
+    },
+  });
+}
+
+async function upsertTemplates(templates) {
+  const results = [];
+  for (const template of templates || []) {
+    results.push(await upsertTemplate(template));
+  }
+  return results;
+}
+
+async function findImageCacheByHash(briefHash) {
+  return prisma.presentationImageCache.findUnique({
+    where: { briefHash },
+  });
+}
+
+async function createImageCache(data) {
+  return prisma.presentationImageCache.create({
+    data,
+  });
+}
+
+async function incrementDeckCreditsCharged(deckId, amountAc) {
+  const amount = Math.max(0, Math.floor(Number(amountAc) || 0));
+  if (amount === 0) {
+    return findDeckById(deckId);
+  }
+
+  return prisma.deck.update({
+    where: { id: deckId },
+    data: {
+      creditsChargedSoFar: { increment: amount },
+    },
+    include: slidesOrderedInclude,
+  });
+}
+
+async function updateProjectThumbnail(projectId, thumbnail) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { thumbnail },
+    select: { id: true, thumbnail: true },
+  });
+}
+
+async function updateProjectCover(projectId, { thumbnail, thumbnailUpdatedAt }) {
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { thumbnail, thumbnailUpdatedAt },
+    select: { id: true, thumbnail: true, thumbnailUpdatedAt: true },
+  });
+}
+
+/**
+ * Deck + project envelope for the render payload. Deliberately excludes the editor-only
+ * fields (outline, generation metrics, credits, folder) and never touches slide rows.
+ */
+async function findPresentationRenderMeta(workspaceId, presentationId) {
+  return prisma.project.findFirst({
+    where: { id: presentationId, workspaceId, type: 'PRESENTATION' },
+    select: {
+      id: true,
+      name: true,
+      workspaceId: true,
+      thumbnail: true,
+      thumbnailUpdatedAt: true,
+      deck: {
+        select: {
+          id: true,
+          status: true,
+          aspectRatio: true,
+          locale: true,
+          themeTokens: true,
+          updatedAt: true,
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Slide half of the version probe, filtered through the deck relation so it needs no prior
+ * deck lookup and can run in parallel with `findPresentationRenderMeta`.
+ */
+async function findSlideVersionByProject(projectId) {
+  const aggregate = await prisma.slide.aggregate({
+    where: { deck: { projectId }, status: 'READY' },
+    _max: { updatedAt: true },
+    _count: { _all: true },
+  });
+
+  return {
+    slideUpdatedAt: aggregate._max.updatedAt,
+    readySlideCount: aggregate._count._all,
+  };
+}
+
+/**
+ * Cheap version probe: answers `If-None-Match` without loading a slide row.
+ * Slide edits go through updateSlide and never touch the Deck row, so `deck.updatedAt`
+ * alone is not a valid version.
+ */
+async function findDeckContentVersion(projectId) {
+  const deck = await prisma.deck.findUnique({
+    where: { projectId },
+    select: { id: true, updatedAt: true },
+  });
+  if (!deck) return null;
+
+  const aggregate = await prisma.slide.aggregate({
+    where: { deckId: deck.id, status: 'READY' },
+    _max: { updatedAt: true },
+    _count: { _all: true },
+  });
+
+  return {
+    deckId: deck.id,
+    deckUpdatedAt: deck.updatedAt,
+    slideUpdatedAt: aggregate._max.updatedAt,
+    readySlideCount: aggregate._count._all,
+  };
+}
+
+/**
+ * One page of READY slides for the render payload. `content` / `imageRef` are read because
+ * titles and legacy hero keys live there, but the render projection drops them before the
+ * response; `contentType`, `layoutId` and `manuallyEdited` are never needed.
+ */
+async function findSlideRenderPage(deckId, { offset = 0, limit = 8 } = {}) {
+  return prisma.slide.findMany({
+    where: { deckId, status: 'READY' },
+    orderBy: { order: 'asc' },
+    skip: offset,
+    take: limit,
+    select: {
+      id: true,
+      order: true,
+      status: true,
+      progressStatus: true,
+      content: true,
+      imageRef: true,
+      elements: true,
+      updatedAt: true,
+    },
+  });
+}
+
+module.exports = {
+  createPresentationProject,
+  findDeckByProjectId,
+  listPresentations,
+  findDeckById,
+  updateDeck,
+  updateProjectName,
+  updateProjectThumbnail,
+  createSlides,
+  createOneSlide,
+  updateSlide,
+  findSlideById,
+  deleteSlideById,
+  clearSlideAssignmentsForUser,
+  duplicatePresentationProject,
+  deleteSlidesByDeckId,
+  shiftSlideOrders,
+  resequenceSlideOrders,
+  reorderSlides,
+  createJob,
+  updateJob,
+  findJobByRequestHash,
+  recordContentRepairJob,
+  findExport,
+  createExport,
+  updateExport,
+  findActiveTemplatesByContentType,
+  findActiveDeckPacks,
+  findLayoutsByLayoutIds,
+  findTemplateById,
+  upsertTemplate,
+  upsertTemplates,
+  findImageCacheByHash,
+  createImageCache,
+  incrementDeckCreditsCharged,
+  updateProjectCover,
+  findPresentationRenderMeta,
+  findSlideVersionByProject,
+  findDeckContentVersion,
+  findSlideRenderPage,
+};

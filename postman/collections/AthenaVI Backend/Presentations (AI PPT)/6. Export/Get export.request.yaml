@@ -1,0 +1,7 @@
+$kind: http-request
+description: Poll until READY for presignedUrl
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/export/{{exportId}}"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 5000

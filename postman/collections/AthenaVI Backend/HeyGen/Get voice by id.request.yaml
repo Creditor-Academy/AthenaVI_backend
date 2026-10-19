@@ -1,0 +1,5 @@
+$kind: http-request
+description: Proxies HeyGen `GET /v3/voices/{voice_id}`. **403** if this voice id is stored as another user's private voice; ids not stored are treated as public catalog reads.
+url: "{{baseUrl}}/api/heygen/voices/{{voiceId}}"
+method: GET
+order: 17000

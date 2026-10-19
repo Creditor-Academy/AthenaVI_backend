@@ -1,0 +1,24 @@
+$kind: http-request
+description: Dedicated superadmin portal login. Same JWT as POST /api/auth/login; 403 if the user is not a platform superadmin.
+url: "{{baseUrl}}/api/auth/superadmin/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "admin@example.com",
+      "password": "password123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        if (j.data && j.data.accessToken) {
+          pm.collectionVariables.set('accessToken', j.data.accessToken);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 4500
