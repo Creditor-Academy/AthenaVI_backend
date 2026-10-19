@@ -249,7 +249,7 @@ In both cases, the user is added to the workspace automatically on success.
 
 **Registered invitees:** prompt login, then **`POST /api/workspaces/invitations/accept`** with `{ "token" }` in the body.
 
-- **409** if the user is already a member or a pending invite already exists for that email.
+- **409** if the user is already a member or an unexpired pending invite already exists for that email. Expired invites do not block a new one.
 
 ---
 
@@ -322,7 +322,7 @@ Authenticated user’s email must match the invitation email.
 }
 ```
 
-**Response (200)** – `data`: `{ "workspace": { ... } }`
+**Response (200)** – `data`: `{ "workspace": { ... } }`. The invitee's `WORKSPACE_INVITATION` inbox item is removed.
 
 - **400** if token invalid, not pending, expired, or email mismatch.
 

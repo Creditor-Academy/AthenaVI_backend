@@ -172,7 +172,8 @@ const findInvitationById = async (invitationId) => {
 
 const findWorkspaceInvitations = async (workspaceId) => {
   return await prisma.invitation.findMany({
-    where: { workspaceId, status: 'PENDING' },
+    // Expired invites stay PENDING in the table; exclude them by date.
+    where: { workspaceId, status: 'PENDING', expiresAt: { gt: new Date() } },
     select: {
       id: true,
       email: true,
@@ -190,6 +191,7 @@ const findPendingInvitation = async (workspaceId, email) => {
       workspaceId,
       email,
       status: 'PENDING',
+      expiresAt: { gt: new Date() },
     },
   });
 }

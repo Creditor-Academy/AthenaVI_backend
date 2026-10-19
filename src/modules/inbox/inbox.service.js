@@ -176,10 +176,6 @@ async function removeInvitationNotifications(invitationId) {
   await inboxDao.deleteByInvitationId(invitationId);
 }
 
-async function markInvitationNotificationRead(userId, invitationId) {
-  await inboxDao.markReadByInvitationForUser(userId, invitationId);
-}
-
 function buildVideoExportCopy({
   status,
   projectName,
@@ -827,7 +823,6 @@ module.exports = {
   notifyWorkspaceInvitation,
   syncPendingWorkspaceInvitations,
   removeInvitationNotifications,
-  markInvitationNotificationRead,
   notifyUser,
   notifyMany,
   notifyWorkspaceAdmins,

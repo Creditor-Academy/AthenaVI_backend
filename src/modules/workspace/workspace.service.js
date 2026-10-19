@@ -291,7 +291,7 @@ async function acceptInvitation(token, userId) {
   );
   if (existingMember) {
     await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
-    await inboxService.markInvitationNotificationRead(userId, invitation.id);
+    await inboxService.removeInvitationNotifications(invitation.id);
     return existingMember.workspace;
   }
   await workspaceDao.createWorkspaceMember({
@@ -300,7 +300,7 @@ async function acceptInvitation(token, userId) {
     role: invitation.role,
   });
   await workspaceDao.updateInvitationStatus(invitation.id, 'ACCEPTED');
-  await inboxService.markInvitationNotificationRead(userId, invitation.id);
+  await inboxService.removeInvitationNotifications(invitation.id);
 
   const workspace = await workspaceDao.findWorkspaceById(invitation.workspaceId);
   inboxService

@@ -159,13 +159,6 @@ const deleteByUserTypeReference = async (userId, type, referenceId) => {
   });
 };
 
-const markReadByInvitationForUser = async (userId, invitationId) => {
-  return await prisma.userInboxNotification.updateMany({
-    where: { userId, invitationId, readAt: null },
-    data: { readAt: new Date() },
-  });
-};
-
 const findPendingInvitationsByEmail = async (email) => {
   return await prisma.invitation.findMany({
     where: {
@@ -215,7 +208,6 @@ module.exports = {
   deleteNotificationForUser,
   deleteByInvitationId,
   deleteByUserTypeReference,
-  markReadByInvitationForUser,
   findPendingInvitationsByEmail,
   findWorkspaceAdminsAndOwners,
   countUnreadPlatformByUserId,
