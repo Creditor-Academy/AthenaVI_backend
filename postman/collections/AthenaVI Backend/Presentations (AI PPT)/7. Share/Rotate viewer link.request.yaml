@@ -1,0 +1,17 @@
+$kind: http-request
+description: Mints a new viewer token; kills every viewer URL already shared.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share/viewer/rotate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const data = j && j.data;
+        const token = (data && data.token) || (data && data.link && data.link.token);
+        if (token) pm.collectionVariables.set("presentationViewerToken", token);
+      }
+    language: text/javascript
+order: 4000

@@ -1,0 +1,16 @@
+$kind: collection
+description: |-
+  Workspace Brand Kits: CRUD, media, AI suggest, logo variants, product mockups, guideline deck + PDF.
+
+  Mockup generate body: `{ templateId, itemColor?, logoRole?, logoPosition?, save? }`.
+  `logoPosition` is only valid for `tshirt` and `hoodie` (`center_chest`, `left_chest`, `full_front`, `center_back`, `full_back`).
+  First 2 successful generates per kit are free.
+
+  Guideline PDF: `GET .../guidelines/pdf` (binary). Deck generate still requires `{ folderId }`.
+auth:
+  - id: brand-kit-bearer-auth
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 7500

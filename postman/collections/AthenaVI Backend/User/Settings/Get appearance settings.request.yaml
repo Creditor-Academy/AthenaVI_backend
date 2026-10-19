@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns interfaceMode (light|dark), themePalette (original|sapphire|ocean|forest|sunset|custom), and customAccentColor (#RRGGBB). Defaults apply when the user has never saved settings.
+url: "{{baseUrl}}/api/user/settings/appearance"
+method: GET
+order: 1000

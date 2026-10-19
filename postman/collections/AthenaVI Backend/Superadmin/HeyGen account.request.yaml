@@ -1,0 +1,5 @@
+$kind: http-request
+description: Proxies HeyGen GET /v3/users/me with HEYGEN_API_KEY (platform COGS wallet).
+url: "{{baseUrl}}/api/superadmin/heygen/account"
+method: GET
+order: 5000

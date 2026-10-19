@@ -1,0 +1,9 @@
+$kind: http-request
+description: >
+  Clone a presentation (deck theme, outline and all slides) into the same folder as "<name> (Copy)".
+  Assignees, comments, share links and exports are not copied. 409 while the source deck is generating.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/duplicate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 600

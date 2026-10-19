@@ -24,6 +24,50 @@ const requestIdParamsSchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
+const createUserBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    // Same constraints as self-service register so admin-created accounts look identical.
+    name: Joi.string().trim().min(2).max(50).required(),
+    email: Joi.string().trim().lowercase().email().max(254).required(),
+    // Optional: when omitted the user gets a "set your password" email instead.
+    password: Joi.string()
+      .min(8)
+      .max(128)
+      .custom((value, helpers) =>
+        Buffer.byteLength(value, 'utf8') > 72 ? helpers.error('string.max', { limit: 72 }) : value
+      )
+      .allow('', null)
+      .optional(),
+    sendWelcomeEmail: Joi.boolean().default(true),
+  })
+    .custom((value, helpers) => {
+      const hasPassword = typeof value.password === 'string' && value.password !== '';
+      return hasPassword || value.sendWelcomeEmail
+        ? value
+        : helpers.message('Provide a password or enable the welcome email');
+    })
+    .required(),
+});
+
+const pauseUserBodySchema = Joi.object({
+  params: Joi.object({ userId: Joi.string().uuid().required() }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    reason: Joi.string().trim().max(500).allow('', null).optional(),
+  }).default({}),
+});
+
+const deleteUserBodySchema = Joi.object({
+  params: Joi.object({ userId: Joi.string().uuid().required() }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    // Typed confirmation: must equal the target user's email (checked in the service).
+    confirmEmail: Joi.string().trim().lowercase().email().max(254).required(),
+  }).required(),
+});
+
 const grantRevokeBodySchema = Joi.object({
   params: Joi.object({
     userId: Joi.string().uuid().required(),
@@ -235,44 +279,68 @@ const productEmailBroadcastRecipientsQuerySchema = Joi.object({
   body: Joi.object({}).unknown(false),
 });
 
-const earlyAccessRequestIdParam = Joi.string()
-  .pattern(/^ea_[A-Za-z0-9_-]+$/)
-  .max(20)
-  .required();
+const createEmailTemplateBodySchema = Joi.object({
+  params: Joi.object({}).unknown(false),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    name: Joi.string().trim().min(1).max(100).required(),
+    subject: Joi.string().trim().max(200).allow('').default(''),
+    htmlBody: Joi.string().trim().min(1).required(),
+    textBody: Joi.string().trim().allow(null, '').optional(),
+    type: Joi.string().valid('html', 'design', 'text').default('html'),
+  }).required(),
+});
 
-const earlyAccessRequestsQuerySchema = Joi.object({
+const updateEmailTemplateBodySchema = Joi.object({
+  params: Joi.object({
+    templateId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({
+    name: Joi.string().trim().min(1).max(100).optional(),
+    subject: Joi.string().trim().max(200).allow('').optional(),
+    htmlBody: Joi.string().trim().min(1).optional(),
+    textBody: Joi.string().trim().allow(null, '').optional(),
+    type: Joi.string().valid('html', 'design', 'text').optional(),
+  }).min(1).required(),
+});
+
+const emailTemplateIdParamsSchema = Joi.object({
+  params: Joi.object({
+    templateId: Joi.string().uuid().required(),
+  }),
+  query: Joi.object({}).unknown(false),
+  body: Joi.object({}).unknown(false),
+});
+
+const listEmailTemplatesQuerySchema = Joi.object({
   params: Joi.object({}).unknown(false),
   query: Joi.object({
     page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(20),
-    status: Joi.string()
-      .valid('pending', 'under_review', 'in_discussion', 'approved', 'rejected')
-      .optional(),
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    search: Joi.string().trim().optional(),
+    type: Joi.string().valid('html', 'design', 'text').optional(),
   }).unknown(false),
   body: Joi.object({}).unknown(false),
 });
 
-const earlyAccessUpdateStatusBodySchema = Joi.object({
+const resendProductEmailBroadcastBodySchema = Joi.object({
   params: Joi.object({
-    requestId: earlyAccessRequestIdParam,
+    broadcastId: Joi.string().uuid().required(),
   }),
   query: Joi.object({}).unknown(false),
   body: Joi.object({
-    status: Joi.string()
-      .valid('under_review', 'in_discussion', 'approved', 'rejected')
-      .required(),
+    emails: Joi.array().items(Joi.string().email().trim()).min(1).optional(),
+    confirm: Joi.string().valid('send').required().messages({
+      'any.only': 'Type send to confirm product email broadcast resend',
+    }),
   }).required(),
 });
 
-const earlyAccessRequestIdParamsSchema = Joi.object({
-  params: Joi.object({
-    requestId: earlyAccessRequestIdParam,
-  }),
-  query: Joi.object({}).unknown(false),
-  body: Joi.object({}).unknown(false),
-});
-
 module.exports = {
+  createUserBodySchema,
+  pauseUserBodySchema,
+  deleteUserBodySchema,
   userIdParamsSchema,
   workspaceIdParamsSchema,
   requestIdParamsSchema,
@@ -295,7 +363,9 @@ module.exports = {
   broadcastIdParamsSchema,
   productEmailBroadcastHistoryQuerySchema,
   productEmailBroadcastRecipientsQuerySchema,
-  earlyAccessRequestsQuerySchema,
-  earlyAccessRequestIdParamsSchema,
-  earlyAccessUpdateStatusBodySchema,
+  createEmailTemplateBodySchema,
+  updateEmailTemplateBodySchema,
+  emailTemplateIdParamsSchema,
+  listEmailTemplatesQuerySchema,
+  resendProductEmailBroadcastBodySchema,
 };

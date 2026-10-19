@@ -32,13 +32,12 @@ const getUserWorkspaces = asyncHandler(async (req, res) => {
 });
 
 const getWorkspaceById = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
   const workspaceId = req.params.workspaceId;
-  const workspace = await workspaceService.getWorkspaceById(
-    userId,
-    workspaceId
-  );
-  return successResponse(req, res, { workspace }, 200, null);
+  const workspace = await workspaceService.getWorkspaceById(workspaceId);
+  // req.workspaceMembership is set by the requireWorkspaceRole middleware on this
+  // route — the caller's role in THIS workspace, not part of the workspace row itself.
+  const withRole = { ...workspace, role: req.workspaceMembership?.role || null };
+  return successResponse(req, res, { workspace: withRole }, 200, null);
 });
 
 const getWorkspaceStorage = asyncHandler(async (req, res) => {

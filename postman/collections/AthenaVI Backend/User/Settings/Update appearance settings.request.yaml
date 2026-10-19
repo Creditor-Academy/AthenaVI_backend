@@ -1,0 +1,15 @@
+$kind: http-request
+description: Partial update; send at least one of interfaceMode, themePalette, customAccentColor. Creates the user_settings row on first save.
+url: "{{baseUrl}}/api/user/settings/appearance"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "interfaceMode": "light",
+      "themePalette": "sapphire",
+      "customAccentColor": "#2563EB"
+    }
+order: 2000

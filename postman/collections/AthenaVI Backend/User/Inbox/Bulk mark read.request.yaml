@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/api/user/inbox/read"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "notificationIds": ["{{notificationId}}"]
+    }
+order: 5000

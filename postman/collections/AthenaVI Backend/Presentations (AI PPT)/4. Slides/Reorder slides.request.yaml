@@ -1,0 +1,17 @@
+$kind: http-request
+description: Must include every slide id exactly once
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/reorder"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "slideIds": [
+        "{{slideId}}",
+        "{{slideId2}}"
+      ]
+    }
+order: 4000

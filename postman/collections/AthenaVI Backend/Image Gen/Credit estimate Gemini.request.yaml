@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/estimate?modelId=gemini-3-pro-image&mode=infographic"
+method: GET
+order: 2110

@@ -1,0 +1,13 @@
+$kind: http-request
+description: Reject a pending upgrade request. Notifies the user (STORAGE_UPGRADE_REJECTED).
+url: "{{baseUrl}}/api/superadmin/storage/requests/{{storageRequestId}}/reject"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reviewNote": "Not eligible at this time"
+    }
+order: 7600

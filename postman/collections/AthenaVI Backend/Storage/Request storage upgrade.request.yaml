@@ -1,0 +1,23 @@
+$kind: http-request
+description: Emails platform superadmin. requestedAdditionalBytes must equal requestedAdditionalGb × 1024³. Does not change quota until admin grants.
+url: "{{baseUrl}}/api/user/storage/request"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "requestedAdditionalGb": 10,
+      "requestedAdditionalBytes": 10737418240,
+      "reason": "Need more space for 4K campaign assets and weekly exports.",
+      "urgency": "flexible",
+      "currentUsedBytes": 536870912,
+      "currentLimitBytes": 1073741824,
+      "tierId": "free",
+      "tierLabel": "Free",
+      "workspaceId": "{{workspaceId}}",
+      "workspaceName": "Personal",
+      "workspaceFootprintBytes": 536870912
+    }
+order: 4000

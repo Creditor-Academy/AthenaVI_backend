@@ -10,6 +10,13 @@ const { rehydrateSpeechInProjectData } = require('./projectSpeechRehydrate');
 const { normalizeEditorProjectData } = require('./projectEditorNormalize');
 const { deleteFile, copyFile, buildPublicUrl } = require('../s3/s3.service');
 const {
+  extractSlideCover,
+  extractVideoCover,
+  toCoverUrls,
+  persistCoverIfEmpty,
+} = require('../../shared/utils/coverThumbnail');
+const prisma = require('../../shared/config/prismaClient');
+const {
   DEFAULT_VIDEO_SETTINGS,
   CANVAS_PRESETS,
 } = require('../../shared/constants/videoEditor');
@@ -19,6 +26,17 @@ const {
   buildProjectSceneCacheKey,
 } = require('../../shared/utils/videoStorageKeys');
 const storageAccounting = require('../storage/storageAccounting.service');
+const videoTemplateService = require('./videoTemplate.service');
+const presentationShareService = require('../presentationShare/presentationShare.service');
+const workspaceDao = require('../workspace/workspace.dao');
+const inboxService = require('../inbox/inbox.service');
+const { buildAssignmentWhere, isAssignmentUnchanged } = require('./project.assignment');
+const {
+  sceneKey,
+  attachSceneAssignees,
+  isSceneAssignmentUnchanged,
+  preserveSceneAssignments,
+} = require('./sceneAssignment');
 
 function buildDefaultProjectData() {
   return {
@@ -180,17 +198,40 @@ const createProject = async (workspaceId, userId, input) => {
     customWidth,
     customHeight,
     tags,
+    templateId,
   } = input;
 
   await assertFolderInWorkspace(folderId, workspaceId);
-  const normalizedState = buildCreateProjectEditorState({
-    editorState,
-    aspectRatio,
-    canvasSize,
-    customWidth,
-    customHeight,
-    tags,
-  });
+
+  const incomingScenes = Array.isArray(editorState?.scenes) ? editorState.scenes : [];
+  if (templateId && incomingScenes.length > 0) {
+    throw new AppError(messages.VIDEO_TEMPLATE_CONFLICTS_WITH_SCENES, 400);
+  }
+
+  let normalizedState;
+  if (templateId) {
+    const template = await videoTemplateService.getActiveVideoTemplate(templateId);
+    normalizedState = await videoTemplateService.applyTemplateToNewProjectState({
+      template,
+      aspectRatio,
+      canvasSize,
+      customWidth,
+      customHeight,
+      tags,
+      resolveVideoSettingsFromCanvas,
+      buildProjectMeta,
+      normalizeProjectState,
+    });
+  } else {
+    normalizedState = buildCreateProjectEditorState({
+      editorState,
+      aspectRatio,
+      canvasSize,
+      customWidth,
+      customHeight,
+      tags,
+    });
+  }
 
   const project = await projectDao.createProject({
     name,
@@ -198,8 +239,9 @@ const createProject = async (workspaceId, userId, input) => {
     folderId,
     createdBy: userId,
     updatedBy: userId,
+    type: 'VIDEO',
     data: normalizedState,
-    thumbnail,
+    thumbnail: thumbnail || (await resolveVideoCoverPersistUrl(normalizedState)),
     duration: duration ?? estimateProjectDuration(normalizedState),
     status: status ?? 'draft',
   });
@@ -209,14 +251,300 @@ const createProject = async (workspaceId, userId, input) => {
   return enrichProject(refreshed);
 };
 
-const listProjects = async (workspaceId, folderId) => {
+const appendSceneFromVideoTemplate = async (workspaceId, projectId, userId, templateId) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  if (project.type === 'PRESENTATION') {
+    throw new AppError(messages.VIDEO_TEMPLATE_NOT_FOR_PRESENTATION, 400);
+  }
+
+  const template = await videoTemplateService.getActiveVideoSceneTemplate(templateId);
+  const currentData =
+    project.data && typeof project.data === 'object'
+      ? project.data
+      : buildDefaultProjectData();
+  const scenes = Array.isArray(currentData.scenes) ? [...currentData.scenes] : [];
+  const nextOrder =
+    scenes.reduce((max, s) => Math.max(max, Number(s.order) || 0), -1) + 1;
+
+  const hydratedSchema = await videoTemplateService.hydrateVideoTemplateSchema(
+    template.schema,
+    template.media
+  );
+
+  let schema;
+  try {
+    schema = require('../validations/videoTemplate.validations').assertVideoSceneTemplateSchema(
+      hydratedSchema
+    );
+  } catch (err) {
+    throw new AppError(err.message || 'Invalid VIDEO_SCENE template schema', 400);
+  }
+
+  const scene = videoTemplateService.schemaToScene(schema, {
+    templateId: template.id,
+    order: nextOrder,
+  });
+  scenes.push(scene);
+
+  const nextData = normalizeProjectState({
+    ...currentData,
+    scenes,
+  });
+
+  return saveProjectData(workspaceId, projectId, userId, nextData);
+};
+
+/**
+ * Assign / reassign / unassign one scene in a TEAM workspace (OWNER/ADMIN only at route).
+ * Mirrors setProjectAssignee, but a scene isn't a DB row — it's an object inside
+ * Project.data.scenes[] (JSON) keyed by sceneId/id — so this is a light, targeted
+ * read-clone-splice-write on that array rather than a Prisma column update, and it
+ * deliberately skips the full saveProjectData pipeline (no re-normalize, no HeyGen/
+ * speech rehydration, no storage recalculation — assignment isn't a content edit).
+ */
+const setSceneAssignee = async (
+  workspaceId,
+  projectId,
+  sceneId,
+  actorId,
+  assigneeId,
+  workspace = null
+) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  if (project.type !== 'VIDEO') {
+    throw new AppError(messages.VIDEO_SCENE_ASSIGN_NOT_FOR_PRESENTATION, 400);
+  }
+
+  const ws = workspace || (await workspaceDao.findWorkspaceById(workspaceId));
+  if (!ws) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+  if (ws.type !== 'TEAM') {
+    throw new AppError(messages.VIDEO_SCENE_ASSIGN_TEAM_ONLY, 400);
+  }
+
+  const nextAssigneeId = assigneeId || null;
+
+  if (nextAssigneeId) {
+    const member = await workspaceDao.findWorkspaceMember(workspaceId, nextAssigneeId);
+    if (!member) {
+      throw new AppError(messages.VIDEO_SCENE_ASSIGNEE_NOT_MEMBER, 400);
+    }
+  }
+
+  const currentData =
+    project.data && typeof project.data === 'object' ? project.data : buildDefaultProjectData();
+  const scenes = Array.isArray(currentData.scenes) ? [...currentData.scenes] : [];
+  const index = scenes.findIndex((s) => sceneKey(s) === sceneId);
+  if (index === -1) {
+    throw new AppError(messages.VIDEO_SCENE_NOT_FOUND, 404);
+  }
+  const scene = scenes[index];
+
+  if (isSceneAssignmentUnchanged(scene, nextAssigneeId)) {
+    const [hydrated] = await attachSceneAssignees([scene]);
+    return { scene: hydrated };
+  }
+
+  const previousAssigneeId = scene.assignedToId || null;
+
+  const updatedScene =
+    nextAssigneeId === null
+      ? { ...scene, assignedToId: null, assignedById: null, assignedAt: null }
+      : {
+          ...scene,
+          assignedToId: nextAssigneeId,
+          assignedById: actorId,
+          assignedAt: new Date().toISOString(),
+        };
+  scenes[index] = updatedScene;
+
+  await projectDao.updateProject(projectId, { data: { ...currentData, scenes } });
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { id: true, name: true, email: true },
+  });
+
+  const notifyCtx = {
+    scene: updatedScene,
+    project,
+    workspace: ws,
+    actor,
+    previousAssigneeId,
+  };
+
+  if (nextAssigneeId && nextAssigneeId !== actorId) {
+    inboxService
+      .notifySceneAssigned(notifyCtx)
+      .catch((error) => console.error('Scene assigned notification failed:', error));
+  }
+
+  if (
+    previousAssigneeId &&
+    previousAssigneeId !== nextAssigneeId &&
+    previousAssigneeId !== actorId
+  ) {
+    inboxService
+      .notifySceneUnassigned({
+        ...notifyCtx,
+        unassignedUserId: previousAssigneeId,
+        reassignedToId: nextAssigneeId,
+      })
+      .catch((error) => console.error('Scene unassigned notification failed:', error));
+  }
+
+  const [hydrated] = await attachSceneAssignees([updatedScene]);
+  return { scene: hydrated };
+};
+
+const listProjects = async (workspaceId, folderId, type, options = {}) => {
   if (folderId) {
     await assertFolderInWorkspace(folderId, workspaceId);
   }
 
-  const projects = await projectDao.listProjects({ workspaceId, folderId });
-  return enrichProjects(projects, { includeData: false });
+  const assignmentWhere =
+    options.assignmentWhere ||
+    buildAssignmentWhere(options.assignmentQuery || {}, options.userId);
+
+  const projects = await projectDao.listProjects({
+    workspaceId,
+    folderId,
+    type,
+    assignmentWhere,
+  });
+  const withCovers = await attachProjectCoverThumbnails(projects);
+  return enrichProjects(withCovers, { includeData: false });
 };
+
+/**
+ * Assign / reassign / unassign a project in a TEAM workspace (OWNER/ADMIN only at route).
+ * @param {string} workspaceId
+ * @param {string} projectId
+ * @param {string} actorId
+ * @param {string | null} assigneeId
+ * @param {{ type?: string } | null} [workspace] optional preloaded workspace from middleware
+ */
+const setProjectAssignee = async (
+  workspaceId,
+  projectId,
+  actorId,
+  assigneeId,
+  workspace = null
+) => {
+  const project = await assertProjectInWorkspace(workspaceId, projectId);
+
+  const ws =
+    workspace ||
+    (await workspaceDao.findWorkspaceById(workspaceId));
+  if (!ws) {
+    throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  }
+  if (ws.type !== 'TEAM') {
+    throw new AppError(messages.PROJECT_ASSIGN_TEAM_ONLY, 400);
+  }
+
+  const nextAssigneeId = assigneeId || null;
+
+  if (nextAssigneeId) {
+    const member = await workspaceDao.findWorkspaceMember(workspaceId, nextAssigneeId);
+    if (!member) {
+      throw new AppError(messages.PROJECT_ASSIGNEE_NOT_MEMBER, 400);
+    }
+  }
+
+  if (isAssignmentUnchanged(project, nextAssigneeId)) {
+    return enrichProject(project, { includeData: false });
+  }
+
+  const previousAssigneeId = project.assignedToId || null;
+
+  const updateData =
+    nextAssigneeId === null
+      ? {
+          assignedToId: null,
+          assignedById: null,
+          assignedAt: null,
+        }
+      : {
+          assignedToId: nextAssigneeId,
+          assignedById: actorId,
+          assignedAt: new Date(),
+        };
+
+  const updated = await projectDao.updateProject(projectId, updateData);
+
+  const actor = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { id: true, name: true, email: true },
+  });
+
+  const notifyCtx = {
+    project: updated,
+    workspace: ws,
+    actor,
+    previousAssigneeId,
+  };
+
+  if (nextAssigneeId && nextAssigneeId !== actorId) {
+    inboxService
+      .notifyProjectAssigned(notifyCtx)
+      .catch((error) => console.error('Project assigned notification failed:', error));
+  }
+
+  if (
+    previousAssigneeId &&
+    previousAssigneeId !== nextAssigneeId &&
+    previousAssigneeId !== actorId
+  ) {
+    inboxService
+      .notifyProjectUnassigned({
+        ...notifyCtx,
+        unassignedUserId: previousAssigneeId,
+        reassignedToId: nextAssigneeId,
+      })
+      .catch((error) => console.error('Project unassigned notification failed:', error));
+  }
+
+  return enrichProject(updated, { includeData: false });
+};
+
+async function resolveVideoCoverPersistUrl(data) {
+  const cover = await toCoverUrls(extractVideoCover(data));
+  return cover.persistUrl || null;
+}
+
+async function attachProjectCoverThumbnails(projects) {
+  if (!Array.isArray(projects) || projects.length === 0) return projects;
+  const missingIds = projects.filter((p) => !p.thumbnail).map((p) => p.id);
+  const sources = missingIds.length ? await projectDao.findCoverSourcesByIds(missingIds) : [];
+  const byId = new Map(sources.map((row) => [row.id, row]));
+
+  return Promise.all(
+    projects.map(async (project) => {
+      if (project.thumbnail) {
+        const cover = await toCoverUrls({ url: project.thumbnail });
+        const thumbnailUrl = cover.displayUrl || project.thumbnail;
+        return { ...project, thumbnail: thumbnailUrl, thumbnailUrl };
+      }
+
+      const source = byId.get(project.id);
+      const extracted =
+        source?.type === 'PRESENTATION'
+          ? extractSlideCover(source?.deck?.slides?.[0])
+          : extractVideoCover(source?.data);
+
+      const cover = await toCoverUrls(extracted);
+      if (cover.persistUrl) {
+        persistCoverIfEmpty(prisma, project.id, cover.persistUrl);
+      }
+      const thumbnailUrl = cover.displayUrl || null;
+      return { ...project, thumbnail: thumbnailUrl, thumbnailUrl };
+    })
+  );
+}
 
 async function attachRehydratedProjectData(workspaceId, projectId, project) {
   if (!project?.data) {
@@ -285,8 +613,13 @@ const updateProject = async (workspaceId, projectId, userId, payload) => {
 };
 
 const saveProjectData = async (workspaceId, projectId, userId, data) => {
-  await assertProjectInWorkspace(workspaceId, projectId);
-  const normalizedState = normalizeProjectState(data);
+  const existing = await assertProjectInWorkspace(workspaceId, projectId);
+  // Scene assignees are owned by the dedicated assignee route, never by editor autosaves.
+  const incoming =
+    data && Array.isArray(data.scenes)
+      ? { ...data, scenes: preserveSceneAssignments(data.scenes, existing.data?.scenes) }
+      : data;
+  const normalizedState = normalizeProjectState(incoming);
   const [heygenRows, speechRows] = await Promise.all([
     heygenDao.listHeygenResponsesByProject(workspaceId, projectId),
     speechDao.listSpeechGenerationsByProject(workspaceId, projectId),
@@ -314,10 +647,13 @@ const saveProjectData = async (workspaceId, projectId, userId, data) => {
 
   const finalState = normalizeEditorProjectData(mergedState);
 
+  const coverUrl = await resolveVideoCoverPersistUrl(finalState);
+
   await projectDao.updateProject(projectId, {
     data: finalState,
     duration: estimateProjectDuration(finalState),
     updatedBy: userId,
+    ...(coverUrl ? { thumbnail: coverUrl } : {}),
   });
   await projectStorageService.recalculateProjectStorage(projectId);
   const refreshed = await projectDao.findProjectById(workspaceId, projectId);
@@ -508,6 +844,9 @@ const deleteProject = async (workspaceId, projectId) => {
     }
   }
 
+  // Drop cached share metadata and the live viewer room before the row (and its FK cascade) goes.
+  await presentationShareService.invalidateForProject(project.id);
+
   await projectDao.deleteProject(project.id);
   const owner = await storageAccounting.getWorkspaceOwnerOrThrow(workspaceId);
   await storageAccounting.recalculateUserStorageUsed(owner.id);
@@ -521,5 +860,8 @@ module.exports = {
   saveProjectData,
   moveProjectToFolder,
   deleteProject,
+  setProjectAssignee,
+  setSceneAssignee,
   buildDefaultProjectData,
+  appendSceneFromVideoTemplate,
 };

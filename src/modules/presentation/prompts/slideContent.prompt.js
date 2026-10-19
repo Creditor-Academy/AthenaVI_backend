@@ -1,0 +1,512 @@
+const DENSITY_CAPS = {
+  concise: {
+    maxBullets: 3,
+    maxWordsBody: 40,
+    maxTitleLines: 1,
+    minTitleWords: 2,
+    maxTitleWords: 6,
+  },
+  balanced: {
+    maxBullets: 5,
+    maxWordsBody: 60,
+    maxTitleLines: 2,
+    minTitleWords: 4,
+    maxTitleWords: 10,
+  },
+  detailed: {
+    maxBullets: 7,
+    maxWordsBody: 100,
+    maxTitleLines: 2,
+    minTitleWords: 5,
+    maxTitleWords: 12,
+  },
+};
+
+function resolveCaps(density = 'balanced') {
+  return DENSITY_CAPS[density] || DENSITY_CAPS.balanced;
+}
+
+function titleLengthGuidance(caps, density = 'balanced') {
+  const min = caps.minTitleWords || 3;
+  const max = caps.maxTitleWords || 8;
+  const lines = caps.maxTitleLines || 1;
+  if (density === 'detailed') {
+    return `Slide title: ${min}–${max} words across up to ${lines} lines. Prefer a full headline (e.g. "Real-time plans that move with you"), never a 1–2 word stub like "Market Reality" when density is detailed.`;
+  }
+  if (density === 'concise') {
+    return `Slide title: ${min}–${max} words, ${lines} line max — punchy but not a single vague word.`;
+  }
+  return `Slide title: ${min}–${max} words across up to ${lines} lines. Avoid 1–2 word stubs unless the brand name alone is the cover title.`;
+}
+
+function buildSystem() {
+  return [
+    'You write slide copy for a polished slide renderer with fixed layout slots.',
+    'Copy must be scannable at a glance — headline + bullets, not essay paragraphs.',
+    'You also decide optional shape treatment per slot (card behind image, pill behind CTA, image mask) — shapes are NOT visible in the layout catalog; you choose at generation time.',
+    'Fill content slots only. No layout coordinates or color hex values.',
+    'Enforce hard density limits and any slide intent / generation hints provided.',
+    'Always include speaker notes in "notes".',
+    'pathBSpec: ONLY for irregular untemplatable diagrams (architecture, ERD, branching systems). Leave pathBSpec null for linear how-it-works / SWOT / funnel / process layouts — those use editable layout slots.',
+    'When pathBSpec is required, fill exact panel titles, labels, and legend — copy is decided here; the image model only typesets later.',
+    'Return JSON only.',
+  ].join(' ');
+}
+
+/** Number of milestone/step cards the layout draws (milestone_N_* / step_N_* slot ids). */
+function timelineSlotCount(slotConstraints) {
+  let max = 0;
+  for (const slot of Array.isArray(slotConstraints) ? slotConstraints : []) {
+    const m = String(slot?.id || '').match(/^(?:milestone|step)_(\d+)(?:_|$)/i);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max;
+}
+
+function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', narrative = {}) {
+  const id = String(layoutId || '').toLowerCase();
+  const type = String(suggestedType || '').toLowerCase();
+  const purpose = String(narrative.purpose || narrative.intent || '').toLowerCase();
+  const narrativeRole = String(narrative.narrativeRole || narrative.narrative_role || '')
+    .toLowerCase()
+    .replace(/-/g, '_');
+  const lines = [];
+
+  if (slideOrder === 1 || type === 'title') {
+    lines.push(
+      'Title slide: spoken outcome headline (5–12 words, period OK) — not "Overview / Introduction / Product". REQUIRED titleRuns (2-3 segments, accent on final punch line). Subtitle/eyebrow = short UPPERCASE kicker when those slots exist. Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
+    );
+  }
+
+  if (type === 'closing' || /closing|cta/.test(id)) {
+    lines.push(
+      'Closing slide: REQUIRED subtitle (1 line), cta (offer-style action: verb + concrete outcome; add a time/number when the brief supports it), and contact when layout has CONTACT slot. Ban "Book a demo / Get started / Learn more" unless the deck is explicitly a sales/demo pitch. Prefer shapeDecisions.CTA.behind "pill".'
+    );
+  }
+
+  if (type === 'chart' || /chart/.test(id)) {
+    lines.push(
+      'Chart slide: analyze the data story FIRST, then pick chart.type and fill data. Never duplicate the same chart twice on one slide.'
+    );
+    lines.push(
+      'Story → type: time-series labels or trend narrative → "line"; values that sum to ~100% or part-of-whole share → "donut"/"pie"; ranked categories or absolute volumes → "bar". Only use chart2/charts[] when comparing two distinct metrics.'
+    );
+    lines.push(
+      'REQUIRED chart.labels (4-6 topic-specific labels) and chart.series[{ name, values }] with numeric values matching labels length. Set isIllustrative:true. Add body (3-4 lines) only when the layout has a BODY slot and insight adds value.'
+    );
+  }
+
+  if (/chart_with_description|chart_donut_context|donut|chart_split/.test(id)) {
+    lines.push(
+      'Chart + paragraph layout: fill body with a 3-4 line insight explaining the chart takeaway — do not repeat the title or raw numbers verbatim.'
+    );
+  }
+
+  if (/chart_donut_context/.test(id)) {
+    lines.push(
+      'Donut context / market-share layout: REQUIRED stats[4] with { label, value, body } per segment OR chart.labels plus chart.series values of matching length — never placeholder names like "Metric A". If the brief is qualitative only, set chart.isIllustrative:true with non-numeric segment labels and copy that does not imply real market-share percentages.'
+    );
+  }
+
+  if (/grid_device/.test(id) || type === 'device_frames') {
+    lines.push(
+      'Device mockup layout: REQUIRED features[] or columns[] (minimum 2) with { title, body } per device card — topic-specific copy only, never "Describe this feature".'
+    );
+  }
+
+  if (/chart_two|chart_three|chart_dual/.test(id)) {
+    lines.push(
+      'Dual/triple chart layout: ONLY when comparing two or three distinct datasets. Provide chart + chart2 (or charts[]) with different labels/metrics — never the same data in both charts.'
+    );
+  }
+
+  if (type === 'timeline' || /timeline/.test(id)) {
+    const slots = Number(narrative.timelineSlotCount) || 0;
+    const count = slots
+      ? `exactly ${slots} entries (this layout draws ${slots} cards — unused cards would show placeholder text)`
+      : 'at least 3 entries';
+    lines.push(
+      `Timeline slide: REQUIRED timeline[] with ${count}. Each entry MUST have label (year/phase), title (2-4 words) AND detail (1-2 lines describing the milestone). Never output year-only entries without detail; keep entries distinct and in chronological order.`
+    );
+  }
+
+  if (/four_para|three_para|two_para|eight_short|intro_.*para|para_.*image/.test(id)) {
+    lines.push(
+      'Compact card layout: each card holds a title AND its paragraph in one small box. Card title ≤4 words; card paragraph ≤18 words (one sentence). Longer copy will be cut, so write tight, specific lines.'
+    );
+  }
+
+  if (/grid_insights_chart/.test(id)) {
+    lines.push(
+      'Grid insights chart layout: REQUIRED insights[3] (short 2-4 word labels, one per insight card), chart { title, labels, series } for BAR_CHART, caption (one short line under the chart), and takeaway { title, body } (title ≤5 words, body 2-3 lines explaining the chart). Never use "Insight 1", "Revenue growth" or "Key takeaway" as literal copy.'
+    );
+  }
+
+  if (/bullet_split_image|split.*bullet/i.test(id)) {
+    lines.push(
+      'Split bullet slide: bullets must use "**Topic:** description" format (bold topic + colon + detail). 4-6 points max.'
+    );
+  }
+
+  if (/closing_thank_you_fullbleed|fullbleed.*thank/i.test(id)) {
+    lines.push(
+      'Full-bleed thank-you slide: REQUIRED quote (≤25 words, attribution optional), titleRuns for "Thank you" bottom-left, shapeDecisions.__overlay__.enabled true.'
+    );
+  }
+
+  if (/comparison_pros_cons/.test(id) || (type === 'comparison' && /pros_cons/.test(id))) {
+    lines.push(
+      'Pros/cons comparison layout: REQUIRED title, prosTitle and consTitle (side labels, e.g. "Franchisee" vs "Independent"). Provide exactly 5 pros and 5 cons — each entry as "Short title: one-line detail" or { title, body }. Optional prosRows/consRows arrays with the same shape. Do not use a single pros/cons bullet block only.'
+    );
+  }
+
+  if (/comparison_side_by_side/.test(id)) {
+    lines.push(
+      'Side-by-side comparison: REQUIRED meaningful left.title and right.title (not "Option A/B"). Each side needs left/right { title, bullets } with 3–5 distinct bullets OR a body paragraph. Optional comparison.left/right mirrors top-level left/right. Never use placeholder option labels.'
+    );
+  }
+
+  if (/comparison_table/.test(id) && !/pricing_comparison/.test(id)) {
+    lines.push(
+      'Comparison table layout: REQUIRED comparison.rows[] (or comparisonRows[]) with one object per table row: { leftTitle, leftBody, rightTitle, rightBody }. Fill LEFT_HEADER/RIGHT_HEADER via left.title and right.title. 3–5 rows minimum; no "Lorem ipsum" or generic option labels.'
+    );
+  }
+
+  if (/eight_short_texts_image|grid_text_image/.test(id)) {
+    lines.push(
+      'Point grid layout: REQUIRED columns[] with one { title, body } per POINT_n slot (maps POINT_n_TITLE / POINT_n_DESC). Up to 8 distinct short titles (≤4 words) and 1–2 line bodies — deck-specific, not generic SaaS capability labels.'
+    );
+  }
+
+  if (/^table_|table_single|table_data/.test(id) || (type === 'table' && /table/.test(id))) {
+    lines.push(
+      'Table layout: REQUIRED table.headers[] and table.rows[][] (or table.cells[][]) for CELL_r_c slots; optional table.rowLabels[] for ROW_n_LABEL. First row of cells maps to header row when headers omitted.'
+    );
+  }
+
+  if (/dual_metric|two_metric|metric_compare|metrics_dual/.test(id)) {
+    lines.push(
+      'Dual metrics layout: REQUIRED stats[] or metrics[] with exactly 2 entries { title, body or description, label?, value? } for METRIC_A_* and METRIC_B_* slots. No "Metric A/B" placeholder titles.'
+    );
+  }
+
+  if (/timeline_process|process_step|step_1_desc/.test(id)) {
+    lines.push(
+      'Process/timeline with step slots: REQUIRED timeline[] (or steps[]) — each { title, body, detail, label, year } as needed for step_n_title / step_n_desc slots. Every step needs substantive detail, not "Step 1" stubs.'
+    );
+  }
+
+  if (/grid_six_images|grid_three_images|four_images_v1/.test(id)) {
+    lines.push(
+      'Gallery grid: REQUIRED items[] or columns[] with one DISTINCT short title (≤4 words) per image slot — e.g. menu items, product variants, or venue features. REQUIRED imagePrompts with keys IMAGE_1, IMAGE_2, … — one isolated photographic subject per slot (≤12 words), no collage.'
+    );
+  }
+
+  if (/grid_bento_three|grid_bento_four|grid_three_asymmetric/.test(id)) {
+    lines.push(
+      'Bento grid: title and subtitle must reflect this deck and slide topic — never generic wellness or template placeholder themes. REQUIRED columns[] with one entry per IMAGE_n slot; each { title, body } names a distinct on-topic visual (menu item, venue moment, product). REQUIRED imagePrompts.IMAGE_1…n: unique ≤12-word photographic subject per column, same industry/mood as the deck; no collages.'
+    );
+  }
+
+  if (/three_cards|four_images|cards_image|grid_.*image|grid_bento|device|timeline_milestones_image/.test(id)) {
+    lines.push(
+      'Multi-image layout: REQUIRED imagePrompts object with a UNIQUE concrete visual metaphor per image slot (IMAGE_1, IMAGE_2, COL_1_IMAGE, etc.). Each prompt ≤12 words naming ONE photographic subject inspired by the column topic — never quote title/body wording, never describe text/captions in the image. Forbid collages, triptychs, and multi-panel images.'
+    );
+    lines.push(
+      'Multi-card/gallery layout: REQUIRED columns[] with one entry per image — each { title, body } must have a DISTINCT title (≤4 words) naming a single visual subject that matches that card’s text (e.g. tins vs robes vs candles). Titles map to IMAGE_n / COL_n_IMAGE captions; imagePrompts stay visual-only.'
+    );
+  }
+
+  if (/^title_hero_|^title_fullbleed|^title_image_logo/.test(id)) {
+    lines.push(
+      'Title hero layout: concise title (≤8 words) + short subtitle/tagline. One strong hero imagePrompt as a photographic scene from the overall deck prompt + slide topic (not title alone, not body paste) — no collage, no text in image. Shaped/fade/full-bleed variants use the same copy rules.'
+    );
+  }
+
+  if (/section_with_image|two_para_right|three_para_image|section_left_image|para_split/.test(id)) {
+    lines.push(
+      'Split text|image layout: text on one half, hero photo on the other. Only title slides get an automatic edge fade on the photo — keep copy concise on the text side.'
+    );
+  }
+
+  if (/two_para|three_para|four_para|intro_four_para|intro_three_para/.test(id)) {
+    lines.push(
+      'Multi-paragraph layout: REQUIRED columns[] with distinct { title, body } per paragraph/column. Titles are subheadings (≤4 words); bodies are 1-3 lines each.'
+    );
+    lines.push(
+      'Four-paragraph + image layouts (four_para_image_v1): fill columns[0..3] — each entry maps to BULLET_1..BULLET_4. Never leave paragraph slots empty.'
+    );
+  }
+
+  if (/diagram_|swot|matrix|funnel|process_step/.test(id)) {
+    lines.push(
+      'Diagram layout: REQUIRED diagram.type matching this layout family (swot|matrix|funnel|cycle|process) and diagram.cells[] (or quadrants[]) with one { title, body } entry per quadrant/step/funnel tier. Each body must be 1-3 original lines about the slide topic. Replace ALL template placeholder wording — never echo "Two to three lines explaining this section."'
+    );
+  }
+
+  if (/device_phone_highlights/.test(id)) {
+    lines.push(
+      'Phone highlights layout: REQUIRED columns[0..5] as { title, body } mapped in order FEATURE_L1, L2, L3, R1, R2, R3 (title→HEADING, body→BODY). Six distinct short titles (≤4 words). Fill imagePrompts.DEVICE_IMAGE as a flat MOBILE APP UI screenshot (lists/maps/cards) — no phone bezel, no photo scene.'
+    );
+  }
+
+  if (/device_phone_triple/.test(id)) {
+    lines.push(
+      'Phone triple layout: REQUIRED title (main HEADING), columns[0] → HEADING_L + BODY_L, columns[1] → HEADING_R + BODY_R. Fill imagePrompts for DEVICE_IMAGE_1..3 with three distinct flat MOBILE APP UI screenshots (no hardware, no photo scenes).'
+    );
+  }
+
+  if (/device_multi_cluster/.test(id)) {
+    lines.push(
+      'Multi-device cluster: REQUIRED title with two lines separated by \\n (line1 + accent line2 for HEADING), subtitle → SUBHEADING, body → BODY. imagePrompts: PHONE_IMAGE + WATCH_IMAGE = mobile app UI; TABLET_IMAGE + LAPTOP_IMAGE = website/web-app UI. Flat screenshots only — no bezels.'
+    );
+  }
+
+  if (/device_(laptop|tablet)_/.test(id)) {
+    lines.push(
+      'Device split/centered layout: REQUIRED title + body. Fill imagePrompts for LAPTOP_IMAGE / TABLET_IMAGE as a flat WEBSITE or web-app UI screenshot (browser page layout) — no hardware bezel, no photographic scene. DEVICE_IMAGE on phone layouts stays mobile app UI.'
+    );
+  }
+
+  if (type === 'pricing' || /^pricing_/.test(id)) {
+    lines.push(
+      'Pricing slide: REQUIRED plans[] with at least 3 tiers when the brief mentions three memberships/plans. Each plan MUST include label (tier name), price (currency string), optional period (/mo, /yr), items[] (3–5 feature bullets), optional cta, and highlighted:true on the recommended tier when applicable.'
+    );
+    lines.push(
+      'Do not leave pricing slots empty — every PLAN_* field (label, price, period, items, CTA) must be populated from plans[]. Never output placeholder tier names or empty item lists.'
+    );
+  }
+
+  if (
+    purpose === 'problem' ||
+    narrativeRole === 'problem_statement' ||
+    narrativeRole === 'pain_points'
+  ) {
+    lines.push(
+      'Problem / friction slide: REQUIRED beats[] or bullets[] (2–5 concrete pains from the brief). Use columns[] only when the layout has card/column slots. Do NOT emit chart, chart2, charts[], stats[], or metrics[] — this is a qualitative narrative slide, not a data visualization.'
+    );
+  }
+
+  return lines.length ? `\n${lines.join('\n')}` : '';
+}
+
+/**
+ * @param {object} vars
+ */
+function buildUser(vars = {}) {
+  const density = vars.density || 'balanced';
+  const caps = resolveCaps(density);
+  const hints = vars.generationHints && typeof vars.generationHints === 'object' ? vars.generationHints : null;
+  const slotLines = Array.isArray(vars.slotConstraints)
+    ? vars.slotConstraints
+        .map((s) => {
+          const bits = [`${s.id}${s.role ? ` (${s.role})` : ''}`];
+          if (s.max_lines) bits.push(`max ${s.max_lines} lines`);
+          if (s.max_words) bits.push(`max ${s.max_words} words`);
+          if (s.fontHint) bits.push(s.fontHint);
+          return `- ${bits.join(', ')}`;
+        })
+        .join('\n')
+    : '';
+
+  const hintLines = [];
+  if (hints) {
+    if (hints.maxTitleWords) hintLines.push(`Max title words: ${hints.maxTitleWords}`);
+    if (hints.maxBodyWords) hintLines.push(`Max body words: ${hints.maxBodyWords}`);
+    if (hints.maxLines) hintLines.push(`Max lines: ${hints.maxLines}`);
+    if (hints.itemCountMin || hints.itemCountMax) {
+      hintLines.push(
+        `Item count: ${hints.itemCountMin || 1}-${hints.itemCountMax || hints.itemCountMin || 7}`
+      );
+    }
+    for (const key of [
+      'titleLength',
+      'subtitleLength',
+      'bodyLength',
+      'itemCount',
+      'itemLength',
+      'statFormat',
+      'labelLength',
+      'calloutLength',
+      'titleTone',
+      'ctaFormat',
+      'eyebrowFormat',
+      'bodyVoice',
+      'imagePromptStyle',
+      'parallelStructure',
+      'pointCount',
+      'pointLength',
+      'bioLength',
+      'nameFormat',
+      'chartDataStyle',
+      'sourceNote',
+    ]) {
+      if (hints[key]) hintLines.push(`${key}: ${hints[key]}`);
+    }
+    const avoid = hints.avoidClichés || hints.avoidCliches;
+    if (Array.isArray(avoid) && avoid.length) {
+      hintLines.push(`Avoid clichés: ${avoid.join(', ')}`);
+    }
+  }
+
+  return [
+    `Deck title: ${vars.deckTitle || ''}`,
+    `Theme tone: ${vars.themeTone || 'professional'}`,
+    `Density: ${density}`,
+    `Locale: ${vars.locale || 'en'}`,
+    `Max bullets: ${caps.maxBullets} | Max words body: ${hints?.maxBodyWords || caps.maxWordsBody} | Max title lines: ${caps.maxTitleLines} | Title words: ${caps.minTitleWords}–${caps.maxTitleWords}`,
+    titleLengthGuidance(caps, density),
+    `Slide order: ${vars.slideOrder || 1}/${vars.slideTotal || 1}`,
+    `Title (required seed — use as the slide headline / brand name): ${vars.title || ''}`,
+    vars.subtitle ? `Subtitle / tagline (required seed): ${vars.subtitle}` : '',
+    `Summary (this is the argument to place in body slots, not a topic label): ${vars.summary || ''}`,
+    Array.isArray(vars.beats) && vars.beats.length
+      ? `Beats (map into columns[] / bullets[] to match slot count):\n${vars.beats
+          .map((b, i) => {
+            if (typeof b === 'string') return `- ${i + 1}. ${b}`;
+            const label = b.label || b.title || '';
+            const text = b.text || b.body || '';
+            return `- ${i + 1}. ${label}${text && text !== label ? `: ${text}` : ''}`;
+          })
+          .join('\n')}`
+      : '',
+    vars.visual ? `Visual direction for this slide only: ${vars.visual}` : '',
+    `Suggested type: ${vars.suggestedContentType || 'bullet_list'}`,
+    vars.intent ? `Slide intent (follow closely): ${vars.intent}` : '',
+    vars.purpose ? `Slide purpose (narrative role): ${vars.purpose}` : '',
+    vars.narrativeRole ? `Narrative role: ${vars.narrativeRole}` : '',
+    `Previous slide title: ${vars.previousSlideTitle || '(none)'}`,
+    `Next slide title: ${vars.nextSlideTitle || '(none)'}`,
+    vars.wizardBrief ? `\nWizard brief (honor voice, audience, purpose, narrative):\n${vars.wizardBrief}` : '',
+    hintLines.length ? `\nGeneration hints:\n${hintLines.join('\n')}` : '',
+    vars.layoutContext?.hasImageOverlay
+      ? '\nFull-bleed overlay slide: text renders over a photo with an automatic dark scrim and light text. Keep titles ≤6 words; body ≤2 short lines. Set shapeDecisions.__overlay__.enabled to true.'
+      : '',
+    density === 'detailed' && !vars.layoutContext?.hasImageOverlay
+      ? '\nDetailed density: fill body/bullets/columns to layout slot capacity — multi-line bodies (not one-line stubs), labeled beats with supporting detail, and use the max bullet/column count the slots allow.'
+      : '',
+    String(vars.layoutId || '').includes('grid_metrics_masonry')
+      ? '\nGrid metrics layout (grid_metrics_masonry_v1): HEADING → title only (≤6 words). Fill columns[] with { title, body } for the two para cards METRIC_TITLE_1/METRIC_BODY_1 and METRIC_TITLE_3/METRIC_BODY_3. Fill stats[] with { value, label } for STAT_1 (wide bottom) and STAT_2 (top). One image slot METRIC_IMAGE_2 sits between the top stat and the right card. Do NOT put bullets or long body copy into metric or stat slots.'
+      : '',
+    vars.layoutId ? `Layout id: ${vars.layoutId}` : '',
+    layoutSpecificRules(vars.layoutId, vars.slideOrder, vars.suggestedContentType, {
+      purpose: vars.purpose,
+      intent: vars.intent,
+      narrativeRole: vars.narrativeRole,
+      timelineSlotCount: timelineSlotCount(vars.slotConstraints),
+    }),
+    Array.isArray(vars.layoutContext?.shapeHints) && vars.layoutContext.shapeHints.length
+      ? `\nShape hints (suggestions only — you decide in shapeDecisions):\n${vars.layoutContext.shapeHints
+          .map(
+            (h) =>
+              `- ${h.pairsWithSlotId || h.slotId}: ${h.kind || 'shape'} → suggested ${h.suggestedBehind || 'none'}`
+          )
+          .join('\n')}`
+      : '',
+    slotLines ? `\nLayout slot constraints (fit the visual container):\n${slotLines}` : '',
+    '',
+    'Rules:',
+    '- Fill every text slot from the required seed (title, subtitle, beats). Do NOT invent a 25-word recap and leave heading/body empty.',
+    '- Title slides: spoken promise headline (not a stub label); subtitle = tagline/kicker; titleRuns required (2–3 segments, accent on final line).',
+    '- Eyebrow / kicker slots: short UPPERCASE role line (2–5 words) when the layout has eyebrow or uses subtitle as kicker.',
+    '- Body copy: prefer situational/sensory detail over feature laundry lists when density allows.',
+    density === 'detailed'
+      ? '- Detailed density: every text slot that can hold body/bullets must be filled; avoid single-line stubs when max_lines ≥ 2 or max words allow more.'
+      : null,
+    '- Closing CTA: offer-style (verb + outcome); concrete time/number when the brief supports it; ban generic CTAs unless sales/demo brief.',
+    '- Replace any template placeholder wording with original content from the brief.',
+    '- Do NOT echo placeholders like "Your Title", "Your subtitle", or "Lorem ipsum".',
+    '- Match slot constraints exactly; prefer headline + 3 bullets over long paragraphs unless BODY allows more.',
+    '- Text is laid out inside slide safe margins (not edge-to-edge); respect max_lines and max_words so copy fits without over-shrinking.',
+    '- title → title+subtitle only; closing → headline + CTA + contact; quote → one quote ≤25 words; stat → 1–6 metrics max; chart → fill chart.labels + chart.series[{ name, values }] with 4-6 numeric data points; table → fill table.headers + table.rows; pricing → MANDATORY plans[] with label, price, period?, items[] (min 2 tiers, prefer 3); every PLAN slot must map from plans[] — no empty tier fields; team → fill members[] with name, role, email; agenda → fill agenda.columns[] with heading + items[]; grid metrics → fill columns[] with { title, body } plus stats[] with { value, label }; contact slides → fill contact { address, phone, email } + title.',
+    '- Multi-column/card/para layouts: fill columns[] with DISTINCT title per column (never repeat titles; CARD_n_TITLE must never equal slide title/HEADING). Map CARD_n_TITLE/BODY_n and BODY_n/BULLET_n slots from columns[n-1].',
+    '- Multi-image layouts: fill imagePrompts { SLOT_ID: "unique visual description" } — one isolated photographic subject per IMAGE_n / COL_n_IMAGE / DEVICE_IMAGE_n (≤12 words). Visual metaphor of the column topic only — do NOT paste title/body text into the prompt; forbid text/captions/logos in the image; no collages or triptychs.',
+    '- imagePrompt / imagePrompts: describe a scene or object a camera would see. Never dump paragraph copy. Prefer "server racks in a dim data center" over quoting the slide body.',
+    '- Chart slides: analyze the data story first — line for trends, donut/pie only for true part-of-whole (~100% total), bar for rankings; dual-chart only for two distinct metrics. Never duplicate identical chart data.',
+    '- Split bullet slides: bullets as "**Topic:** description" (bold topic prefix) or { topic, text } objects.',
+    '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
+    '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on EACH column separately (never one full-width bar behind all columns). Leave left/right margin so cards do not touch slide edges. Use "none" only for clean/minimal slides. Prefer Graphics Library icons for list/card markers when available.',
+    '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
+    '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block — lead lines use textOnImage or text, final line uses accent colorRole with fontWeight 700. Do NOT set fontFamily on runs; the deck heading font applies. Set title to the full concatenated string too.',
+    '',
+    'Output JSON schema (fill relevant slots; unused fields null or empty):',
+    JSON.stringify(
+      {
+        title: '...',
+        titleRuns: [
+          { text: 'Lead line one.\n', colorRole: 'textOnImage' },
+          { text: 'Accent closing line.', colorRole: 'accent', fontWeight: 700 },
+        ],
+        subtitle: null,
+        body: null,
+        bullets: ['**Topic one:** Supporting detail.', '**Topic two:** Supporting detail.'],
+        stats: [{ label: '...', value: '...' }],
+        columns: [
+          { title: 'Distinct card title A', body: 'Body for column A.' },
+          { title: 'Distinct card title B', body: 'Body for column B.' },
+        ],
+        imagePrompts: {
+          IMAGE_1: 'Ceramic tea tins on a wooden shelf, soft morning light',
+          IMAGE_2: 'Folded linen robes on a hotel bed, muted tones',
+        },
+        quote: null,
+        chart: {
+          type: 'bar',
+          labels: ['2022', '2023', '2024', '2025'],
+          series: [{ name: 'Growth', values: [12, 19, 24, 31] }],
+          isIllustrative: true,
+        },
+        table: {
+          headers: ['Column A', 'Column B'],
+          rows: [['Row 1', 'Value'], ['Row 2', 'Value']],
+        },
+        members: [{ name: '...', role: '...', email: '...' }],
+        plans: [
+          { label: 'Basic', price: '$29', period: '/mo', items: ['Feature A', 'Feature B'], cta: 'Choose Basic' },
+          { label: 'Pro', price: '$59', period: '/mo', items: ['Everything in Basic', 'Feature C'], highlighted: true, cta: 'Choose Pro' },
+          { label: 'Enterprise', price: 'Custom', items: ['Dedicated support', 'SLA'], cta: 'Contact us' },
+        ],
+        contact: { address: '...', phone: '...', email: '...' },
+        agenda: {
+          columns: [{ heading: '...', items: ['...'] }],
+        },
+        comparison: {
+          left: { title: 'Option A', body: '...', bullets: ['...'] },
+          right: { title: 'Option B', body: '...', bullets: ['...'] },
+        },
+        pros: ['Advantage one', 'Advantage two'],
+        cons: ['Risk one', 'Risk two'],
+        timeline: [
+          { label: '2020', detail: 'Key event summary' },
+          { label: '2022', detail: 'Next milestone' },
+        ],
+        diagram: {
+          type: 'swot',
+          cells: [
+            { title: 'Strengths', body: '...' },
+            { title: 'Weaknesses', body: '...' },
+          ],
+        },
+        notes: '...',
+        pathBSpec: null,
+        shapeDecisions: {
+          HERO_IMAGE: { behind: 'none', mask: 'none', borderRadius: 10 },
+          CTA: { behind: 'pill', mask: 'none' },
+          __overlay__: { enabled: true, scrim: 0.45 },
+        },
+      },
+      null,
+      2
+    ),
+  ]
+    .filter((line) => line != null && line !== '')
+    .join('\n');
+}
+
+module.exports = {
+  buildSystem,
+  buildUser,
+  DENSITY_CAPS,
+  resolveCaps,
+  titleLengthGuidance,
+};

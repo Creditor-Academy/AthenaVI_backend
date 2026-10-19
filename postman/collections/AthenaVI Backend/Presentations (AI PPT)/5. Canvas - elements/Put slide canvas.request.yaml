@@ -1,0 +1,39 @@
+$kind: http-request
+description: Autosave full freeform canvas (max 50 elements)
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/canvas"
+method: PUT
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "version": 1,
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "elements": [
+        {
+          "id": "el_title",
+          "type": "text",
+          "layer": 1,
+          "placement": {
+            "x": 160,
+            "y": 200,
+            "width": 1600,
+            "height": 120,
+            "rotation": 0,
+            "opacity": 1
+          },
+          "content": {
+            "text": "Hello",
+            "fontSize": 44,
+            "bold": true
+          },
+          "role": "title"
+        }
+      ]
+    }
+order: 1000

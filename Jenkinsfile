@@ -43,6 +43,15 @@ pipeline {
             }
         }
 
+        stage('Unit Tests') {
+            steps {
+                sh '''
+                set -e
+                npm test
+                '''
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
                 script {

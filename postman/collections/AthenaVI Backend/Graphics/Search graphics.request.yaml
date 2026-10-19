@@ -1,0 +1,28 @@
+$kind: http-request
+description: Intent search over published graphics (max 8). Used by PPT/image generation.
+url: "{{baseUrl}}/api/graphics/search"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "keywords": ["ornament", "flourish"],
+      "style": "minimal",
+      "mood": "professional",
+      "preferredType": "decorative",
+      "maxCount": 6
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const items = j.data && j.data.items;
+        if (items && items[0] && items[0].id) {
+          pm.collectionVariables.set('graphicId', items[0].id);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 2000

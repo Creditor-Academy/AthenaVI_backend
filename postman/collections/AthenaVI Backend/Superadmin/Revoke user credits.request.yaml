@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/credits/revoke"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 100,
+      "reason": "Correction"
+    }
+order: 2300

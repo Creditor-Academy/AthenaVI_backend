@@ -1,0 +1,7 @@
+$kind: http-request
+description: Roots only (400 on a reply). Workspace members only. A resolved root rejects new replies until reopened.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments/{{presentationCommentId}}/resolve"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 5000

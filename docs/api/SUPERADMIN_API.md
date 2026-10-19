@@ -23,11 +23,6 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/storage/tiers` | Storage tier presets (`id`, `label`, `limitBytes`) |
 | `GET` | `/api/superadmin/storage/requests` | Storage upgrade queue (`status` = `pending` \| `approved` \| `rejected`) |
 | `POST` | `/api/superadmin/storage/requests/:requestId/reject` | Body: `{ reviewNote? }` |
-| `GET` | `/api/superadmin/early-access/requests` | Early access queue (`status` = `pending` \| `under_review` \| `in_discussion` \| `approved` \| `rejected`) |
-| `GET` | `/api/superadmin/early-access/requests/:requestId` | Single early access request |
-| `PATCH` | `/api/superadmin/early-access/requests/:requestId/status` | Body: `{ status }` — `under_review` \| `in_discussion` \| `approved` \| `rejected` |
-| `POST` | `/api/superadmin/early-access/requests/:requestId/approve` | Shortcut → `approved` |
-| `POST` | `/api/superadmin/early-access/requests/:requestId/reject` | Shortcut → `rejected` |
 | `GET` | `/api/superadmin/workspaces` | List TEAM workspaces (`page`, `limit`, `search`) |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits` | TEAM workspace pool summary |
 | `GET` | `/api/superadmin/workspaces/:workspaceId/credits/history` | Workspace credit ledger |
@@ -38,6 +33,262 @@ Requires **`Authorization: Bearer`** plus platform superadmin (`User.isPlatformS
 | `GET` | `/api/superadmin/reports/credits/platform-actions` | Platform grant/revoke audit |
 | `GET` | `/api/superadmin/heygen/account` | HeyGen API account billing |
 | `GET` | `/api/superadmin/alerts/summary` | Unread platform alerts + HeyGen wallet snapshot |
+| `GET` | `/api/superadmin/templates` | List templates (`type` = `DECK_LAYOUT` \| `VIDEO_SCENE` \| `DECK_PACK` \| `VIDEO_PACK`) |
+| `POST` | `/api/superadmin/templates` | Create template — **`type` required**; schema validated by type |
+| `GET` | `/api/superadmin/templates/:templateId` | Get template |
+| `PATCH` | `/api/superadmin/templates/:templateId` | Update `name` / `schema` / `isActive` / `contentType` / `variant` |
+| `POST` | `/api/superadmin/presentations/:presentationId/publish-as-pack` | Publish PPT canvas → hybrid `DECK_PACK` |
+| `POST` | `/api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template` | Publish one video scene → `VIDEO_SCENE` |
+| `POST` | `/api/superadmin/projects/:projectId/publish-as-video-pack` | Publish all video scenes → `VIDEO_PACK` |
+
+**Template types (do not mix products):**
+
+| `type` | Product | Schema |
+|--------|---------|--------|
+| `DECK_LAYOUT` | AI PPT / presentations | `schemaVersion?`, `layout_id`, `content_type`, `grid`, `slots[]` (`id`, `region`, optional `role`, `typography`, `shape`, `layer`). No `scene` / `videoSettings`. |
+| `DECK_PACK` | AI PPT branded multi-slide pack | `{ schemaVersion?, pack_id, themeId?, aspectRatio, meta?, narrative?, slides[{ order, layout_id?, contentType, intent?, designTokens?, generationHints?, placeholder, snapshot? }], generationDefaults?, preview? }` — each present `layout_id` must exist as active `DECK_LAYOUT`; `snapshot.elements` enables canvas-quality clone + AI rebind |
+| `VIDEO_SCENE` | Video editor (one scene) | `{ version, videoSettings?, scene: { durationInFrames, background, elements[] }, meta? }` — no `slots`/`grid` |
+| `VIDEO_PACK` | Video editor (multi-scene) | `{ schemaVersion?, pack_id, meta?, videoSettings?, scenes[], preview? }` — snapshot only, **no AI** |
+
+**Bare-minimum pack checklist (authoring bar):** `schemaVersion: 2`; `meta` + `narrative`; every slide has `intent`, `designTokens`, `generationHints`, real `placeholder` copy; image layouts include `placeholder.imagePrompt` and/or `generationHints.imagePromptStyle`; `generationDefaults` with `preferVisuals`, `imageStyle`, `layoutWhitelist`, `slideOrder: "fixed"`; `preview` for the picker; **template media** on image slides (upload via API or seed acquires stock-once to S3). Create layouts first, then the pack.
+
+### Template media (Canva-like baked photos)
+
+| Method | Path |
+|--------|------|
+| `GET` | `/api/superadmin/templates/:templateId/media` |
+| `POST` | `/api/superadmin/templates/:templateId/media` — multipart `file`, fields `kind` (`photo`\|`preview`\|`graphic`), optional `slotHint` (default `slide:1` for PPT photos / `scene:1` for video templates; use `preview` or `kind=preview` for picker thumb), optional `setAsPreview` (bool), `name` |
+| `DELETE` | `/api/superadmin/templates/:templateId/media/:mediaId` |
+
+| `GET` | `/api/superadmin/graphics` | List graphics (`q`, `category`, `type`, `style`, `mood`, `colorMode`, `status`, `page`, `limit`) |
+| `POST` | `/api/superadmin/graphics` | Multipart SVG `file` + metadata (`name`, `description`, `type`, `category`, `tags`, `style`, `moods`, `usage`, `colorMode`, `containsText`). Starts as `draft`. |
+| `GET` | `/api/superadmin/graphics/:id` | Get one graphic |
+| `PATCH` | `/api/superadmin/graphics/:id` | Update metadata |
+| `POST` | `/api/superadmin/graphics/:id/publish` | Publish (editor + generation only use published) |
+| `POST` | `/api/superadmin/graphics/:id/unpublish` | Back to draft |
+| `POST` | `/api/superadmin/graphics/:id/archive` | Archive |
+| `DELETE` | `/api/superadmin/graphics/:id` | Delete record + S3 objects |
+
+Published catalog (workspace JWT, not superadmin): `GET /api/graphics`, `POST /api/graphics/search`, `GET /api/graphics/:id`.
+
+
+**Create `DECK_LAYOUT` example**
+
+```json
+{
+  "type": "DECK_LAYOUT",
+  "name": "Title Centered",
+  "contentType": "title",
+  "variant": "v1",
+  "isActive": true,
+  "schema": {
+    "schemaVersion": 2,
+    "layout_id": "title_centered_v1",
+    "content_type": "title",
+    "grid": "12-col",
+    "slots": [
+      {
+        "id": "title",
+        "region": "cols 2-11, rows 4-7",
+        "role": "heading",
+        "typography": { "fontSize": 64, "fontWeight": 800, "align": "center", "colorRole": "text" },
+        "max_lines": 3
+      }
+    ]
+  }
+}
+```
+
+**Create `DECK_PACK` example** (layouts referenced must already be active)
+
+```json
+{
+  "type": "DECK_PACK",
+  "name": "Company Meeting — Clean",
+  "contentType": "pack",
+  "variant": "company_meeting_clean",
+  "isActive": true,
+  "schema": {
+    "schemaVersion": 2,
+    "pack_id": "company_meeting_clean",
+    "themeId": "clean_light",
+    "aspectRatio": "16:9",
+    "meta": {
+      "name": "Company Meeting — Clean",
+      "useCase": "company_meeting",
+      "tone": "clear, professional"
+    },
+    "narrative": {
+      "arc": "meeting_policy_targets_challenges_close",
+      "summary": "Open, agenda, policy, prep, benefits, targets, challenges, achievements, reminder, thank you."
+    },
+    "slides": [
+      {
+        "order": 1,
+        "layout_id": "title_hero_image_v3",
+        "contentType": "title",
+        "intent": "Open the meeting",
+        "designTokens": {
+          "backgroundStyle": "gradient",
+          "imagePosition": "right-half",
+          "textContrast": "high"
+        },
+        "generationHints": {
+          "maxTitleWords": 4,
+          "imagePromptStyle": "clean corporate photography, bright office"
+        },
+        "placeholder": {
+          "title": "Company Meeting",
+          "subtitle": "Your Company",
+          "imagePrompt": "bright modern conference room, soft natural light, no text"
+        }
+      }
+    ],
+    "generationDefaults": {
+      "preferVisuals": true,
+      "imageStyle": "clean corporate photography, bright office, natural light",
+      "imageType": "ai",
+      "slideOrder": "fixed",
+      "layoutWhitelist": ["title_hero_image_v3"]
+    },
+    "preview": {
+      "label": "Company Meeting — Clean",
+      "slideCount": 1,
+      "tags": ["meeting"]
+    }
+  }
+}
+```
+
+**Create `VIDEO_SCENE`:** same endpoint with `"type": "VIDEO_SCENE"` and video scene schema (see workspace video templates docs).
+
+**Create `VIDEO_PACK`:** `"type": "VIDEO_PACK"` with `pack_id` + `scenes[]` (full editor scenes). Prefer canvas publish below.
+
+### Canvas publish (hybrid PPT + video packs)
+
+Design in the product editors, then publish to system templates (coexists with JSON `POST /templates`).
+
+**PPT → hybrid `DECK_PACK`**
+
+```http
+POST /api/superadmin/presentations/:presentationId/publish-as-pack
+```
+
+```json
+{
+  "name": "My Canvas Pack",
+  "packId": "my_canvas_pack_v1",
+  "themeId": "clean_light",
+  "isActive": true,
+  "variant": "canvas"
+}
+```
+
+- Stores designed `snapshot.elements` per slide + optional `layout_id` / roles for AI.
+- Copies slide images to system S3 + `TemplateMedia` (`slide:{n}`, `preview`).
+- Sets `meta.authoredVia: "canvas"` and `meta.aiReady` when every slide has `layout_id` or role-tagged text/image elements.
+- Clone (`createMode: pack`) uses snapshot when present; AI generate **rebinds** content into those elements by `role`.
+
+**Video → one scene `VIDEO_SCENE`**
+
+```http
+POST /api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template
+```
+
+```json
+{ "name": "Intro scene", "variant": "canvas", "isActive": true }
+```
+
+- Copies scene media (image/video/audio `s3Key`s) into system S3 + `TemplateMedia` (`scene:1` for primary visual + `preview`, `element:{id}` / `asset:…` for others).
+- Rewrites schema element keys to durable system keys; preserves avatar placeholders / `presenter` (strips `generation` / HeyGen job ids).
+- Sets `meta.authoredVia: "canvas"`.
+
+**Video → multi-scene `VIDEO_PACK` (no AI)**
+
+```http
+POST /api/superadmin/projects/:projectId/publish-as-video-pack
+```
+
+```json
+{
+  "name": "Onboarding video",
+  "packId": "onboarding_video_v1",
+  "isActive": true,
+  "variant": "canvas"
+}
+```
+
+- Per-scene primary visual → `TemplateMedia` slotHint `scene:{n}` (1-based); first scene primary also upserts `preview`.
+- Remaining assets → `element:{id}` / `asset:…` under `videos/_system/...`.
+- Sets `meta.authoredVia: "canvas"`. Snapshot only — **no AI**.
+
+Admin can also upload picker thumbs via `POST /api/superadmin/templates/:templateId/media` (`kind=preview` or `slotHint=scene:1` for video types).
+
+Workspace: `GET .../presentation-templates`, `GET .../presentation-deck-packs` (summary), `GET .../presentation-deck-packs/:packId` (detail), `GET .../video-templates?type=VIDEO_SCENE|VIDEO_PACK` (returns `media[]` + `previewImageUrl`). PPT apply via create `createMode: template|pack` / `apply-layout`; video via project `templateId` (scene or pack) / `scenes/from-template` (**VIDEO_SCENE only**). Seed packs: `npm run seed:presentation-deck-packs` (after layout seed).
+
+---
+
+### Create user (admin-provisioned account)
+
+```http
+POST /api/superadmin/users
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "optional-min-8-chars",
+  "sendWelcomeEmail": true
+}
+```
+
+Creates a verified account with a Personal workspace and the default storage tier (same as self-service register).
+
+| Field | Rules |
+|-------|-------|
+| `name` | required, 2–50 chars (trimmed) |
+| `email` | required, valid email, max 254 (trimmed, lower-cased) |
+| `password` | optional, 8–128 chars and at most 72 bytes (bcrypt limit). Omit it and the user receives a "set your password" link (valid 72 h) instead |
+| `sendWelcomeEmail` | optional, default `true`. Must be `true` when no `password` is given |
+
+Unknown fields (e.g. `isPlatformSuperadmin`, `credits`) are ignored — use the dedicated endpoints to change those.
+
+**201**
+
+```json
+{
+  "success": true,
+  "message": "User account created",
+  "data": {
+    "user": { "id": "...", "email": "jane@example.com", "name": "Jane Doe", "credits": 0, "storageLimit": 1073741824, "storageUsed": 0, "isPlatformSuperadmin": false, "createdAt": "..." },
+    "welcomeEmailSent": true
+  }
+}
+```
+
+A password is never emailed or returned. If the email fails to send the account is still created and `welcomeEmailSent` is `false` (the user can use *Forgot password*).
+
+**400** — validation (see table). **409** — email already registered (including a concurrent signup race).
+
+---
+
+### Pause, resume and delete a user
+
+```http
+POST   /api/superadmin/users/:userId/pause    { "reason": "optional, max 500" }
+POST   /api/superadmin/users/:userId/resume
+DELETE /api/superadmin/users/:userId          { "confirmEmail": "user@example.com" }
+```
+
+- **Pause** sets `pausedAt` / `pauseReason` and immediately revokes every session and refresh token. While paused the user cannot sign in (password, Google or superadmin login → **403** `Your account has been paused…`) and cannot refresh a token. Data is untouched. Idempotent: `data.changed` is `false` if already paused (sessions are still revoked, so a retry after a partial failure is safe).
+- **Resume** clears the pause; the user signs in again normally. Idempotent.
+- **Delete** is permanent (S3 files, credit history, workspaces, everything). `confirmEmail` must match the user's email (case-insensitive).
+- Users list rows now include `pausedAt` and `pauseReason`.
+
+Rejected for all three: your own account (**400**), a platform superadmin including `PLATFORM_SUPERADMIN_EMAILS` (**400**, remove access first), unknown user (**404**). Delete additionally returns **400** on a confirmation mismatch and **409** if the user owns team workspaces other members still use (transfer/delete them first) or is still referenced by other records.
+
+Requires migration `20261011090000_user_service_pause` (`npx prisma migrate deploy`).
 
 ---
 
@@ -75,39 +326,6 @@ Content-Type: application/json
 **404** if request not found. **400** if not `pending`. Notifies user via inbox (`STORAGE_UPGRADE_REJECTED`).
 
 New user requests also notify superadmins via inbox (`PLATFORM_STORAGE_UPGRADE_REQUEST`) in addition to email.
-
----
-
-### Early access triage
-
-Workflow: **`pending`** → **`under_review`** → **`in_discussion`** → **`approved`** / **`rejected`**.
-
-Each status change emails the applicant automatically (including **`pending`** on form submit).
-
-```http
-GET /api/superadmin/early-access/requests?status=pending&page=1&limit=20
-```
-
-**200** — `data.requests[]`: `requestId`, `name`, `email`, `company`, `role`, `useCase`, `message`, `status`, `createdAt`, `reviewedAt`, `reviewerId`. Includes `pagination`.
-
-```http
-GET /api/superadmin/early-access/requests/:requestId
-PATCH /api/superadmin/early-access/requests/:requestId/status
-Content-Type: application/json
-
-{ "status": "under_review" }
-```
-
-Allowed `status` values on PATCH: `under_review`, `in_discussion`, `approved`, `rejected`. Cannot revert to `pending`. **400** if already `approved`/`rejected` or status unchanged.
-
-```http
-POST /api/superadmin/early-access/requests/:requestId/approve
-POST /api/superadmin/early-access/requests/:requestId/reject
-```
-
-**404** if not found.
-
-`GET /api/superadmin/alerts/summary` → `pendingEarlyAccessCount` counts open requests (`pending`, `under_review`, `in_discussion`).
 
 ---
 
@@ -158,7 +376,6 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "unreadPlatformCount": 1,
-  "pendingEarlyAccessCount": 3,
   "heygenWallet": {
     "remainingBalanceUsd": 42.5,
     "currency": "usd",

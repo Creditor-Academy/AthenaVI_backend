@@ -1,0 +1,5 @@
+$kind: http-request
+description: Deletes the DB row and S3 objects.
+url: "{{baseUrl}}/api/superadmin/graphics/{{graphicId}}"
+method: DELETE
+order: 5300

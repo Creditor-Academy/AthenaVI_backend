@@ -1,0 +1,5 @@
+$kind: http-request
+description: Platform grant/revoke audit. Optional from, to, type, scope=user|workspace.
+url: "{{baseUrl}}/api/superadmin/reports/credits/platform-actions?page=1&limit=20"
+method: GET
+order: 4100

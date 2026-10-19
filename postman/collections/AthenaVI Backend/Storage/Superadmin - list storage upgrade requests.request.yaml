@@ -1,0 +1,14 @@
+$kind: http-request
+description: Upgrade queue. status = pending | approved | rejected.
+url: "{{baseUrl}}/api/superadmin/storage/requests?status=pending&page=1&limit=20"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const r = j.data && j.data.requests && j.data.requests[0];
+        if (r && r.requestId) pm.collectionVariables.set('storageRequestId', r.requestId);
+      } catch (e) {}
+    language: text/javascript
+order: 7500

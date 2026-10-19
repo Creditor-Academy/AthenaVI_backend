@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generate"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "mode": "image",
+      "folderId": "{{folderId}}",
+      "modelId": "gemini-3.1-flash-lite-image",
+      "formatId": "square",
+      "prompt": "Flat vector illustration of a paper plane over a dotted route line."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+        }
+      }
+    language: text/javascript
+order: 3090

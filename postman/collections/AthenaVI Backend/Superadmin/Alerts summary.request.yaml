@@ -1,0 +1,5 @@
+$kind: http-request
+description: Unread platform alerts + HeyGen wallet snapshot.
+url: "{{baseUrl}}/api/superadmin/alerts/summary"
+method: GET
+order: 5100

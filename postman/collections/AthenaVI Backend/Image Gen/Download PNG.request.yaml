@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}/download?format=png"
+method: GET
+queryParams:
+  format: png
+order: 6000

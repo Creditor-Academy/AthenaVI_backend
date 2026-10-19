@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get thread
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}"
+method: GET
+order: 3300

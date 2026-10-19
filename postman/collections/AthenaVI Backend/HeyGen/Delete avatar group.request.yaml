@@ -1,0 +1,9 @@
+$kind: http-request
+description: Deletes custom avatar group on HeyGen and locally. Optional `voice_id` deletes paired cloned voice. **403** if group not owned.
+url: "{{baseUrl}}/api/heygen/avatars/{{groupId}}?voice_id={{voiceId}}"
+method: DELETE
+queryParams:
+  - key: voice_id
+    value: "{{voiceId}}"
+    description: Optional paired clone from digital twin flow
+order: 9000

@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/members"
+method: GET
+order: 10000

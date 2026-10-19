@@ -1,0 +1,5 @@
+$kind: http-request
+description: Owner quota + workspace footprint (assetBytes, heygenBytes, renderBytes, totalBytes).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/storage"
+method: GET
+order: 5000

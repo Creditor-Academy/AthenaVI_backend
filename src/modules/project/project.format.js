@@ -1,9 +1,12 @@
 const { attachUsers } = require('../../shared/utils/attachUsers');
 const { toJsonNumber } = require('../../shared/utils/byteSize');
+const { attachSceneAssignees } = require('./sceneAssignment');
 
 const USER_FIELD_MAP = [
   { sourceField: 'createdBy', targetField: 'owner' },
   { sourceField: 'updatedBy', targetField: 'lastModifiedBy' },
+  { sourceField: 'assignedToId', targetField: 'assignee' },
+  { sourceField: 'assignedById', targetField: 'assignedBy' },
 ];
 
 function baseProjectFields(project) {
@@ -13,11 +16,16 @@ function baseProjectFields(project) {
   return {
     id: project.id,
     name: project.name,
+    type: project.type || 'VIDEO',
     workspaceId: project.workspaceId,
     folderId: project.folderId,
     createdBy: project.createdBy,
     updatedBy: project.updatedBy ?? null,
+    assignedToId: project.assignedToId ?? null,
+    assignedById: project.assignedById ?? null,
+    assignedAt: project.assignedAt ?? null,
     thumbnail: project.thumbnail,
+    thumbnailUrl: project.thumbnailUrl || project.thumbnail,
     duration: project.duration,
     status: project.status,
     storageBytes: toJsonNumber(project.storageBytes),
@@ -42,7 +50,18 @@ async function enrichProjects(projects, { includeData = false } = {}) {
   const formatted = projects.map((project) =>
     includeData ? formatProjectDetail(project) : formatProjectSummary(project)
   );
-  return attachUsers(formatted, USER_FIELD_MAP);
+  const withUsers = await attachUsers(formatted, USER_FIELD_MAP);
+  if (!includeData) return withUsers;
+
+  // VIDEO scenes carry their own assignee — hydrate scene.assignee/assignedBy the
+  // same way the project-level assignee/owner fields were just hydrated above.
+  return Promise.all(
+    withUsers.map(async (project) => {
+      if (!Array.isArray(project.data?.scenes)) return project;
+      const scenes = await attachSceneAssignees(project.data.scenes);
+      return { ...project, data: { ...project.data, scenes } };
+    })
+  );
 }
 
 async function enrichProject(project, { includeData = true } = {}) {

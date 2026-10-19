@@ -1,0 +1,25 @@
+$kind: http-request
+name: Send thread message social copy edit
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/threads/{{imageGenThreadId}}/messages"
+method: POST
+body:
+  type: json
+  data: |-
+    {
+      "content": "Change the headline to \"Go live this weekend\" and remove the call to action",
+      "editMode": "spec"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.generation && j.data.generation.id;
+        if (id) {
+          pm.collectionVariables.set("generationId", id);
+          pm.environment.set("generationId", id);
+          pm.environment.set("imageGenerationId", id);
+        }
+      }
+    language: text/javascript
+order: 3410

@@ -23,6 +23,30 @@ function buildPublicUrl(key) {
   return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
 
+/**
+ * Best-effort extract of an S3 object key from a stored public/presigned URL.
+ * @param {string|null|undefined} url
+ * @returns {string|null}
+ */
+function extractS3KeyFromUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const u = new URL(url);
+    let key = decodeURIComponent(u.pathname.replace(/^\//, ''));
+    if (!key) return null;
+    const host = String(u.hostname || '');
+    // Path-style: s3.region.amazonaws.com/bucket/key
+    if (/^s3[.-]/i.test(host) || host === 's3.amazonaws.com') {
+      const parts = key.split('/');
+      if (parts.length > 1) key = parts.slice(1).join('/');
+    }
+    // Virtual-hosted: bucket.s3.region.amazonaws.com/key — pathname is already the key
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
 async function uploadBodyToKey(body, key, contentType) {
   const command = new PutObjectCommand({
     Bucket: BUCKET,
@@ -135,6 +159,34 @@ async function getPresignedGetUrl(key, expiresInSeconds = 300, options = {}) {
   }
   const command = new GetObjectCommand(input);
   return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+}
+
+async function getObjectBuffer(key) {
+  if (!BUCKET) {
+    throw new AppError(messages.INTERNAL_SERVER_ERROR, 500);
+  }
+
+  const out = await s3.send(
+    new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+    })
+  );
+
+  const body = out.Body;
+  if (!body) {
+    throw new AppError(messages.NOT_FOUND, 404);
+  }
+
+  if (typeof body.transformToByteArray === 'function') {
+    return Buffer.from(await body.transformToByteArray());
+  }
+
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 async function downloadObjectToFile(key, destPath) {
@@ -332,10 +384,12 @@ module.exports = {
   copyFile,
   moveFile,
   getPresignedGetUrl,
+  getObjectBuffer,
   downloadObjectToFile,
   streamObjectToResponse,
   streamRemoteUrlToResponse,
   headRemoteUrlMeta,
   headObjectMeta,
   buildPublicUrl,
+  extractS3KeyFromUrl,
 };

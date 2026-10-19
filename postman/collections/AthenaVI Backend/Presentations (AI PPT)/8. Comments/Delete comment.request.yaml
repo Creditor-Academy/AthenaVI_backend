@@ -1,0 +1,7 @@
+$kind: http-request
+description: Soft delete. Author, or workspace OWNER/ADMIN. Deleting a root also deletes its replies.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments/{{presentationCommentId}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 8000

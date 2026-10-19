@@ -1,0 +1,15 @@
+$kind: http-request
+description: "Sends to users with productEmails: true. Requires confirm: send. Returns broadcastId for history."
+url: "{{baseUrl}}/api/superadmin/broadcasts/product-email"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "subject": "New Athena VI features",
+      "html": "<p>We shipped improvements to the editor this week.</p>",
+      "confirm": "send"
+    }
+order: 12000

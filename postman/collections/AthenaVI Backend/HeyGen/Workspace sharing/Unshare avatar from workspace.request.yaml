@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/heygen/avatars/{{groupId}}/share"
+method: DELETE
+order: 2000

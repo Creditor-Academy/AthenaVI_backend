@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/superadmin/workspaces/{{workspaceId}}/credits/grant"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 2000,
+      "reason": "Workspace top-up"
+    }
+order: 3400

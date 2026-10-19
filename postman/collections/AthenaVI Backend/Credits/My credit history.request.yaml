@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/credits/{{workspaceId}}/my-history"
+method: GET
+order: 3000

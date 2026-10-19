@@ -1,0 +1,5 @@
+$kind: http-request
+description: sendBeacon-friendly alias for DELETE presence. Same viewerSessionId query.
+url: "{{baseUrl}}/api/p/{{presentationViewerToken}}/presence/leave?viewerSessionId={{viewerSessionId}}"
+method: POST
+order: 9010

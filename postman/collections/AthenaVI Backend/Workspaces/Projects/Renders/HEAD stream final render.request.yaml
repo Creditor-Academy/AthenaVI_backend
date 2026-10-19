@@ -1,0 +1,9 @@
+$kind: http-request
+description: Metadata only before streaming the completed MP4.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/renders/{{renderId}}/stream"
+method: HEAD
+auth:
+  type: bearer
+  credentials:
+    token: "{{accessToken}}"
+order: 4400

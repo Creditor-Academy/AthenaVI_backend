@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/guidelines"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 1160

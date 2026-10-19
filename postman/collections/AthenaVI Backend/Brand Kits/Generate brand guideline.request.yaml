@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/{{brandKitId}}/guidelines/generate"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "folderId": "{{folderId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.guideline && j.data.guideline.presentationId;
+        if (id) pm.collectionVariables.set("guidelinePresentationId", id);
+      }
+    language: text/javascript
+order: 1150

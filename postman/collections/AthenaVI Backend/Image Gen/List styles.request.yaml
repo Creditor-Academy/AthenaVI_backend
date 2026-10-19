@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/styles"
+method: GET
+order: 1200

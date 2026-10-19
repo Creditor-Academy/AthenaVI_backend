@@ -1,0 +1,16 @@
+$kind: http-request
+description: List users with credits + storage. Optional search on email or name.
+url: "{{baseUrl}}/api/superadmin/users?page=1&limit=20"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const users = j.data && j.data.users;
+        if (users && users[0] && users[0].id) {
+          pm.collectionVariables.set('storageUserId', users[0].id);
+        }
+      } catch (e) {}
+    language: text/javascript
+order: 1000

@@ -1,0 +1,3 @@
+$kind: collection
+description: Project-scoped comments with @mentions. See docs/api/PROJECT_COMMENTS_API.md
+order: 20000

@@ -1,0 +1,3 @@
+$kind: collection
+description: "HeyGen scene clips for a project. **Create** only starts the job (`s3Key` null). **Get** / **Download** / **Stream** poll HeyGen and copy the finished MP4 to S3: `workspaces/…/scenes/{sceneId}/heygen/{heygenVideoId}.mp4`. Requires **HEYGEN_API_KEY** + AWS S3 env. Use `avatarLookId` (look id from **List avatar looks**), not `groupId`."
+order: 18000

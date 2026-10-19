@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/generations/{{generationId}}/download?format=pdf"
+method: GET
+queryParams:
+  format: pdf
+order: 6200

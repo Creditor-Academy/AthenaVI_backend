@@ -1,0 +1,5 @@
+$kind: http-request
+description: Liveness probe. Returns { status: UP, timestamp }.
+url: "{{baseUrl}}/health"
+method: GET
+order: 2000

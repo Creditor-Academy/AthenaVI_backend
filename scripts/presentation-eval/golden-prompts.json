@@ -1,0 +1,114 @@
+[
+  {
+    "id": "founder-pitch-seed",
+    "persona": "founder",
+    "prompt": "Create a seed-stage pitch deck for Athena VI, an AI virtual instructor platform. Cover problem, solution, market, product, traction, business model, and ask.",
+    "slideCount": 12,
+    "density": "balanced"
+  },
+  {
+    "id": "founder-series-a",
+    "persona": "founder",
+    "prompt": "Build a Series A investor update deck: ARR growth, retention, GTM motion, competitive moat, hiring plan, and 18-month use of funds.",
+    "slideCount": 14,
+    "density": "detailed"
+  },
+  {
+    "id": "founder-all-hands",
+    "persona": "founder",
+    "prompt": "Company all-hands deck on Q3 strategy: vision refresh, three priorities, org changes, and how teams measure success.",
+    "slideCount": 10,
+    "density": "concise"
+  },
+  {
+    "id": "founder-customer-story",
+    "persona": "founder",
+    "prompt": "Customer case study deck for a B2B SaaS win: before state, implementation, results with metrics, and quote-driven close.",
+    "slideCount": 8,
+    "density": "balanced"
+  },
+  {
+    "id": "pm-roadmap-q",
+    "persona": "pm",
+    "prompt": "Quarterly product roadmap review for an AI presentation product: themes, bets, sequencing, risks, and success metrics.",
+    "slideCount": 12,
+    "density": "detailed"
+  },
+  {
+    "id": "pm-prd-walkthrough",
+    "persona": "pm",
+    "prompt": "PRD walkthrough for a new outline-from-document feature: problem, users, requirements, UX flow, edge cases, and rollout plan.",
+    "slideCount": 15,
+    "density": "detailed"
+  },
+  {
+    "id": "pm-retro",
+    "persona": "pm",
+    "prompt": "Sprint retrospective deck: what went well, what didn't, metrics snapshot, experiments to try next, and action owners.",
+    "slideCount": 8,
+    "density": "concise"
+  },
+  {
+    "id": "pm-stakeholder-update",
+    "persona": "pm",
+    "prompt": "Stakeholder status deck for a multi-team launch: timeline, dependencies, open decisions, and go/no-go criteria.",
+    "slideCount": 10,
+    "density": "balanced"
+  },
+  {
+    "id": "educator-lecture",
+    "persona": "educator",
+    "prompt": "Introductory lecture on prompt engineering for undergraduate CS students: concepts, examples, pitfalls, and a short practice exercise.",
+    "slideCount": 16,
+    "density": "detailed"
+  },
+  {
+    "id": "educator-workshop",
+    "persona": "educator",
+    "prompt": "60-minute workshop agenda on designing better slide narratives: learning objectives, activities, checkpoints, and takeaways.",
+    "slideCount": 12,
+    "density": "balanced"
+  },
+  {
+    "id": "educator-assessment",
+    "persona": "educator",
+    "prompt": "Lesson wrap-up deck with key concepts, comparison table of techniques, quiz-style review questions, and further reading.",
+    "slideCount": 9,
+    "density": "concise"
+  },
+  {
+    "id": "educator-parent-night",
+    "persona": "educator",
+    "prompt": "Parent night presentation on how AI tutors support homework: benefits, privacy, classroom norms, and FAQ.",
+    "slideCount": 10,
+    "density": "balanced"
+  },
+  {
+    "id": "marketer-product-launch",
+    "persona": "marketer",
+    "prompt": "Product launch deck for a new AI PPT generator: positioning, audience segments, message pillars, channel plan, and KPIs.",
+    "slideCount": 12,
+    "density": "balanced"
+  },
+  {
+    "id": "marketer-campaign-brief",
+    "persona": "marketer",
+    "prompt": "Campaign brief presentation for a summer demand-gen push: goals, creative concepts, timeline, budget allocation, and success metrics.",
+    "slideCount": 11,
+    "density": "detailed"
+  },
+  {
+    "id": "marketer-brand-refresh",
+    "persona": "marketer",
+    "prompt": "Brand refresh proposal: current perception, new visual direction, voice guidelines, rollout phases, and risk mitigation.",
+    "slideCount": 10,
+    "density": "balanced"
+  },
+  {
+    "id": "marketer-webinar",
+    "persona": "marketer",
+    "prompt": "Webinar deck for marketers on converting viewers into trials: hook, three tactics, case stats, and CTA.",
+    "slideCount": 8,
+    "density": "concise"
+  }
+]

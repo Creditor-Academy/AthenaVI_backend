@@ -113,8 +113,8 @@ src/modules/<feature>/
 
 ### Route registration
 
-- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`.
-- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
+- **Top-level:** `src/app.js` mounts `/api/user`, `/api/auth`, `/api/workspaces`, `/api/credits`, `/api/assets`, `/api/heygen`, `/api/stock`, `/api/fonts`, `/api/image-gen`, `/api/p` (**public** presentation share links — capability token in the path, `optionalAuthMiddleware`, never 401; read-only apart from comments on **reviewer** links).
+- **Under workspaces:** `src/modules/workspace/workspace.routes.js` mounts `/:workspaceId/folders`, `/:workspaceId/projects`, `/:workspaceId/presentations` (AI PPT — separate module/credits), `/:workspaceId/brand-kits`, `/:workspaceId/presentation-deck-packs`, `/:workspaceId/video-templates` (`VIDEO_SCENE` + `VIDEO_PACK`), `/:workspaceId/projects/:projectId/heygen`, `/:workspaceId/projects/:projectId/renders`.
 
 ---
 
@@ -169,6 +169,7 @@ Use **`successResponse`** / **`errorResponse`** from `src/shared/utils/apiRespon
 | Identity | `User`, `Account`, `Session`, `RefreshToken`, `PasswordResetToken` |
 | Workspaces | `Workspace`, `WorkspaceMember`, `Invitation` |
 | Editor | `Folder`, `Project` (large JSON `data`), `Asset` |
+| Presentations | `Deck`, `Slide`, `PresentationShareLink`, `PresentationComment` (slide threads; `slideId` is **SET NULL**, never cascade) |
 | HeyGen | `HeygenResponse`, `HeygenAvatar`, `HeygenVoice` |
 | Renders | `ProjectRender`, `SceneRenderCache` |
 | Billing | `CreditTransaction`, `User.credits`, `Workspace.credits` (TEAM pool), `/api/superadmin`, `/api/credits` — rates in `src/shared/config/creditPricing.js` aligned with HeyGen PAYG/Enterprise tables |
@@ -219,11 +220,20 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Index (start here) | [`docs/api/README.md`](docs/api/README.md) |
 | Base URL, envelopes, auth | [`docs/api/OVERVIEW.md`](docs/api/OVERVIEW.md) |
 | Auth API | [`docs/api/AUTH_API.md`](docs/api/AUTH_API.md) |
-| Early Access API | [`docs/api/EARLY_ACCESS_API.md`](docs/api/EARLY_ACCESS_API.md) |
 | User API | [`docs/api/USER_API.md`](docs/api/USER_API.md) |
 | User inbox | [`docs/api/USER_INBOX_API.md`](docs/api/USER_INBOX_API.md) |
 | User settings | [`docs/api/USER_SETTINGS_API.md`](docs/api/USER_SETTINGS_API.md) |
 | Workspaces, folders, projects, renders | [`docs/api/WORKSPACE_API.md`](docs/api/WORKSPACE_API.md) |
+| Presentations (AI PPT) | [`docs/api/PRESENTATION_API.md`](docs/api/PRESENTATION_API.md) |
+| Presentation comments (slide threads + share-link guests) | [`docs/api/PRESENTATION_COMMENTS_API.md`](docs/api/PRESENTATION_COMMENTS_API.md) |
+| **AI PPT generation (how it works)** | [`docs/AI_PPT_GENERATION_COMPLETE.md`](docs/AI_PPT_GENERATION_COMPLETE.md) |
+| **Image Gen (how it works + Infographics plan)** | [`docs/IMAGE_GEN_COMPLETE.md`](docs/IMAGE_GEN_COMPLETE.md) |
+| **Presentations (frontend)** | [`docs/PRESENTATION_FRONTEND_INTEGRATION.md`](docs/PRESENTATION_FRONTEND_INTEGRATION.md) |
+| **PPT + Image Gen + Brand Kit (A→Z, self-contained)** | [`docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md`](docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) |
+| Image Gen (AI studio) | [`docs/api/IMAGE_GEN_API.md`](docs/api/IMAGE_GEN_API.md) |
+| **Image Gen (frontend)** | [`docs/IMAGE_GEN_FRONTEND_INTEGRATION.md`](docs/IMAGE_GEN_FRONTEND_INTEGRATION.md) |
+| Brand Kits | [`docs/api/BRAND_KIT_API.md`](docs/api/BRAND_KIT_API.md) |
+| Fonts catalog | [`docs/api/FONTS_API.md`](docs/api/FONTS_API.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |
@@ -283,7 +293,13 @@ Request
 
 ## Testing
 
-There is **no** `npm test` script in `package.json` today. If you add tests, document the runner here and in `package.json`.
+Run unit tests with:
+
+```
+npm test
+```
+
+Today that runs `node --test` on `src/modules/presentation/deckRender.service.test.js` (speakerNotes), `src/modules/presentationShare/presentationShare.presence.smoke.test.js` (presenter lock), the project/slide/scene assignment tests, and Image Gen social mode (`src/modules/imageGen/social.service.test.js` for catalogs/validation/prompts/pricing, `src/modules/imageGen/imageGen.social.flow.test.js` for generate/regenerate/chat through the real service with DB, S3, credits, and providers stubbed). Add more `*.test.js` files under `src/` and extend the `test` script as needed.
 
 ---
 
@@ -296,7 +312,7 @@ There is **no** `npm test` script in `package.json` today. If you add tests, doc
 5. Add **controller** handlers using `asyncHandler` + `successResponse`.
 6. Wire **routes**; mount in `app.js` or under `workspace.routes.js` as appropriate.
 7. Document the contract in the relevant **`docs/api/*.md`** file (same PR).
-8. Update **`postman/AthenaVI_Backend.postman_collection.json`** when routes, bodies, or variables change.
+8. Update the Postman v3 collection under **`postman/collections/AthenaVI Backend/`** (and environments under **`postman/environments/*.environment.yaml`**) when routes, bodies, or variables change.
 9. Run **`graphify update .`** (or rely on the **stop** hook below).
 
 ---
@@ -317,6 +333,8 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `docs/api/README.md` | API documentation index |
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
+| `docs/PRESENTATION_FRONTEND_INTEGRATION.md` | Frontend PPT/canvas + templates integration (UI flows) |
+| `docs/IMAGE_GEN_FRONTEND_INTEGRATION.md` | Frontend AI image studio (models, regen/tweak, download) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
 | `docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md` | Frontend notifications guide (settings, inbox, comments) |
 | `docs/SUPERADMIN_FRONTEND_INTEGRATION.md` | Frontend superadmin portal (login, toggle, credit admin APIs) |

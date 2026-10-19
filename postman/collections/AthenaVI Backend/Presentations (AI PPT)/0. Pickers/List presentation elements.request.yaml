@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentation-elements"
+method: GET
+headers:
+  Authorization: Bearer {{accessToken}}
+order: 3000

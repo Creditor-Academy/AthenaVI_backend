@@ -1,0 +1,14 @@
+$kind: http-request
+description: Author only (403 otherwise). slideId and parentId cannot change. Only newly added mentions notify.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/comments/{{presentationCommentId}}"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "body": "Can we shorten this headline to six words?"
+    }
+order: 4000

@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const { sendEmail } = require('../../shared/notification/email.service');
 const buildInvitationEmail = require('../../shared/templates/invitation.template');
 const inboxService = require('../inbox/inbox.service');
+const projectDao = require('../project/project.dao');
+const presentationDao = require('../presentation/presentation.dao');
 
 const INVITATION_EXPIRY_DAYS = 7;
 const MAX_WORKSPACE_NAME_LENGTH = 255;
@@ -44,15 +46,14 @@ async function getUserWorkspaces(userId) {
   return await workspaceDao.findWorkspacesByUserId(userId);
 }
 
-async function getWorkspaceById(userId, workspaceId) {
+/**
+ * Membership is already enforced by the requireWorkspaceRole middleware on this
+ * route (403s before this ever runs), so this just loads the workspace row —
+ * the caller's role comes from req.workspaceMembership, not a second lookup here.
+ */
+async function getWorkspaceById(workspaceId) {
   const workspace = await workspaceDao.findWorkspaceById(workspaceId);
   if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
-
-  const membership = await workspaceDao.findWorkspaceMember(
-    workspaceId,
-    userId
-  );
-  if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
 
   return workspace;
 }
@@ -345,7 +346,14 @@ async function removeMember(workspaceId, requesterId, memberId) {
     }
   }
 
-  await workspaceDao.deleteMember(memberId);
+  await workspaceDao.transaction(async (tx) => {
+    await projectDao.clearAssignmentsForUser(workspaceId, targetMember.userId, tx);
+    await projectDao.clearSceneAssignmentsForUser(workspaceId, targetMember.userId, tx);
+    await presentationDao.clearSlideAssignmentsForUser(workspaceId, targetMember.userId, tx);
+    await tx.workspaceMember.delete({
+      where: { id: memberId },
+    });
+  });
 
   const workspace = await workspaceDao.findWorkspaceById(workspaceId);
   inboxService

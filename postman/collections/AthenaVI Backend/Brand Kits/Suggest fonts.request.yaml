@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/brand-kits/suggest/fonts"
+method: POST
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tone": "Professional, confident",
+      "primaryHex": "#D51C0B",
+      "brandKitId": "{{brandKitId}}"
+    }
+order: 1110

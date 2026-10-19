@@ -1,0 +1,27 @@
+$kind: http-request
+description: 201 — Synchronous TTS; returns completed row with `s3Key`. Idempotent on scene + voice + script.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/speech"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "sceneId": "scene_001",
+      "voiceId": "{{voiceId}}",
+      "script": "Welcome to our audio lesson.",
+      "inputType": "text",
+      "speed": 1,
+      "locale": "en-US"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.speechGeneration && j.data.speechGeneration.id;
+        if (id) { pm.collectionVariables.set('speechId', id); }
+      } catch (e) {}
+    language: text/javascript
+order: 1000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/comments"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "body": "Looks great — please review the intro.",
+      "mentionedUserIds": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const j = pm.response.json();
+      const id = j.data && j.data.comment && j.data.comment.id;
+      if (id) { pm.collectionVariables.set('commentId', id); }
+    language: text/javascript
+order: 3000

@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Create Video wizard: canvas (aspectRatio) + details (title, tags, folderId). Workspace is :workspaceId in the URL. List folders: GET .../folders."
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Untitled Video",
+      "folderId": "{{folderId}}",
+      "aspectRatio": "16:9",
+      "tags": ["Professional", "Presentation"]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      try {
+        const j = pm.response.json();
+        const id = j.data && j.data.project && j.data.project.id;
+        if (id) { pm.collectionVariables.set('projectId', id); }
+      } catch (e) {}
+    language: text/javascript
+order: 1000

@@ -18,6 +18,7 @@ const {
   isTransparentVideoSource,
   resolveCanvasBackgroundColor,
 } = require('./transparentVideo');
+const { useSceneFonts } = require('./fonts');
 
 function getElementAnimationContext(element) {
   return {
@@ -464,6 +465,7 @@ function SceneElement({ element, scene }) {
 
 function SceneComposition({ scene, videoSettings = {} }) {
   const canvasColor = resolveCanvasBackgroundColor(videoSettings, scene.background);
+  useSceneFonts(scene?.elements || []);
 
   return (
     <AbsoluteFill style={{ backgroundColor: canvasColor, overflow: 'hidden' }}>

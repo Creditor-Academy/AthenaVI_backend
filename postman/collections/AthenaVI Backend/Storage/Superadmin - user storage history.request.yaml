@@ -1,0 +1,5 @@
+$kind: http-request
+description: Target user storage ledger. Requires platform superadmin.
+url: "{{baseUrl}}/api/superadmin/users/{{storageUserId}}/storage/history?page=1&limit=20"
+method: GET
+order: 8100

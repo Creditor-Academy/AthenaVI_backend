@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/slides/{{slideId}}/elements/{{elementId}}"
+method: PATCH
+headers:
+  Authorization: Bearer {{accessToken}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "placement": {
+        "x": 220,
+        "y": 220,
+        "width": 400,
+        "height": 240
+      },
+      "content": {
+        "text": "Edited"
+      }
+    }
+order: 4000

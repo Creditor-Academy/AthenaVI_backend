@@ -15,7 +15,6 @@
 | GET | `/api/auth/google` | No | Start Google OAuth |
 | GET | `/api/auth/superadmin/google` | No | Start Google OAuth (superadmin portal) |
 | GET | `/api/auth/google/callback` | No | Google redirect (OAuth) |
-| POST | `/api/early-access/request` | No | Submit early access request (rate limited) |
 | GET | `/api/user/profile` | Bearer | Get profile |
 | GET | `/api/user/capabilities` | Bearer | Platform capabilities (portal toggle) |
 | GET | `/api/user/storage` | Bearer | My storage quota summary (+ active pending upgrade request) |
@@ -50,11 +49,107 @@
 | POST | `/api/workspaces/:workspaceId/folders` | Bearer | Create folder |
 | PATCH | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Rename folder |
 | DELETE | `/api/workspaces/:workspaceId/folders/:folderId` | Bearer + creator or OWNER/ADMIN | Delete folder |
-| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create project |
-| GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId` optional) |
+| GET | `/api/workspaces/:workspaceId/library` | Bearer + member | Content tabs: omit `category` for counts; `category=video\|presentation\|image` lists items |
+| POST | `/api/workspaces/:workspaceId/presentations` | Bearer + member | Create presentation (`blank` \| `template` \| `pack`) |
+| GET | `/api/workspaces/:workspaceId/presentations` | Bearer + member | List presentations (`folderId` optional) |
+| GET | `/api/workspaces/:workspaceId/presentation-templates` | Bearer + member | List DECK_LAYOUT templates + categories (`?category=` / `?contentType=`) |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs` | Bearer + member | List DECK_PACK multi-slide packs (summary) |
+| GET | `/api/workspaces/:workspaceId/presentation-deck-packs/:packId` | Bearer + member | Get one DECK_PACK (full schema + slidePreviews) |
+| GET | `/api/workspaces/:workspaceId/brand-kits` | Bearer + member | List workspace Brand Kits |
+| POST | `/api/workspaces/:workspaceId/brand-kits` | Bearer + OWNER/ADMIN | Create Brand Kit |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + member | Get Brand Kit |
+| PATCH | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Update Brand Kit |
+| DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId` | Bearer + OWNER/ADMIN | Delete Brand Kit |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/set-default` | Bearer + OWNER/ADMIN | Set default Brand Kit |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/health` | Bearer + member | Brand Kit completeness score |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/colors` | Bearer + OWNER/ADMIN | AI suggest palette from logo |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/fonts` | Bearer + OWNER/ADMIN | AI suggest font pairing |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/voice` | Bearer + OWNER/ADMIN | AI expand brand voice |
+| POST | `/api/workspaces/:workspaceId/brand-kits/suggest/image-style` | Bearer + OWNER/ADMIN | AI suggest image brief + chart colors |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/suggest/logo-variants` | Bearer + OWNER/ADMIN | Generate logo variants |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/catalog` | Bearer + member | Logo mockup catalog + free quota |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups` | Bearer + member | Saved logo mockups + free quota |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/mockups/generate` | Bearer + OWNER/ADMIN | Generate logo product mockup |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/generate` | Bearer + OWNER/ADMIN | Generate 6-slide guideline deck |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines` | Bearer + member | Guideline presentation link |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/guidelines/pdf` | Bearer + member | Download brand guideline PDF |
+| POST | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media` | Bearer + OWNER/ADMIN | Upload logo/photo/graphic |
+| DELETE | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId` | Bearer + OWNER/ADMIN | Delete Brand Kit media |
+| GET | `/api/workspaces/:workspaceId/brand-kits/:brandKitId/media/:mediaId/stream` | Bearer + member | Stream Brand Kit media |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/apply-brand-kit` | Bearer + member | Apply Brand Kit to deck |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/media` | Bearer + member | Upload image onto slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/attach-asset` | Bearer + member | Attach workspace Asset to slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/insert-stock` | Bearer + member | Insert stock photo onto slide |
+| GET | `/api/superadmin/templates/:templateId/media` | Superadmin | List template media |
+| POST | `/api/superadmin/templates/:templateId/media` | Superadmin | Upload template media |
+| DELETE | `/api/superadmin/templates/:templateId/media/:mediaId` | Superadmin | Delete template media |
+| GET | `/api/workspaces/:workspaceId/presentation-themes` | Bearer + member | List curated themes |
+| GET | `/api/workspaces/:workspaceId/presentation-elements` | Bearer + member | Element library presets |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId` | Bearer + member | Get presentation + deck + slides |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/preview` | Bearer + member | Live-render slide payload for My Work / Present (`offset`, `limit` max **40**; member responses include `speakerNotes`; ETag → 304) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/thumbnail/image` | Bearer + member | Upload the deck cover captured from the preview (multipart `file`, ≤2 MB) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/presence` | Bearer + member | Present heartbeat (`slideIndex`, `presenting`); 409 if another presenter |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/presence/leave` | Bearer and/or `leaveToken` | Release Present lock (`sendBeacon` OK) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/status` | Bearer + member | Generation progress |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/credit-estimate` | Bearer + member | Outline/generate/export AC estimate |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Generate outline (prompt/outline/document) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/outline` | Bearer + member | Update outline JSON |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/theme` | Bearer + member | Set theme |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/generate` | Bearer + member | Start deck generation (202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides` | Bearer + member | Add slide; optional `generate`+`prompt` for add+AI (deck max 40) |
+| DELETE | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Delete slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/duplicate` | Bearer + member | Duplicate slide |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/reorder` | Bearer + member | Reorder slides |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/apply-layout` | Bearer + member | Apply DECK_LAYOUT |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/canvas` | Bearer + member | Save freeform canvas |
+| POST/PATCH/DELETE | `.../slides/:slideId/elements...` | Bearer + member | Element CRUD / reorder |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId` | Bearer + member | Patch slide |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/regenerate` | Bearer + member | Regenerate slide (`prompt` optional; 202) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/export` | Bearer + member | Queue PPTX/PDF/PNG/JPEG export (202) |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` | Bearer + member | Poll export status |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/comments` | Bearer + member | List slide comment threads (`slideId`, `resolved`, `orphaned`) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments` | Bearer + member | Create thread (`slideId`) or reply (`parentId`) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId` | Bearer + member | Update own comment |
+| DELETE | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId` | Bearer + member | Delete comment (author or OWNER/ADMIN) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/resolve` | Bearer + member | Resolve thread (root only) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/:commentId/unresolve` | Bearer + member | Reopen thread |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/comments/mentionable-users` | Bearer + member | Mention autocomplete |
+| GET | `/api/workspaces/:workspaceId/presentations/:presentationId/share` | Bearer + member | Both share links (`viewer`, `reviewer`) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` | Bearer + member | Enable viewer link (lazy mint) |
+| PUT | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer` | Bearer + member | Enable reviewer link (lazy mint) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer` | Bearer + member | Enable/disable viewer link |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer` | Bearer + member | Enable/disable reviewer link |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/viewer/rotate` | Bearer + member | Rotate viewer token |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/share/reviewer/rotate` | Bearer + member | Rotate reviewer token |
+| GET | `/api/p/:token` | Public (optional Bearer) | Shared deck, view-only (ETag) |
+| GET | `/api/p/:token/session` | Public (optional Bearer) | Viewer name, `canComment`, `canOpenInEditor` |
+| PUT | `/api/p/:token/presence` | Public (optional Bearer) | Presence heartbeat → viewers + `presenter` + `commentsUpdatedAt` |
+| GET | `/api/p/:token/presence` | Public (optional Bearer) | Live viewer list + `presenter` |
+| DELETE | `/api/p/:token/presence` | Public (optional Bearer) | Leave preview (`viewerSessionId` query) |
+| POST | `/api/p/:token/presence/leave` | Public (optional Bearer) | `sendBeacon` leave alias (same query) |
+| GET | `/api/p/:token/comments` | Public (optional Bearer) | Comments on READY slides (empty when `access: VIEW`) |
+| POST | `/api/p/:token/comments` | Public (optional Bearer) | Guest/visitor comment or reply (reviewer link only) |
+| PATCH | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Edit own comment (guests send `viewerSessionId`) |
+| DELETE | `/api/p/:token/comments/:commentId` | Public (optional Bearer) | Delete own comment |
+| POST | `/api/p/:token/comments/:commentId/resolve` | Public (members only) | Resolve thread; 403 for guests |
+| POST | `/api/p/:token/comments/:commentId/unresolve` | Public (members only) | Reopen thread; 403 for guests |
+| GET | `/api/p/:token/comments/mentionable-users` | Public (members only) | Mention autocomplete; 404 for guests |
+| GET | `/api/workspaces/:workspaceId/video-templates` | Bearer + member | List active VIDEO_SCENE / VIDEO_PACK (`?type=`) |
+| GET | `/api/workspaces/:workspaceId/video-templates/:templateId` | Bearer + member | Get one video template |
+| POST | `/api/workspaces/:workspaceId/projects` | Bearer + member | Create VIDEO project (optional `templateId` scene or pack) |
+| POST | `/api/superadmin/presentations/:presentationId/publish-as-pack` | Superadmin | Publish PPT canvas as DECK_PACK |
+| POST | `/api/superadmin/projects/:projectId/scenes/:sceneId/publish-as-template` | Superadmin | Publish scene as VIDEO_SCENE |
+| POST | `/api/superadmin/projects/:projectId/publish-as-video-pack` | Superadmin | Publish project as VIDEO_PACK |
+| GET | `/api/workspaces/:workspaceId/projects` | Bearer + member | List projects (`folderId`, `type`, assignment filters optional) |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Get project |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Update project metadata |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign project (TEAM only) |
+| PATCH | `/api/workspaces/:workspaceId/projects/:projectId/scenes/:sceneId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign a video scene (TEAM, VIDEO only) |
+| PATCH | `/api/workspaces/:workspaceId/presentations/:presentationId/slides/:slideId/assignee` | Bearer + OWNER/ADMIN | Assign / unassign a slide (TEAM only) |
+| POST | `/api/workspaces/:workspaceId/presentations/:presentationId/duplicate` | Bearer + member | Duplicate presentation ("<name> (Copy)") |
+| GET | `/api/workspaces/:workspaceId/presentation-templates/:templateId` | Bearer + member | One DECK_LAYOUT template |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/data` | Bearer + member | Save validated editor state |
+| POST | `/api/workspaces/:workspaceId/projects/:projectId/scenes/from-template` | Bearer + member | Append scene from VIDEO_SCENE template |
 | PATCH | `/api/workspaces/:workspaceId/projects/:projectId/move-folder` | Bearer + member | Move project and migrate folder-aware S3 assets |
 | DELETE | `/api/workspaces/:workspaceId/projects/:projectId` | Bearer + member | Delete project and related assets |
 | GET | `/api/workspaces/:workspaceId/projects/:projectId/comments` | Bearer + member | List project comments |
@@ -70,14 +165,46 @@
 | GET | `/api/workspaces/:workspaceId/storage` | Bearer + member | Workspace footprint + owner quota |
 | GET | `/api/workspaces/:workspaceId/videos` | Bearer + member | Workspace video library across projects |
 | POST | `/api/assets/:workspaceId/upload` | Bearer + workspace access | Upload workspace asset (multipart `file`) |
-| GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|all`) |
+| GET | `/api/assets/:workspaceId` | Bearer + workspace access | List workspace assets (`take` / `skip`, optional `source=upload\|stock\|ai_gen\|all`) |
 | PATCH | `/api/assets/:workspaceId/:assetId/rename` | Bearer + workspace access | Rename asset |
 | DELETE | `/api/assets/:workspaceId/:assetId` | Bearer + workspace access | Delete asset |
 | GET | `/api/stock/search` | Bearer | Search stock (`q`, `type=photo\|video`, `provider=pexels\|unsplash\|pixabay\|all`, `page`, `perPage`) |
 | POST | `/api/stock/workspaces/:workspaceId/import` | Bearer + workspace access | Import stock item → workspace Asset (S3 copy) |
-| GET | `/api/credits/:id` | Bearer + OWNER/ADMIN | Workspace credit balance |
+| GET | `/api/fonts/catalog` | Bearer | Font catalog + pairings (`q`, `category`, `subset`, `featured`, `limit`) |
+| GET | `/api/fonts/css` | Bearer | Build Google Fonts CSS2 URL (`families`) |
+| GET | `/api/graphics` | Bearer | Published SVG catalog (`q`, `category`, `type`, `page`, `limit`) |
+| POST | `/api/graphics/search` | Bearer | Intent search over published graphics |
+| GET | `/api/graphics/:id` | Bearer | One published graphic |
+| GET | `/api/image-gen/models` | Bearer | Image Gen model picker catalog (`models`, `providers`, per-mode `defaults`) |
+| GET | `/api/image-gen/formats` | Bearer | Image Gen format catalog (square / landscape / portrait + seven social destinations + eight print sizes) |
+| GET | `/api/image-gen/styles` | Bearer | Image Gen vibe/style presets |
+| GET | `/api/image-gen/archetypes` | Bearer | Image Gen infographic archetype catalog |
+| GET | `/api/image-gen/workspaces/:workspaceId/estimate` | Bearer + workspace access | Image Gen credit estimate |
+| POST | `/api/image-gen/workspaces/:workspaceId/context` | Bearer + workspace access | Create context bundle (multipart, free) |
+| GET | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Get context preview |
+| DELETE | `/api/image-gen/workspaces/:workspaceId/context/:contextId` | Bearer + workspace access | Delete unpinned context |
+| POST | `/api/image-gen/workspaces/:workspaceId/generate` | Bearer + workspace access | Generate (sync, `mode` image \| infographic \| social \| printable) → Asset + folder chat (`folderId` required; `formatId` required for social and printable) |
+| GET | `/api/image-gen/workspaces/:workspaceId/threads` | Bearer + workspace access | List image chats (`folderId`/`take`/`skip`) |
+| GET | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Get chat + messages (free) |
+| POST | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/messages` | Bearer + workspace access | Chat send → tweak latest hop (charges) |
+| PATCH | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Rename chat |
+| POST | `/api/image-gen/workspaces/:workspaceId/threads/:threadId/move-folder` | Bearer + workspace access | Move chat to another folder |
+| DELETE | `/api/image-gen/workspaces/:workspaceId/threads/:threadId` | Bearer + workspace access | Delete chat (keeps assets) |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations` | Bearer + workspace access | List image hops (`take`/`skip`/`mode`/`threadId`) |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId` | Bearer + workspace access | Get generation |
+| POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/regenerate` | Bearer + workspace access | Regenerate |
+| POST | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/tweak` | Bearer + workspace access | Tweak with instruction |
+| GET | `/api/image-gen/workspaces/:workspaceId/generations/:generationId/download` | Bearer + workspace access | Download `png`\|`jpg`\|`jpeg`\|`pdf`; printables: physical-size PDF, `bleed=true` for bleed + crop marks |
+| GET | `/api/credits/me` | Bearer | Personal credit balance |
+| GET | `/api/credits/me/history` | Bearer | Personal credit ledger |
+| GET | `/api/credits/me/estimate` | Bearer | Personal estimate (`voice_clone` \| `voice_design` \| `voice_preview` \| `avatar_create`) |
+| GET | `/api/credits/:id` | Bearer + member | Workspace credit balance |
+| GET | `/api/credits/:id/estimate` | Bearer + member | Workspace estimate (`heygen_video` \| `speech_generation` \| `remotion_export`) |
+| POST | `/api/credits/:id/allocate` | Bearer + OWNER | TEAM: personal → workspace pool |
+| POST | `/api/credits/:id/deallocate` | Bearer + OWNER | TEAM: workspace pool → personal |
 | GET | `/api/credits/:id/history` | Bearer + OWNER/ADMIN | Workspace credit history |
 | GET | `/api/credits/:id/my-history` | Bearer + any member | My credits in workspace |
+| GET | `/api/credits/:id/usage-by-member` | Bearer + OWNER/ADMIN | TEAM usage by member |
 | GET | `/api/superadmin/users` | Bearer + platform superadmin | List users (credits + storage) |
 | PATCH | `/api/superadmin/users/:userId/platform-access` | Bearer + platform superadmin | Grant/revoke platform superadmin flag |
 | GET | `/api/superadmin/users/:userId/credits` | Bearer + platform superadmin | User personal balance |
@@ -91,11 +218,6 @@
 | GET | `/api/superadmin/storage/tiers` | Bearer + platform superadmin | Storage tier presets |
 | GET | `/api/superadmin/storage/requests` | Bearer + platform superadmin | Storage upgrade request queue |
 | POST | `/api/superadmin/storage/requests/:requestId/reject` | Bearer + platform superadmin | Reject storage upgrade request |
-| GET | `/api/superadmin/early-access/requests` | Bearer + platform superadmin | Early access request queue |
-| GET | `/api/superadmin/early-access/requests/:requestId` | Bearer + platform superadmin | Single early access request |
-| PATCH | `/api/superadmin/early-access/requests/:requestId/status` | Bearer + platform superadmin | Update status (`under_review`, `in_discussion`, `approved`, `rejected`) |
-| POST | `/api/superadmin/early-access/requests/:requestId/approve` | Bearer + platform superadmin | Approve early access request |
-| POST | `/api/superadmin/early-access/requests/:requestId/reject` | Bearer + platform superadmin | Reject early access request |
 | GET | `/api/superadmin/workspaces` | Bearer + platform superadmin | List TEAM workspaces with pools |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits` | Bearer + platform superadmin | Workspace pool summary |
 | GET | `/api/superadmin/workspaces/:workspaceId/credits/history` | Bearer + platform superadmin | Workspace credit ledger |
@@ -110,6 +232,17 @@
 | GET | `/api/superadmin/broadcasts/product-email` | Bearer + platform superadmin | Product email broadcast history (paginated) |
 | GET | `/api/superadmin/broadcasts/product-email/:broadcastId` | Bearer + platform superadmin | Single broadcast detail |
 | GET | `/api/superadmin/broadcasts/product-email/:broadcastId/recipients` | Bearer + platform superadmin | Per-recipient delivery log (`status` filter) |
+| GET | `/api/superadmin/graphics` | Bearer + platform superadmin | List graphics library |
+| POST | `/api/superadmin/graphics` | Bearer + platform superadmin | Upload SVG (starts as draft) |
+| GET | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Get graphic |
+| PATCH | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Update metadata |
+| POST | `/api/superadmin/graphics/:id/publish` | Bearer + platform superadmin | Publish |
+| POST | `/api/superadmin/graphics/:id/unpublish` | Bearer + platform superadmin | Back to draft |
+| POST | `/api/superadmin/graphics/:id/archive` | Bearer + platform superadmin | Archive |
+| DELETE | `/api/superadmin/graphics/:id` | Bearer + platform superadmin | Delete + S3 |
+| GET | `/api/superadmin/graphics/getillustrations/meta` | Bearer + platform superadmin | GetIllustrations categories/packs |
+| GET | `/api/superadmin/graphics/getillustrations/free` | Bearer + platform superadmin | Browse free GetIllustrations catalog |
+| POST | `/api/superadmin/graphics/getillustrations/icon-packs/:packId/save` | Bearer + platform superadmin | Import icon pack into library |
 | GET | `/api/heygen/avatars/groups` | Bearer | HeyGen avatar groups (`ownership=private` filtered per user; optional `workspace_id` merges shared) |
 | GET | `/api/heygen/avatars/looks` | Bearer | HeyGen avatar looks (`ownership=private` filtered; optional `workspace_id`) |
 | POST | `/api/heygen/avatars/upload` | Bearer | Upload avatar training file to S3; returns public `url` (max ~900 MB) |

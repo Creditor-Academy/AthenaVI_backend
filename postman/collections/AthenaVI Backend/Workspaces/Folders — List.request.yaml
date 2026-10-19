@@ -1,0 +1,5 @@
+$kind: http-request
+description: Returns folders with owner, lastModifiedAt/By, projectCount, sizeBytes (sum of project storageBytes), and lastActivityAt. `creator` is deprecated alias of `owner`.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders"
+method: GET
+order: 14000

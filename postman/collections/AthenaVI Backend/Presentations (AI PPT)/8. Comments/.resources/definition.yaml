@@ -1,0 +1,3 @@
+$kind: collection
+description: "Slide comment threads: one level of replies, resolvable roots. Editor requests need Bearer + membership; the Public requests use only the share token and require share access COMMENT. Guests send viewerSessionId + displayName. See docs/api/PRESENTATION_COMMENTS_API.md"
+order: 9000

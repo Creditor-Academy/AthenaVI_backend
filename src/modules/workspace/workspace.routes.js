@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { authMiddleware } = require('../../middlewares/auth.middlware');
+const { authMiddleware, optionalAuthMiddleware } = require('../../middlewares/auth.middlware');
 const {
   requireWorkspaceRole,
 } = require('../../middlewares/requireWorkspaceRole');
@@ -24,6 +24,7 @@ const workspaceValidations = require('../validations/workspace.validations');
 const validate = require('../../middlewares/validate.middleware');
 const folderRoutes = require('../folder/folder.routes');
 const projectRoutes = require('../project/project.routes');
+const canvasRoutes = require('../canvas/canvas.routes');
 const heygenVideoRoutes = require('../video/heygenVideo.routes');
 const renderRoutes = require('../render/render.routes');
 const renderController = require('../render/render.controller');
@@ -31,12 +32,102 @@ const renderValidations = require('../render/render.validation');
 const speechRoutes = require('../speech/speech.routes');
 const commentRoutes = require('../comment/comment.routes');
 const heygenShareRoutes = require('../heygen/heygenShare.routes');
+const presentationRoutes = require('../presentation/presentation.routes');
+const presentationShareController = require('../presentationShare/presentationShare.controller');
+const presentationShareValidations = require('../validations/presentationShare.validations');
+const presentationController = require('../presentation/presentation.controller');
+const presentationValidations = require('../validations/presentation.validations');
+const brandKitRoutes = require('../brandKit/brandKit.routes');
+const videoTemplateController = require('../project/videoTemplate.controller');
+const videoTemplateValidations = require('../validations/videoTemplate.validations');
+const workspaceLibraryController = require('./workspaceLibrary.controller');
 
 const anyMember = ['OWNER', 'ADMIN', 'MEMBER'];
 const ownerOrAdmin = ['OWNER', 'ADMIN'];
 const ownerOnly = ['OWNER'];
 
 // nested routes
+router.get(
+  '/:workspaceId/library',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(workspaceValidations.listWorkspaceLibrarySchema),
+  workspaceLibraryController.getLibrary
+);
+router.get(
+  '/:workspaceId/presentation-templates',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationTemplatesSchema),
+  presentationController.listPresentationTemplates
+);
+router.get(
+  '/:workspaceId/presentation-themes',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationThemesSchema),
+  presentationController.listPresentationThemes
+);
+router.get(
+  '/:workspaceId/presentation-elements',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationElementsSchema),
+  presentationController.listPresentationElements
+);
+
+/**
+ * Present leave via sendBeacon (leaveToken) or Bearer. Registered before the auth-gated
+ * presentations mount so Authorization is optional when leaveToken is present.
+ */
+router.post(
+  '/:workspaceId/presentations/:presentationId/presence/leave',
+  optionalAuthMiddleware,
+  validate(presentationShareValidations.memberPresenceLeaveSchema),
+  presentationShareController.memberLeavePresence
+);
+router.use(
+  '/:workspaceId/presentations',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  presentationRoutes
+);
+router.use('/:workspaceId/brand-kits', authMiddleware, brandKitRoutes);
+router.get(
+  '/:workspaceId/presentation-templates/:templateId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.workspacePresentationTemplateByIdSchema),
+  presentationController.getPresentationTemplate
+);
+router.get(
+  '/:workspaceId/presentation-deck-packs',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.listWorkspacePresentationDeckPacksSchema),
+  presentationController.listPresentationDeckPacks
+);
+router.get(
+  '/:workspaceId/presentation-deck-packs/:packId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(presentationValidations.workspacePresentationDeckPackByIdSchema),
+  presentationController.getPresentationDeckPack
+);
+router.get(
+  '/:workspaceId/video-templates',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(videoTemplateValidations.listWorkspaceVideoTemplatesSchema),
+  videoTemplateController.listVideoTemplates
+);
+router.get(
+  '/:workspaceId/video-templates/:templateId',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  validate(videoTemplateValidations.workspaceVideoTemplateByIdSchema),
+  videoTemplateController.getVideoTemplate
+);
 router.use(
   '/:workspaceId/heygen',
   authMiddleware,
@@ -85,6 +176,12 @@ router.use(
   authMiddleware,
   requireWorkspaceRole(anyMember),
   projectRoutes
+);
+router.use(
+  '/:workspaceId/canvases',
+  authMiddleware,
+  requireWorkspaceRole(anyMember),
+  canvasRoutes
 );
 
 // workspace routes

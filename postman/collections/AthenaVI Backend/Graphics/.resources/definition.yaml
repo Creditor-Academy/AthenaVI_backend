@@ -1,0 +1,11 @@
+$kind: collection
+description: |-
+  Published SVG catalog for the editor (`GET /api/graphics`). Superadmin draft/publish
+  and GetIllustrations import live under **Superadmin → Graphics**.
+auth:
+  - id: graphics-bearer-auth
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{accessToken}}"
+order: 8600

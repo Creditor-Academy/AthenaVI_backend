@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/api/stock/search?q=nature&type=video&provider=pixabay&page=1&perPage=20"
+method: GET
+queryParams:
+  q: nature
+  type: video
+  provider: pixabay
+  page: "1"
+  perPage: "20"
+order: 7000

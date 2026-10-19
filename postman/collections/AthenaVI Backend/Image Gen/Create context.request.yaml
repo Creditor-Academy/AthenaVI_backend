@@ -1,0 +1,30 @@
+$kind: http-request
+name: Create context
+url: "{{baseUrl}}/api/image-gen/workspaces/{{workspaceId}}/context"
+method: POST
+body:
+  type: formdata
+  data:
+    - key: payload
+      type: text
+      value: |-
+        {
+          "inlineText": "Brand brief: clean SaaS aesthetic, blue and teal accents",
+          "assetIds": []
+        }
+    - key: files
+      type: file
+      src: []
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 201) {
+        const j = pm.response.json();
+        const id = j && j.data && j.data.context && j.data.context.id;
+        if (id) {
+          pm.collectionVariables.set("imageGenContextId", id);
+          pm.environment.set("imageGenContextId", id);
+        }
+      }
+    language: text/javascript
+order: 2500

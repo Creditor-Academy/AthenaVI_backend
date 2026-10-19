@@ -1,0 +1,17 @@
+$kind: http-request
+description: Idempotent. Mints reviewer link on first enable; required for public comment requests.
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share/reviewer"
+method: PUT
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const data = j && j.data;
+        const token = (data && data.token) || (data && data.link && data.link.token);
+        if (token) pm.collectionVariables.set("presentationReviewerToken", token);
+      }
+    language: text/javascript
+order: 1100

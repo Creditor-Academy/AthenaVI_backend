@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/folders/{{folderId}}"
+method: DELETE
+order: 16000

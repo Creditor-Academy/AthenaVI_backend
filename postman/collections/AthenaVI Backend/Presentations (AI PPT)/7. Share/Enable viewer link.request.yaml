@@ -1,0 +1,17 @@
+$kind: http-request
+description: Idempotent. Mints viewer link on first enable; link.url returned when a link exists (top-level token/url on first create).
+url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/presentations/{{presentationId}}/share/viewer"
+method: PUT
+headers:
+  Authorization: Bearer {{accessToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      if (pm.response.code === 200) {
+        const j = pm.response.json();
+        const data = j && j.data;
+        const token = (data && data.token) || (data && data.link && data.link.token);
+        if (token) pm.collectionVariables.set("presentationViewerToken", token);
+      }
+    language: text/javascript
+order: 1000
