@@ -44,6 +44,7 @@ const createCanvas = async (workspaceId, userId, { name, folderId, data, thumbna
     type: CANVAS_TYPE,
     data: normalizedData,
     thumbnail: thumbnail || null,
+    thumbnailUpdatedAt: thumbnail ? new Date() : null,
     status: 'draft',
   });
 
@@ -72,10 +73,11 @@ const getCanvasById = async (workspaceId, canvasId) => {
 
 const updateCanvasMeta = async (workspaceId, canvasId, userId, payload) => {
   await assertCanvasInWorkspace(workspaceId, canvasId);
-  const updated = await projectDao.updateProject(canvasId, {
-    ...payload,
-    updatedBy: userId,
-  });
+  const data = { ...payload, updatedBy: userId };
+  if (Object.prototype.hasOwnProperty.call(payload, 'thumbnail')) {
+    data.thumbnailUpdatedAt = payload.thumbnail ? new Date() : null;
+  }
+  const updated = await projectDao.updateProject(canvasId, data);
   return enrichProject(updated);
 };
 

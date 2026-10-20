@@ -67,6 +67,22 @@ const canvasDataSchema = Joi.object({
   .unknown(true)
   .required();
 
+/**
+ * Library cover. https URLs (uploaded images) or a compact SVG data URL generated
+ * from the first page. Capped so a list of designs stays small.
+ */
+const thumbnailSchema = Joi.string()
+  .max(120000)
+  .custom((value, helpers) => {
+    const text = String(value || '').trim();
+    if (/^https?:\/\//i.test(text)) return text;
+    if (/^data:image\/svg\+xml/i.test(text)) return text;
+    return helpers.error('any.invalid');
+  })
+  .messages({
+    'any.invalid': 'thumbnail must be an http(s) URL or an SVG data URL',
+  });
+
 /** Partial payload allowed on create (client may create blank, then autosave). */
 const createCanvasDataSchema = Joi.object({
   version: Joi.number().integer().min(1).default(1),
@@ -83,7 +99,7 @@ const createCanvasSchema = Joi.object({
     name: Joi.string().trim().min(1).max(255).required(),
     folderId: Joi.string().uuid().required(),
     data: createCanvasDataSchema.optional(),
-    thumbnail: Joi.string().uri().optional(),
+    thumbnail: thumbnailSchema.optional(),
   }),
   query: Joi.object({}).unknown(false),
 });
@@ -111,7 +127,7 @@ const updateCanvasSchema = Joi.object({
   }),
   body: Joi.object({
     name: Joi.string().trim().min(1).max(255).optional(),
-    thumbnail: Joi.string().uri().allow(null).optional(),
+    thumbnail: thumbnailSchema.allow(null).optional(),
   }).min(1),
 });
 
