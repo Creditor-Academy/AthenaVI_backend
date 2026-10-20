@@ -2,7 +2,7 @@
 
 **Lead:** Komal Giri  
 **Backups (pair):** Ankit Kumar (editor / content contract), Sahil (APIs / credits)  
-**Status:** Policy written 19 October 2026. Tests are the contract. Pair walkthrough with backups is still required before bus-factor is considered closed.
+**Status:** Policy written 19 October 2026. Tests are the contract. Ankit's editor-contract and Image Studio boundary tests are in the frontend tree. A live scoring walkthrough with Komal is still useful; backups can already point at the tests below.
 
 This is the **policy** note: *why* a layout wins, *when* repair runs, *when* Path A vs Path B is chosen, and *what is billed*. It is not the HTTP spec and not a dump of `deckGeneration.service.js`.
 
@@ -245,7 +245,7 @@ Canonical table lives in [`AI_PPT_GENERATION_COMPLETE.md`](AI_PPT_GENERATION_COM
 |-------|-------|----------------|
 | AI outline / generate | 5–20 slides | `AI_SLIDE_MAX` |
 | Manual add / duplicate | 40 slides | after AI, user may grow the deck |
-| Elements per slide | 50 | `MAX_ELEMENTS_PER_SLIDE` |
+| Elements per slide | 60 | `MAX_ELEMENTS_PER_SLIDE` |
 | 16:9 / 4:3 | 1920×1080 / 1600×1200 | native PPT canvases |
 | 9:16 | **rejected 400** | PPT only — use Canvas Editor for custom sizes |
 
@@ -304,7 +304,7 @@ Do not “just tweak the scorer” because a single deck looked wrong. If the ca
 | Scoring weights / rank | `test/layoutRules.test.js`, `scripts/test-layout-scoring.js` |
 | Hard-reject comparison vs quote | `test/layoutBadFit.test.js` |
 | Empty pool → widen / universal text | `test/ensureLayoutPick.test.js` |
-| ARRAY_OVERFLOW not silently sliced | `test/layoutSelectionRegression.test.js`, `test/contentIntegrityRegression.test.js` |
+| ARRAY_OVERFLOW not silently sliced | `test/layoutSelectionRegression.test.js`, `test/contentIntegrityRegression.test.js`, frontend `src/utils/engineEditorContract.test.mjs` |
 | Chart density | `scripts/test-chart-density-cap.js` |
 | Gallery vs hero | `scripts/test-gallery-grid-policy.js`, `test/gridGalleryImageCoherence.test.js` |
 | Path B vs process vs empty spec | `scripts/test-path-b-vs-layouts.js` |
@@ -324,8 +324,19 @@ Do not “just tweak the scorer” because a single deck looked wrong. If the ca
 | Lead | **Komal Giri** | Change scoring, repair, Path A/B, catalog policy |
 | Backup — editor contract | **Ankit Kumar** | Point at `ARRAY_OVERFLOW` / canvas compile tests before changing slot repair |
 | Backup — API / credits | **Sahil** | Point at charge-on-success + Path A/B feature keys before changing billing |
+| Pair — Image Studio | **Ankit Kumar** (Tanu lead) | Keep studio infographics off PPT Path B (`imageStudioEngineBoundary.test.mjs`) |
 
-**Pair walkthrough (still open):** Komal walks Ankit and Sahil through §3 scoring, §4 overflow, and §5 Path A/B once. Each backup names the test that fails if they break that rule. Until that happens, bus-factor is reduced by this file but **not closed**.
+**Backup tests Ankit can name (run these before touching slot repair or Path B):**
+
+| Rule | Command |
+|------|---------|
+| ARRAY_OVERFLOW not silently sliced | Frontend: `node --import ./scripts/test-resolve-hook.mjs --test src/utils/engineEditorContract.test.mjs` · Backend: `node --test src/modules/presentation/test/layoutSelectionRegression.test.js` |
+| Editor slot map vs compile | Backend: `node --test src/modules/presentation/test/editorCanvasParity.test.js` |
+| PPT caps / 9:16 → 16:9 | `engineEditorContract.test.mjs` (same command as overflow) |
+| Image Studio ≠ Path B | `node --import ./scripts/test-resolve-hook.mjs --test src/pages/Slides/AIStudio/imageStudioEngineBoundary.test.mjs` |
+| Path B vs process layout | `npm run test:path-b-vs-layouts` (backend) |
+
+**Pair walkthrough:** Komal should still walk scoring (§3) live once. Overflow (§4) and Path B vs Image Studio (§5.1) now have named tests a second engineer can run without Komal. Until the scoring walk happens, bus-factor is reduced but scoring remains Komal-led.
 
 ---
 

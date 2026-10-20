@@ -55,7 +55,7 @@ AI generation **fills** that canvas. It never accepts one mega “final deck JSO
 |-------|-------|--------|
 | AI outline / generate | 5–20 slides | `AI_SLIDE_MAX` |
 | Manual add / duplicate | 40 slides | `DECK_SLIDE_MAX` |
-| Elements per slide | 50 | `MAX_ELEMENTS_PER_SLIDE` |
+| Elements per slide | 60 | `MAX_ELEMENTS_PER_SLIDE` |
 | Canvas 16:9 | 1920×1080 | native |
 | Canvas 4:3 | 1600×1200 | native |
 | 9:16 | **rejected** (400) | PPT only |

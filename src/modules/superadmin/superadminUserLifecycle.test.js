@@ -154,6 +154,42 @@ describe('pauseUser', () => {
     });
     await assert.rejects(createUserLifecycleService(deps).pauseUser({ targetUserId: TARGET, actorId: ADMIN }), /redis down/);
   });
+
+  it('kills the live session so the next request is 401 and login is 403', async () => {
+    const sessions = new Map([[TARGET, new Set(['sess_live'])]]);
+    const { deps, state } = makeDeps({
+      revokeAllSessions: async (id) => {
+        sessions.delete(id);
+      },
+    });
+
+    function requestWithSession(userId, sessionId) {
+      const live = sessions.get(userId);
+      if (!live || !live.has(sessionId)) {
+        const err = new Error('Session expired');
+        err.statusCode = 401;
+        throw err;
+      }
+      assertAccountActive(state.target);
+      return { ok: true };
+    }
+
+    function loginPausedUser() {
+      assertAccountActive(state.target);
+    }
+
+    assert.equal(requestWithSession(TARGET, 'sess_live').ok, true);
+
+    await createUserLifecycleService(deps).pauseUser({
+      targetUserId: TARGET,
+      actorId: ADMIN,
+      reason: 'policy',
+    });
+    state.target.pausedAt = new Date();
+
+    assert.throws(() => requestWithSession(TARGET, 'sess_live'), (err) => err.statusCode === 401);
+    assert.throws(() => loginPausedUser(), (err) => err.statusCode === 403);
+  });
 });
 
 describe('resumeUser', () => {

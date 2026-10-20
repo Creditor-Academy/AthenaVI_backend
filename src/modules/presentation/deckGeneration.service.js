@@ -96,6 +96,7 @@ const workspaceDao = require('../workspace/workspace.dao');
 const {
   attachSlideAssignees,
   isSlideAssignmentUnchanged,
+  fireSlideAssignmentNotifications,
 } = require('./slideAssignment');
 const { PPT_FEATURE } = require('../../shared/config/presentationCreditPricing');
 const { layoutSlotsToElements, injectBrandLogo, rebindContentToElements, elementsHaveRebindRoles, applySlideDesignTokens, finalizeElementsDoc, isMediaImageSlot, isPackPlaceholderText, shouldRecompileLayout, resolveImageGenSize } = require('./layoutToElements');
@@ -5751,33 +5752,14 @@ async function setSlideAssignee({
     select: { id: true, name: true, email: true },
   });
 
-  const notifyCtx = {
+  fireSlideAssignmentNotifications(inboxService, {
     slide: updated,
     project,
     workspace: ws,
     actor,
     previousAssigneeId,
-  };
-
-  if (nextAssigneeId && nextAssigneeId !== actorId) {
-    inboxService
-      .notifySlideAssigned(notifyCtx)
-      .catch((error) => console.error('Slide assigned notification failed:', error));
-  }
-
-  if (
-    previousAssigneeId &&
-    previousAssigneeId !== nextAssigneeId &&
-    previousAssigneeId !== actorId
-  ) {
-    inboxService
-      .notifySlideUnassigned({
-        ...notifyCtx,
-        unassignedUserId: previousAssigneeId,
-        reassignedToId: nextAssigneeId,
-      })
-      .catch((error) => console.error('Slide unassigned notification failed:', error));
-  }
+    nextAssigneeId,
+  });
 
   const [hydrated] = await attachSlideAssignees([enrichSlideForClient(updated)]);
   return { slide: hydrated };
