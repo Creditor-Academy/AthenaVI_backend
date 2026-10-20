@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const {
   isSlideAssignmentUnchanged,
   buildSlideAssignmentMetadata,
+  slideAssignmentNotifications,
+  fireSlideAssignmentNotifications,
 } = require('./slideAssignment');
 const { setSlideAssigneeSchema } = require('../validations/presentation.validations');
 const {
@@ -126,5 +128,61 @@ describe('slide assignment notification wiring', () => {
     const collab = getTypesForCategory(CATEGORIES.COLLABORATION);
     assert.ok(collab.includes('SLIDE_ASSIGNED'));
     assert.ok(collab.includes('SLIDE_UNASSIGNED'));
+  });
+
+  it('notifies the new assignee, not the actor assigning themselves', () => {
+    assert.deepEqual(
+      slideAssignmentNotifications({ actorId: 'admin', previousAssigneeId: null, nextAssigneeId: USER }),
+      [{ type: 'SLIDE_ASSIGNED', userId: USER }]
+    );
+    assert.deepEqual(
+      slideAssignmentNotifications({ actorId: USER, previousAssigneeId: null, nextAssigneeId: USER }),
+      []
+    );
+  });
+
+  it('notifies the previous assignee on reassign and unassign', () => {
+    assert.deepEqual(
+      slideAssignmentNotifications({
+        actorId: 'admin',
+        previousAssigneeId: 'old',
+        nextAssigneeId: USER,
+      }),
+      [
+        { type: 'SLIDE_ASSIGNED', userId: USER },
+        { type: 'SLIDE_UNASSIGNED', userId: 'old', reassignedToId: USER },
+      ]
+    );
+    assert.deepEqual(
+      slideAssignmentNotifications({
+        actorId: 'admin',
+        previousAssigneeId: USER,
+        nextAssigneeId: null,
+      }),
+      [{ type: 'SLIDE_UNASSIGNED', userId: USER, reassignedToId: null }]
+    );
+  });
+
+  it('fires inbox notifySlideAssigned when an OWNER assigns a slide', async () => {
+    const calls = [];
+    const inbox = {
+      notifySlideAssigned: async (ctx) => {
+        calls.push({ op: 'assigned', userId: ctx.slide.assignedToId, slideId: ctx.slide.id });
+      },
+      notifySlideUnassigned: async (ctx) => {
+        calls.push({ op: 'unassigned', userId: ctx.unassignedUserId });
+      },
+    };
+    const { events, jobs } = fireSlideAssignmentNotifications(inbox, {
+      actor: { id: 'admin', name: 'Ankit' },
+      previousAssigneeId: null,
+      nextAssigneeId: USER,
+      slide: { id: SLIDE, assignedToId: USER, order: 0 },
+      project: { id: PRESENTATION, workspaceId: WS, name: 'Pitch' },
+      workspace: { id: WS, name: 'Acme' },
+    });
+    assert.deepEqual(events, [{ type: 'SLIDE_ASSIGNED', userId: USER }]);
+    await Promise.all(jobs);
+    assert.deepEqual(calls, [{ op: 'assigned', userId: USER, slideId: SLIDE }]);
   });
 });

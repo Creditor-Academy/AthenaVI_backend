@@ -59,8 +59,55 @@ function buildSlideAssignmentMetadata({ slide, project, workspace, actor, fronte
   return metadata;
 }
 
+/**
+ * Which inbox events fire after a slide assignee change.
+ * Self-assign / no-op changes notify nobody.
+ */
+function slideAssignmentNotifications({ actorId, previousAssigneeId, nextAssigneeId } = {}) {
+  const actor = actorId || null;
+  const previous = previousAssigneeId || null;
+  const next = nextAssigneeId || null;
+  const events = [];
+  if (next && next !== actor) {
+    events.push({ type: 'SLIDE_ASSIGNED', userId: next });
+  }
+  if (previous && previous !== next && previous !== actor) {
+    events.push({ type: 'SLIDE_UNASSIGNED', userId: previous, reassignedToId: next });
+  }
+  return events;
+}
+
+function fireSlideAssignmentNotifications(inbox, ctx) {
+  const events = slideAssignmentNotifications({
+    actorId: ctx?.actor?.id,
+    previousAssigneeId: ctx?.previousAssigneeId,
+    nextAssigneeId: ctx?.nextAssigneeId,
+  });
+  const jobs = events.map((event) => {
+    const job =
+      event.type === 'SLIDE_ASSIGNED'
+        ? inbox.notifySlideAssigned(ctx)
+        : inbox.notifySlideUnassigned({
+            ...ctx,
+            unassignedUserId: event.userId,
+            reassignedToId: event.reassignedToId,
+          });
+    return Promise.resolve(job).catch((error) =>
+      console.error(
+        event.type === 'SLIDE_ASSIGNED'
+          ? 'Slide assigned notification failed:'
+          : 'Slide unassigned notification failed:',
+        error
+      )
+    );
+  });
+  return { events, jobs };
+}
+
 module.exports = {
   attachSlideAssignees,
   isSlideAssignmentUnchanged,
   buildSlideAssignmentMetadata,
+  slideAssignmentNotifications,
+  fireSlideAssignmentNotifications,
 };
