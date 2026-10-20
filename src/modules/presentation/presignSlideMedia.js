@@ -5,13 +5,60 @@ const PRESIGN_TTL_SECONDS =
     ? Number(process.env.PPT_IMAGE_PRESIGN_TTL_SEC)
     : 3600;
 
-async function signKey(key) {
-  if (!key) return null;
-  try {
-    return await s3Service.getPresignedGetUrl(key, PRESIGN_TTL_SECONDS);
-  } catch {
-    return null;
+const SIGNABLE_URL_FIELDS = ['url', 'src', 'screenUrl', 'thumbnailUrl', 'previewUrl'];
+
+function isHeroMediaSlot(el) {
+  const slotId = String(el?.slotId || '').toUpperCase();
+  const role = String(el?.role || '').toLowerCase();
+  return (
+    slotId === 'BACKGROUND_IMAGE' ||
+    slotId === 'HERO_IMAGE' ||
+    role === 'background' ||
+    Boolean(el?.content?.useAsBackground)
+  );
+}
+
+function isPresignableElement(el) {
+  if (!el || typeof el !== 'object' || !el.content || typeof el.content !== 'object') {
+    return false;
   }
+  const type = String(el.type || '').toLowerCase();
+  if (type === 'image' || type === 'icon') return true;
+  if (type !== 'shape') return false;
+  return Boolean(
+    el.content.s3Key ||
+      el.content.deviceFrame ||
+      el.content.shape === 'device-frame' ||
+      SIGNABLE_URL_FIELDS.some((field) => el.content[field])
+  );
+}
+
+function resolveElementMediaKey(content = {}) {
+  if (content.s3Key) return content.s3Key;
+  for (const field of SIGNABLE_URL_FIELDS) {
+    const key = s3Service.extractS3KeyFromUrl(content[field]);
+    if (key) return key;
+  }
+  return null;
+}
+
+function applySignedMedia(content, signed, elementKey) {
+  const next = { ...content, url: signed };
+  if (elementKey) next.s3Key = elementKey;
+  for (const field of SIGNABLE_URL_FIELDS) {
+    if (field !== 'url' && content[field]) next[field] = signed;
+  }
+  return next;
+}
+
+async function signKey(key, cache) {
+  if (!key) return null;
+  if (cache?.has(key)) return cache.get(key);
+  const pending = s3Service
+    .getPresignedGetUrl(key, PRESIGN_TTL_SECONDS)
+    .catch(() => null);
+  cache?.set(key, pending);
+  return pending;
 }
 
 /**
@@ -19,11 +66,13 @@ async function signKey(key) {
  * Persisted `url` / `s3Key` stay as-is in DB; this is response-only.
  * Prefers per-element `content.s3Key` so gallery slides do not all share hero URL.
  * @param {object|null|undefined} slide
+ * @param {Map<string, string|null>} [cache]
  * @returns {Promise<object|null|undefined>}
  */
-async function attachPresignedMedia(slide) {
+async function attachPresignedMedia(slide, cache) {
   if (!slide || typeof slide !== 'object') return slide;
 
+  const signCache = cache || new Map();
   const next = { ...slide };
   let heroSignedUrl = null;
   const heroKey = next.imageRef?.s3Key || null;
@@ -31,7 +80,7 @@ async function attachPresignedMedia(slide) {
   if (next.imageRef && typeof next.imageRef === 'object') {
     const imageRef = { ...next.imageRef };
     if (imageRef.s3Key) {
-      heroSignedUrl = await signKey(imageRef.s3Key);
+      heroSignedUrl = await signKey(imageRef.s3Key, signCache);
       if (heroSignedUrl) imageRef.url = heroSignedUrl;
     }
     next.imageRef = imageRef;
@@ -42,39 +91,21 @@ async function attachPresignedMedia(slide) {
       ...next.elements,
       elements: await Promise.all(
         next.elements.elements.map(async (el) => {
-          if (!el || el.type !== 'image' || !el.content || typeof el.content !== 'object') {
-            return el;
-          }
+          if (!isPresignableElement(el)) return el;
 
-          const slotId = String(el.slotId || '').toUpperCase();
-          const role = String(el.role || '').toLowerCase();
-          const isHeroSlot =
-            slotId === 'BACKGROUND_IMAGE' ||
-            slotId === 'HERO_IMAGE' ||
-            role === 'background' ||
-            el.content.useAsBackground;
-
-          const elementKey =
-            el.content.s3Key ||
-            s3Service.extractS3KeyFromUrl(el.content.url || el.content.src) ||
-            null;
-
+          const elementKey = resolveElementMediaKey(el.content);
           let signed = null;
           if (elementKey) {
-            signed = await signKey(elementKey);
-          } else if (isHeroSlot && (heroSignedUrl || heroKey)) {
-            signed = heroSignedUrl || (await signKey(heroKey));
+            signed = await signKey(elementKey, signCache);
+          } else if (isHeroMediaSlot(el) && (heroSignedUrl || heroKey)) {
+            signed = heroSignedUrl || (await signKey(heroKey, signCache));
           }
 
           if (!signed) return el;
 
           return {
             ...el,
-            content: {
-              ...el.content,
-              ...(elementKey ? { s3Key: elementKey } : {}),
-              url: signed,
-            },
+            content: applySignedMedia(el.content, signed, elementKey),
           };
         })
       ),
@@ -91,7 +122,8 @@ async function attachPresignedMedia(slide) {
  */
 async function attachPresignedMediaToSlides(slides) {
   if (!Array.isArray(slides) || slides.length === 0) return slides || [];
-  return Promise.all(slides.map((s) => attachPresignedMedia(s)));
+  const cache = new Map();
+  return Promise.all(slides.map((s) => attachPresignedMedia(s, cache)));
 }
 
 /**
@@ -125,5 +157,6 @@ module.exports = {
   attachPresignedMedia,
   attachPresignedMediaToSlides,
   presignPresentationPayload,
+  isPresignableElement,
   PRESIGN_TTL_SECONDS,
 };
