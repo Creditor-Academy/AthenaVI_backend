@@ -26,8 +26,69 @@ const {
   buildDeckHtml,
 } = require('./slideHtml');
 const { FONT_REF_WIDTH } = require('./textFit.util');
+const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
+const { normalizeChartContent } = require('./chartContentNormalize');
 
 const PRESIGN_EXPIRES_SEC = 3600;
+const EXPORT_MAX_QUEUED_MS =
+  Number(process.env.PPT_EXPORT_MAX_QUEUED_MS) > 0
+    ? Number(process.env.PPT_EXPORT_MAX_QUEUED_MS)
+    : 5 * 60 * 1000;
+const EXPORT_MAX_RENDERING_MS =
+  Number(process.env.PPT_EXPORT_MAX_RENDERING_MS) > 0
+    ? Number(process.env.PPT_EXPORT_MAX_RENDERING_MS)
+    : 45 * 60 * 1000;
+/** No heartbeat refresh while RENDERING → treat job as stuck (worker died). */
+const EXPORT_RENDERING_HEARTBEAT_STALE_MS =
+  Number(process.env.PPT_EXPORT_HEARTBEAT_STALE_MS) > 0
+    ? Number(process.env.PPT_EXPORT_HEARTBEAT_STALE_MS)
+    : 5 * 60 * 1000;
+const PUPPETEER_EXPORT_TIMEOUT_MS =
+  Number(process.env.PPT_EXPORT_PUPPETEER_TIMEOUT_MS) > 0
+    ? Number(process.env.PPT_EXPORT_PUPPETEER_TIMEOUT_MS)
+    : 180_000;
+
+function exportJobIsStale(row) {
+  if (!row || (row.status !== 'QUEUED' && row.status !== 'RENDERING')) return false;
+  const now = Date.now();
+  const createdAt = row.createdAt ? new Date(row.createdAt).getTime() : now;
+  const updatedAt = row.updatedAt ? new Date(row.updatedAt).getTime() : createdAt;
+
+  if (row.status === 'QUEUED') {
+    return now - createdAt > EXPORT_MAX_QUEUED_MS;
+  }
+  if (now - createdAt > EXPORT_MAX_RENDERING_MS) {
+    return true;
+  }
+  return now - updatedAt > EXPORT_RENDERING_HEARTBEAT_STALE_MS;
+}
+
+async function touchExportHeartbeat(exportId) {
+  if (!exportId) return;
+  try {
+    await presentationDao.updateExport(exportId, { error: null });
+  } catch {
+    // non-fatal
+  }
+}
+
+function normalizeExportError(err) {
+  const msg = String(err?.message || err || '');
+  if (/timeout.*\d{4,6}.*exceeded|Navigation timeout|Waiting failed.*timeout/i.test(msg)) {
+    const sec = msg.match(/(\d{4,6})\s*ms/)?.[1];
+    const hint = sec ? ` (${Math.round(Number(sec) / 1000)}s limit)` : '';
+    return `Export rendering timed out${hint}. For large decks use PowerPoint (PPTX), or try again with fewer slides.`;
+  }
+  return msg.slice(0, 2000);
+}
+
+function safeExportFilename(name, ext) {
+  const base = String(name || 'presentation')
+    .replace(/[^\w\s.-]/g, '')
+    .trim()
+    .slice(0, 80) || 'presentation';
+  return `${base}.${ext}`;
+}
 
 async function notifyExportFinished({
   userId,
@@ -69,6 +130,15 @@ async function notifyExportFinished({
 
 const DEFAULT_SLIDE_SIZE_IN = { w: PPTX_WIDTH_IN, h: PPTX_HEIGHT_IN };
 
+function readPlacementMetrics(placement = {}) {
+  return {
+    x: Number(placement.x) || 0,
+    y: Number(placement.y) || 0,
+    width: Number(placement.width ?? placement.w) || 100,
+    height: Number(placement.height ?? placement.h) || 100,
+  };
+}
+
 function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT, slideSize = DEFAULT_SLIDE_SIZE_IN) {
   return {
     x: (Number(x) || 0) / canvasW * slideSize.w,
@@ -76,6 +146,19 @@ function pxToIn(x, y, w, h, canvasW = CANVAS_WIDTH, canvasH = CANVAS_HEIGHT, sli
     w: Math.max(0.1, (Number(w) || 100) / canvasW * slideSize.w),
     h: Math.max(0.1, (Number(h) || 100) / canvasH * slideSize.h),
   };
+}
+
+function placementToIn(placement, canvasW, canvasH, slideSize) {
+  const m = readPlacementMetrics(placement);
+  return pxToIn(m.x, m.y, m.width, m.height, canvasW, canvasH, slideSize);
+}
+
+/** Match editor flex verticalAlign → pptxgenjs valign. */
+function pptxValign(content = {}) {
+  const v = String(content.verticalAlign || content.valign || '').toLowerCase();
+  if (v === 'center' || v === 'middle') return 'middle';
+  if (v === 'bottom' || v === 'flex-end' || v === 'end') return 'bottom';
+  return 'top';
 }
 
 /**
@@ -163,14 +246,16 @@ function shapeTypeForPptx(shape) {
   return 'rect';
 }
 
-function mapChartTypeForPptx(chartType) {
+/** pptxgenjs v4: addChart(typeEnum, data[], opts) — not the v3 categories/series object shape. */
+function resolvePptxChartTypeEnum(pptx, chartType) {
   const { mapChartType } = require('./elementContent.normalize');
   const t = mapChartType(chartType);
-  if (t === 'doughnut') return 'doughnut';
-  if (t === 'pie') return 'pie';
-  if (t === 'line') return 'line';
-  if (t === 'area') return 'area';
-  return 'bar';
+  const ChartType = pptx.ChartType || pptx.charts || {};
+  if (t === 'doughnut' || t === 'donut') return ChartType.doughnut || ChartType.donut || 'doughnut';
+  if (t === 'pie') return ChartType.pie || 'pie';
+  if (t === 'line') return ChartType.line || 'line';
+  if (t === 'area') return ChartType.area || 'area';
+  return ChartType.bar || 'bar';
 }
 
 function resolveExportFontFace(content, el, themeFonts = {}) {
@@ -192,7 +277,8 @@ async function addElementsToPptxSlide(
   textColor,
   brandChartColors = [],
   themeFonts = {},
-  slideSize = DEFAULT_SLIDE_SIZE_IN
+  slideSize = DEFAULT_SLIDE_SIZE_IN,
+  pptx = null
 ) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
@@ -205,15 +291,7 @@ async function addElementsToPptxSlide(
   );
 
   for (const el of elements) {
-    const box = pxToIn(
-      el.placement?.x,
-      el.placement?.y,
-      el.placement?.width,
-      el.placement?.height,
-      canvasW,
-      canvasH,
-      slideSize
-    );
+    const box = placementToIn(el.placement, canvasW, canvasH, slideSize);
     const content = el.content || {};
     const rotate = Number(el.placement?.rotation) || 0;
     if (el.type === 'group') continue;
@@ -237,9 +315,13 @@ async function addElementsToPptxSlide(
           ? firstHexFromFill(content.fill, palette, textColorResolved)
           : textColorResolved,
         align: content.align || 'left',
-        valign: 'top',
+        valign: pptxValign(content),
         rotate,
       };
+      if (content.wrap === 'nowrap') {
+        textOpts.shrinkText = true;
+        textOpts.wrap = false;
+      }
       if (content.letterSpacing != null) {
         // pptxgenjs charSpacing / lineSpacing are in points: em × font size (pt)
         textOpts.charSpacing = Math.round(Number(content.letterSpacing) * fontSizePt * 10) / 10;
@@ -269,7 +351,7 @@ async function addElementsToPptxSlide(
           w: box.w,
           h: box.h,
           align: content.align || 'left',
-          valign: 'top',
+          valign: pptxValign(content),
           rotate,
         });
       } else {
@@ -369,38 +451,48 @@ async function addElementsToPptxSlide(
         s.addShape('rect', { ...shapeOpts, shape: undefined });
       }
     } else if (el.type === 'chart') {
-      const labels = Array.isArray(content.labels)
-        ? content.labels
-        : Array.isArray(content.data?.labels)
-          ? content.data.labels
-          : [];
-      const series = Array.isArray(content.series)
-        ? content.series
-        : Array.isArray(content.data?.series)
-          ? content.data.series
-          : [];
-      if (labels.length && series.length) {
+      const normalized = normalizeChartContent(content, palette);
+      let labels = Array.isArray(normalized.labels) ? normalized.labels : [];
+      let series = Array.isArray(normalized.series) ? normalized.series : [];
+      const values = Array.isArray(series[0]?.values) ? series[0].values : [];
+      if (!labels.length && values.length) {
+        labels = values.map((_, i) => `Item ${i + 1}`);
+      }
+      if (labels.length && values.length && !series.length) {
+        series = [{ name: 'Series', values }];
+      }
+      if (labels.length && series.length && values.length && pptx) {
         try {
+          const chartData = series.map((ser) => ({
+            name: ser.name || 'Series',
+            labels,
+            values: (ser.values || []).map((v) => Number(v) || 0),
+          }));
           const chartOpts = {
             x: box.x,
             y: box.y,
             w: box.w,
             h: box.h,
             showTitle: false,
-            categories: labels,
-            series: series.map((ser) => ({
-              name: ser.name || 'Series',
-              values: ser.values || [],
-            })),
+            showLegend: false,
           };
           const chartColorSource =
+            (Array.isArray(normalized.colors) && normalized.colors.length ? normalized.colors : null) ||
             (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
             (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : null);
           if (chartColorSource?.length) {
             chartOpts.chartColors = chartColorHexes(chartColorSource, palette, '0A84FF');
           }
-          s.addChart(mapChartTypeForPptx(content.chartType || content.chartTypeRaw), chartOpts);
-        } catch {
+          s.addChart(
+            resolvePptxChartTypeEnum(pptx, normalized.chartType || content.chartType || content.chartTypeRaw),
+            chartData,
+            chartOpts
+          );
+        } catch (chartErr) {
+          logger.warn?.('pptx_chart_export_failed', {
+            slideId: slide.id,
+            error: chartErr?.message || chartErr,
+          });
           s.addText('Chart', {
             x: box.x,
             y: box.y,
@@ -562,7 +654,7 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
   if (content.notes) s.addNotes(String(content.notes));
 }
 
-async function buildPptxBuffer(deck, { slideId } = {}) {
+async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
   const PptxGenJS = require('pptxgenjs');
   const pptx = new PptxGenJS();
   const aspect = resolveAspectCanvas(deck.aspectRatio);
@@ -632,9 +724,13 @@ async function buildPptxBuffer(deck, { slideId } = {}) {
       await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts, {
         w: aspect.pptxWidthIn || PPTX_WIDTH_IN,
         h: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
-      });
+      }, pptx);
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
+    }
+    if (typeof onSlideProcessed === 'function') {
+      // eslint-disable-next-line no-await-in-loop
+      await onSlideProcessed(slide);
     }
   }
 
@@ -690,11 +786,14 @@ async function withBrowserPage(fn, { args = [] } = {}) {
 
 async function buildPdfBuffer(deck, opts = {}) {
   const aspect = resolveAspectCanvas(deck.aspectRatio);
+  const contentTimeout = PUPPETEER_EXPORT_TIMEOUT_MS;
   return withBrowserPage(async (page) => {
     await page.setViewport({ width: aspect.width, height: aspect.height });
+    page.setDefaultNavigationTimeout(contentTimeout);
+    page.setDefaultTimeout(contentTimeout);
     await page.setContent(await buildDeckHtml(deck, opts), {
       waitUntil: 'networkidle0',
-      timeout: 60000,
+      timeout: contentTimeout,
     });
     const pdf = await page.pdf({
       width: `${aspect.pptxWidthIn}in`,
@@ -786,13 +885,13 @@ function buildZipBuffer(files) {
   return Buffer.concat([...parts, centralBuf, end]);
 }
 
-async function buildRasterExport(deck, { format, slideId } = {}) {
+async function buildRasterExport(deck, { format, slideId, onSlideProcessed } = {}) {
   const type = String(format || 'PNG').toUpperCase() === 'JPEG' ? 'jpeg' : 'png';
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (slideId) slides = slides.filter((s) => s.id === slideId);
   if (!slides.length) throw new AppError('No slides to export', 400);
 
-  const images = await renderSlideScreenshots(deck, { slides, format: type });
+  const images = await renderSlideScreenshots(deck, { slides, format: type, onSlideProcessed });
 
   if (images.length === 1) {
     return {
@@ -817,14 +916,14 @@ async function buildRasterExport(deck, { format, slideId } = {}) {
  * @param {{ slides?: object[], format?: string, onSlide?: Function }} opts
  *   onSlide → optional callback after each slide (upload progressively)
  */
-async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide } = {}) {
+async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, onSlideProcessed } = {}) {
   const type = String(format || 'jpeg').toLowerCase() === 'png' ? 'png' : 'jpeg';
   const list = Array.isArray(slides) && slides.length
     ? slides
     : [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (!list.length) return [];
 
-  const contentTimeout = 60000;
+  const contentTimeout = PUPPETEER_EXPORT_TIMEOUT_MS;
   const jpegQuality = 82;
 
   return withBrowserPage(async (page) => {
@@ -862,6 +961,10 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide }
           // eslint-disable-next-line no-await-in-loop
           await onSlide(image, slide);
         }
+        if (typeof onSlideProcessed === 'function') {
+          // eslint-disable-next-line no-await-in-loop
+          await onSlideProcessed(slide);
+        }
       } catch (err) {
         logger.warn?.('slide_screenshot_failed', {
           slideId: slide.id,
@@ -890,10 +993,12 @@ async function processExport({
 
   try {
     await presentationDao.updateExport(exportId, { status: 'RENDERING' });
-    const deck = await presentationDao.findDeckById(row.deckId);
-    if (!deck) {
+    const deckRaw = await presentationDao.findDeckById(row.deckId);
+    if (!deckRaw) {
       throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
     }
+    const deck = enrichDeckMediaKeysForExport(deckRaw);
+    const heartbeat = () => touchExportHeartbeat(exportId);
 
     const format = String(row.format || '').toUpperCase();
     let buffer;
@@ -901,15 +1006,20 @@ async function processExport({
     let ext;
 
     if (format === 'PPTX') {
-      buffer = await buildPptxBuffer(deck, { slideId });
+      buffer = await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat });
       contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
       ext = 'pptx';
     } else if (format === 'PDF') {
+      await heartbeat();
       buffer = await buildPdfBuffer(deck, { slideId });
       contentType = 'application/pdf';
       ext = 'pdf';
     } else if (format === 'PNG' || format === 'JPEG') {
-      const raster = await buildRasterExport(deck, { format, slideId });
+      const raster = await buildRasterExport(deck, {
+        format,
+        slideId,
+        onSlideProcessed: heartbeat,
+      });
       buffer = raster.buffer;
       contentType = raster.contentType;
       ext = raster.ext;
@@ -958,7 +1068,7 @@ async function processExport({
     logger.error?.('processExport failed', err) || console.error('processExport failed', err);
     await presentationDao.updateExport(exportId, {
       status: 'FAILED',
-      error: String(err.message || err).slice(0, 2000),
+      error: normalizeExportError(err),
     });
     await notifyExportFinished({
       userId,
@@ -1020,12 +1130,24 @@ async function queueExport({ workspaceId, presentationId, userId, format, slideI
 }
 
 async function getExport({ workspaceId, presentationId, exportId }) {
-  const { deck } = await loadPresentationDeck(presentationId, {
+  const { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
-  const row = await presentationDao.findExport(exportId);
+  let row = await presentationDao.findExport(exportId);
   if (!row || row.deckId !== deck.id) {
     throw new AppError(messages.PRESENTATION_EXPORT_NOT_FOUND, 404);
+  }
+
+  if (exportJobIsStale(row)) {
+    const staleError =
+      row.status === 'QUEUED'
+        ? 'Export did not start in time. Please try again.'
+        : 'Export timed out on the server. For large decks use PowerPoint (PPTX) or try again.';
+    await presentationDao.updateExport(exportId, {
+      status: 'FAILED',
+      error: staleError,
+    });
+    row = { ...row, status: 'FAILED', error: staleError };
   }
 
   const payload = {
@@ -1039,8 +1161,16 @@ async function getExport({ workspaceId, presentationId, exportId }) {
   };
 
   if (row.status === 'READY' && row.s3Key) {
-    const presignedUrl = await s3Service.getPresignedGetUrl(row.s3Key, PRESIGN_EXPIRES_SEC);
+    const ext =
+      String(row.format || 'PPTX').toLowerCase() === 'jpeg'
+        ? 'jpg'
+        : String(row.format || 'pptx').toLowerCase();
+    const filename = safeExportFilename(project?.name, ext);
+    const presignedUrl = await s3Service.getPresignedGetUrl(row.s3Key, PRESIGN_EXPIRES_SEC, {
+      responseContentDisposition: `attachment; filename="${filename}"`,
+    });
     payload.presignedUrl = presignedUrl;
+    payload.filename = filename;
     payload.url = presignedUrl;
     payload.downloadUrl = presignedUrl;
     payload.expiresIn = PRESIGN_EXPIRES_SEC;

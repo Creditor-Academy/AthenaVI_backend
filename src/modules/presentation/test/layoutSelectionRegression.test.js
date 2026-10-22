@@ -26,6 +26,7 @@ const {
   contentFitsLayoutGroups,
   validateContentForLayoutSoft,
 } = require('@athena/contracts/contentContract.js');
+const { textForSlot } = require('@athena/contracts/slotText.js');
 
 function qaHasUnresolvedOverflow(issues) {
   return (issues || []).some(
@@ -359,6 +360,51 @@ test('safe fallback skips excluded compatible layouts', () => {
     excludeLayoutIds: [comparison.id],
   });
   assert.equal(safe, null);
+});
+
+test('textForSlot maps POINT_, CELL_, and comparison ROW slots from structured content', () => {
+  const content = {
+    title: 'Strategy',
+    columns: [
+      { title: 'Vision', body: 'North star' },
+      { title: 'Execution', body: 'Ship weekly' },
+    ],
+    table: {
+      headers: ['Metric', 'Q1', 'Q2'],
+      rows: [
+        ['Revenue', '$1M', '$2M'],
+        ['Users', '10k', '20k'],
+      ],
+    },
+    comparison: {
+      rows: [
+        {
+          leftTitle: 'Cloud',
+          leftBody: 'Elastic',
+          rightTitle: 'On-prem',
+          rightBody: 'Fixed',
+        },
+      ],
+    },
+  };
+  assert.equal(textForSlot('POINT_1_TITLE', content), 'Vision');
+  assert.equal(textForSlot('POINT_2_DESC', content), 'Ship weekly');
+  assert.equal(textForSlot('CELL_1_1', content), 'Metric');
+  assert.equal(textForSlot('CELL_1_2', content), 'Q1');
+  assert.equal(textForSlot('CELL_2_1', content), 'Users');
+  assert.equal(textForSlot('ROW_1_LEFT_TITLE', content), 'Cloud');
+  assert.equal(textForSlot('ROW_1_RIGHT_BODY', content), 'Fixed');
+});
+
+test('textForSlot maps subheadline intro and numbered headings', () => {
+  const content = {
+    title: 'Main headline',
+    subtitle: 'Tagline here',
+    intro: 'Opening paragraph.',
+  };
+  assert.equal(textForSlot('SUBHEADLINE', content), 'Tagline here');
+  assert.equal(textForSlot('INTRO', content), 'Opening paragraph.');
+  assert.equal(textForSlot('HEADING_1', content), 'Main headline');
 });
 
 test('layout retry pick excludes previously rejected layout id', async () => {
