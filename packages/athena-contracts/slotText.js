@@ -1100,10 +1100,57 @@ function textForSlot(slotId, content = {}, layoutSchema = null) {
     return sideHeadingBody[1] === 'heading' ? sideCopy.title : sideCopy.body;
   }
 
+  if (id === 'heading_1' || id === 'heading_3') {
+    const { line1, line2 } = titleLinesFromContent(content);
+    if (id === 'heading_1') return line1 || String(content.title || '').trim();
+    return line2 || String(content.subtitle || '').trim();
+  }
+
   if (id === 'heading_2') {
     const { line2 } = titleLinesFromContent(content);
     if (line2) return line2;
     return String(content.subtitle || '').trim();
+  }
+
+  if (id === 'subheadline' || id === 'sub_headline') {
+    return String(content.subtitle || content.subheadline || content.summary || '').trim();
+  }
+
+  if (id === 'intro') {
+    return String(
+      content.intro ||
+        content.lead ||
+        content.summary ||
+        content.body ||
+        ''
+    ).trim();
+  }
+
+  const cardQuarter = id.match(/^card_(\d+)_quarter$/);
+  if (cardQuarter) {
+    const col = structuredColumnAt(content, Number(cardQuarter[1]) - 1);
+    return String(col?.period ?? col?.quarter ?? col?.label ?? col?.title ?? '').trim();
+  }
+
+  const cardInsight = id.match(/^card_(\d+)_insight_(title|body|label)$/);
+  if (cardInsight) {
+    const idx = Number(cardInsight[1]) - 1;
+    const insights = Array.isArray(content.insights) ? content.insights : [];
+    const insight = insights[idx];
+    const col = structuredColumnAt(content, idx);
+    const field = cardInsight[2];
+    if (field === 'label') {
+      return (
+        String(insight?.label ?? insight?.title ?? col?.title ?? col?.heading ?? '').trim() ||
+        String(content.stats?.[idx]?.label ?? '').trim()
+      );
+    }
+    if (field === 'title') {
+      return String(insight?.title ?? col?.title ?? col?.heading ?? '').trim();
+    }
+    return String(
+      insight?.body ?? insight?.text ?? col?.body ?? content.stats?.[idx]?.body ?? ''
+    ).trim();
   }
 
   if (id === 'subheading') {

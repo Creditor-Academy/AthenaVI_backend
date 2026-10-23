@@ -121,6 +121,29 @@ test('pdf html: page size follows deck aspect; inline SVG is rasterized, never i
   assert.doesNotMatch(html, /<svg/);
 });
 
+test('pptx chart: normalized data embeds a native chart (not grey placeholder)', async () => {
+  const buffer = await buildPptxBuffer(
+    deckWith([
+      {
+        id: 'c',
+        type: 'chart',
+        layer: 2,
+        placement: { x: 200, y: 200, width: 800, height: 500 },
+        content: {
+          chartType: 'column-grouped',
+          data: {
+            labels: ['Q1', 'Q2', 'Q3'],
+            series: [{ name: 'Revenue', values: [10, 20, 15] }],
+          },
+        },
+      },
+    ])
+  );
+  const { slide } = await slideXml(buffer);
+  assert.match(slide, /<c:chart[\s/>]/, 'expected embedded OOXML chart');
+  assert.doesNotMatch(slide, />Chart</, 'placeholder label must not appear');
+});
+
 test('svgMarkupToPngBuffer: ignores non-SVG input and rasterizes scriptable SVG inertly', async () => {
   assert.strictEqual(await svgMarkupToPngBuffer('<div>nope</div>'), null);
   const hostile = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="alert(1)"><script>alert(1)</script><rect width="10" height="10"/></svg>';

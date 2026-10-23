@@ -26,11 +26,19 @@ function bulletsFromContent(content) {
   return [];
 }
 
-async function fetchImageBuffer(url, s3Key) {
+const EXPORT_IMAGE_FETCH_TIMEOUT_MS =
+  Number(process.env.PPT_EXPORT_IMAGE_FETCH_TIMEOUT_MS) > 0
+    ? Number(process.env.PPT_EXPORT_IMAGE_FETCH_TIMEOUT_MS)
+    : 30_000;
+
+async function fetchImageBuffer(url, s3Key, { timeoutMs } = {}) {
   try {
     if (s3Key) return await s3Service.getObjectBuffer(s3Key);
     if (!url || !/^https?:\/\//i.test(String(url))) return null;
-    return await downloadRemote(url, { maxBytes: 12 * 1024 * 1024 });
+    return await downloadRemote(url, {
+      maxBytes: 12 * 1024 * 1024,
+      timeoutMs: timeoutMs ?? EXPORT_IMAGE_FETCH_TIMEOUT_MS,
+    });
   } catch {
     return null;
   }

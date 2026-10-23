@@ -8,7 +8,7 @@ Gap analysis (layout selection, content contract, slot mapping, validation): [`A
 
 It is written from the **backend implementation** (`src/modules/presentation/`). HTTP contracts stay in [`docs/api/PRESENTATION_API.md`](api/PRESENTATION_API.md). Frontend wiring stays in [`PRESENTATION_FRONTEND_INTEGRATION.md`](PRESENTATION_FRONTEND_INTEGRATION.md). Credits: [`PRESENTATION_CREDITS_FRONTEND.md`](PRESENTATION_CREDITS_FRONTEND.md). Prompt files: [`PRESENTATION_PROMPTS.md`](PRESENTATION_PROMPTS.md).
 
-**Prompt bundle in code:** `PROMPT_BUNDLE_VERSION = "v1.8"` (`src/modules/presentation/prompts/index.js`).
+**Prompt bundle in code:** `PROMPT_BUNDLE_VERSION = "v2.1"` (`src/modules/presentation/prompts/index.js`).
 
 ---
 
@@ -86,7 +86,10 @@ Mounted at `/api/workspaces/:workspaceId/presentations` from `workspace.routes.j
 | `presentation.service.js` | Create, list, get, pack clone, brand apply, add-slide+AI, passthrough |
 | `deckGeneration.service.js` | **The AI engine:** outline, generate, per-slide pipeline, regenerate |
 | `generationFlow.service.js` | Wizard snapshot → generate context (theme, image mode, brief, canvas) |
-| `layoutSelector.service.js` | Score layouts for a content type + density |
+| `deckLayout/rankLayouts.js` | Score + rank layout candidates (capacity, purpose, soft compatibility penalties) |
+| `deckLayout/pickLayoutForGeneratedSlide.js` | Pick layout (heuristic rank + optional AI on final phase) |
+| `deckLayout/resolveLayoutCandidates.js` | Widen candidate pool by structure (comparison, timeline, table, …) |
+| `layoutSelector.service.js` | **Deprecated** — not used on the generate path |
 | `layoutQa.service.js` | Truncate copy to slot `max_words` / `max_lines` / `max_items` |
 | `layoutToElements.js` | Slot schema → canvas **or** rebind text/images into existing canvas |
 | `slideEditor.service.js` | Manual add/delete/duplicate/reorder, canvas CRUD |
@@ -453,19 +456,12 @@ Skipped when the slide **will rebind** an existing role-tagged canvas (pack snap
 Otherwise:
 
 1. If pack whitelist contains the existing `layoutId`, keep it.
-2. Else `resolveLayoutTemplates(layoutContentType, { layoutIdWhitelist })`:
-   - DB active `DECK_LAYOUT`s for that `contentType`
-   - Fallback: `seed-layouts.json`
-   - Fallback: any active layout
-   - If whitelist: filter; if empty, load those layout ids anyway
-3. `selectLayout` scores templates:
-   - **−100** if same as previous slide’s layout (avoid identical consecutive layouts)
-   - **+50 / −40** if `preferImageSlot` and template has / lacks image slot
-   - Extra score for chart/table/pricing/team/agenda/device/stat/grid match vs content arrays
-   - Density: lots of bullets prefer dense/high `max_items` layouts
-4. `validateSlide` truncates strings/bullets to slot caps.
+2. **`resolveLayoutCandidates`** loads templates for the primary `layoutContentType` **plus widened catalog types** when structure demands it (e.g. `hasComparison` → also `comparison` layouts even if classify typed `bullet_list`).
+3. **`rankLayouts`** scores each candidate (`scoreLayout.js`): purpose/type/capacity match, **soft compatibility penalties subtracted from score**, layout variety vs previous slide.
+4. **`pickLayoutForGeneratedSlide`** chooses ranked[0] or AI pick on **final** phase; if the primary pool hard-rejects everything, **widened** templates are ranked; if still empty, **safe fallback** or null (no silent random layout).
+5. **`validateSlide`** truncates strings/bullets to slot caps; generate path uses `includeContract` when a schema exists and may **retry layout pick** on contract overflow.
 
-If classify type has no image slot but policy wants one, selector falls back to `image+text` templates.
+If classify type has no image slot but policy wants one, policy may remap toward `image+text` before candidate resolution.
 
 ### 8.5 Image brief LLM
 
@@ -767,7 +763,7 @@ Inbox also fires when the **deck** finishes.
 | Path B typeset | `pathB.prompt.js` | bundled into Path B image | `IMAGE_PATH_B` |
 | Vision | `visionRelevance.prompt.js` | no | score on image jobs |
 
-Bump `PROMPT_BUNDLE_VERSION` when wording or JSON schema changes in a way that should invalidate caches/metrics (`docs/PRESENTATION_PROMPTS.md`). Current code version is **v1.8**.
+Bump `PROMPT_BUNDLE_VERSION` when wording or JSON schema changes in a way that should invalidate caches/metrics (`docs/PRESENTATION_PROMPTS.md`). Current code version is **v2.1**.
 
 ---
 

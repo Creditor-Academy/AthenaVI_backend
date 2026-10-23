@@ -153,10 +153,57 @@ async function presignPresentationPayload(data) {
   return out;
 }
 
+/**
+ * Ensure image elements and imageRef carry stable S3 keys before export (avoids hung
+ * fetches on expired presigned URLs stored in JSON).
+ * @param {object} deck
+ * @returns {object}
+ */
+function enrichDeckMediaKeysForExport(deck) {
+  if (!deck || typeof deck !== 'object') return deck;
+  const slides = (deck.slides || []).map((slide) => {
+    if (!slide || typeof slide !== 'object') return slide;
+    const next = { ...slide };
+
+    if (next.imageRef && typeof next.imageRef === 'object') {
+      const imageRef = { ...next.imageRef };
+      if (!imageRef.s3Key) {
+        const key = s3Service.extractS3KeyFromUrl(imageRef.url);
+        if (key) imageRef.s3Key = key;
+      }
+      next.imageRef = imageRef;
+    }
+
+    if (next.elements && typeof next.elements === 'object' && Array.isArray(next.elements.elements)) {
+      const heroKey = next.imageRef?.s3Key || null;
+      next.elements = {
+        ...next.elements,
+        elements: next.elements.elements.map((el) => {
+          if (!el || el.type !== 'image' || !el.content || typeof el.content !== 'object') {
+            return el;
+          }
+          const content = { ...el.content };
+          if (!content.s3Key) {
+            const elementKey =
+              s3Service.extractS3KeyFromUrl(content.url || content.src) || heroKey || null;
+            if (elementKey) content.s3Key = elementKey;
+          }
+          return { ...el, content };
+        }),
+      };
+    }
+
+    return next;
+  });
+
+  return { ...deck, slides };
+}
+
 module.exports = {
   attachPresignedMedia,
   attachPresignedMediaToSlides,
   presignPresentationPayload,
   isPresignableElement,
+  enrichDeckMediaKeysForExport,
   PRESIGN_TTL_SECONDS,
 };
