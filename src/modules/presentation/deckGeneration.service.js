@@ -3404,7 +3404,7 @@ function generationHintsFromLayout(layoutSchema) {
   }
   if (ct === 'title' || (layoutId.includes('title') && ct === 'title')) {
     hints.titleTone =
-      'Spoken headline (5–12 words), period OK — an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments; accent colorRole on the final punch line.';
+      'Spoken headline (5–12 words), period OK — an outcome promise, not a stub like "Overview / Introduction / Product". Require titleRuns with 2-3 segments: lead fontRole heading; optional middle fontRole body or italic; final accent + fontWeight 700 + fontRole heading.';
   }
   const hasEyebrow = slots.some((s) => {
     const role = String(s.role || '').toLowerCase();

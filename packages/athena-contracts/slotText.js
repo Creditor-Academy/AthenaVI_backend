@@ -309,6 +309,11 @@ function featureSideColumnIndex(side, num) {
   return Math.max(0, n - 1);
 }
 
+/**
+ * Hero slide titleRuns[] run shape (title / quote / closing / statement):
+ * { text, colorRole?, color?, fontWeight?, italic?, fontRole?: 'heading'|'body', fontFamily? }
+ * Prefer fontRole over raw fontFamily; compile resolves fontRole via theme fonts.
+ */
 function titleLinesFromContent(content = {}) {
   const title = String(content.title || '').trim();
   const fromTitle = title.split(/\n+/).map((s) => s.trim()).filter(Boolean);
