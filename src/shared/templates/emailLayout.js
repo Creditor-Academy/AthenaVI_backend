@@ -20,14 +20,17 @@ const BRAND = {
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 };
 
+const WHY_CHOOSE_TAGLINE =
+  'One studio for video, presentations, and visuals \u2014 create with AI, stay on-brand, and deliver in minutes.';
+
 const WHY_CHOOSE_US = [
   {
     number: '01',
     category: 'AI Engine',
-    headline: 'AI-Powered Creation with NextGen Tools',
+    headline: 'AI presentations and video, built for speed',
     description:
-      'Generate professional videos in minutes with our advanced AI technology.',
-    tags: ['Real-time Gen', 'HD 4K Support', 'AI-Powered Creation'],
+      'Go from a short brief to a finished deck or HD video. Smart outlines, layout-aware slides, and avatar-led video in one workspace.',
+    tags: ['AI PPT', 'Outline to deck', 'HD video', 'Brand-aware themes'],
     layout: 'wide',
     theme: {
       bg: '#D8E0EC',
@@ -43,11 +46,11 @@ const WHY_CHOOSE_US = [
   {
     number: '02',
     category: 'Toolkit',
-    headline: 'Easy Customization',
-    subheadline: 'Customize Every Frame with Ease',
+    headline: 'Edit on a real canvas',
+    subheadline: 'Slides and video, refined to the pixel',
     description:
-      'Personalize every aspect of your videos with intuitive editing tools.',
-    tags: ['Infinite Edit', 'Layer Control'],
+      'Fine-tune text, layouts, charts, images, and layers. Exports match what you see on screen.',
+    tags: ['Canvas editor', 'PPTX & PDF export', 'Layer control'],
     layout: 'tall',
     theme: {
       bg: '#E5C5C1',
@@ -63,10 +66,10 @@ const WHY_CHOOSE_US = [
   {
     number: '03',
     category: 'Vocal AI',
-    headline: 'Voice-Based Interaction',
+    headline: 'Voice that fits your story',
     description:
-      'Enable users to ask questions using voice and receive intelligent spoken responses.',
-    tags: ['Smart NLP', 'Instant Voice'],
+      'Natural narration for videos and agents, plus conversational flows where audiences ask by voice and hear a spoken answer.',
+    tags: ['Voice cloning', 'Smart NLP', 'Multilingual'],
     layout: 'tall',
     theme: {
       bg: '#D4EADC',
@@ -81,11 +84,11 @@ const WHY_CHOOSE_US = [
   },
   {
     number: '04',
-    category: 'Templates',
-    headline: 'World-class templates that empower creators',
+    category: 'Templates & Brand Kits',
+    headline: 'Templates and Brand Kits that scale with your team',
     description:
-      'Jump-start your projects with professionally designed templates built for creators and teams.',
-    tags: ['Ready to Use', 'Fully Editable', 'Creator-Ready'],
+      'Start from professional slide and video layouts, then lock colors, fonts, and logos so every deck and campaign looks unmistakably yours.',
+    tags: ['Deck layouts', 'Brand Kit', 'Light & dark themes', 'Team-ready'],
     layout: 'wide',
     theme: {
       bg: '#E8E0F4',
@@ -104,8 +107,8 @@ const BENTO = {
   wide: '61%',
   narrow: '39%',
   gutter: '8px',
-  row1Height: '204px',
-  row2Height: '272px',
+  row1Height: '228px',
+  row2Height: '292px',
   radius: '20px',
 };
 
@@ -459,7 +462,7 @@ function bentoFeatureCardCell(feature, { width, height, className }) {
     ? `<p style="margin:0;font-size:0;line-height:0;">${feature.tags
         .map(
           (tag) => `
-          <span style="display:inline-block;margin:0 4px 4px 0;padding:4px 8px;background-color:${theme.tagBg};color:${theme.tagText};font-size:9px;font-weight:600;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
+          <span style="display:inline-block;margin:0 4px 4px 0;padding:4px 9px;background-color:${theme.tagBg};color:${theme.tagText};font-size:9px;font-weight:600;letter-spacing:0.02em;border-radius:20px;line-height:1.3;border:1px solid ${theme.border};">
             ${escapeHtml(tag)}
           </span>`
         )
@@ -470,12 +473,21 @@ function bentoFeatureCardCell(feature, { width, height, className }) {
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>
         <td valign="top" style="vertical-align:top;padding-right:6px;">
-          <p style="margin:0;color:${theme.accent};font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.3;">
-            ${escapeHtml(feature.category)}
-          </p>
+          <table role="presentation" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:middle;padding-right:6px;">
+                <div style="width:14px;height:2px;background-color:${theme.stripe};border-radius:2px;font-size:0;line-height:0;">&nbsp;</div>
+              </td>
+              <td style="vertical-align:middle;">
+                <p style="margin:0;color:${theme.accent};font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;line-height:1.3;">
+                  ${escapeHtml(feature.category)}
+                </p>
+              </td>
+            </tr>
+          </table>
         </td>
         <td align="right" valign="top" width="1" style="vertical-align:top;white-space:nowrap;">
-          <span class="bento-watermark" style="display:block;font-size:${watermarkSize};font-weight:800;color:${theme.watermark};opacity:${theme.watermarkOpacity};letter-spacing:-0.05em;line-height:0.85;font-family:${BRAND.fontFamily};">
+          <span class="bento-watermark" style="display:block;font-size:${watermarkSize};font-weight:800;color:${theme.watermark};opacity:${theme.watermarkOpacity};letter-spacing:-0.06em;line-height:0.85;font-family:${BRAND.fontFamily};">
             ${escapeHtml(feature.number)}
           </span>
         </td>
@@ -483,11 +495,11 @@ function bentoFeatureCardCell(feature, { width, height, className }) {
     </table>`;
 
   const bodyBlock = `
-    <p style="margin:8px 0 6px;color:${theme.accent};font-size:${headlineSize};font-weight:700;line-height:1.3;">
+    <p style="margin:10px 0 6px;color:${theme.accent};font-size:${headlineSize};font-weight:700;line-height:1.3;letter-spacing:-0.01em;">
       ${escapeHtml(feature.headline)}
     </p>
     ${subheadlineBlock}
-    <p style="margin:0;color:${BRAND.textMuted};font-size:${descSize};line-height:1.45;">
+    <p style="margin:0;color:${BRAND.textMuted};font-size:${descSize};line-height:1.5;">
       ${escapeHtml(feature.description)}
     </p>`;
 
@@ -542,22 +554,41 @@ function bentoRowReversed(narrowFeature, wideFeature, rowHeight) {
     </tr>`;
 }
 
-function whyChooseUsSection({ leading = false, align = 'center' } = {}) {
+function whyChooseUsSection({ leading = false, align = 'center', withCta = true } = {}) {
   const [card01, card02, card03, card04] = WHY_CHOOSE_US;
   const leadBlock = leading ? '' : sectionDivider();
+  const eyebrowMargin = align === 'left' ? '0 0 8px' : '0 auto 8px';
+
+  const ctaBlock = withCta
+    ? `
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:14px 0 4px;">
+      <tr>
+        <td style="text-align:${align};">
+          <a href="${escapeHtml(exploreUrl())}"
+            style="display:inline-block;color:${BRAND.headerBg};font-size:13px;font-weight:600;text-decoration:none;letter-spacing:0.01em;border-bottom:1px solid ${BRAND.headerBg};padding-bottom:2px;">
+            Explore what&rsquo;s new in ${escapeHtml(brandName())} &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>`
+    : '';
 
   return `
     ${leadBlock}
+    <p style="margin:${eyebrowMargin};color:${BRAND.accent};font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;line-height:1.3;text-align:${align};">
+      The platform
+    </p>
     ${sectionHeading(`Why choose ${brandName()}?`, { align })}
-    <p style="margin:0 0 16px;color:${BRAND.textMuted};font-size:13px;line-height:1.55;text-align:${align};">
-      Next-generation tools to create, customize, and deliver professional video experiences.
+    <p style="margin:-4px 0 18px;color:${BRAND.textMuted};font-size:13px;line-height:1.6;text-align:${align};max-width:460px;${align === 'center' ? 'margin-left:auto;margin-right:auto;' : ''}">
+      ${escapeHtml(WHY_CHOOSE_TAGLINE)}
     </p>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="bento-grid"
       style="width:100%;margin:0 0 4px;border-collapse:collapse;table-layout:fixed;">
       ${bentoRow(card01, card02, BENTO.row1Height)}
       ${bentoGutterCell({ vertical: true })}
       ${bentoRowReversed(card03, card04, BENTO.row2Height)}
-    </table>`;
+    </table>
+    ${ctaBlock}`;
 }
 
 function whyChooseUsText() {
@@ -566,7 +597,7 @@ function whyChooseUsText() {
     const tags = f.tags?.length ? ` (${f.tags.join(', ')})` : '';
     return `  ${f.number} ${f.category} — ${headline}\n     ${f.description}${tags}`;
   });
-  return `Why choose ${brandName()}?\n\n${lines.join('\n\n')}`;
+  return `Why choose ${brandName()}?\n${WHY_CHOOSE_TAGLINE}\n\n${lines.join('\n\n')}\n\nExplore what's new: ${exploreUrl()}`;
 }
 
 function primaryButton({ href, label, fullWidth = false }) {
@@ -709,6 +740,7 @@ function whyChooseUsSectionPreSignIn(overrides = {}) {
 module.exports = {
   BRAND,
   WHY_CHOOSE_US,
+  WHY_CHOOSE_TAGLINE,
   PRE_SIGNIN_WHY_CHOOSE_OPTS,
   DEFAULT_EMAIL_LOGO_URL,
   escapeHtml,
