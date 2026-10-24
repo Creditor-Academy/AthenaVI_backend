@@ -14,7 +14,7 @@ const MODELS = Object.freeze([
     name: 'GPT Image',
     description: 'OpenAI image model at standard quality — faster and cheaper than HD.',
     provider: 'openai',
-    providerModel: 'gpt-image-1',
+    providerModel: 'gpt-image-2.5-flare',
     quality: 'medium',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE,
     modes: ALL_MODES,
@@ -26,7 +26,7 @@ const MODELS = Object.freeze([
     name: 'GPT Image HD',
     description: 'OpenAI image model at high quality. Default for general images.',
     provider: 'openai',
-    providerModel: 'gpt-image-1',
+    providerModel: 'gpt-image-2.5-sunburst',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.GPT_IMAGE_HD,
     modes: ALL_MODES,
@@ -34,13 +34,13 @@ const MODELS = Object.freeze([
     supportsEdit: true,
   },
   {
-    // Compatibility alias: OpenAI retired dall-e-3 (May 2026). Runs gpt-image-1 @ high.
+    // Compatibility alias: OpenAI retired dall-e-3 (May 2026). Runs the GPT Image HD model @ high.
     id: 'dall-e-3',
     name: 'DALL·E 3',
     description:
       'Legacy option — OpenAI retired DALL·E 3; we generate with GPT Image HD under the hood.',
     provider: 'openai',
-    providerModel: 'gpt-image-1',
+    providerModel: 'gpt-image-2.5-sunburst',
     quality: 'high',
     feature: IMAGE_GEN_FEATURE.DALL_E_3,
     modes: ALL_MODES,

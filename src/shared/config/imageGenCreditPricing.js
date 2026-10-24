@@ -18,7 +18,7 @@ const IMAGE_GEN_FEATURE = Object.freeze({
 const FLAT_AC = Object.freeze({
   [IMAGE_GEN_FEATURE.GPT_IMAGE]: 6,
   [IMAGE_GEN_FEATURE.GPT_IMAGE_HD]: 12,
-  // Same OpenAI call as HD (dall-e-3 is a catalog alias → gpt-image-1 high)
+  // Same OpenAI call as HD (dall-e-3 is a catalog alias → GPT Image HD)
   [IMAGE_GEN_FEATURE.DALL_E_3]: 12,
   // Gemini placeholders until the ~20% margin pass; tiers track Google list price gaps
   [IMAGE_GEN_FEATURE.GEMINI_PRO_IMAGE]: 12,

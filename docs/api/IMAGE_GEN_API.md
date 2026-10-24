@@ -60,9 +60,11 @@ Every model supports all four modes and **edits** (tweak / chat pixel edits stay
 
 | `id` | Provider | AC | Notes |
 |------|----------|----|-------|
-| `gpt-image-1-hd` | openai | 12 | High quality. Default for `image` (Recommended) |
-| `gpt-image-1` | openai | 6 | Standard |
-| `dall-e-3` | openai | 12 | Compat alias → gpt-image-1 high |
+| `gpt-image-1-hd` | openai | 12 | High quality. Default for `image` (Recommended). Calls `gpt-image-2.5-sunburst` |
+| `gpt-image-1` | openai | 6 | Standard. Calls `gpt-image-2.5-flare` |
+| `dall-e-3` | openai | 12 | Compat alias → `gpt-image-2.5-sunburst` high |
+
+Catalog ids are stable; OpenAI shut down the `gpt-image-1` provider model on 23 Oct 2026, so the ids above now call the `gpt-image-2.5` models.
 | `gemini-3-pro-image` | gemini | 12 | Nano Banana Pro — best in-image text; up to 4K. Default for `infographic`, `social`, and `printable` |
 | `gemini-3.1-flash-image` | gemini | 8 | Nano Banana 2 — balanced; up to 4K |
 | `gemini-3.1-flash-lite-image` | gemini | 4 | Nano Banana 2 Lite — **1K only**, draft quality; weaker with multiple reference images |
@@ -283,7 +285,7 @@ Same routes as before. Thread payload includes `mode` and `archetype` from the h
 - Printable: wording changes ("change the date to…", "add the phone number", "remove the CTA") patch the `PrintSpec` and re-render at the same size. Pure visual changes run a pixel edit on the bleed master, so the new version still has a bleed and the same trim pixels. `editMode` overrides the routing.
 - Image: existing chat edit composition + pixel edit.
 - Sticky mode: cannot change mode mid-thread.
-- Pixel edits run on the parent generation's provider: Gemini parents edit on the same Gemini model, OpenAI parents on `gpt-image-1`.
+- Pixel edits run on the parent generation's provider: Gemini parents edit on the same Gemini model, OpenAI parents on `gpt-image-2.5-sunburst`.
 
 ---
 

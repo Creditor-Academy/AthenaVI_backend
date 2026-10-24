@@ -546,7 +546,7 @@ Triggered only when classify (or content) sets `visual_need: path_b`. Intended f
 3. **Stock mode:** `stockService.searchStock` → download preview → upload to  
    `presentations/{workspaceId}/{deckId}/images/{slideId}-{uuid}.jpg`  
    Vision: if `relevant === false`, discard and **throw** (no silent AI fallback in stock mode).
-4. **AI mode:** `generateImage` (`PPT_IMAGE_MODEL`, default `gpt-image-1`, quality medium). Prompt = subject + composition + style phrase + negative terms. On AI failure, **try stock**; if that also fails, rethrow AI error. Vision score is stored on the job but does **not** discard AI images.
+4. **AI mode:** `generateImage` (`PPT_IMAGE_MODEL`, default `gpt-image-2.5-flare`, quality medium). Prompt = subject + composition + style phrase + negative terms. On AI failure, **try stock**; if that also fails, rethrow AI error. Vision score is stored on the job but does **not** discard AI images.
 5. Upload PNG to the same S3 prefix.
 6. Put cache (ignore unique races).
 7. Charge `ppt_image_path_a`.
@@ -701,7 +701,7 @@ Both user **and** workspace buckets must be free. 429 + `retryAfterSec`.
 |---------|-----|---------|
 | Outline LLM | `PPT_OUTLINE_MODEL` | `gpt-4.1` |
 | Slide / classify / brief | `PPT_SLIDE_MODEL` | `gpt-4.1-mini` |
-| Images | `PPT_IMAGE_MODEL` | `gpt-image-1` |
+| Images | `PPT_IMAGE_MODEL` | `gpt-image-2.5-flare` |
 | Vision | `PPT_VISION_MODEL` | slide model |
 | Slide concurrency | `PPT_SLIDE_CONCURRENCY` | 4 |
 | Content timeout | `PPT_SLIDE_CONTENT_TIMEOUT_MS` | 45000 |

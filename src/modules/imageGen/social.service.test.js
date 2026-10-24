@@ -162,6 +162,15 @@ test('model picker exposes two providers with three models each and mode default
   assert.equal(resolveModel('gpt-image-1-hd').recommended, true);
 });
 
+test('OpenAI catalog ids call live provider models', () => {
+  assert.equal(resolveModel('gpt-image-1').providerModel, 'gpt-image-2.5-flare');
+  assert.equal(resolveModel('gpt-image-1-hd').providerModel, 'gpt-image-2.5-sunburst');
+  assert.equal(resolveModel('dall-e-3').providerModel, 'gpt-image-2.5-sunburst');
+  for (const model of modelCatalog().models) {
+    assert.equal(model.providerModel, undefined, model.id);
+  }
+});
+
 test('social credits use the flat social feature with model fallback and env override', () => {
   const prev = process.env.IMAGE_GEN_SOCIAL_AC;
   try {
