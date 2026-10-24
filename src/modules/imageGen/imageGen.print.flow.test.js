@@ -240,11 +240,11 @@ test('every print size exports exact trim and bleed pixels on both providers', a
   assert.ok(openai.every((c) => c.imageSize === undefined), 'OpenAI calls get no imageSize');
 });
 
-test('business card copy is clamped to the card limits', async () => {
+test('business card copy is kept in full', async () => {
   const { generation } = await generatePrintable('business-card');
-  assert.equal(generation.printSpec.cta, '');
-  assert.ok(generation.printSpec.details.length <= 4);
-  assert.ok(generation.request.warnings.some((w) => /call to action/i.test(w)));
+  assert.equal(generation.printSpec.cta, 'Register today');
+  assert.equal(generation.printSpec.details.length, 3);
+  assert.deepEqual(generation.request.warnings, []);
 });
 
 test('printable regenerate keeps the size, reuses the spec, rejects a size change', async () => {

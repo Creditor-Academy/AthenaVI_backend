@@ -1,4 +1,4 @@
-const { describeLimits, describeSize } = require('./printSpec.prompt');
+const { describeSize } = require('./printSpec.prompt');
 const { classifyEditHeuristic: socialHeuristic } = require('./socialChat.prompt');
 
 function buildRouterSystem() {
@@ -30,7 +30,7 @@ function buildSpecPatchSystem() {
     '- Preserve prior visualStyle and palette UNLESS the user explicitly asks to change the look.',
     '- Keep unchanged copy and detail lines verbatim.',
     '- Never invent phone numbers, emails, websites, addresses, dates, prices, or statistics.',
-    '- Respect the copy limits; use an empty string when a limit is 0.',
+    '- Keep copy the user did not ask to change, in full. Do not shorten it.',
     '- Return ONLY valid JSON.',
   ].join('\n');
 }
@@ -38,7 +38,7 @@ function buildSpecPatchSystem() {
 function buildSpecPatchUser({ spec, instruction, format }) {
   return [
     `Print size: ${describeSize(format)}`,
-    `Copy limits: ${describeLimits(format.textLimits)}`,
+    'Copy: keep every line in full. There is no character limit.',
     '',
     'Current PrintSpec JSON:',
     JSON.stringify(spec || {}, null, 2),

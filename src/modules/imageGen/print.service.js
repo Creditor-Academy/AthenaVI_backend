@@ -22,74 +22,19 @@ const { parseAspect } = require('./prompts/socialRender.prompt');
 
 const TEXT_FIELDS = Object.freeze(['headline', 'subheadline', 'cta']);
 
-const FIELD_LABELS = Object.freeze({
-  headline: 'Headline',
-  subheadline: 'Subheadline',
-  cta: 'Call to action',
-});
-
-function truncateAtWord(text, max) {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  const lastSpace = cut.lastIndexOf(' ');
-  return (lastSpace >= Math.floor(max * 0.6) ? cut.slice(0, lastSpace) : cut).trim();
-}
-
 /**
- * Enforce per-size copy limits and stamp size fields.
- * A limit of 0 drops that field; extra detail lines are dropped.
+ * Stamp the print size onto the spec. Copy is kept in full.
  */
 function clampCopy(spec, format) {
-  const warnings = [];
-  const limits = (format && format.textLimits) || {};
   const next = { ...spec };
-  const sizeName = format ? format.name : 'this size';
 
   for (const field of TEXT_FIELDS) {
-    const value = next[field] != null ? String(next[field]).trim() : '';
-    const max = limits[field];
-    if (!value || max == null) {
-      next[field] = value;
-      continue;
-    }
-    if (max === 0) {
-      if (field !== 'headline') {
-        next[field] = '';
-        warnings.push(`${FIELD_LABELS[field]} removed; ${sizeName} has no ${FIELD_LABELS[field].toLowerCase()}.`);
-      }
-      continue;
-    }
-    if (value.length > max) {
-      next[field] = truncateAtWord(value, max);
-      warnings.push(
-        `${FIELD_LABELS[field]} shortened from ${value.length} to ${next[field].length} characters for ${sizeName} (max ${max}).`
-      );
-    } else {
-      next[field] = value;
-    }
+    next[field] = next[field] != null ? String(next[field]).trim() : '';
   }
 
-  const rawDetails = Array.isArray(next.details)
+  next.details = Array.isArray(next.details)
     ? next.details.map((d) => String(d || '').trim()).filter(Boolean)
     : [];
-  const maxLines = limits.details ?? rawDetails.length;
-  const maxLine = limits.detailLine;
-  let details = rawDetails;
-  if (details.length > maxLines) {
-    warnings.push(
-      `${details.length - maxLines} detail line(s) dropped; ${sizeName} fits ${maxLines}.`
-    );
-    details = details.slice(0, maxLines);
-  }
-  if (maxLine) {
-    details = details.map((line) => {
-      if (line.length <= maxLine) return line;
-      const cut = truncateAtWord(line, maxLine);
-      warnings.push(`Detail line shortened from ${line.length} to ${cut.length} characters (max ${maxLine}).`);
-      return cut;
-    });
-  }
-  next.details = details;
 
   if (format) {
     next.formatId = format.id;
@@ -97,7 +42,7 @@ function clampCopy(spec, format) {
     next.safeZone = format.safeZone;
   }
 
-  return { spec: next, warnings };
+  return { spec: next, warnings: [] };
 }
 
 function joiErrorMessages(error) {

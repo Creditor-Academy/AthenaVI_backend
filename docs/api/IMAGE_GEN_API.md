@@ -104,16 +104,18 @@ The provider canvas is center-cropped (`cover`) to the destination. The render p
 
 Mode 4 sizes. `width`/`height` are the **trim** pixels (the finished piece). Every size is rendered with a bleed on each side, and a safe margin keeps text away from the cut.
 
-| `formatId` | Kind | Trim size | DPI | Trim px | Bleed px | Bleed / safe | Gemini / OpenAI render | Copy limits (headline / subheadline / detail lines × chars / CTA) |
-|------------|------|-----------|-----|---------|----------|--------------|------------------------|--------------------------------------------------------------------|
-| `poster-a4-portrait` | poster | 210×297 mm | 300 | 2480×3508 | 2550×3578 | 3 / 5 mm | 3:4 / 1024x1536 | 60 / 120 / 4×80 / 40 |
-| `poster-a4-landscape` | poster | 297×210 mm | 300 | 3508×2480 | 3578×2550 | 3 / 5 mm | 4:3 / 1536x1024 | 60 / 120 / 4×80 / 40 |
-| `poster-a3-portrait` | poster | 297×420 mm | 150 | 1754×2480 | 1790×2516 | 3 / 5 mm | 3:4 / 1024x1536 | 60 / 120 / 4×80 / 40 |
-| `poster-a3-landscape` | poster | 420×297 mm | 150 | 2480×1754 | 2516×1790 | 3 / 5 mm | 4:3 / 1536x1024 | 60 / 120 / 4×80 / 40 |
-| `poster-a2-portrait` | poster | 420×594 mm | 150 | 2480×3508 | 2516×3544 | 3 / 5 mm | 3:4 / 1024x1536 | 60 / 120 / 4×80 / 40 |
-| `poster-a2-landscape` | poster | 594×420 mm | 150 | 3508×2480 | 3544×2516 | 3 / 5 mm | 4:3 / 1536x1024 | 60 / 120 / 4×80 / 40 |
-| `business-card` | business_card | 3.5×2 in (front only) | 300 | 1050×600 | 1126×676 | 1/8 / 1/8 in | 16:9 / 1536x1024 | 40 / 60 / 4×48 / none |
-| `invitation-a6-portrait` | invitation | 105×148 mm | 300 | 1240×1748 | 1310×1818 | 3 / 5 mm | 3:4 / 1024x1536 | 60 / 100 / 5×70 / 40 |
+| `formatId` | Kind | Trim size | DPI | Trim px | Bleed px | Bleed / safe | Gemini / OpenAI render |
+|------------|------|-----------|-----|---------|----------|--------------|------------------------|
+| `poster-a4-portrait` | poster | 210×297 mm | 300 | 2480×3508 | 2550×3578 | 3 / 5 mm | 3:4 / 1024x1536 |
+| `poster-a4-landscape` | poster | 297×210 mm | 300 | 3508×2480 | 3578×2550 | 3 / 5 mm | 4:3 / 1536x1024 |
+| `poster-a3-portrait` | poster | 297×420 mm | 150 | 1754×2480 | 1790×2516 | 3 / 5 mm | 3:4 / 1024x1536 |
+| `poster-a3-landscape` | poster | 420×297 mm | 150 | 2480×1754 | 2516×1790 | 3 / 5 mm | 4:3 / 1536x1024 |
+| `poster-a2-portrait` | poster | 420×594 mm | 150 | 2480×3508 | 2516×3544 | 3 / 5 mm | 3:4 / 1024x1536 |
+| `poster-a2-landscape` | poster | 594×420 mm | 150 | 3508×2480 | 3544×2516 | 3 / 5 mm | 4:3 / 1536x1024 |
+| `business-card` | business_card | 3.5×2 in (front only) | 300 | 1050×600 | 1126×676 | 1/8 / 1/8 in | 16:9 / 1536x1024 |
+| `invitation-a6-portrait` | invitation | 105×148 mm | 300 | 1240×1748 | 1310×1818 | 3 / 5 mm | 3:4 / 1024x1536 |
+
+Printed copy and art direction are not shortened. The generate `prompt` is still capped at 16,000 characters.
 
 The `print` object on each print format (and on printable generations):
 
@@ -264,7 +266,7 @@ Put every fact that must be printed (dates, venue, names, phone, email, URL) in 
 
 **Social pipeline:** moderate prompt → LLM `SocialPostSpec` (`headline`, optional `supportingText` / `cta`, `visualSubject`, `composition`, `visualStyle`, `palette`; Joi + 1 retry → **400** if still invalid) → clamp copy to the destination limits (truncated at a word; fields the destination does not allow are dropped) → render prompt with exact copy, safe zone, and crop band → image model → `cover` crop to exact pixels → Asset + thread. The spec is returned as `generation.socialSpec`, and `generation.platform` names the destination platform. Clamp notes appear in `generation.request.warnings`.
 
-**Printable pipeline:** moderate prompt → LLM `PrintSpec` (`headline`, optional `subheadline`, `details[]` (one printed line each: date, venue, phone, email…), optional `cta`, `visualSubject`, `composition`, `visualStyle`, `palette`; Joi + 1 retry → **400** if still invalid) → clamp copy to the size limits (extra detail lines dropped, long lines cut at a word) → render prompt (flat artwork, not a mockup, no crop marks, background into the bleed, text inside the safe area, exact copy) → image model → `cover` crop to the **bleed** canvas → cut out the trim → Asset (trim size, DPI stamped) + thread. The bleed master is kept privately for the bleed PDF. The spec is returned as `generation.printSpec` and the physical info as `generation.print` (the `print` object above plus `bleedAvailable: true`).
+**Printable pipeline:** moderate prompt → LLM `PrintSpec` (`headline`, optional `subheadline`, `details[]` (one printed line each: date, venue, phone, email…), optional `cta`, `visualSubject`, `composition`, `visualStyle`, `palette`; copy is kept in full, Joi + 1 retry → **400** if the spec is still missing a headline or artwork) → render prompt (flat artwork, not a mockup, no crop marks, background into the bleed, text inside the safe area, exact copy) → image model → `cover` crop to the **bleed** canvas → cut out the trim → Asset (trim size, DPI stamped) + thread. The bleed master is kept privately for the bleed PDF. The spec is returned as `generation.printSpec` and the physical info as `generation.print` (the `print` object above plus `bleedAvailable: true`).
 
 **Response `data`:** `{ generation, asset, creditsCharged, downloadFormats, thread, actions }`.
 
