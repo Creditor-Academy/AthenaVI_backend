@@ -123,6 +123,13 @@ router.post(
 );
 
 router.get(
+  '/:brandKitId/guidelines/preview',
+  requireWorkspaceRole(anyMember),
+  validate(brandKitValidations.previewGuidelineSchema),
+  brandKitController.previewGuideline
+);
+
+router.get(
   '/:brandKitId/guidelines/pdf',
   requireWorkspaceRole(anyMember),
   validate(brandKitValidations.brandKitByIdSchema),

@@ -19489,3 +19489,7 @@
 {"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-10-24T06:16:48.933Z"}
 {"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-10-24T06:16:48.937Z"}
 {"level":"info","message":"Platform HeyGen wallet low alert dispatched","remainingBalanceUsd":0.05,"timestamp":"2026-10-24T06:16:51.279Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:22:06.715Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:22:06.719Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.548Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.554Z"}

@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { GUIDELINE_TEMPLATE_IDS } = require('./brandKit.guidelineTemplates');
 
 const workspaceIdParam = Joi.string().uuid().required();
 const brandKitIdParam = Joi.string().trim().min(1).max(64).required();
@@ -284,6 +285,19 @@ const suggestLogoVariantsSchema = Joi.object({
   query: Joi.object({}).unknown(false),
 });
 
+const previewGuidelineSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    brandKitId: brandKitIdParam,
+  }),
+  query: Joi.object({
+    templateId: Joi.string()
+      .valid(...GUIDELINE_TEMPLATE_IDS)
+      .optional(),
+  }).unknown(false),
+  body: Joi.object({}).unknown(true).optional(),
+});
+
 const generateGuidelineSchema = Joi.object({
   params: Joi.object({
     workspaceId: workspaceIdParam,
@@ -291,6 +305,9 @@ const generateGuidelineSchema = Joi.object({
   }),
   body: Joi.object({
     folderId: Joi.string().uuid().required(),
+    templateId: Joi.string()
+      .valid(...GUIDELINE_TEMPLATE_IDS)
+      .optional(),
   }).required(),
   query: Joi.object({}).unknown(false),
 });
@@ -385,5 +402,6 @@ module.exports = {
   suggestImageStyleSchema,
   suggestLogoVariantsSchema,
   generateGuidelineSchema,
+  previewGuidelineSchema,
   generateMockupSchema,
 };
