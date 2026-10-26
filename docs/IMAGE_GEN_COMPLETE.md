@@ -190,9 +190,9 @@ Assets link back via `stockMetadata.generationId` (+ mode, model, format, action
 
 | `id` | Provider | Model under the hood | Default AC | Notes |
 |------|----------|----------------------|------------|--------|
-| `gpt-image-1-hd` | openai | `gpt-image-1` (high) | **12** | Default for `image`; recommended |
-| `gpt-image-1` | openai | `gpt-image-1` (medium) | **6** | Standard quality |
-| `dall-e-3` | openai | `gpt-image-1` (high) | **12** | Compat alias (DALL·E 3 retired) |
+| `gpt-image-1-hd` | openai | `gpt-image-2.5-sunburst` (high) | **12** | Default for `image`; recommended |
+| `gpt-image-1` | openai | `gpt-image-2.5-flare` (medium) | **6** | Standard quality |
+| `dall-e-3` | openai | `gpt-image-2.5-sunburst` (high) | **12** | Compat alias (DALL·E 3 retired) |
 | `gemini-3-pro-image` | gemini | `gemini-3-pro-image` | **12** | Nano Banana Pro; best in-image text; ≤4K. Default for `infographic`, `social`, and `printable` |
 | `gemini-3.1-flash-image` | gemini | `gemini-3.1-flash-image` | **8** | Nano Banana 2; balanced; ≤4K |
 | `gemini-3.1-flash-lite-image` | gemini | `gemini-3.1-flash-lite-image` | **4** | Nano Banana 2 Lite; **1K only** |

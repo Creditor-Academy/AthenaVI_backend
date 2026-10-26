@@ -121,6 +121,80 @@ test('pdf html: page size follows deck aspect; inline SVG is rasterized, never i
   assert.doesNotMatch(html, /<svg/);
 });
 
+test('pptx chart: normalized data embeds a native chart (not grey placeholder)', async () => {
+  const buffer = await buildPptxBuffer(
+    deckWith([
+      {
+        id: 'c',
+        type: 'chart',
+        layer: 2,
+        placement: { x: 200, y: 200, width: 800, height: 500 },
+        content: {
+          chartType: 'column-grouped',
+          data: {
+            labels: ['Q1', 'Q2', 'Q3'],
+            series: [{ name: 'Revenue', values: [10, 20, 15] }],
+          },
+        },
+      },
+    ])
+  );
+  const { slide } = await slideXml(buffer);
+  assert.match(slide, /<c:chart[\s/>]/, 'expected embedded OOXML chart');
+  assert.doesNotMatch(slide, />Chart</, 'placeholder label must not appear');
+});
+
+test('pptx overlay scrim: rgba fill × content.opacity exports translucent, never an opaque slab', async () => {
+  const buffer = await buildPptxBuffer(
+    deckWith([
+      {
+        id: 'scrim',
+        type: 'shape',
+        layer: 1,
+        placement: { x: 0, y: 0, width: 1920, height: 1080 },
+        content: { shape: 'rect', fill: { type: 'solid', color: 'rgba(0,0,0,0.45)', colorRole: 'overlayScrim' }, opacity: 0.45 },
+        role: 'design_overlay',
+      },
+    ])
+  );
+  const { slide } = await slideXml(buffer);
+  // 0.45 alpha × 0.45 opacity ≈ 20% black, as the editor paints it.
+  assert.match(slide, /<a:srgbClr val="000000"><a:alpha val="20000"\/>/);
+  assert.doesNotMatch(slide, /val="0A84FF"/, 'must not fall back to the opaque default fill');
+});
+
+test('pptx palette rgba (cardBg) and rgba text keep their alpha instead of turning black', async () => {
+  const deck = deckWith([
+    { id: 'card', type: 'shape', layer: 1, placement: { x: 100, y: 100, width: 600, height: 300 }, content: { shape: 'rect', fill: { type: 'solid', colorRole: 'cardBg' } } },
+    { id: 't', type: 'text', layer: 2, placement: { x: 100, y: 500, width: 600, height: 100 }, content: { text: 'On photo', fontSize: 20, color: 'rgba(255,255,255,0.88)' } },
+  ]);
+  deck.themeTokens.palette.cardBg = 'rgba(0,0,0,0.04)';
+  const { slide } = await slideXml(await buildPptxBuffer(deck));
+  assert.match(slide, /<a:srgbClr val="000000"><a:alpha val="4000"\/>/, 'cardBg is 4% black, not opaque black');
+  assert.match(slide, /<a:srgbClr val="FFFFFF"><a:alpha val="88000"\/>/, 'text keeps 88% white');
+});
+
+test('pptx image fit contain: letterboxed to the image aspect, never stretched', async () => {
+  const s3Service = require('../../s3/s3.service');
+  const original = s3Service.getObjectBuffer;
+  // 4:1 logo into a square box.
+  s3Service.getObjectBuffer = async () =>
+    sharp({ create: { width: 400, height: 100, channels: 3, background: '#2563EB' } }).png().toBuffer();
+  try {
+    const buffer = await buildPptxBuffer(
+      deckWith([
+        { id: 'logo', type: 'image', layer: 1, placement: { x: 0, y: 0, width: 1080, height: 1080 }, content: { url: 'x', s3Key: 'logo.png', fit: 'contain' } },
+      ])
+    );
+    const { slide } = await slideXml(buffer);
+    const pic = slide.slice(slide.indexOf('<p:pic>'));
+    const [, cx, cy] = pic.match(/<a:ext cx="(\d+)" cy="(\d+)"/).map(Number);
+    assert.ok(Math.abs(cx / cy - 4) < 0.01, `expected 4:1 picture, got ${cx}:${cy}`);
+  } finally {
+    s3Service.getObjectBuffer = original;
+  }
+});
+
 test('svgMarkupToPngBuffer: ignores non-SVG input and rasterizes scriptable SVG inertly', async () => {
   assert.strictEqual(await svgMarkupToPngBuffer('<div>nope</div>'), null);
   const hostile = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" onload="alert(1)"><script>alert(1)</script><rect width="10" height="10"/></svg>';

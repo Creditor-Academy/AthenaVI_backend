@@ -56,6 +56,16 @@ function candidateContentTypes(profile = {}, outlineSlide = {}, primaryLayoutCon
   if (profile.hasChart || suggested === 'chart') {
     types.add('chart');
   }
+  if (profile.hasTable || suggested === 'table') {
+    // Table layouts are catalog-typed as chart in seed data.
+    types.add('chart');
+  }
+  if (
+    profile.bulletCount >= 3 &&
+    (profile.hasComparison || profile.contentStructure === 'comparison')
+  ) {
+    types.add('comparison');
+  }
   if (suggested === 'stat' || profile.metricCount >= 2) {
     types.add('stat');
   }

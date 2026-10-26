@@ -236,7 +236,7 @@ async function generateMockup({
     logoPosition: resolvedLogoPosition,
   });
 
-  const model = process.env.BRAND_KIT_MOCKUP_MODEL || 'gpt-image-1';
+  const model = process.env.BRAND_KIT_MOCKUP_MODEL || 'gpt-image-2.5-sunburst';
   const { buffer } = await generateImageWithReferences({
     prompt,
     referenceBuffers: [logoBuffer],

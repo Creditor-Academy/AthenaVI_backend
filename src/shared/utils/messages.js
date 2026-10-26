@@ -444,6 +444,7 @@ module.exports = {
   BRAND_KIT_LOGO_VARIANTS: 'Brand logo variants generated',
   BRAND_KIT_GUIDELINE_GENERATED: 'Brand guideline deck generated',
   BRAND_KIT_GUIDELINE_FETCHED: 'Brand guideline info fetched',
+  BRAND_KIT_GUIDELINE_PREVIEW: 'Brand guideline preview built',
   BRAND_KIT_GUIDELINE_PDF: 'Brand guideline PDF generated',
   BRAND_KIT_MOCKUP_CATALOG: 'Brand kit mockup catalog fetched',
   BRAND_KIT_MOCKUPS_FETCHED: 'Brand kit mockups fetched',

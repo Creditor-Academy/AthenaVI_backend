@@ -192,8 +192,18 @@ const generateGuideline = asyncHandler(async (req, res) => {
     userId: req.user.id,
     brandKitId: req.params.brandKitId,
     folderId: req.body.folderId,
+    templateId: req.body.templateId,
   });
   return successResponse(req, res, { guideline: data }, 201, messages.BRAND_KIT_GUIDELINE_GENERATED);
+});
+
+const previewGuideline = asyncHandler(async (req, res) => {
+  const data = await brandKitGuidelineService.previewGuideline({
+    workspaceId: req.params.workspaceId,
+    brandKitId: req.params.brandKitId,
+    templateId: req.query.templateId,
+  });
+  return successResponse(req, res, { preview: data }, 200, messages.BRAND_KIT_GUIDELINE_PREVIEW);
 });
 
 const getGuideline = asyncHandler(async (req, res) => {
@@ -268,6 +278,7 @@ module.exports = {
   suggestLogoVariants,
   generateGuideline,
   getGuideline,
+  previewGuideline,
   downloadGuidelinePdf,
   listMockupCatalog,
   listMockups,

@@ -37,7 +37,7 @@ function buildSystem() {
     '2. Facts from attached context must appear VERBATIM; never contradict or “improve” them.',
     '3. NEVER invent phone numbers, emails, websites, addresses, dates, prices, or statistics.',
     '   If a detail was not supplied, leave it out rather than using a placeholder.',
-    '4. Respect the character and line limits given for this size. When a limit is 0, return an empty string.',
+    '4. Keep the user\'s headline, subheadline, detail lines, call to action, and visual direction in full. Do not shorten them.',
     '5. Use the language the user wrote in unless they ask for another one.',
     '',
     'Visual rules:',
@@ -46,15 +46,6 @@ function buildSystem() {
     '- Leave visualStyle empty unless the user or StyleHint gave style language.',
     '- Return ONLY valid JSON matching the schema hint.',
   ].join('\n');
-}
-
-function describeLimits(limits = {}) {
-  return [
-    `headline ≤ ${limits.headline ?? 60} chars`,
-    `subheadline ≤ ${limits.subheadline ?? 100} chars`,
-    `details ≤ ${limits.details ?? 4} lines of ≤ ${limits.detailLine ?? 80} chars`,
-    `cta ≤ ${limits.cta ?? 40} chars`,
-  ].join(', ');
 }
 
 function describeSize(format) {
@@ -75,7 +66,7 @@ function buildUser({
     `Print size: ${describeSize(format)}`,
     `Item: ${KIND_GUIDANCE[format.kind] || KIND_GUIDANCE.poster}`,
     `Safe margin: ${format.safeZone}`,
-    `Copy limits: ${describeLimits(format.textLimits)}`,
+    'Copy: keep every line the user wrote. There is no character limit.',
   ];
 
   if (styleHint && String(styleHint).trim()) {
@@ -122,6 +113,5 @@ module.exports = {
   buildSystem,
   buildUser,
   buildCorrectiveUser,
-  describeLimits,
   describeSize,
 };

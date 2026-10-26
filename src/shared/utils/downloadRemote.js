@@ -5,8 +5,12 @@ const messages = require('./messages');
  * Download a remote URL into a Buffer with an optional max-bytes guard.
  * Checks Content-Length when present; aborts if the body exceeds maxBytes while streaming.
  */
-async function downloadRemote(url, { maxBytes } = {}) {
-  const res = await fetch(url, { method: 'GET' });
+async function downloadRemote(url, { maxBytes, timeoutMs } = {}) {
+  const fetchOpts = { method: 'GET' };
+  if (Number(timeoutMs) > 0) {
+    fetchOpts.signal = AbortSignal.timeout(Number(timeoutMs));
+  }
+  const res = await fetch(url, fetchOpts);
   if (!res.ok) {
     throw new AppError(messages.STOCK_REMOTE_FETCH_FAILED, 502);
   }

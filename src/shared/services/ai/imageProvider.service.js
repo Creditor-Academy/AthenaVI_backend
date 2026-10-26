@@ -66,11 +66,11 @@ async function editForModel({
     });
   }
 
-  // OpenAI edits always run on gpt-image-1 (dall-e has no edit endpoint).
+  // OpenAI edits always run on the HD GPT Image model, whichever OpenAI row made the parent.
   return openaiImage.editImage({
     imageBuffer,
     instruction,
-    model: 'gpt-image-1',
+    model: 'gpt-image-2.5-sunburst',
     quality: model?.quality === 'high' ? 'high' : 'medium',
     size,
   });

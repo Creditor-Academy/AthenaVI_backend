@@ -2,7 +2,14 @@ const AppError = require('../../utils/AppError');
 const { getOpenAI } = require('./openai.client');
 const { toFile } = require('openai');
 
-const DEFAULT_IMAGE_MODEL = process.env.PPT_IMAGE_MODEL || 'gpt-image-1';
+const DEFAULT_IMAGE_MODEL = process.env.PPT_IMAGE_MODEL || 'gpt-image-2.5-flare';
+const DEFAULT_EDIT_MODEL = 'gpt-image-2.5-sunburst';
+
+/** gpt-image-2 and later always read inputs at high fidelity and reject `input_fidelity`. */
+function acceptsInputFidelity(model) {
+  const match = /^gpt-image-(\d+)/.exec(String(model || ''));
+  return Boolean(match) && Number(match[1]) < 2;
+}
 
 /**
  * Map public quality knobs to OpenAI image quality values.
@@ -102,14 +109,14 @@ async function generateImage({
 async function editImage({
   imageBuffer,
   instruction,
-  model = 'gpt-image-1',
+  model = DEFAULT_EDIT_MODEL,
   size,
   quality = 'standard',
 } = {}) {
   const openai = getOpenAI();
-  let resolvedModel = model || 'gpt-image-1';
+  let resolvedModel = model || DEFAULT_EDIT_MODEL;
   if (!String(resolvedModel).startsWith('gpt-image')) {
-    resolvedModel = 'gpt-image-1';
+    resolvedModel = DEFAULT_EDIT_MODEL;
   }
 
   if (!imageBuffer || !Buffer.isBuffer(imageBuffer)) {
@@ -178,15 +185,15 @@ async function editImage({
 async function generateImageWithReferences({
   prompt,
   referenceBuffers = [],
-  model = 'gpt-image-1',
+  model = DEFAULT_EDIT_MODEL,
   size,
   quality = 'standard',
   inputFidelity,
 } = {}) {
   const openai = getOpenAI();
-  let resolvedModel = model || 'gpt-image-1';
+  let resolvedModel = model || DEFAULT_EDIT_MODEL;
   if (!String(resolvedModel).startsWith('gpt-image')) {
-    resolvedModel = 'gpt-image-1';
+    resolvedModel = DEFAULT_EDIT_MODEL;
   }
 
   if (!prompt || !String(prompt).trim()) {
@@ -226,7 +233,7 @@ async function generateImageWithReferences({
   if (size) {
     params.size = size;
   }
-  if (fidelity === 'low' || fidelity === 'high') {
+  if ((fidelity === 'low' || fidelity === 'high') && acceptsInputFidelity(resolvedModel)) {
     params.input_fidelity = fidelity;
   }
 

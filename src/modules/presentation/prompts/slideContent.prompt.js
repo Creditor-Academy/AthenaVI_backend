@@ -74,7 +74,7 @@ function layoutSpecificRules(layoutId = '', slideOrder = 1, suggestedType = '', 
 
   if (slideOrder === 1 || type === 'title') {
     lines.push(
-      'Title slide: spoken outcome headline (5–12 words, period OK) — not "Overview / Introduction / Product". REQUIRED titleRuns (2-3 segments, accent on final punch line). Subtitle/eyebrow = short UPPERCASE kicker when those slots exist. Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
+      'Title slide: spoken outcome headline (5–12 words, period OK) — not "Overview / Introduction / Product". REQUIRED titleRuns (2-3 segments): lead fontRole heading + text/textOnImage; optional middle fontRole body or italic:true + muted; final punch fontRole heading + accent + fontWeight 700. Subtitle/eyebrow = short UPPERCASE kicker when those slots exist. Set shapeDecisions.HERO_IMAGE with behind:"card" or mask:"rect" when hero image present.'
     );
   }
 
@@ -427,15 +427,16 @@ function buildUser(vars = {}) {
     '- When layout has multiple columns/cards, use parallel grammar across bullets/items.',
     '- shapeDecisions: for each image/CTA slot, set behind ("none"|"card"|"pill"|"surface") and optional mask ("none"|"rect"). For multi-column/timeline/card layouts set behind:"card" on EACH column separately (never one full-width bar behind all columns). Leave left/right margin so cards do not touch slide edges. Use "none" only for clean/minimal slides. Prefer Graphics Library icons for list/card markers when available.',
     '- Never overlap text on text; only overlay text on photos when __overlay__ scrim is enabled.',
-    '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block — lead lines use textOnImage or text, final line uses accent colorRole with fontWeight 700. Do NOT set fontFamily on runs; the deck heading font applies. Set title to the full concatenated string too.',
+    '- titleRuns: on title/quote/closing/statement slides, split the headline into 2-3 styled segments in one block. Lead: colorRole text or textOnImage, fontRole heading. Optional middle: colorRole text or muted, fontRole body OR italic true (not both required). Final punch: colorRole accent, fontWeight 700, fontRole heading. Use fontRole heading|body only — do not set raw fontFamily. Set title to the full concatenated string too.',
     '',
     'Output JSON schema (fill relevant slots; unused fields null or empty):',
     JSON.stringify(
       {
         title: '...',
         titleRuns: [
-          { text: 'Lead line one.\n', colorRole: 'textOnImage' },
-          { text: 'Accent closing line.', colorRole: 'accent', fontWeight: 700 },
+          { text: 'Lead line one.\n', colorRole: 'textOnImage', fontRole: 'heading' },
+          { text: 'Optional bridge phrase. ', colorRole: 'muted', fontRole: 'body', italic: true },
+          { text: 'Accent closing line.', colorRole: 'accent', fontWeight: 700, fontRole: 'heading' },
         ],
         subtitle: null,
         body: null,

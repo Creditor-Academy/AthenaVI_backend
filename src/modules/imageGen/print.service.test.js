@@ -120,11 +120,14 @@ test('PrintSpec schema requires headline and visual subject', () => {
   assert.equal(validatePrintSpec(sampleSpec()).error, undefined);
   assert.ok(validatePrintSpec(sampleSpec({ headline: '' })).error);
   assert.ok(validatePrintSpec(sampleSpec({ visualSubject: undefined })).error);
-  assert.ok(validatePrintSpec(sampleSpec({ details: new Array(9).fill('x') })).error);
+  const longArt = 'golden diya '.repeat(80);
+  assert.equal(validatePrintSpec(sampleSpec({ visualSubject: longArt, visualStyle: longArt })).error, undefined);
+  assert.equal(validatePrintSpec(sampleSpec({ details: new Array(9).fill('x') })).error, undefined);
 });
 
-test('clampCopy fits a business card: no CTA, four detail lines, short lines', () => {
+test('clampCopy keeps the user copy and stamps the size', () => {
   const card = FORMAT_BY_ID['business-card'];
+  const address = 'Level 4, Prestige Tech Park, Outer Ring Road, Marathahalli, Bengaluru';
   const { spec, warnings } = clampCopy(
     sampleSpec({
       headline: 'Priya Raman',
@@ -133,18 +136,18 @@ test('clampCopy fits a business card: no CTA, four detail lines, short lines', (
         '+91 98450 12345',
         'priya@athenavi.com',
         'athenavi.com',
-        'Level 4, Prestige Tech Park, Outer Ring Road, Marathahalli, Bengaluru',
+        address,
         'extra line',
       ],
     }),
     card
   );
-  assert.equal(spec.cta, '');
-  assert.equal(spec.details.length, 4);
-  assert.ok(spec.details.every((line) => line.length <= card.textLimits.detailLine));
+  assert.equal(spec.cta, 'Register today');
+  assert.equal(spec.details.length, 5);
+  assert.equal(spec.details[3], address);
   assert.equal(spec.formatId, 'business-card');
   assert.equal(spec.kind, 'business_card');
-  assert.ok(warnings.length >= 3);
+  assert.deepEqual(warnings, []);
 });
 
 test('render prompt: flat artwork, bleed geometry, exact copy', () => {

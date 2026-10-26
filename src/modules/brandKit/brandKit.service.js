@@ -265,6 +265,23 @@ function buildTypographyColors(data = {}) {
 }
 
 /**
+ * Dark text/bg pair is optional, but once both bgDark and textDark are set it must
+ * meet WCAG AA like the light pair. Called on create/update only.
+ */
+function assertDarkContrast(data) {
+  const roles = data?.colorRoles || {};
+  if (!roles.bgDark || !roles.textDark) return;
+  const palette = buildPaletteFromRoles(colorMap(data), roles, 'Dark');
+  const ratio = themeService.contrastRatio(palette.text, palette.bg);
+  if (ratio != null && ratio < themeService.AA_CONTRAST_RATIO) {
+    throw new AppError(
+      `Dark mode text/bg contrast ${ratio.toFixed(2)}:1 fails WCAG AA (need ${themeService.AA_CONTRAST_RATIO}:1)`,
+      400
+    );
+  }
+}
+
+/**
  * Map a brand kit (+ media) to presentation themeTokens.
  */
 function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
@@ -284,7 +301,7 @@ function brandKitToThemeTokens(kit, { includeMediaUrls = true } = {}) {
     try {
       themeService.assertContrast(paletteDark);
     } catch {
-      // dark pair optional — do not block kit save if incomplete
+      // Enforced on save via assertDarkContrast; stay lenient here so older kits still theme decks.
     }
   }
 
@@ -575,6 +592,7 @@ async function getBrandKit(workspaceId, brandKitId, { userId } = {}) {
 async function createBrandKit({ workspaceId, userId, name, data, isDefault }) {
   validateBrandKitData(data);
   brandKitToThemeTokens({ id: 'new', name, data, media: [] }, { includeMediaUrls: false });
+  assertDarkContrast(data);
   const kit = await brandKitDao.createKit({
     workspaceId,
     name,
@@ -591,6 +609,7 @@ async function updateBrandKit({ workspaceId, brandKitId, name, data, isDefault }
     brandKitToThemeTokens({ id: brandKitId, name: name || 'kit', data, media: [] }, {
       includeMediaUrls: false,
     });
+    assertDarkContrast(data);
   }
   const kit = await brandKitDao.updateKit({
     workspaceId,

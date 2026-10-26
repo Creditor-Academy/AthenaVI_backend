@@ -2260,7 +2260,15 @@ function layoutSlotsToElements(
     if (style.colorRole) textContent.colorRole = style.colorRole;
     if (style.letterSpacing != null) textContent.letterSpacing = style.letterSpacing;
     if (style.lineHeight != null) textContent.lineHeight = style.lineHeight;
-    textContent = applyRichTitleToTextContent(textContent, content, slotId, role, onImage, layoutSchema);
+    textContent = applyRichTitleToTextContent(
+      textContent,
+      content,
+      slotId,
+      role,
+      onImage,
+      layoutSchema,
+      themeTokens
+    );
     textContent = applyRichBulletsToTextContent(textContent, content, slotId, onImage);
     const slotRole = elementRoleFromSlot(slot, slotId);
     const fontFamily = fontFamilyForRole(slotRole, themeTokens);
@@ -2961,12 +2969,49 @@ function deriveTitleRunsFallback(content, onImage = false) {
   if (!title || String(title).length < 20) return null;
   const parts = String(title).match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [title];
   if (parts.length < 2) return null;
+  const ink = onImage ? 'textOnImage' : 'text';
+  if (parts.length >= 3) {
+    return [
+      { text: parts[0], colorRole: ink, fontRole: 'heading' },
+      {
+        text: parts.slice(1, -1).join(''),
+        colorRole: 'muted',
+        fontRole: 'body',
+        italic: true,
+      },
+      { text: parts[parts.length - 1], colorRole: 'accent', fontWeight: 700, fontRole: 'heading' },
+    ];
+  }
   const lead = parts.slice(0, -1).join('');
   const last = parts[parts.length - 1];
   return [
-    { text: lead, colorRole: onImage ? 'textOnImage' : 'text' },
-    { text: last, colorRole: 'accent', fontWeight: 700 },
+    { text: lead, colorRole: ink, fontRole: 'heading' },
+    { text: last, colorRole: 'accent', fontWeight: 700, fontRole: 'heading' },
   ];
+}
+
+function resolveTitleRunFontFamily(run, themeTokens) {
+  if (run?.fontFamily) return run.fontFamily;
+  const role = String(run?.fontRole || 'heading').toLowerCase();
+  const fonts = themeTokens?.fonts || {};
+  if (role === 'body' && fonts.body) return fonts.body;
+  if (fonts.heading) return fonts.heading;
+  return undefined;
+}
+
+function serializeTitleRun(run, themeTokens) {
+  const fontRole = run?.fontRole ? String(run.fontRole).toLowerCase() : 'heading';
+  const out = {
+    text: String(run.text || ''),
+    ...(run.colorRole ? { colorRole: run.colorRole } : {}),
+    ...(run.color ? { color: run.color } : {}),
+    ...(run.fontWeight != null ? { fontWeight: run.fontWeight } : {}),
+    ...(run.italic != null ? { italic: run.italic } : {}),
+  };
+  const resolvedFamily = resolveTitleRunFontFamily({ ...run, fontRole }, themeTokens);
+  if (resolvedFamily) out.fontFamily = resolvedFamily;
+  else out.fontRole = fontRole;
+  return out;
 }
 
 function normalizeRunText(text) {
@@ -2997,7 +3042,7 @@ function dropSubtitleEchoRuns(runs, content, layoutSchema) {
   return kept.length ? kept : runs;
 }
 
-function buildRichTitleContent(content, onImage = false, layoutSchema = null) {
+function buildRichTitleContent(content, onImage = false, layoutSchema = null, themeTokens = null) {
   let runs = Array.isArray(content?.titleRuns) ? content.titleRuns.filter((r) => r?.text) : null;
   runs = dropSubtitleEchoRuns(runs, content, layoutSchema);
   if (!runs?.length) runs = deriveTitleRunsFallback(content, onImage);
@@ -3012,20 +3057,21 @@ function buildRichTitleContent(content, onImage = false, layoutSchema = null) {
   const text = runs.map((r) => String(r.text || '')).join('');
   return {
     text,
-    runs: runs.map((r) => ({
-      text: String(r.text || ''),
-      ...(r.colorRole ? { colorRole: r.colorRole } : {}),
-      ...(r.color ? { color: r.color } : {}),
-      ...(r.fontWeight != null ? { fontWeight: r.fontWeight } : {}),
-      ...(r.italic != null ? { italic: r.italic } : {}),
-      ...(r.fontFamily ? { fontFamily: r.fontFamily } : {}),
-    })),
+    runs: runs.map((r) => serializeTitleRun(r, themeTokens)),
   };
 }
 
-function applyRichTitleToTextContent(textContent, content, slotId, role, onImage = false, layoutSchema = null) {
+function applyRichTitleToTextContent(
+  textContent,
+  content,
+  slotId,
+  role,
+  onImage = false,
+  layoutSchema = null,
+  themeTokens = null
+) {
   if (!isRichTitleSlot(slotId, role)) return textContent;
-  const rich = buildRichTitleContent(content, onImage, layoutSchema);
+  const rich = buildRichTitleContent(content, onImage, layoutSchema, themeTokens);
   if (!rich) return textContent;
   return { ...textContent, text: rich.text, runs: rich.runs };
 }
@@ -9816,7 +9862,7 @@ function rebindContentToElements(elementsDoc, content = {}, imageRef = null, opt
         applyText(el, content.title, 'title');
       }
       const onImage = layoutRequiresOverlayScrim(opts.layoutSchema);
-      const rich = buildRichTitleContent(content, onImage, opts.layoutSchema);
+      const rich = buildRichTitleContent(content, onImage, opts.layoutSchema, themeTokens);
       if (rich && (isMainTitleSlot(slotKey, role) || isMainTitleSlot(id, role) || role === 'quote')) {
         el.content = { ...(el.content || {}), text: rich.text, runs: rich.runs };
       }
@@ -9915,4 +9961,7 @@ module.exports = {
   isPackPlaceholderText,
   isMediaImageSlot,
   textForSlot,
+  buildRichTitleContent,
+  deriveTitleRunsFallback,
+  serializeTitleRun,
 };
