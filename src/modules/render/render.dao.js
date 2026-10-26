@@ -141,7 +141,50 @@ const upsertSceneRenderCache = ({
   });
 };
 
+const ACTIVE_RENDER_STATUSES = ['queued', 'processing'];
+
+/**
+ * Fails renders left `queued` / `processing` by a previous process. Only rows created before `before`
+ * are touched, so a render started by this process is never caught.
+ */
+const failInterruptedRenders = async ({ before, error }) => {
+  const where = {
+    status: { in: ACTIVE_RENDER_STATUSES },
+    createdAt: { lt: before },
+  };
+  const rows = await prisma.projectRender.findMany({
+    where,
+    select: { id: true, projectId: true },
+  });
+  if (!rows.length) {
+    return { renders: 0, projects: 0 };
+  }
+
+  const ids = rows.map((row) => row.id);
+  const projectIds = [...new Set(rows.map((row) => row.projectId))];
+  const failedAt = new Date();
+  const failedFields = { status: 'failed', progress: 100, failedAt, error };
+
+  const [unbilled, billed, projects] = await prisma.$transaction([
+    prisma.projectRender.updateMany({
+      where: { id: { in: ids }, ...where, billingStatus: { not: 'charged' } },
+      data: { ...failedFields, billingStatus: 'failed' },
+    }),
+    prisma.projectRender.updateMany({
+      where: { id: { in: ids }, ...where, billingStatus: 'charged' },
+      data: failedFields,
+    }),
+    prisma.project.updateMany({
+      where: { id: { in: projectIds }, status: 'rendering', updatedAt: { lt: before } },
+      data: { status: 'failed' },
+    }),
+  ]);
+
+  return { renders: unbilled.count + billed.count, projects: projects.count };
+};
+
 module.exports = {
+  failInterruptedRenders,
   createProjectRender,
   updateProjectRender,
   listProjectRenders,

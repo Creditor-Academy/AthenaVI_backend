@@ -429,7 +429,10 @@ Store secrets in **AWS Secrets Manager** or **SSM Parameter Store**. Inject at d
 | `PLATFORM_HEYGEN_WALLET_THRESHOLD_USD` | `50` | Platform wallet alert threshold |
 | `PLATFORM_SUPERADMIN_NOTIFICATION_EMAIL` | superadmin emails | Storage upgrade request inbox |
 | `STORAGE_UPGRADE_REQUEST_COOLDOWN_SEC` | `86400` | 24h cooldown per user |
-| `REMOTION_DELAY_RENDER_TIMEOUT_MS` | `120000` | Remotion render timeout (2 min) |
+| `REMOTION_DELAY_RENDER_TIMEOUT_MS` | `120000` | Remotion per-frame stall timeout (2 min). Use `600000` on a 4 vCPU host |
+| `REMOTION_CONCURRENCY` | Remotion default | Chrome tabs per export. `2` on 4 vCPU, `1` on 2 vCPU |
+| `REMOTION_X264_PRESET` | `medium` | x264 encoder preset (`ultrafast` … `placebo`). `veryfast` cuts encode CPU |
+| `REMOTION_CHROMIUM_GL` | Remotion default | Chromium GL backend. `swangle` on hosts without a GPU |
 | `REDIS_CONNECT_TIMEOUT` | `30000` | Redis connect timeout |
 | `HEYGEN_BASE_URL` | HeyGen default | Override only if needed |
 

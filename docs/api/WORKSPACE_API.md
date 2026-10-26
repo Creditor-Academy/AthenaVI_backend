@@ -1030,6 +1030,10 @@ Scene caches use:
 
 **Response (202)** – `data.render`: queued render row with `status`, `progress`, and ids.
 
+- The server runs one export at a time. Extra exports stay `queued` (progress `0`) until the previous one finishes, then move to `processing`.
+- The render uses the project as saved when this request was made. Edits saved while it waits are not included.
+- If the server restarts before an export finishes, that render becomes `failed` with `error: "Render interrupted by a server restart. Please export again."`.
+
 ---
 
 ### List renders

@@ -206,6 +206,7 @@ module.exports = {
   PROJECT_RENDER_NOT_FOUND: 'Project render not found',
   PROJECT_RENDER_NOT_READY: 'Project render is not ready for download yet',
   PROJECT_RENDER_FAILED: 'Project render failed',
+  PROJECT_RENDER_INTERRUPTED: 'Render interrupted by a server restart. Please export again.',
   PROJECT_SCENE_ASSET_NOT_READY: 'A required scene asset is not ready yet',
   PROJECT_AUDIO_SOURCE_REQUIRED:
     'Audio clip is missing a workspace asset, speech generation, or HTTPS source URL',
