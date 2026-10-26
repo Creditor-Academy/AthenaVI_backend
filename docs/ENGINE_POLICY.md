@@ -1,8 +1,8 @@
 # Engine policy — AI presentation generation
 
-**Lead:** Komal Giri  
-**Backups (pair):** Ankit Kumar (editor / content contract), Sahil (APIs / credits)  
-**Status:** Policy written 19 October 2026. Tests are the contract. Ankit's editor-contract and Image Studio boundary tests are in the frontend tree. A live scoring walkthrough with Komal is still useful; backups can already point at the tests below.
+**Owners (equal):** Komal Giri and Ankit Kumar  
+**Pair:** Sahil (APIs / credits)  
+**Status:** Policy written 19 October 2026. Tests are the contract. Ankit's editor-contract and Image Studio boundary tests are in the frontend tree. Sahil pairing is done — he has the knowledge and can point at the credit tests below.
 
 This is the **policy** note: *why* a layout wins, *when* repair runs, *when* Path A vs Path B is chosen, and *what is billed*. It is not the HTTP spec and not a dump of `deckGeneration.service.js`.
 
@@ -321,12 +321,12 @@ Do not “just tweak the scorer” because a single deck looked wrong. If the ca
 
 | Role | Person | Must be able to |
 |------|--------|-----------------|
-| Lead | **Komal Giri** | Change scoring, repair, Path A/B, catalog policy |
-| Backup — editor contract | **Ankit Kumar** | Point at `ARRAY_OVERFLOW` / canvas compile tests before changing slot repair |
-| Backup — API / credits | **Sahil** | Point at charge-on-success + Path A/B feature keys before changing billing |
+| Owner (equal) | **Komal Giri** | Change scoring, repair, Path A/B, catalog policy |
+| Owner (equal) | **Ankit Kumar** | Same policy surface, plus editor contract: `ARRAY_OVERFLOW` / canvas compile tests before changing slot repair |
+| Pair — API / credits | **Sahil** | Point at charge-on-success + Path A/B feature keys before changing billing |
 | Pair — Image Studio | **Ankit Kumar** (Tanu lead) | Keep studio infographics off PPT Path B (`imageStudioEngineBoundary.test.mjs`) |
 
-**Backup tests Ankit can name (run these before touching slot repair or Path B):**
+**Tests Ankit names (run these before touching slot repair or Path B):**
 
 | Rule | Command |
 |------|---------|
@@ -336,7 +336,7 @@ Do not “just tweak the scorer” because a single deck looked wrong. If the ca
 | Image Studio ≠ Path B | `node --import ./scripts/test-resolve-hook.mjs --test src/pages/Slides/AIStudio/imageStudioEngineBoundary.test.mjs` |
 | Path B vs process layout | `npm run test:path-b-vs-layouts` (backend) |
 
-**Pair walkthrough:** Komal should still walk scoring (§3) live once. Overflow (§4) and Path B vs Image Studio (§5.1) now have named tests a second engineer can run without Komal. Until the scoring walk happens, bus-factor is reduced but scoring remains Komal-led.
+**Pair walkthrough:** Komal and Ankit own this note equally. **Sahil has the knowledge** (scoring, repair, Path A/B, credits). Overflow (§4) and Path B vs Image Studio (§5.1) have named tests a second engineer can run without waiting on either owner.
 
 ---
 

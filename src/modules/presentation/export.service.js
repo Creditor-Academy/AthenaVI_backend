@@ -28,6 +28,7 @@ const {
 const { FONT_REF_WIDTH } = require('./textFit.util');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
 const { normalizeChartContent } = require('./chartContentNormalize');
+const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 const EXPORT_MAX_QUEUED_MS =
@@ -169,7 +170,48 @@ function stagePxToPt(px, slideSize = DEFAULT_SLIDE_SIZE_IN) {
   return Math.max(1, Math.round(((Number(px) || 0) * slideSize.w * 72 / FONT_REF_WIDTH) * 10) / 10);
 }
 
+/**
+ * pptxgenjs only accepts 6-digit hex and silently swaps anything else for black, so
+ * rgb()/rgba() (palette cardBg / divider, translucent fills) are flattened onto the slide bg.
+ */
+function toPptxHex(value, palette, fallback) {
+  const raw = String(value || '').trim();
+  if (!/^rgba?\(/i.test(raw)) return raw.replace(/^#/, '');
+  const rgba = parseCssColor(raw);
+  if (!rgba) return String(fallback).replace(/^#/, '');
+  return compositeRgbaOnHex(rgba, palette?.bg || '#FFFFFF').replace(/^#/, '').toUpperCase();
+}
+
 function resolveColor(value, palette, fallback = '111111') {
+  return toPptxHex(resolvePaletteColor(value, palette, fallback), palette, fallback);
+}
+
+/**
+ * Like resolveColor, but keeps rgba alpha separate so callers can pass it as pptxgenjs
+ * `transparency` — overlays (image scrims, translucent text) stay see-through instead of
+ * becoming an opaque slab over the photo.
+ */
+function resolveColorAlpha(value, palette, fallback = '111111') {
+  const raw = String(resolvePaletteColor(value, palette, fallback) || '').trim();
+  const rgba = /^rgba?\(/i.test(raw) ? parseCssColor(raw) : null;
+  if (!rgba) return { color: toPptxHex(raw, palette, fallback), alpha: 1 };
+  const alpha = rgba.a == null ? 1 : Math.max(0, Math.min(1, Number(rgba.a)));
+  const color = compositeRgbaOnHex({ ...rgba, a: 1 }, '#FFFFFF').replace(/^#/, '').toUpperCase();
+  return { color, alpha };
+}
+
+/** pptxgenjs `transparency` (0–100) for an alpha; undefined when fully opaque. */
+function pptxTransparency(alpha) {
+  const a = Math.max(0, Math.min(1, Number(alpha)));
+  return a >= 1 ? undefined : Math.round((1 - a) * 100);
+}
+
+function withTransparency(props, alpha) {
+  const transparency = pptxTransparency(alpha);
+  return transparency == null ? props : { ...props, transparency };
+}
+
+function resolvePaletteColor(value, palette, fallback) {
   if (!value) return String(fallback).replace(/^#/, '');
   if (typeof value === 'object') return firstHexFromFill(value, palette, fallback);
   const key = String(value);
@@ -192,10 +234,7 @@ function resolveColor(value, palette, fallback = '111111') {
   if (key === 'cardBg') return String(palette.cardBg || palette.surface || 'F5F5F5').replace(/^#/, '');
   if (key === 'gradientStart') return String(palette.gradientStart || palette.bg || fallback).replace(/^#/, '');
   if (key === 'gradientEnd') return String(palette.gradientEnd || palette.surface || fallback).replace(/^#/, '');
-  // rgba(...) — pptxgenjs wants hex; fall back
-  if (key.startsWith('rgba') || key.startsWith('rgb')) {
-    return String(fallback).replace(/^#/, '');
-  }
+  // rgb()/rgba() literals are flattened to hex by resolveColor
   return key.replace(/^#/, '');
 }
 
@@ -297,11 +336,8 @@ async function addElementsToPptxSlide(
     if (el.type === 'group') continue;
 
     if (el.type === 'text' || el.type === 'textbox') {
-      const textColorResolved = resolveColor(
-        content.color || content.colorRole,
-        palette,
-        textColor
-      );
+      const textInk = resolveColorAlpha(content.color || content.colorRole, palette, textColor);
+      const textColorResolved = textInk.color;
       const fontSizePt = toPt(Number(content.fontSize) || 18);
       const textOpts = {
         x: box.x,
@@ -318,6 +354,9 @@ async function addElementsToPptxSlide(
         valign: pptxValign(content),
         rotate,
       };
+      if (!content.fill && pptxTransparency(textInk.alpha) != null) {
+        textOpts.transparency = pptxTransparency(textInk.alpha);
+      }
       if (content.wrap === 'nowrap') {
         textOpts.shrinkText = true;
         textOpts.wrap = false;
@@ -390,6 +429,13 @@ async function addElementsToPptxSlide(
         if (fit === 'cover' && image.width && image.height) {
           imageOpts.h = box.w * (image.height / image.width);
           imageOpts.sizing = { type: 'cover', w: box.w, h: box.h };
+        } else if (fit === 'contain' && image.width && image.height) {
+          // Letterbox like CSS object-fit: contain — never stretch (logos must keep proportions).
+          const scale = Math.min(box.w / image.width, box.h / image.height);
+          imageOpts.w = image.width * scale;
+          imageOpts.h = image.height * scale;
+          imageOpts.x = box.x + (box.w - imageOpts.w) / 2;
+          imageOpts.y = box.y + (box.h - imageOpts.h) / 2;
         }
         s.addImage(imageOpts);
       } else {
@@ -423,7 +469,10 @@ async function addElementsToPptxSlide(
         w: box.w,
         h: box.h,
         line: strokeColor
-          ? { color: resolveColor(strokeColor, palette, 'E5E5E5'), width: strokeWidth || 1.5 }
+          ? (() => {
+              const ink = resolveColorAlpha(strokeColor, palette, 'E5E5E5');
+              return withTransparency({ color: ink.color, width: strokeWidth || 1.5 }, ink.alpha);
+            })()
           : { type: 'none' },
         rotate,
       };
@@ -443,7 +492,12 @@ async function addElementsToPptxSlide(
           angle: Number.isFinite(fillResolved.angle) ? fillResolved.angle : 135,
         };
       } else {
-        shapeOpts.fill = { color: fillResolved.color };
+        // Editor paints rgba fills and multiplies content.opacity on top — mirror both.
+        const fill = content.fill;
+        const fillSource = fill && typeof fill === 'object' ? fill.color || fill.colorRole : fill;
+        const ink = resolveColorAlpha(fillSource, palette, '0A84FF');
+        const shapeOpacity = Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1;
+        shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
       }
       try {
         s.addShape(shape, shapeOpts);

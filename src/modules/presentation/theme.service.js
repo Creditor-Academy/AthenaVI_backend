@@ -410,6 +410,7 @@ module.exports = {
   relativeLuminance,
   parseHexColor,
   parseCssColor,
+  compositeRgbaOnHex,
   contrastRatioCss,
   // path kept for tests / tooling that need the catalog file location
   catalogPath: path.join(__dirname, 'themes', 'catalog.json'),
