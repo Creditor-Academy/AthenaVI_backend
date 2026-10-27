@@ -42,8 +42,23 @@ async function createTeamWorkspace(userId, name) {
   });
 }
 
+/**
+ * `members` is filtered to the caller's own row, so surface it as `role` / `memberId` —
+ * clients read the caller's role from `role` (without it, admins showed up as members).
+ * `memberCount` is the real total: plain members can't list members, so counting
+ * `members` client-side always gave 2 (themselves + the assumed owner).
+ */
 async function getUserWorkspaces(userId) {
-  return await workspaceDao.findWorkspacesByUserId(userId);
+  const workspaces = await workspaceDao.findWorkspacesByUserId(userId);
+  return workspaces.map(({ _count, ...workspace }) => {
+    const own = (workspace.members || [])[0] || null;
+    return {
+      ...workspace,
+      role: own?.role || null,
+      memberId: own?.id || null,
+      memberCount: _count?.members ?? null,
+    };
+  });
 }
 
 /**
@@ -329,14 +344,18 @@ async function removeMember(workspaceId, requesterId, memberId) {
     throw new AppError(messages.WORKSPACE_MEMBER_NOT_FOUND, 404);
   }
 
-  const isSelf = requesterId === memberId;
+  // memberId is the WorkspaceMember row id; compare user ids to detect "leaving".
+  const isSelf = targetMember.userId === requesterId;
   if (isSelf) {
     if (targetMember.role === 'OWNER') {
       throw new AppError(messages.WORKSPACE_OWNER_CANNOT_REMOVE_SELF, 400);
     }
   } else {
     if (!['OWNER', 'ADMIN'].includes(requesterMembership.role)) {
-      throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+      throw new AppError(messages.WORKSPACE_ADMIN_REQUIRED, 403);
+    }
+    if (targetMember.role === 'OWNER' && requesterMembership.role !== 'OWNER') {
+      throw new AppError(messages.WORKSPACE_ADMIN_CANNOT_REMOVE_OWNER, 403);
     }
     if (targetMember.role === 'OWNER') {
       const ownerCount = await workspaceDao.countOwnersInWorkspace(workspaceId);
@@ -420,6 +439,18 @@ async function changeMemberRole(workspaceId, requesterId, memberId, newRole) {
   return updatedMember;
 }
 
+/** Any member can leave; owners must transfer ownership first (enforced in removeMember). */
+async function leaveWorkspace(workspaceId, userId) {
+  const workspace = await workspaceDao.findWorkspaceById(workspaceId);
+  if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
+  if (workspace.type === 'PRIVATE') {
+    throw new AppError(messages.WORKSPACE_CANNOT_LEAVE_PRIVATE, 400);
+  }
+  const membership = await workspaceDao.findWorkspaceMember(workspaceId, userId);
+  if (!membership) throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+  return removeMember(workspaceId, userId, membership.id);
+}
+
 async function getWorkspaceMembers(workspaceId, userId) {
   const membership = await workspaceDao.findWorkspaceMember(
     workspaceId,
@@ -444,6 +475,7 @@ module.exports = {
   cancelInvitation,
   getWorkspaceInvitations,
   removeMember,
+  leaveWorkspace,
   changeMemberRole,
   getWorkspaceMembers,
 };

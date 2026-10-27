@@ -88,6 +88,18 @@ const updateProject = async (projectId, data) => {
   });
 };
 
+/**
+ * Optimistic write: only applies when the row's `updatedAt` still equals `expectedUpdatedAt`.
+ * Returns true when the row was written.
+ */
+const updateProjectIfUnchanged = async (projectId, expectedUpdatedAt, data) => {
+  const result = await prisma.project.updateMany({
+    where: { id: projectId, updatedAt: expectedUpdatedAt },
+    data,
+  });
+  return result.count > 0;
+};
+
 const deleteProject = async (projectId) => {
   return prisma.project.delete({
     where: { id: projectId },
@@ -192,6 +204,7 @@ module.exports = {
   findProjectByIdWithAssets,
   createProject,
   updateProject,
+  updateProjectIfUnchanged,
   deleteProject,
   clearAssignmentsForUser,
   clearSceneAssignmentsForUser,

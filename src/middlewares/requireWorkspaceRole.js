@@ -27,7 +27,12 @@ function requireWorkspaceRole(allowedRoles) {
     }
 
     if (!allowedRoles.includes(membership.role)) {
-      throw new AppError(messages.WORKSPACE_FORBIDDEN, 403);
+      // A member with too low a role gets told what's needed, not "no access".
+      const ownerOnly = allowedRoles.length === 1 && allowedRoles[0] === 'OWNER';
+      throw new AppError(
+        ownerOnly ? messages.WORKSPACE_OWNER_REQUIRED : messages.WORKSPACE_ADMIN_REQUIRED,
+        403
+      );
     }
 
     req.workspaceMembership = membership;
