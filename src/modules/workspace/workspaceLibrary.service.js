@@ -118,7 +118,31 @@ async function listLibraryCategory({ userId, workspace, category, query = {} }) 
   };
 }
 
+/** Cap for image threads in the "all" view (the Images tab pages through the rest). */
+const ALL_VIEW_IMAGE_LIMIT = 100;
+
+/** Every category in one response — the "All" tab — fetched in parallel. */
+async function listAllLibraryItems({ userId, workspace, query = {} }) {
+  const lists = await Promise.all(
+    ['video', 'presentation', 'canvas', 'image'].map((category) =>
+      listLibraryCategory({
+        userId,
+        workspace,
+        category,
+        query:
+          category === 'image'
+            ? { ...query, take: Math.min(Number(query.take) || ALL_VIEW_IMAGE_LIMIT, ALL_VIEW_IMAGE_LIMIT), skip: 0 }
+            : query,
+      })
+    )
+  );
+  return { category: 'all', items: lists.flatMap((list) => list.items) };
+}
+
 async function getLibrary({ userId, workspace, query = {} }) {
+  if (query.category === 'all') {
+    return listAllLibraryItems({ userId, workspace, query });
+  }
   if (query.category) {
     return listLibraryCategory({ userId, workspace, category: query.category, query });
   }
