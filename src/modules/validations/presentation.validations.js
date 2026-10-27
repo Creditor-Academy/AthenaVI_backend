@@ -646,6 +646,8 @@ const regenerateSlideSchema = Joi.object({
     // Opt-in: callers must explicitly confirm discarding manual edits (409 otherwise).
     overwriteManualEdits: Joi.boolean().default(false),
     prompt: slideAiPromptField.optional(),
+    // AI edit panel action id (e.g. 'improve-writing'); drives edit vs fresh regenerate.
+    action: Joi.string().trim().max(64).optional(),
   })
     .default({})
     .optional(),

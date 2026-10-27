@@ -17,6 +17,9 @@ const { startAccountDeletionJob } = require('./shared/jobs/accountDeletion.job')
 const { startPlatformAlertsJob } = require('./shared/jobs/platformAlerts.job');
 const { startWeeklyDigestJob } = require('./shared/jobs/weeklyDigest.job');
 const { startImageGenContextCleanupJob } = require('./shared/jobs/imageGenContextCleanup.job');
+const { recoverInterruptedRenders } = require('./shared/jobs/renderRecovery.job');
+
+const BOOTED_AT = new Date();
 
 const PORT = process.env.PORT || 9000;
 
@@ -44,6 +47,7 @@ const server = app.listen(PORT, () => {
   startPlatformAlertsJob();
   startWeeklyDigestJob();
   startImageGenContextCleanupJob();
+  recoverInterruptedRenders(BOOTED_AT);
 });
 
 const shutdown = async (signal) => {

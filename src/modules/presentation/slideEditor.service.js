@@ -263,6 +263,10 @@ async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
 
   const slide = (deck.slides || []).find((s) => s.id === slideId);
   if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+  // A late autosave must not overwrite (and mark READY) a slide that is regenerating.
+  if (slide.status === 'PENDING' || slide.status === 'GENERATING') {
+    throw new AppError('Slide is regenerating; try again when it finishes', 409);
+  }
 
   const doc = normalizeCanvasPayload(canvas);
   const updated = await presentationDao.updateSlide(slideId, {

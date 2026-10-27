@@ -42,8 +42,11 @@ const {
 const { getEffectiveSpeechFields } = require('../project/projectSpeechRehydrate');
 const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
+const { buildRemotionRenderOptions } = require('./renderOptions');
+const { renderQueue } = require('./renderQueue');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
+const REMOTION_RENDER_OPTIONS = buildRemotionRenderOptions();
 /** Bump when Remotion compositing changes so scene caches re-render. */
 const SCENE_RENDER_COMPOSITOR_VERSION = 5;
 let remotionBundlePromise = null;
@@ -307,6 +310,7 @@ async function renderCompositionToFile({ serveUrl, id, inputProps, outputLocatio
     outputLocation,
     inputProps,
     timeoutInMilliseconds: RENDER_DELAY_TIMEOUT_MS,
+    ...REMOTION_RENDER_OPTIONS,
   });
 }
 
@@ -508,11 +512,20 @@ async function dispatchVideoExportNotification({
   }
 }
 
-async function processProjectRender({ renderId, workspaceId, projectId, userId, forceRebuild }) {
+async function processProjectRender({
+  renderId,
+  workspaceId,
+  projectId,
+  userId,
+  forceRebuild,
+  inputSnapshot,
+}) {
   const tempDirectory = await ensureTempDirectory(renderId);
 
   try {
-    const project = await getProjectOrThrow(workspaceId, projectId);
+    const currentProject = await getProjectOrThrow(workspaceId, projectId);
+    const project =
+      inputSnapshot == null ? currentProject : { ...currentProject, data: inputSnapshot };
     const manifest = await resolveProjectManifest(project);
 
     await renderDao.updateProjectRender(renderId, {
@@ -660,14 +673,18 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
     status: 'rendering',
   });
 
-  setImmediate(() => {
-    processProjectRender({
-      renderId: render.id,
-      workspaceId,
-      projectId,
-      userId,
-      forceRebuild,
-    }).catch(async (error) => {
+  renderQueue
+    .enqueue(() =>
+      processProjectRender({
+        renderId: render.id,
+        workspaceId,
+        projectId,
+        userId,
+        forceRebuild,
+        inputSnapshot: project.data,
+      })
+    )
+    .catch(async (error) => {
       try {
         await renderDao.updateProjectRender(render.id, {
           status: 'failed',
@@ -679,7 +696,6 @@ const startProjectRender = async ({ workspaceId, projectId, userId, forceRebuild
         void updateError;
       }
     });
-  });
 
   return serializeProjectRender(render);
 };
