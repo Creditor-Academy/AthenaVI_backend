@@ -44,6 +44,11 @@ const storageAccounting = require('../storage/storageAccounting.service');
 const inboxService = require('../inbox/inbox.service');
 const { buildRemotionRenderOptions } = require('./renderOptions');
 const { renderQueue } = require('./renderQueue');
+const {
+  createProgressReporter,
+  mapRange,
+  remotionProgressRatio,
+} = require('./renderProgress');
 const PRESIGN_TTL_SECONDS = 3600;
 const RENDER_DELAY_TIMEOUT_MS = Number(process.env.REMOTION_DELAY_RENDER_TIMEOUT_MS) || 120000;
 const REMOTION_RENDER_OPTIONS = buildRemotionRenderOptions();
@@ -295,7 +300,13 @@ async function ensureRemotionBundle() {
   return remotionBundlePromise;
 }
 
-async function renderCompositionToFile({ serveUrl, id, inputProps, outputLocation }) {
+async function renderCompositionToFile({
+  serveUrl,
+  id,
+  inputProps,
+  outputLocation,
+  onProgress,
+}) {
   const composition = await selectComposition({
     serveUrl,
     id,
@@ -311,6 +322,7 @@ async function renderCompositionToFile({ serveUrl, id, inputProps, outputLocatio
     inputProps,
     timeoutInMilliseconds: RENDER_DELAY_TIMEOUT_MS,
     ...REMOTION_RENDER_OPTIONS,
+    onProgress: typeof onProgress === 'function' ? onProgress : undefined,
   });
 }
 
@@ -326,12 +338,16 @@ async function renderSceneCaches({
   forceRebuild,
   renderId,
   serveUrl,
+  reportProgress,
 }) {
   const tempDirectory = await ensureTempDirectory(renderId);
   const sceneCacheEntries = [];
+  const sceneCount = manifest.scenes.length || 1;
 
   for (let index = 0; index < manifest.scenes.length; index += 1) {
     const scene = manifest.scenes[index];
+    const sliceStart = mapRange(index / sceneCount, 5, 70);
+    const sliceEnd = mapRange((index + 1) / sceneCount, 5, 70);
     const cached = forceRebuild
       ? null
       : await renderDao.findSceneRenderCache(project.id, scene.sceneId, scene.sceneHash);
@@ -346,6 +362,9 @@ async function renderSceneCaches({
         sceneHash: scene.sceneHash,
         s3Key: cached.s3Key,
       });
+      if (reportProgress) {
+        await reportProgress(sliceEnd);
+      }
       continue;
     }
 
@@ -359,6 +378,11 @@ async function renderSceneCaches({
         videoSettings: manifest.videoSettings,
       },
       outputLocation,
+      onProgress: reportProgress
+        ? (event) => {
+            reportProgress(mapRange(remotionProgressRatio(event), sliceStart, sliceEnd));
+          }
+        : undefined,
     });
 
     const fileBuffer = await fs.readFile(outputLocation);
@@ -395,6 +419,9 @@ async function renderSceneCaches({
       sceneHash: scene.sceneHash,
       s3Key: uploaded.key,
     });
+    if (reportProgress) {
+      await reportProgress(sliceEnd);
+    }
   }
 
   return sceneCacheEntries;
@@ -539,6 +566,10 @@ async function processProjectRender({
       })),
     });
 
+    const { report } = createProgressReporter({
+      persist: (progress) => renderDao.updateProjectRender(renderId, { progress }),
+    });
+
     const serveUrl = await ensureRemotionBundle();
     const cachedScenes = await renderSceneCaches({
       project,
@@ -546,11 +577,10 @@ async function processProjectRender({
       forceRebuild,
       renderId,
       serveUrl,
+      reportProgress: report,
     });
 
-    await renderDao.updateProjectRender(renderId, {
-      progress: 70,
-    });
+    await report(70);
 
     const outputLocation = path.join(tempDirectory, 'final.mp4');
     await renderCompositionToFile({
@@ -561,6 +591,9 @@ async function processProjectRender({
         scenes: cachedScenes,
       },
       outputLocation,
+      onProgress: (event) => {
+        report(mapRange(remotionProgressRatio(event), 70, 99));
+      },
     });
 
     const finalBuffer = await fs.readFile(outputLocation);
