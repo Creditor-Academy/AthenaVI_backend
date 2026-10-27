@@ -402,7 +402,7 @@ const reorderElements = asyncHandler(async (req, res) => {
 const regenerateSlide = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId, slideId } = req.params;
   const userId = req.user.id;
-  const { target, overwriteManualEdits, prompt } = req.body || {};
+  const { target, overwriteManualEdits, prompt, action } = req.body || {};
 
   const data = await presentationService.regenerateSlide({
     workspaceId,
@@ -412,6 +412,7 @@ const regenerateSlide = asyncHandler(async (req, res) => {
     target,
     overwriteManualEdits,
     prompt,
+    action,
   });
 
   return successResponse(req, res, data, 202, messages.PRESENTATION_SLIDE_REGENERATE_STARTED);

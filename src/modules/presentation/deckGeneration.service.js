@@ -2386,6 +2386,7 @@ async function resolveSlideImage({
       slide.id,
       PROMPT_BUNDLE_VERSION,
       crypto.createHash('sha256').update(promptText).digest('hex'),
+      ctx.forceImageRefresh ? ctx.regenerateNonce || '' : '',
     ]);
     const { job, duplicate } = await beginJob({
       slideId: slide.id,
@@ -2497,7 +2498,13 @@ async function resolveSlideImage({
     };
   }
 
-  const requestHash = hashPayload(['IMAGE_PATH_A', slide.id, briefHash, PROMPT_BUNDLE_VERSION]);
+  const requestHash = hashPayload([
+    'IMAGE_PATH_A',
+    slide.id,
+    briefHash,
+    PROMPT_BUNDLE_VERSION,
+    ctx.forceImageRefresh ? ctx.regenerateNonce || '' : '',
+  ]);
   const { job, duplicate } = await beginJob({
     slideId: slide.id,
     jobType: 'IMAGE_PATH_A',
@@ -3593,6 +3600,8 @@ async function processSlide(ctx, slide) {
       ctx.userPrompt || '',
       slideIntent || '',
       contentLayoutSchema?.layout_id || '',
+      ctx.editInstruction || '',
+      ctx.regenerateNonce || '',
     ]);
     const contentJob = await beginJob({
       slideId: slide.id,
@@ -3639,6 +3648,8 @@ async function processSlide(ctx, slide) {
               slotConstraints: slotConstraintsFromLayout(contentLayoutSchema),
               layoutContext: layoutContextFromSchema(contentLayoutSchema),
               layoutId: contentLayoutSchema?.layout_id || preSelectedLayoutId || null,
+              editInstruction: ctx.editInstruction || null,
+              existingContent: ctx.existingContent || null,
             }),
             model: DEFAULT_SLIDE_MODEL,
           }),
@@ -5283,6 +5294,9 @@ async function getStatus(presentationId, workspaceId) {
   };
 }
 
+// Edit actions that should re-pick the layout instead of keeping the current one.
+const EDIT_ACTIONS_NEW_LAYOUT = new Set(['make-visual', 'add-chart']);
+
 function seedTitleFromPrompt(prompt) {
   const text = String(prompt || '').trim();
   if (!text) return '';
@@ -5298,6 +5312,7 @@ async function regenerateSlide({
   target = 'all',
   overwriteManualEdits = false,
   prompt = null,
+  action = null,
 }) {
   const normalizedTarget =
     String(target || 'all').toLowerCase() === 'full' ? 'all' : String(target || 'all').toLowerCase();
@@ -5327,6 +5342,17 @@ async function regenerateSlide({
     throw new AppError('Provide prompt or slide title to regenerate content', 400);
   }
 
+  // AI edit panel actions rewrite the slide's current content instead of starting over.
+  const actionId = action ? String(action).trim().toLowerCase() : null;
+  const existingContent =
+    slide.content && typeof slide.content === 'object' && Object.keys(slide.content).length
+      ? slide.content
+      : null;
+  const editMode =
+    Boolean(userPrompt && actionId && actionId !== 'try-new-layout' && existingContent) &&
+    target !== 'image';
+  const keepLayout = editMode && !EDIT_ACTIONS_NEW_LAYOUT.has(actionId) && Boolean(slide.layoutId);
+
   await presentationRateLimit.assertRegenerateAllowed(userId, workspaceId);
 
   const estimateSlides = target === 'image' ? 0 : 1;
@@ -5340,7 +5366,13 @@ async function regenerateSlide({
 
   // Reset fields based on target; keep prompt/title seed for content LLM context
   const reset = { status: 'PENDING' };
-  if (target === 'all' || target === 'content') {
+  if (editMode) {
+    reset.content = { ...existingContent };
+    if (!keepLayout) {
+      reset.layoutId = null;
+      reset.elements = null;
+    }
+  } else if (target === 'all' || target === 'content') {
     reset.content = userPrompt
       ? { title: seedTitleFromPrompt(userPrompt), summary: userPrompt }
       : existingTitle
@@ -5367,6 +5399,21 @@ async function regenerateSlide({
         ? Boolean(deck.outline.preferVisuals)
         : detectPreferVisuals(deck.outline?.sourcePrompt || userPrompt);
 
+  let plannedLayouts = null;
+  if (keepLayout) {
+    const rows = await presentationDao.findLayoutsByLayoutIds([slide.layoutId]);
+    if (rows[0]?.schema) {
+      plannedLayouts = {
+        [Number(slide.order)]: {
+          layoutId: slide.layoutId,
+          template: rows[0],
+          schema: rows[0].schema,
+          layoutContentType: slide.contentType || null,
+        },
+      };
+    }
+  }
+
   const ctx = {
     workspaceId,
     deckId: deck.id,
@@ -5381,10 +5428,18 @@ async function regenerateSlide({
     layoutIdByOrder: {},
     fullBleedUsed: false,
     regenerateTarget: target,
-    userPrompt: userPrompt || existingTitle || flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
+    // Unique per request so each regenerate is a new job + credit charge (not deduped).
+    regenerateNonce: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    editInstruction: editMode ? userPrompt : null,
+    existingContent: editMode ? existingContent : null,
+    plannedLayouts,
+    userPrompt: editMode
+      ? existingTitle || flowCtx.userPrompt || deck.outline?.sourcePrompt || null
+      : userPrompt || existingTitle || flowCtx.userPrompt || deck.outline?.sourcePrompt || null,
     preferVisuals,
     wizardBrief: flowCtx.wizardBrief || '',
-    sourceText: userPrompt || flowCtx.userPrompt || deck.outline?.sourcePrompt || '',
+    sourceText:
+      (editMode ? null : userPrompt) || flowCtx.userPrompt || deck.outline?.sourcePrompt || '',
     deckNarrative:
       flowCtx.packNarrative?.summary ||
       flowCtx.wizardBrief ||

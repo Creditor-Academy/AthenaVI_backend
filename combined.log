@@ -19493,3 +19493,7 @@
 {"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:22:06.719Z"}
 {"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.548Z"}
 {"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.554Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-27T04:35:50.160Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-27T04:35:50.166Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-27T04:53:53.725Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-27T04:53:53.732Z"}
