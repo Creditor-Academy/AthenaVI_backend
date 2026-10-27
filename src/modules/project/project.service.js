@@ -836,20 +836,16 @@ const deleteProject = async (workspaceId, projectId) => {
     ...project.sceneRenderCaches.map((item) => item.s3Key).filter(Boolean),
   ];
 
-  for (const key of keys) {
-    try {
-      await deleteFile(key);
-    } catch (error) {
-      void error;
-    }
-  }
-
   // Drop cached share metadata and the live viewer room before the row (and its FK cascade) goes.
   await presentationShareService.invalidateForProject(project.id);
 
   await projectDao.deleteProject(project.id);
   const owner = await storageAccounting.getWorkspaceOwnerOrThrow(workspaceId);
   await storageAccounting.recalculateUserStorageUsed(owner.id);
+
+  // S3 cleanup is best-effort and can be slow for render-heavy projects; don't hold the
+  // request on it (a long delete invited repeat clicks that then 404'd).
+  Promise.allSettled(keys.map((key) => deleteFile(key))).catch(() => {});
 };
 
 module.exports = {

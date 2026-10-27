@@ -92,6 +92,11 @@ module.exports = {
   // Workspace
   WORKSPACE_NOT_FOUND: 'Workspace not found',
   WORKSPACE_FORBIDDEN: 'You do not have access to this workspace',
+  WORKSPACE_OWNER_REQUIRED: 'Only the workspace owner can do this',
+  WORKSPACE_ADMIN_REQUIRED: 'Only workspace owners and admins can do this',
+  WORKSPACE_ADMIN_CANNOT_REMOVE_OWNER: 'Admins cannot remove the workspace owner',
+  WORKSPACE_LEFT: 'You left the workspace',
+  WORKSPACE_CANNOT_LEAVE_PRIVATE: 'You cannot leave your personal workspace',
   WORKSPACE_NAME_REQUIRED: 'Workspace name is required',
   WORKSPACE_CANNOT_DELETE_PRIVATE: 'Private workspace cannot be deleted',
   WORKSPACE_CREATED: 'Workspace created successfully',
@@ -184,6 +189,8 @@ module.exports = {
   CANVAS_MOVED: 'Canvas moved successfully',
   CANVAS_DELETED: 'Canvas deleted successfully',
   CANVAS_NOT_FOUND: 'Canvas not found',
+  CANVAS_REVISION_CONFLICT:
+    'This design was changed somewhere else since you opened it. Load the latest version or keep yours.',
   VIDEO_SCENE_ASSIGNEE_UPDATED: 'Scene assignee updated successfully',
   VIDEO_SCENE_ASSIGN_TEAM_ONLY: 'Scene assignment is only available in team workspaces',
   VIDEO_SCENE_ASSIGNEE_NOT_MEMBER: 'Assignee must be a member of this workspace',

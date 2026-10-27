@@ -16,6 +16,7 @@ const {
   acceptInvitation,
   getInvitationPreview,
   removeMember,
+  leaveWorkspace,
   changeMemberRole,
   cancelInvitation,
   getWorkspaceInvitations,
@@ -276,6 +277,14 @@ router.patch(
   validate(workspaceValidations.changeMemberRoleSchema),
   requireWorkspaceRole(ownerOnly),
   changeMemberRole
+);
+// Members can't use DELETE /members/:memberId (owner/admin only), so leaving has its own route.
+router.post(
+  '/:workspaceId/leave',
+  authMiddleware,
+  validate(workspaceValidations.workspaceByIdSchema),
+  requireWorkspaceRole(anyMember),
+  leaveWorkspace
 );
 router.delete(
   '/:workspaceId/members/:memberId',

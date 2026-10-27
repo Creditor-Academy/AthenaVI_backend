@@ -153,6 +153,11 @@ const removeMember = asyncHandler(async (req, res) => {
   );
 });
 
+const leaveWorkspace = asyncHandler(async (req, res) => {
+  await workspaceService.leaveWorkspace(req.params.workspaceId, req.user.id);
+  return successResponse(req, res, null, 200, messages.WORKSPACE_LEFT);
+});
+
 const changeMemberRole = asyncHandler(async (req, res) => {
   const workspaceId = req.params.workspaceId;
   const memberId = req.params.memberId;
@@ -188,5 +193,6 @@ module.exports = {
   cancelInvitation,
   getWorkspaceInvitations,
   removeMember,
+  leaveWorkspace,
   changeMemberRole,
 };

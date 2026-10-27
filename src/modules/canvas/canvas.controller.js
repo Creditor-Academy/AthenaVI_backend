@@ -44,7 +44,9 @@ const updateCanvas = asyncHandler(async (req, res) => {
 const saveCanvasData = asyncHandler(async (req, res) => {
   const { workspaceId, canvasId } = req.params;
   const userId = req.user.id;
-  const canvas = await canvasService.saveCanvasData(workspaceId, canvasId, userId, req.body.data);
+  const canvas = await canvasService.saveCanvasData(workspaceId, canvasId, userId, req.body.data, {
+    baseRevision: req.body.baseRevision,
+  });
 
   return successResponse(req, res, { canvas }, 200, messages.CANVAS_DATA_SAVED);
 });

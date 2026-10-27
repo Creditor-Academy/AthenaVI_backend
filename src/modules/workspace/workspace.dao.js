@@ -57,8 +57,9 @@ const findWorkspacesByUserId = async (userId) => {
       owner: { select: { id: true, email: true, name: true } },
       members: {
         where: { userId },
-        select: { role: true, joinedAt: true },
+        select: { id: true, userId: true, role: true, joinedAt: true },
       },
+      _count: { select: { members: true } },
     },
     orderBy: { updatedAt: 'desc' },
   });
