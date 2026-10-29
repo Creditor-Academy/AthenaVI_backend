@@ -863,10 +863,10 @@ module.exports = {
   },
   attachSlideAsset: async (...args) => {
     const slideMedia = require('./slideMedia.service');
-    return slideMedia.attachSlideAsset(...args);
+    return slideMedia.attachAsset(...args);
   },
   insertSlideStock: async (...args) => {
     const slideMedia = require('./slideMedia.service');
-    return slideMedia.insertSlideStock(...args);
+    return slideMedia.insertStock(...args);
   },
 };
