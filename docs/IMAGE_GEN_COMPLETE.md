@@ -268,7 +268,7 @@ validate (mode=image, folderId, prompt, …)
 
 Inputs (at least one required):
 
-- `files` — PDF, DOCX, MD, TXT, PNG, JPG, JPEG, WebP (max **5** combined with assets; **20 MB** each)
+- `files` — PDF, DOCX, MD, TXT, PNG, JPG, JPEG, WebP (max **5** combined with assets; **1 GB** each)
 - `payload` JSON — `{ inlineText?, assetIds? }` (`assetIds` = workspace **image** assets)
 
 Pipeline:
@@ -277,7 +277,7 @@ Pipeline:
 2. Parse documents → excerpts; vision-summarize reference images  
 3. Moderate text where applicable  
 4. Upload file bytes to context S3 keys  
-5. Store `ImageGenContext` + files; return `previews` + `warnings`
+5. Store `ImageGenContext` + files; return `previews` + `warnings` plus `rateLimit` (`limit`, `used`, `remaining`, `resetAt`, `retryAfterSec`). A **429** includes the same `resetAt` (ISO) and `Retry-After` seconds until the hour resets. `GET .../context-quota` returns the bucket without creating.
 
 On generate:
 
@@ -355,7 +355,7 @@ Credit history labels (enriched): “AI image generation”, “AI image generat
 |--------|----------------|
 | Generate | `IMAGE_GEN_RATE_LIMIT_MAX` 30 / window `3600`s |
 | Regenerate / tweak / chat send | `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` 60 / `3600`s |
-| Context create | `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` 20 / `3600`s |
+| Context create | `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` 20 per fixed hour (`3600`s). First create starts the hour; the count resets to 0 when that hour ends. |
 
 Keys are per user and per workspace.
 
@@ -393,6 +393,7 @@ Full list: [`docs/api/ENVIRONMENT.md`](api/ENVIRONMENT.md).
 | GET | `/models` `/formats` `/styles` | Free |
 | GET | `/workspaces/:id/estimate` | Free |
 | POST | `/workspaces/:id/context` | Free |
+| GET | `/workspaces/:id/context-quota` | Free |
 | GET/DELETE | `/workspaces/:id/context/:contextId` | Free |
 | POST | `/workspaces/:id/generate` | Model AC |
 | GET | `/workspaces/:id/threads` | Free |

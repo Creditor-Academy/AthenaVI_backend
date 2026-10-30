@@ -582,7 +582,9 @@ async function runPipeline({
     contextId: contextId || null,
     workspace,
     userId,
-    parentSnapshot: action === 'regenerate' ? parentSnapshot : null,
+    // Generate must use a live context. Tweak / regenerate may fall back to the
+    // text snapshot saved on the parent so an expired pack does not 400 the chat.
+    parentSnapshot: action === 'generate' ? null : parentSnapshot,
     requireLive: action === 'generate' && Boolean(contextId),
   });
 
@@ -1231,8 +1233,8 @@ async function sendThreadMessage({
         : null;
     if (snapshot?.enrichmentBlock) {
       editPrompt = contextService.appendContextBlock(editPrompt, snapshot.enrichmentBlock);
-      if (editPrompt.length > 4000) {
-        editPrompt = editPrompt.slice(0, 4000);
+      if (editPrompt.length > 16000) {
+        editPrompt = editPrompt.slice(0, 16000);
       }
     }
 

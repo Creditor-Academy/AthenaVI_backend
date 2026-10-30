@@ -8,10 +8,14 @@ exports.successResponse = (req, res, data, statusCode, message) => {
   });
 };
 
-exports.errorResponse = (req, res, statusCode, message, errors = []) => {
-  return res.status(statusCode).json({
+exports.errorResponse = (req, res, statusCode, message, errors = [], data) => {
+  const body = {
     success: false,
     message,
     errors,
-  });
+  };
+  if (data && typeof data === 'object') {
+    body.data = jsonSafeDeep(data);
+  }
+  return res.status(statusCode).json(body);
 };

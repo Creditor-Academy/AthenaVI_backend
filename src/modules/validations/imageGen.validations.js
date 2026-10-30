@@ -9,8 +9,8 @@ const {
 
 /** Freeform generate/regenerate prompt. */
 const IMAGE_GEN_PROMPT_MAX = 16_000;
-/** Tweak follow-up instruction. */
-const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 4_000;
+/** Tweak / chat follow-up. Same cap as generate so a full brief can be sent as a hop. */
+const IMAGE_GEN_TWEAK_INSTRUCTION_MAX = 16_000;
 const STYLE_HINT_MAX = 300;
 
 const STUDIO_MODES = ['image', 'infographic', 'social', 'printable'];
@@ -118,9 +118,17 @@ const regenerateSchema = Joi.object({
 const tweakSchema = Joi.object({
   params: generationParams,
   body: Joi.object({
-    instruction: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).required(),
+    instruction: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).optional(),
+    prompt: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).optional(),
     editMode: Joi.string().valid('spec', 'pixel').optional(),
-  }),
+  })
+    .or('instruction', 'prompt')
+    .custom((value) => {
+      if (!value.instruction && value.prompt) {
+        return { ...value, instruction: value.prompt };
+      }
+      return value;
+    }),
 });
 
 const listGenerationsSchema = Joi.object({
@@ -172,10 +180,18 @@ const getThreadSchema = Joi.object({
 const sendThreadMessageSchema = Joi.object({
   params: threadParams,
   body: Joi.object({
-    content: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).required(),
+    content: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).optional(),
+    prompt: Joi.string().trim().min(1).max(IMAGE_GEN_TWEAK_INSTRUCTION_MAX).optional(),
     fromGenerationId: Joi.string().uuid().optional(),
     editMode: Joi.string().valid('spec', 'pixel').optional(),
-  }),
+  })
+    .or('content', 'prompt')
+    .custom((value) => {
+      if (!value.content && value.prompt) {
+        return { ...value, content: value.prompt };
+      }
+      return value;
+    }),
 });
 
 const renameThreadSchema = Joi.object({
@@ -233,6 +249,10 @@ const createContextSchema = Joi.object({
   body: createContextBody,
 });
 
+const contextQuotaSchema = Joi.object({
+  params: workspaceParams,
+});
+
 const getContextSchema = Joi.object({
   params: contextParams,
 });
@@ -256,6 +276,7 @@ module.exports = {
   estimateSchema,
   downloadSchema,
   createContextSchema,
+  contextQuotaSchema,
   getContextSchema,
   deleteContextSchema,
   listThreadsSchema,

@@ -10,7 +10,15 @@ const createContext = asyncHandler(async (req, res) => {
     files: req.files || [],
     body: req.body || {},
   });
-  return successResponse(req, res, { context: data }, 201, messages.IMAGE_GEN_CONTEXT_CREATED);
+  return successResponse(req, res, data, 201, messages.IMAGE_GEN_CONTEXT_CREATED);
+});
+
+const getContextQuota = asyncHandler(async (req, res) => {
+  const rateLimit = await contextService.getContextQuota({
+    userId: req.user.id,
+    workspace: req.workspace,
+  });
+  return successResponse(req, res, { rateLimit }, 200, messages.IMAGE_GEN_CONTEXT_FETCHED);
 });
 
 const getContext = asyncHandler(async (req, res) => {
@@ -34,5 +42,6 @@ const deleteContext = asyncHandler(async (req, res) => {
 module.exports = {
   createContext,
   getContext,
+  getContextQuota,
   deleteContext,
 };

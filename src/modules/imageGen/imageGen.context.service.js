@@ -106,7 +106,7 @@ function isContextUsable(row) {
 }
 
 async function createContext({ userId, workspace, files = [], body = {} }) {
-  await contextRateLimit.assertContextCreateAllowed(userId, workspace.id);
+  const rateLimit = await contextRateLimit.assertContextCreateAllowed(userId, workspace.id);
 
   const inlineText =
     body.inlineText != null && String(body.inlineText).trim()
@@ -267,7 +267,14 @@ async function createContext({ userId, workspace, files = [], body = {} }) {
     })),
   });
 
-  return serializeContext(row);
+  return {
+    context: serializeContext(row),
+    rateLimit,
+  };
+}
+
+async function getContextQuota({ userId, workspace }) {
+  return contextRateLimit.getContextHourState(userId, workspace.id);
 }
 
 async function getContext({ userId, workspace, contextId }) {
@@ -433,6 +440,7 @@ async function pinIfNeeded(contextId) {
 module.exports = {
   createContext,
   getContext,
+  getContextQuota,
   deleteContext,
   resolveForGenerate,
   pinIfNeeded,

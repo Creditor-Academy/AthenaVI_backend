@@ -145,7 +145,7 @@ Opening a chat is free. Sending a message charges tweak AC in Mode 1 and the mod
 | 402 | Insufficient credits |
 | 404 | Missing generation/thread/folder/expired context |
 | 409 | Delete pinned context |
-| 429 | Rate limited |
+| 429 | Rate limited. Context create includes `data.resetAt` (ISO) and `data.retryAfterSec`. Header `Retry-After` is the same seconds. Poll `GET .../context-quota` to show remaining / reset time before upload. |
 | 502/503 | OpenAI or Gemini failure / provider not configured |
 
 ---
@@ -155,7 +155,7 @@ Opening a chat is free. Sending a message charges tweak AC in Mode 1 and the mod
 | Topic | Hint |
 |-------|------|
 | Prompt | Max **16,000** chars |
-| Chat / tweak | Max **4,000** chars |
+| Chat / tweak | Max **16,000** chars (same as generate). Prefer `{ content }` / `{ instruction }`; `{ prompt }` is accepted as an alias. |
 | Infographic / social / printable sync | Loading + **≥ 120s** timeout |
 | Thread mode | Sticky: modes never mix in one chat; social and printable chats keep their size |
 | Dense content | Server may truncate sections or copy and return `request.warnings` |

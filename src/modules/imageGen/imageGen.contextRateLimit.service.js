@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const { redisClient } = require('../../shared/config/redis');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
@@ -13,60 +12,89 @@ const MAX =
     ? Number(process.env.IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX)
     : 20;
 
-const userKey = (userId) => `imageGen:context:user:${userId || 'unknown'}`;
+const userKey = (userId) => `imageGen:context:hour:user:${userId || 'unknown'}`;
 const workspaceKey = (workspaceId) =>
-  `imageGen:context:workspace:${workspaceId || 'unknown'}`;
+  `imageGen:context:hour:workspace:${workspaceId || 'unknown'}`;
 
-async function pruneAndCount(key, windowMs) {
-  const now = Date.now();
-  const windowStart = now - windowMs;
-  await redisClient.zRemRangeByScore(key, 0, windowStart);
-  const count = await redisClient.zCard(key);
-  return { count, now };
-}
-
-async function getBucketState(key, max, windowSec) {
-  const windowMs = windowSec * 1000;
-  const { count, now } = await pruneAndCount(key, windowMs);
-
-  if (count >= max) {
-    const oldest = await redisClient.zRangeWithScores(key, 0, 0);
-    let retryAfterSec = windowSec;
-    if (oldest.length > 0) {
-      const oldestScore = Number(oldest[0].score);
-      retryAfterSec = Math.max(1, Math.ceil((oldestScore + windowMs - now) / 1000));
-    }
-    return { blocked: true, retryAfterSec };
+function resetAtFromRetry(retryAfterSec) {
+  if (!retryAfterSec || retryAfterSec <= 0) {
+    return null;
   }
-
-  return { blocked: false, retryAfterSec: 0 };
+  return new Date(Date.now() + retryAfterSec * 1000).toISOString();
 }
 
-async function recordRequest(key, windowSec) {
-  const now = Date.now();
-  const member = `${now}:${crypto.randomUUID()}`;
-  await redisClient.zAdd(key, { score: now, value: member });
-  await redisClient.expire(key, windowSec);
+async function readBucket(key, max, windowSec) {
+  const raw = await redisClient.get(key);
+  const count = raw == null ? 0 : Number(raw) || 0;
+  const ttl = await redisClient.ttl(key);
+  const retryAfterSec = count > 0 ? Math.max(1, ttl > 0 ? ttl : windowSec) : 0;
+  return {
+    count,
+    remaining: Math.max(0, max - count),
+    blocked: count >= max,
+    retryAfterSec,
+    resetAt: resetAtFromRetry(retryAfterSec),
+  };
+}
+
+function mergeHourState(user, workspace) {
+  const remaining = Math.min(user.remaining, workspace.remaining);
+  const used = Math.max(user.count, workspace.count);
+  const retryAfterSec = Math.max(user.retryAfterSec || 0, workspace.retryAfterSec || 0);
+  const resetCandidates = [user.resetAt, workspace.resetAt].filter(Boolean).sort();
+  const resetAt = resetCandidates.length ? resetCandidates[resetCandidates.length - 1] : null;
+  return {
+    limit: MAX,
+    used,
+    remaining,
+    resetAt,
+    retryAfterSec,
+  };
+}
+
+async function getContextHourState(userId, workspaceId) {
+  const [user, workspace] = await Promise.all([
+    readBucket(userKey(userId), MAX, WINDOW_SEC),
+    readBucket(workspaceKey(workspaceId), MAX, WINDOW_SEC),
+  ]);
+  return mergeHourState(user, workspace);
+}
+
+async function takeSlot(key, windowSec) {
+  const count = await redisClient.incr(key);
+  const ttl = await redisClient.ttl(key);
+  if (count === 1 || ttl < 0) {
+    await redisClient.expire(key, windowSec);
+  }
 }
 
 async function assertContextCreateAllowed(userId, workspaceId) {
   const [userState, workspaceState] = await Promise.all([
-    getBucketState(userKey(userId), MAX, WINDOW_SEC),
-    getBucketState(workspaceKey(workspaceId), MAX, WINDOW_SEC),
+    readBucket(userKey(userId), MAX, WINDOW_SEC),
+    readBucket(workspaceKey(workspaceId), MAX, WINDOW_SEC),
   ]);
 
   if (userState.blocked || workspaceState.blocked) {
+    const hour = mergeHourState(userState, workspaceState);
     const err = new AppError(messages.IMAGE_GEN_CONTEXT_RATE_LIMITED, 429);
-    err.retryAfterSec = Math.max(userState.retryAfterSec, workspaceState.retryAfterSec);
+    err.retryAfterSec = hour.retryAfterSec;
+    err.resetAt = hour.resetAt;
+    err.remaining = 0;
+    err.limit = MAX;
     throw err;
   }
 
   await Promise.all([
-    recordRequest(userKey(userId), WINDOW_SEC),
-    recordRequest(workspaceKey(workspaceId), WINDOW_SEC),
+    takeSlot(userKey(userId), WINDOW_SEC),
+    takeSlot(workspaceKey(workspaceId), WINDOW_SEC),
   ]);
+
+  return getContextHourState(userId, workspaceId);
 }
 
 module.exports = {
   assertContextCreateAllowed,
+  getContextHourState,
+  MAX,
+  WINDOW_SEC,
 };

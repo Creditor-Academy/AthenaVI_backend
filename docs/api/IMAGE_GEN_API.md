@@ -173,7 +173,7 @@ Ids: `process`, `timeline`, `comparison`, `stats`, `hierarchy`, `list`, `cycle`.
 
 ## Context bundles
 
-Same as before: `POST/GET/DELETE .../context`. Free to create. Used by both modes.  
+Same as before: `POST/GET/DELETE .../context`. Free to create. Used by both modes. `POST .../context` also returns `data.rateLimit` (`limit`, `used`, `remaining`, `resetAt`, `retryAfterSec`). `GET .../context-quota` is the same bucket without uploading. A **429** body includes `data.resetAt` and `Retry-After`.  
 For infographic: document text feeds the **spec LLM**; reference images (if any) go to the **render** call as brand/logo/icon cues only.
 
 ---
