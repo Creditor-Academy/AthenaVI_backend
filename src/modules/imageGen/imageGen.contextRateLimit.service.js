@@ -13,8 +13,6 @@ const MAX =
     : 20;
 
 const userKey = (userId) => `imageGen:context:hour:user:${userId || 'unknown'}`;
-const workspaceKey = (workspaceId) =>
-  `imageGen:context:hour:workspace:${workspaceId || 'unknown'}`;
 
 function resetAtFromRetry(retryAfterSec) {
   if (!retryAfterSec || retryAfterSec <= 0) {
@@ -37,27 +35,18 @@ async function readBucket(key, max, windowSec) {
   };
 }
 
-function mergeHourState(user, workspace) {
-  const remaining = Math.min(user.remaining, workspace.remaining);
-  const used = Math.max(user.count, workspace.count);
-  const retryAfterSec = Math.max(user.retryAfterSec || 0, workspace.retryAfterSec || 0);
-  const resetCandidates = [user.resetAt, workspace.resetAt].filter(Boolean).sort();
-  const resetAt = resetCandidates.length ? resetCandidates[resetCandidates.length - 1] : null;
+function toHourState(bucket) {
   return {
     limit: MAX,
-    used,
-    remaining,
-    resetAt,
-    retryAfterSec,
+    used: bucket.count,
+    remaining: bucket.remaining,
+    resetAt: bucket.resetAt,
+    retryAfterSec: bucket.retryAfterSec,
   };
 }
 
-async function getContextHourState(userId, workspaceId) {
-  const [user, workspace] = await Promise.all([
-    readBucket(userKey(userId), MAX, WINDOW_SEC),
-    readBucket(workspaceKey(workspaceId), MAX, WINDOW_SEC),
-  ]);
-  return mergeHourState(user, workspace);
+async function getContextHourState(userId) {
+  return toHourState(await readBucket(userKey(userId), MAX, WINDOW_SEC));
 }
 
 async function takeSlot(key, windowSec) {
@@ -68,14 +57,11 @@ async function takeSlot(key, windowSec) {
   }
 }
 
-async function assertContextCreateAllowed(userId, workspaceId) {
-  const [userState, workspaceState] = await Promise.all([
-    readBucket(userKey(userId), MAX, WINDOW_SEC),
-    readBucket(workspaceKey(workspaceId), MAX, WINDOW_SEC),
-  ]);
+async function assertContextCreateAllowed(userId) {
+  const userState = await readBucket(userKey(userId), MAX, WINDOW_SEC);
 
-  if (userState.blocked || workspaceState.blocked) {
-    const hour = mergeHourState(userState, workspaceState);
+  if (userState.blocked) {
+    const hour = toHourState(userState);
     const err = new AppError(messages.IMAGE_GEN_CONTEXT_RATE_LIMITED, 429);
     err.retryAfterSec = hour.retryAfterSec;
     err.resetAt = hour.resetAt;
@@ -84,12 +70,9 @@ async function assertContextCreateAllowed(userId, workspaceId) {
     throw err;
   }
 
-  await Promise.all([
-    takeSlot(userKey(userId), WINDOW_SEC),
-    takeSlot(workspaceKey(workspaceId), WINDOW_SEC),
-  ]);
+  await takeSlot(userKey(userId), WINDOW_SEC);
 
-  return getContextHourState(userId, workspaceId);
+  return getContextHourState(userId);
 }
 
 module.exports = {

@@ -355,9 +355,9 @@ Credit history labels (enriched): “AI image generation”, “AI image generat
 |--------|----------------|
 | Generate | `IMAGE_GEN_RATE_LIMIT_MAX` 30 / window `3600`s |
 | Regenerate / tweak / chat send | `IMAGE_GEN_REGENERATE_RATE_LIMIT_MAX` 60 / `3600`s |
-| Context create | `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` 20 per fixed hour (`3600`s). First create starts the hour; the count resets to 0 when that hour ends. |
+| Context create | `IMAGE_GEN_CONTEXT_RATE_LIMIT_MAX` 20 per fixed hour (`3600`s), **per user only** — shared across every workspace the user belongs to, and teammates do not share a pool. First create starts the hour; the count resets to 0 when that hour ends. |
 
-Keys are per user and per workspace.
+Generate and regenerate keys are per user and per workspace; the context-create key is per user.
 
 ---
 

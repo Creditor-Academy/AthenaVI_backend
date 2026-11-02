@@ -19493,3 +19493,13 @@
 {"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:22:06.719Z"}
 {"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.548Z"}
 {"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-10-26T04:23:15.554Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-11-02T05:25:06.645Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-11-02T05:25:06.654Z"}
+{"candidateCount":1,"excludeLayoutIds":["comparison_side_by_side_v1"],"level":"warn","message":"presentation_layout_pool_exhausted_by_exclusions","phase":"final","slideNumber":2,"timestamp":"2026-11-02T05:27:42.276Z"}
+{"level":"warn","message":"presentation_layout_pool_empty","phase":"final","slideNumber":2,"timestamp":"2026-11-02T05:27:42.283Z"}
+{"level":"info","message":"Server running on port 9000","timestamp":"2026-11-02T05:30:08.428Z"}
+{"intervalMs":3600000,"level":"info","message":"Account deletion job scheduled","timestamp":"2026-11-02T05:30:08.432Z"}
+{"intervalMs":3600000,"level":"info","message":"Platform alerts job scheduled","timestamp":"2026-11-02T05:30:08.460Z"}
+{"intervalMs":3600000,"level":"info","message":"Weekly digest job scheduled","timestamp":"2026-11-02T05:30:08.461Z"}
+{"intervalMs":86400000,"level":"info","message":"Image gen context cleanup job scheduled","timestamp":"2026-11-02T05:30:08.461Z"}
+{"level":"warn","message":"Refresh Token missing","timestamp":"2026-11-02T05:32:04.181Z"}
