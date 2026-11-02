@@ -1139,7 +1139,7 @@ Social: a new `prompt` / `styleHint` / `style` / `brandPalette` / `contextId` re
 { "instruction": "Make the background darker and move the logo left", "editMode": "pixel" }
 ```
 
-Image mode: pixel edit of the parent PNG on the parent's provider. Infographic, social, and printable: copy/layout instructions patch the spec and re-render; visual-only instructions pixel-edit (`request.pixelEdited: true`). `editMode: "spec" | "pixel"` overrides. Social and printable pixel edits keep the exact size and the existing copy (printables keep their bleed). Charges model AC (mode AC in Modes 2–4). `instruction` max **4,000** chars.
+Image mode: pixel edit of the parent PNG on the parent's provider. Infographic, social, and printable: copy/layout instructions patch the spec and re-render; visual-only instructions pixel-edit (`request.pixelEdited: true`). `editMode: "spec" | "pixel"` overrides. Social and printable pixel edits keep the exact size and the existing copy (printables keep their bleed). Charges model AC (mode AC in Modes 2–4). `instruction` max **16,000** chars.
 
 ## 3.9 Download
 

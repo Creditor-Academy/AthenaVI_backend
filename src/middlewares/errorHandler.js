@@ -70,12 +70,23 @@ module.exports = (err, req, res, next) => {
       res.set('Retry-After', String(Math.ceil(err.retryAfterSec)));
     }
 
+    const rateLimitData =
+      statusCode === 429 && (err.resetAt || Number(err.retryAfterSec) > 0)
+        ? {
+            retryAfterSec: Number(err.retryAfterSec) || 0,
+            resetAt: err.resetAt || null,
+            remaining: err.remaining != null ? Number(err.remaining) : 0,
+            limit: err.limit != null ? Number(err.limit) : undefined,
+          }
+        : undefined;
+
     return errorResponse(
       req,
       res,
       statusCode,
       err.message || messages.INTERNAL_SERVER_ERROR,
-      errors
+      errors,
+      rateLimitData
     );
   }
 

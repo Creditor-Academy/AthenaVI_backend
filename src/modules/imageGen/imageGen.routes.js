@@ -15,7 +15,7 @@ const router = express.Router();
 const MAX_FILE_BYTES =
   Number(process.env.IMAGE_GEN_CONTEXT_MAX_FILE_BYTES) > 0
     ? Number(process.env.IMAGE_GEN_CONTEXT_MAX_FILE_BYTES)
-    : 20 * 1024 * 1024;
+    : 1024 * 1024 * 1024;
 
 const MAX_FILES =
   Number(process.env.IMAGE_GEN_CONTEXT_MAX_FILES) > 0
@@ -135,6 +135,14 @@ router.post(
   parseContextPayload,
   validate(imageGenValidations.createContextSchema),
   contextController.createContext
+);
+
+router.get(
+  '/workspaces/:workspaceId/context-quota',
+  authMiddleware,
+  checkWorkspaceAccess,
+  validate(imageGenValidations.contextQuotaSchema),
+  contextController.getContextQuota
 );
 
 router.get(
