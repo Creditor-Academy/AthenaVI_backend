@@ -20,9 +20,12 @@ module.exports = (err, req, res, next) => {
 
   /** express.json / body-parser: payload larger than `limit` */
   if (
-    err.status === 413 ||
-    err.type === 'entity.too.large' ||
-    (typeof err.message === 'string' && err.message.toLowerCase().includes('too large'))
+    // A file over an upload limit is a MulterError whose message is also "File too large";
+    // it gets its own per-route message below, not this JSON-body hint.
+    !(err instanceof multer.MulterError) &&
+    (err.status === 413 ||
+      err.type === 'entity.too.large' ||
+      (typeof err.message === 'string' && err.message.toLowerCase().includes('too large')))
   ) {
     const hint =
       'JSON body exceeds server limit (voice clone base64 is large). Use multipart POST /api/heygen/voices/clone with field file, or POST /api/heygen/voices/upload then JSON with audio.type url. Optional: JSON_BODY_LIMIT=32mb.';
@@ -42,15 +45,24 @@ module.exports = (err, req, res, next) => {
     const isVoiceCloneMultipart = url.includes('/voices/clone');
     const isAvatarCreateMultipart =
       url.endsWith('/avatars') || url.match(/\/avatars$/);
+    const isLibraryUpload = /\/assets\/[^/]+\/upload/.test(url);
+    const isProfileImage = url.includes('/upload/profile-image');
+    const isHeygen = url.includes('/heygen/');
     const msg =
       err.code === 'LIMIT_FILE_SIZE'
-        ? isLargeAvatarUpload
+        ? isLibraryUpload
+          ? 'File too large (max 1 GB)'
+          : isLargeAvatarUpload
           ? 'File too large (max 900 MB for HeyGen avatar file upload)'
           : isVoiceUpload || isVoiceCloneMultipart
             ? 'File too large (max 100 MB for HeyGen voice clone upload)'
             : isAvatarCreateMultipart
               ? 'File too large (max 900 MB for HeyGen avatar create multipart)'
-              : 'File too large (max 32 MB for HeyGen avatar upload)'
+              : isProfileImage
+                ? 'File too large (max 2 MB for a profile photo)'
+                : isHeygen
+                  ? 'File too large (max 32 MB for HeyGen avatar upload)'
+                  : 'File too large (max 50 MB)'
         : err.message || 'Upload error';
     return errorResponse(req, res, 400, msg, [msg]);
   }

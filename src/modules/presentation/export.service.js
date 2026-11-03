@@ -1,3 +1,4 @@
+const { normalizeCrop } = require('./imageCrop');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const logger = require('../../shared/utils/logger');
@@ -411,7 +412,7 @@ async function addElementsToPptxSlide(
           : null;
       const image = inlineSvgPng
         ? await imageBufferToPptxImage(inlineSvgPng)
-        : await fetchImageForPptx(url, key);
+        : await fetchImageForPptx(url, key, { crop: el.type === 'image' ? content.crop : null });
       if (image) {
         const { flipH, flipV } = contentFlipFlags(content);
         const imageOpts = {
@@ -425,7 +426,10 @@ async function addElementsToPptxSlide(
           flipV,
         };
         // Editor renders photos with object-fit: cover (default) — crop instead of stretching.
-        const fit = String(content.fit || (inlineSvgPng ? 'contain' : 'cover')).toLowerCase();
+        // A cropped image was already cut to the region, whose ratio matches the box → cover.
+        const fit = normalizeCrop(content.crop) && el.type === 'image'
+          ? 'cover'
+          : String(content.fit || (inlineSvgPng ? 'contain' : 'cover')).toLowerCase();
         if (fit === 'cover' && image.width && image.height) {
           imageOpts.h = box.w * (image.height / image.width);
           imageOpts.sizing = { type: 'cover', w: box.w, h: box.h };

@@ -3,6 +3,7 @@
  * Kept free of Puppeteer / credit / export-job concerns.
  */
 
+const { normalizeCrop, cropPixelRect, croppedImageCss } = require('./imageCrop');
 const sharp = require('sharp');
 const s3Service = require('../s3/s3.service');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
@@ -106,8 +107,22 @@ async function imageBufferToPptxImage(buffer) {
   }
 }
 
-async function fetchImageForPptx(url, s3Key) {
-  return imageBufferToPptxImage(await fetchImageBuffer(url, s3Key));
+/** Cut the editor's crop region out of an image buffer (returns the original on failure). */
+async function cropImageBuffer(buffer, crop) {
+  if (!buffer || !normalizeCrop(crop)) return buffer;
+  try {
+    const meta = await sharp(buffer, { density: 144 }).metadata();
+    const rect = cropPixelRect(crop, meta.width, meta.height);
+    if (!rect) return buffer;
+    return await sharp(buffer, { density: 144 }).extract(rect).png().toBuffer();
+  } catch {
+    return buffer;
+  }
+}
+
+async function fetchImageForPptx(url, s3Key, { crop = null } = {}) {
+  const buffer = await fetchImageBuffer(url, s3Key);
+  return imageBufferToPptxImage(crop ? await cropImageBuffer(buffer, crop) : buffer);
 }
 
 function contentFlipFlags(content = {}) {
@@ -276,7 +291,13 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
           height: Number(p.height) || 0,
           color: graphicTintColor(c, palette),
         });
-        if (src) {
+        const cropCss = el.type === 'image' ? croppedImageCss(c.crop) : null;
+        if (src && cropCss) {
+          // Cropped image: the box shows only the chosen region (editor parity).
+          parts.push(
+            `<div style="${style};overflow:hidden"><img src="${escapeHtml(src)}" alt="" style="${cropCss}" /></div>`
+          );
+        } else if (src) {
           parts.push(
             `<img src="${escapeHtml(src)}" alt="" style="${style};object-fit:${escapeHtml(c.fit || 'cover')}" />`
           );
@@ -420,6 +441,7 @@ module.exports = {
   bulletsFromContent,
   fetchImageAsBase64,
   fetchImageForPptx,
+  cropImageBuffer,
   imageBufferToPptxImage,
   svgMarkupToPngBuffer,
   sniffImageMime,

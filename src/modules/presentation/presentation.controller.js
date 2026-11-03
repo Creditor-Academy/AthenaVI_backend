@@ -536,6 +536,7 @@ const insertSlideStock = asyncHandler(async (req, res) => {
     externalId: req.body.externalId,
     elementId: req.body.elementId,
     userId: req.user.id,
+    workspace: req.workspace,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_SLIDE_STOCK_INSERTED);
 });

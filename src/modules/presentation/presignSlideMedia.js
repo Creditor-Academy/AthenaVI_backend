@@ -18,6 +18,30 @@ function isHeroMediaSlot(el) {
   );
 }
 
+/**
+ * S3 key for a URL that points at this app's own bucket (public or presigned form);
+ * null for any other host, so external images are never rewritten into broken S3 links.
+ */
+function ownBucketKey(url) {
+  const bucket = process.env.AWS_S3_BUCKET;
+  if (!bucket || !url || typeof url !== 'string') return null;
+  try {
+    const u = new URL(url);
+    const host = String(u.hostname || '').toLowerCase();
+    const b = bucket.toLowerCase();
+    if (host.startsWith(`${b}.s3.`) || host === `${b}.s3.amazonaws.com`) {
+      return s3Service.extractS3KeyFromUrl(url);
+    }
+    if (/^s3[.-]/.test(host) || host === 's3.amazonaws.com') {
+      const path = decodeURIComponent(u.pathname.replace(/^\//, ''));
+      if (path.startsWith(`${bucket}/`)) return path.slice(bucket.length + 1) || null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function isPresignableElement(el) {
   if (!el || typeof el !== 'object' || !el.content || typeof el.content !== 'object') {
     return false;
@@ -113,6 +137,14 @@ async function attachPresignedMedia(slide, cache) {
     next.elements = elementsDoc;
   }
 
+  // Slide background image (Slide design → Background → Add image / "Use as background").
+  // Stored in the elements doc; uploads live in the private bucket, so sign it like media.
+  if (next.elements && typeof next.elements === 'object' && next.elements.backgroundImage) {
+    const bgKey = ownBucketKey(next.elements.backgroundImage);
+    const signedBg = bgKey ? await signKey(bgKey, signCache) : null;
+    if (signedBg) next.elements = { ...next.elements, backgroundImage: signedBg };
+  }
+
   return next;
 }
 
@@ -200,6 +232,7 @@ function enrichDeckMediaKeysForExport(deck) {
 }
 
 module.exports = {
+  ownBucketKey,
   attachPresignedMedia,
   attachPresignedMediaToSlides,
   presignPresentationPayload,

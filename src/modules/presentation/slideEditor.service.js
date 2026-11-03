@@ -355,6 +355,23 @@ function persistElementsDoc(slideId, doc) {
   });
 }
 
+/**
+ * Merge a content patch. When the image URL changes without a new `s3Key`, the old key is
+ * dropped: presigning prefers `s3Key` over `url`, so keeping it made a replaced image revert
+ * to the previous one on the next load / export. A null `s3Key` means "derive from url".
+ */
+function mergeElementContent(currentContent = {}, patchContent = {}) {
+  const merged = { ...(currentContent || {}), ...patchContent };
+  const hasKey = Object.prototype.hasOwnProperty.call(patchContent, 's3Key');
+  const urlChanged = ['url', 'src'].some(
+    (field) =>
+      Object.prototype.hasOwnProperty.call(patchContent, field) &&
+      patchContent[field] !== (currentContent || {})[field]
+  );
+  if ((urlChanged && !hasKey) || merged.s3Key == null) delete merged.s3Key;
+  return merged;
+}
+
 async function patchElement({ workspaceId, presentationId, slideId, elementId, patch }) {
   const { deck } = await loadDeckContext(workspaceId, presentationId);
   assertNotGenerating(deck);
@@ -373,7 +390,7 @@ async function patchElement({ workspaceId, presentationId, slideId, elementId, p
     id: current.id,
     type: patch.type || current.type,
     placement: patch.placement ? { ...current.placement, ...patch.placement } : current.placement,
-    content: patch.content ? { ...current.content, ...patch.content } : current.content,
+    content: patch.content ? mergeElementContent(current.content, patch.content) : current.content,
     locked: patch.locked != null ? Boolean(patch.locked) : current.locked,
   };
   if (patch.childIds) merged.childIds = patch.childIds;
@@ -403,7 +420,7 @@ async function patchElementsBatch({ workspaceId, presentationId, slideId, patche
       id: current.id,
       type: patch.type || current.type,
       placement: patch.placement ? { ...current.placement, ...patch.placement } : current.placement,
-      content: patch.content ? { ...current.content, ...patch.content } : current.content,
+      content: patch.content ? mergeElementContent(current.content, patch.content) : current.content,
       locked: patch.locked != null ? Boolean(patch.locked) : current.locked,
     };
     if (patch.childIds) merged.childIds = patch.childIds;
@@ -596,6 +613,7 @@ async function getDeckLayoutTemplate({ templateId }) {
 }
 
 module.exports = {
+  mergeElementContent,
   addSlide,
   getDeckLayoutTemplate,
   deleteSlide,
