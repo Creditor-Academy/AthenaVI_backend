@@ -255,7 +255,7 @@ Frontend hosting is outside this backend deployment. Confirm the production fron
 | Healthy / unhealthy threshold | 2 / 3 |
 | **Idle timeout** | **600 seconds** |
 
-Increase idle timeout for large uploads (HeyGen avatar twin up to ~900 MB) and long Remotion renders.
+Increase idle timeout for large uploads (media library up to 1 GB, HeyGen avatar twin up to ~900 MB) and long Remotion renders.
 
 ---
 
@@ -301,11 +301,16 @@ server {
     listen 80;
     server_name vi.api.lmsathena.com;
 
-    client_max_body_size 1024m;
+    # Media library uploads go up to 1 GB (src/middlewares/upload.middleware.js); 1100m leaves
+    # room for the multipart envelope. Without this, Nginx's default (1m) refuses larger files
+    # with a 413 that carries no CORS headers — the browser then only reports "Failed to fetch".
+    client_max_body_size 1100m;
     client_body_timeout 600s;
     proxy_read_timeout 600s;
     proxy_connect_timeout 60s;
     proxy_send_timeout 600s;
+    # Stream uploads to Node instead of writing the whole body to Nginx's disk first.
+    proxy_request_buffering off;
 
     location / {
         proxy_pass http://athena_api;

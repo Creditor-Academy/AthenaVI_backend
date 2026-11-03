@@ -47,12 +47,14 @@ function extractS3KeyFromUrl(url) {
   }
 }
 
-async function uploadBodyToKey(body, key, contentType) {
+async function uploadBodyToKey(body, key, contentType, { contentLength } = {}) {
   const command = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: body,
     ContentType: contentType,
+    // Required when the body is a stream (large uploads are streamed from a temp file).
+    ...(contentLength != null ? { ContentLength: contentLength } : {}),
   });
 
   await s3.send(command);
@@ -69,14 +71,15 @@ async function uploadFile(
   entityId,     // userId | workspaceId
   folder = '',  // profile | assets | thumbnails etc
   originalName,
-  contentType
+  contentType,
+  { contentLength } = {}
 ) {
   // extract file extension
   const extension = path.extname(originalName);
 
   // generate unique key
   const key = `${entityType}/${entityId}/${folder}/${uuidv4()}${extension}`;
-  return uploadBodyToKey(fileBuffer, key, contentType);
+  return uploadBodyToKey(fileBuffer, key, contentType, { contentLength });
 }
 
 async function uploadFileToKey(fileBuffer, key, contentType) {

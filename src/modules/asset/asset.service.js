@@ -1,3 +1,4 @@
+const fs = require('fs');
 const messages = require('../../shared/utils/messages');
 const assetDao = require('./asset.dao');
 const { uploadFile, deleteFile } = require('../s3/s3.service');
@@ -68,6 +69,8 @@ const persistWorkspaceAsset = async ({
   userId,
   workspace,
   buffer,
+  filePath = null,
+  fileSize = null,
   contentType,
   originalName,
   name,
@@ -84,7 +87,7 @@ const persistWorkspaceAsset = async ({
       throw new AppError(messages.WORKSPACE_OWNER_NOT_FOUND, 404);
     }
 
-    const size = buffer.length;
+    const size = filePath ? Number(fileSize) || 0 : buffer.length;
     await storageAccounting.recalculateUserStorageUsed(workspace.ownerId);
     try {
       await storageAccounting.assertOwnerCanFitAdditionalBytes(workspace.id, size);
@@ -102,13 +105,15 @@ const persistWorkspaceAsset = async ({
       throw storageError;
     }
 
+    // Large library uploads arrive as a temp file and are streamed, never loaded into memory.
     const { key, url } = await uploadFile(
-      buffer,
+      filePath ? fs.createReadStream(filePath) : buffer,
       'workspace',
       workspace.id,
       'assets',
       originalName,
-      contentType
+      contentType,
+      filePath ? { contentLength: size } : {}
     );
     uploadedKey = key;
 
@@ -143,7 +148,8 @@ const persistWorkspaceAsset = async ({
 
 const uploadAsset = async ({ userId, workspace, file, name }) => {
   const buffer = file.buffer;
-  if (!buffer) {
+  const filePath = file.path || null;
+  if (!buffer && !filePath) {
     throw new AppError(messages.INVALID_FILE_TYPE, 400);
   }
 
@@ -151,6 +157,8 @@ const uploadAsset = async ({ userId, workspace, file, name }) => {
     userId,
     workspace,
     buffer,
+    filePath,
+    fileSize: file.size,
     contentType: file.mimetype,
     originalName: file.originalname,
     name: name || file.originalname,

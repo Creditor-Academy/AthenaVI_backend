@@ -1,7 +1,7 @@
 const express = require('express');
 const { authMiddleware } = require('../../middlewares/auth.middlware');
 const { checkWorkspaceAccess } = require('../../middlewares/workspaceAccess');
-const { uploadAssetS3 } = require('../../middlewares/upload.middleware');
+const { uploadLibraryAsset, removeUploadedTempFile } = require('../../middlewares/upload.middleware');
 const validate = require('../../middlewares/validate.middleware');
 const { uploadAssetSchema, getAssetsSchema, renameAssetSchema, deleteAssetSchema } = require('./asset.validation');
 const assetController = require('./asset.controller');
@@ -11,7 +11,8 @@ router.post(
   "/:workspaceId/upload",
   authMiddleware,
   checkWorkspaceAccess,
-  uploadAssetS3.single("file"),
+  uploadLibraryAsset.single("file"),
+  removeUploadedTempFile,
   validate(uploadAssetSchema),
   assetController.uploadAsset
 );

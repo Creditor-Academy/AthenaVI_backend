@@ -1,6 +1,7 @@
 const path = require('path');
 const crypto = require('crypto');
 const AppError = require('../../shared/utils/AppError');
+const prisma = require('../../shared/config/prismaClient');
 const messages = require('../../shared/utils/messages');
 const s3Service = require('../s3/s3.service');
 const stockService = require('../stock/stock.service');
@@ -31,6 +32,21 @@ function getElementsDoc(slide) {
   return blankCanvas();
 }
 
+function findScreenImage(frame, elements) {
+  const p = frame.placement || {};
+  const inside = (el) => {
+    const q = el.placement || {};
+    const cx = (q.x || 0) + (q.width || 0) / 2;
+    const cy = (q.y || 0) + (q.height || 0) / 2;
+    return cx >= (p.x || 0) && cx <= (p.x || 0) + (p.width || 0) && cy >= (p.y || 0) && cy <= (p.y || 0) + (p.height || 0);
+  };
+  return (
+    elements
+      .filter((el) => el.id !== frame.id && el.type === 'image' && inside(el))
+      .sort((a, b) => (b.layer || 0) - (a.layer || 0))[0] || null
+  );
+}
+
 function applyImageToElements(elementsDoc, { url, s3Key, elementId, assetId, provider }) {
   const doc = {
     version: elementsDoc.version || 1,
@@ -40,11 +56,17 @@ function applyImageToElements(elementsDoc, { url, s3Key, elementId, assetId, pro
 
   let target = null;
   if (elementId) {
-    target = doc.elements.find((e) => e.id === elementId && e.type === 'image');
-    if (!target) throw new AppError('Image element not found on slide', 404);
-  } else {
-    target = doc.elements.find((e) => e.type === 'image' && e.role === 'image');
-    if (!target) target = doc.elements.find((e) => e.type === 'image');
+    const picked = doc.elements.find((e) => e.id === elementId);
+    if (!picked) throw new AppError('Image element not found on slide', 404);
+    if (picked.type === 'image') target = picked;
+    // Layout device frames only draw chrome; their picture is the image inside the screen.
+    else if (picked.content?.layoutSurface) target = findScreenImage(picked, doc.elements);
+    // Any other selection (text, shape, group…) is treated like "no target" below.
+  }
+  if (!target) {
+    // Fill an empty image slot if the layout has one; otherwise add a new image rather than
+    // silently replacing a picture that is already on the slide.
+    target = doc.elements.find((e) => e.type === 'image' && !(e.content?.url || e.content?.src));
   }
 
   const mediaContent = {
@@ -189,6 +211,7 @@ async function insertStock({
   externalId,
   elementId,
   userId,
+  workspace: requestWorkspace = null,
 }) {
   const { deck } = await loadSlideContext(workspaceId, presentationId, slideId);
 
@@ -197,7 +220,13 @@ async function insertStock({
   let meta = {};
 
   if (provider && externalId) {
-    const workspace = { id: workspaceId };
+    // The asset is stored against the workspace owner's quota, so it needs the real workspace
+    // row (ownerId) — a bare `{ id }` made findUserById(undefined) throw and the request 500.
+    const workspace =
+      requestWorkspace?.id === workspaceId && requestWorkspace?.ownerId
+        ? requestWorkspace
+        : await prisma.workspace.findUnique({ where: { id: workspaceId } });
+    if (!workspace) throw new AppError(messages.WORKSPACE_NOT_FOUND, 404);
     const asset = await stockService.importStockAsset({
       userId,
       workspace,
@@ -260,6 +289,7 @@ async function insertStock({
 }
 
 module.exports = {
+  applyImageToElements,
   uploadSlideMedia,
   attachAsset,
   insertStock,

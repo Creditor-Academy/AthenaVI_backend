@@ -49,6 +49,9 @@ const server = app.listen(PORT, () => {
   startImageGenContextCleanupJob();
   recoverInterruptedRenders(BOOTED_AT);
 });
+// Node closes a request that takes over 5 minutes to arrive (requestTimeout). Media library
+// uploads go up to 1 GB, which takes longer than that on a slow connection.
+server.requestTimeout = 60 * 60 * 1000;
 
 const shutdown = async (signal) => {
   console.log(`Received ${signal}. Shutting down...`);
