@@ -18,7 +18,11 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-    throw new AppError(messages.TOKEN_EXPIRED, 401);
+    // Only an out-of-date token is "expired"; a bad signature or garbled token is not.
+    throw new AppError(
+      err?.name === 'TokenExpiredError' ? messages.TOKEN_EXPIRED : messages.UNAUTHORIZED,
+      401
+    );
   }
 
   const { sub: userId, sessionId } = payload;
