@@ -16,6 +16,7 @@ const {
   textPaintCss,
 } = require('./canvasFill');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
+const { linkedRuns } = require('./textLinks');
 
 function bulletsFromContent(content) {
   if (!content || typeof content !== 'object') return [];
@@ -158,18 +159,28 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+// Links stay clickable in the exported PDF (Chromium keeps <a href> as PDF link annotations).
+function htmlTextPiece(text, paint, href) {
+  if (href) {
+    return `<a href="${escapeHtml(href)}" style="${paint};text-decoration:underline">${escapeHtml(text)}</a>`;
+  }
+  return `<span style="${paint}">${escapeHtml(text)}</span>`;
+}
+
 function htmlTextInner(c, palette, fallbackColor) {
   const runs = Array.isArray(c.runs) ? c.runs : [];
   if (runs.length) {
-    return runs
+    return linkedRuns(runs)
       .map((run) => {
         const paint = textPaintCss(run.fill || run.color || run.colorRole, palette, fallbackColor);
-        return `<span style="${paint}">${escapeHtml(run.text || '')}</span>`;
+        return htmlTextPiece(run.text || '', paint, run.href);
       })
       .join('');
   }
   const paint = textPaintCss(c.fill || c.color || c.colorRole, palette, fallbackColor);
-  return `<span style="${paint}">${escapeHtml(c.text || '')}</span>`;
+  const pieces = linkedRuns([{ text: c.text || '' }]);
+  if (!pieces.length) return `<span style="${paint}"></span>`;
+  return pieces.map((piece) => htmlTextPiece(piece.text, paint, piece.href)).join('');
 }
 
 function htmlChartInner(c, palette) {

@@ -16,6 +16,7 @@ const {
   resolveAspectCanvas,
 } = require('./presentation.constants');
 const { firstHexFromFill } = require('./canvasFill');
+const { linkedRuns } = require('./textLinks');
 const {
   bulletsFromContent,
   fetchImageForPptx,
@@ -370,8 +371,25 @@ async function addElementsToPptxSlide(
         textOpts.lineSpacing = Math.round(Number(content.lineHeight) * fontSizePt);
       }
       const fontFace = resolveExportFontFace(content, el, themeFonts);
-      if (Array.isArray(content.runs) && content.runs.length) {
-        const runPayload = content.runs.map((run) => ({
+      // Linked text (stored links and web addresses in the text) exports as PowerPoint hyperlinks.
+      const plainLinks =
+        Array.isArray(content.runs) && content.runs.length
+          ? null
+          : linkedRuns([{ text: String(content.text || '') }]);
+      if (plainLinks && plainLinks.some((piece) => piece.href)) {
+        if (fontFace) textOpts.fontFace = fontFace;
+        s.addText(
+          plainLinks.map((piece) => ({
+            text: piece.text,
+            // A hyperlink run doesn't take the box colour from pptxgenjs, so it is given here.
+            options: piece.href
+              ? { hyperlink: { url: piece.href, tooltip: piece.href }, color: textOpts.color }
+              : {},
+          })),
+          textOpts
+        );
+      } else if (Array.isArray(content.runs) && content.runs.length) {
+        const runPayload = linkedRuns(content.runs).map((run) => ({
           text: String(run.text || ''),
           options: {
             fontSize: fontSizePt,
@@ -383,6 +401,7 @@ async function addElementsToPptxSlide(
               textColorResolved
             ),
             fontFace: run.fontFamily || fontFace || undefined,
+            ...(run.href ? { hyperlink: { url: run.href, tooltip: run.href } } : {}),
           },
         }));
         s.addText(runPayload, {
