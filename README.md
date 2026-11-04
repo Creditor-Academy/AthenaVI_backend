@@ -40,6 +40,7 @@ Full HTTP contracts are split under **`docs/api/`** so you can jump to one area 
 | Guide | Purpose |
 |-------|---------|
 | [docs/PROJECT_EDITOR_INTEGRATION.md](docs/PROJECT_EDITOR_INTEGRATION.md) | Editor project model, save/load, playback, HeyGen |
+| [docs/CLIENT_RENDERING_RECOMMENDATIONS.md](docs/CLIENT_RENDERING_RECOMMENDATIONS.md) | Client-side export recommendation: hybrid render, HeyGen webhooks, browser stack |
 | [docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md](docs/FRONTEND_PPT_IMAGE_BRAND_KIT_A_TO_Z.md) | **All-in-one** — PPT + Image Gen + Brand Kit (superadmin → user, self-contained) |
 | [docs/PRESENTATION_FRONTEND_INTEGRATION.md](docs/PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + templates** — AI/blank/template, canvas, export, admin templates |
 | [docs/CREDITS_FRONTEND_INTEGRATION.md](docs/CREDITS_FRONTEND_INTEGRATION.md) | Credits: pools, pricing, billing logic, editor & library UX |
