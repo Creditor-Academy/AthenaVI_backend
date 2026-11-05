@@ -17,6 +17,7 @@ const {
 } = require('./canvasFill');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const { linkedRuns } = require('./textLinks');
+const { elementEffectCssFilter } = require('./elementEffects');
 
 function bulletsFromContent(content) {
   if (!content || typeof content !== 'object') return [];
@@ -264,7 +265,7 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
       const c = el.content || {};
       const isText = el.type === 'text' || el.type === 'textbox';
       const transformCss = placementTransformCss(p, isText ? {} : c);
-      const style = [
+      let style = [
         `position:absolute`,
         `left:${Number(p.x) || 0}px`,
         `top:${Number(p.y) || 0}px`,
@@ -275,7 +276,11 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
         `transform-origin:center center`,
         `box-sizing:border-box`,
         `overflow:${isText ? 'visible' : 'hidden'}`,
-      ].join(';');
+      ];
+      // Shadow / glow / outline… (drawn past the box, like in the editor).
+      const effectFilter = elementEffectCssFilter(c, { palette, scale: stageScale });
+      if (effectFilter) style.push(`filter:${effectFilter}`);
+      style = style.join(';');
 
       if (el.type === 'group') {
         continue;
