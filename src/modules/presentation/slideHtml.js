@@ -35,8 +35,14 @@ const EXPORT_IMAGE_FETCH_TIMEOUT_MS =
     : 30_000;
 
 async function fetchImageBuffer(url, s3Key, { timeoutMs } = {}) {
+  if (s3Key) {
+    try {
+      return await s3Service.getObjectBuffer(s3Key);
+    } catch {
+      // Missing / unreadable object: fall back to the element's own URL below.
+    }
+  }
   try {
-    if (s3Key) return await s3Service.getObjectBuffer(s3Key);
     if (!url || !/^https?:\/\//i.test(String(url))) return null;
     return await downloadRemote(url, {
       maxBytes: 12 * 1024 * 1024,

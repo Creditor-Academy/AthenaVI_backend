@@ -32,6 +32,17 @@ const { elementEffectPptxShadow } = require('./elementEffects');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
 const { normalizeChartContent } = require('./chartContentNormalize');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
+const { withExportPage } = require('../../shared/utils/exportBrowser');
+const {
+  isBrowserExportFormat,
+  createSemaphore,
+  withHeartbeat,
+  pdfRenderTimeoutMs,
+  safeExportFilename,
+  exportFileExt,
+  slideImageFilename,
+  normalizeExportError,
+} = require('./exportJob.util');
 
 const PRESIGN_EXPIRES_SEC = 3600;
 const EXPORT_MAX_QUEUED_MS =
@@ -51,6 +62,25 @@ const PUPPETEER_EXPORT_TIMEOUT_MS =
   Number(process.env.PPT_EXPORT_PUPPETEER_TIMEOUT_MS) > 0
     ? Number(process.env.PPT_EXPORT_PUPPETEER_TIMEOUT_MS)
     : 180_000;
+/** Browser exports (PDF / PNG / JPEG) running at once on this server; the rest wait QUEUED. */
+const EXPORT_MAX_CONCURRENT_BROWSER =
+  Number(process.env.PPT_EXPORT_MAX_CONCURRENT_BROWSER) > 0
+    ? Number(process.env.PPT_EXPORT_MAX_CONCURRENT_BROWSER)
+    : 2;
+const EXPORT_HEARTBEAT_INTERVAL_MS =
+  Number(process.env.PPT_EXPORT_HEARTBEAT_INTERVAL_MS) > 0
+    ? Number(process.env.PPT_EXPORT_HEARTBEAT_INTERVAL_MS)
+    : 20_000;
+const browserExportSlots = createSemaphore(EXPORT_MAX_CONCURRENT_BROWSER);
+
+/** Browser exports running / waiting on this server (for /health/export and tests). */
+function exportQueueStats() {
+  return {
+    running: browserExportSlots.active,
+    waiting: browserExportSlots.waiting,
+    limit: browserExportSlots.limit,
+  };
+}
 
 function exportJobIsStale(row) {
   if (!row || (row.status !== 'QUEUED' && row.status !== 'RENDERING')) return false;
@@ -59,7 +89,8 @@ function exportJobIsStale(row) {
   const updatedAt = row.updatedAt ? new Date(row.updatedAt).getTime() : createdAt;
 
   if (row.status === 'QUEUED') {
-    return now - createdAt > EXPORT_MAX_QUEUED_MS;
+    // A job waiting for a free browser slot keeps beating, so judge it by its last beat.
+    return now - updatedAt > EXPORT_MAX_QUEUED_MS;
   }
   if (now - createdAt > EXPORT_MAX_RENDERING_MS) {
     return true;
@@ -74,24 +105,6 @@ async function touchExportHeartbeat(exportId) {
   } catch {
     // non-fatal
   }
-}
-
-function normalizeExportError(err) {
-  const msg = String(err?.message || err || '');
-  if (/timeout.*\d{4,6}.*exceeded|Navigation timeout|Waiting failed.*timeout/i.test(msg)) {
-    const sec = msg.match(/(\d{4,6})\s*ms/)?.[1];
-    const hint = sec ? ` (${Math.round(Number(sec) / 1000)}s limit)` : '';
-    return `Export rendering timed out${hint}. For large decks use PowerPoint (PPTX), or try again with fewer slides.`;
-  }
-  return msg.slice(0, 2000);
-}
-
-function safeExportFilename(name, ext) {
-  const base = String(name || 'presentation')
-    .replace(/[^\w\s.-]/g, '')
-    .trim()
-    .slice(0, 80) || 'presentation';
-  return `${base}.${ext}`;
 }
 
 async function notifyExportFinished({
@@ -823,56 +836,12 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
   return Buffer.isBuffer(out) ? out : Buffer.from(out);
 }
 
-async function withBrowserPage(fn, { args = [] } = {}) {
-  let browser;
-  try {
-    const puppeteer = require('puppeteer');
-    const { resolveChromeExecutable } = require('../../shared/utils/chromeExecutable');
-    const executablePath = resolveChromeExecutable();
-    const launchOpts = {
-      headless: true,
-      // Desktop Chrome on Windows shows a window on launch even when headless; keep the
-      // process hidden and parked offscreen so an export never flashes on the host.
-      windowsHide: true,
-      pipe: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--font-render-hinting=none',
-        '--window-position=-32000,-32000',
-        '--mute-audio',
-        '--no-first-run',
-        '--no-default-browser-check',
-        ...args,
-      ],
-    };
-    if (executablePath) {
-      launchOpts.executablePath = executablePath;
-    } else {
-      // Last resort: ask Puppeteer to use the installed Chrome channel.
-      launchOpts.channel = 'chrome';
-    }
-
-    browser = await puppeteer.launch(launchOpts);
-    const page = await browser.newPage();
-    return await fn(page);
-  } finally {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch {
-        // ignore
-      }
-    }
-  }
-}
-
 async function buildPdfBuffer(deck, opts = {}) {
   const aspect = resolveAspectCanvas(deck.aspectRatio);
-  const contentTimeout = PUPPETEER_EXPORT_TIMEOUT_MS;
-  return withBrowserPage(async (page) => {
+  const slideCount = opts.slideId ? 1 : (deck.slides || []).length;
+  // The whole deck loads as one page, so big decks get more time.
+  const contentTimeout = pdfRenderTimeoutMs(slideCount, PUPPETEER_EXPORT_TIMEOUT_MS);
+  return withExportPage(async (page) => {
     await page.setViewport({ width: aspect.width, height: aspect.height });
     page.setDefaultNavigationTimeout(contentTimeout);
     page.setDefaultTimeout(contentTimeout);
@@ -970,13 +939,31 @@ function buildZipBuffer(files) {
   return Buffer.concat([...parts, centralBuf, end]);
 }
 
-async function buildRasterExport(deck, { format, slideId, onSlideProcessed } = {}) {
+async function buildRasterExport(deck, { format, slideId, deckName, onSlideProcessed } = {}) {
   const type = String(format || 'PNG').toUpperCase() === 'JPEG' ? 'jpeg' : 'png';
-  let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
-  if (slideId) slides = slides.filter((s) => s.id === slideId);
+  const ext = type === 'jpeg' ? 'jpg' : 'png';
+  const ordered = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
+  const slides = slideId ? ordered.filter((s) => s.id === slideId) : ordered;
   if (!slides.length) throw new AppError('No slides to export', 400);
 
-  const images = await renderSlideScreenshots(deck, { slides, format: type, onSlideProcessed });
+  // Files are numbered by the slide's place in the deck: <Deck>-slide-03.png.
+  const position = new Map(ordered.map((s, i) => [s.id, i + 1]));
+  let firstFailure = null;
+  const images = await renderSlideScreenshots(deck, {
+    slides,
+    format: type,
+    onSlideProcessed,
+    stopOnFailure: true,
+    fileName: (slide, i) => slideImageFilename(deckName, position.get(slide.id) || i + 1, ext),
+    onSlide: (image, slide, err) => {
+      if (!image && !firstFailure) firstFailure = err || new Error(`Slide ${slide?.id} did not render`);
+    },
+  });
+
+  // A missing slide must fail the export, not ship a partial (or empty) zip.
+  if (firstFailure || images.length !== slides.length) {
+    throw firstFailure || new Error('Some slides did not render');
+  }
 
   if (images.length === 1) {
     return {
@@ -1001,7 +988,10 @@ async function buildRasterExport(deck, { format, slideId, onSlideProcessed } = {
  * @param {{ slides?: object[], format?: string, onSlide?: Function }} opts
  *   onSlide → optional callback after each slide (upload progressively)
  */
-async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, onSlideProcessed } = {}) {
+async function renderSlideScreenshots(
+  deck,
+  { slides, format = 'jpeg', onSlide, onSlideProcessed, fileName, stopOnFailure = false } = {}
+) {
   const type = String(format || 'jpeg').toLowerCase() === 'png' ? 'png' : 'jpeg';
   const list = Array.isArray(slides) && slides.length
     ? slides
@@ -1011,16 +1001,20 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, 
   const contentTimeout = PUPPETEER_EXPORT_TIMEOUT_MS;
   const jpegQuality = 82;
 
-  return withBrowserPage(async (page) => {
-    // Don't let a single broken remote image hang forever.
-    page.setDefaultNavigationTimeout(contentTimeout);
-    page.setDefaultTimeout(contentTimeout);
-
+  return withExportPage(async (firstPage) => {
+    const browser = firstPage.browser();
     const images = [];
     for (let i = 0; i < list.length; i += 1) {
       const slide = list[i];
       const canvasW = Math.max(320, Math.round(slide.elements?.canvas?.width || CANVAS_WIDTH));
       const canvasH = Math.max(180, Math.round(slide.elements?.canvas?.height || CANVAS_HEIGHT));
+      // A fresh page per slide: with Puppeteer 25 a second setContent(…networkidle0) on the
+      // same page never settles, which made every slide after the first time out.
+      const page = i === 0 ? firstPage : await browser.newPage();
+      // Don't let a single broken remote image hang forever.
+      page.setDefaultNavigationTimeout(contentTimeout);
+      page.setDefaultTimeout(contentTimeout);
+      let failed = false;
       try {
         // eslint-disable-next-line no-await-in-loop
         await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
@@ -1038,7 +1032,10 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, 
         const image = {
           slideId: slide.id,
           order: slide.order,
-          name: `slide-${String(i + 1).padStart(2, '0')}.${type === 'jpeg' ? 'jpg' : 'png'}`,
+          name:
+            typeof fileName === 'function'
+              ? fileName(slide, i)
+              : `slide-${String(i + 1).padStart(2, '0')}.${type === 'jpeg' ? 'jpg' : 'png'}`,
           data: Buffer.from(buf),
         };
         images.push(image);
@@ -1051,6 +1048,7 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, 
           await onSlideProcessed(slide);
         }
       } catch (err) {
+        failed = true;
         logger.warn?.('slide_screenshot_failed', {
           slideId: slide.id,
           error: err.message,
@@ -1059,7 +1057,12 @@ async function renderSlideScreenshots(deck, { slides, format = 'jpeg', onSlide, 
           // eslint-disable-next-line no-await-in-loop
           await onSlide(null, slide, err);
         }
+      } finally {
+        if (page !== firstPage) {
+          await page.close().catch(() => {});
+        }
       }
+      if (failed && stopOnFailure) break;
     }
     return images;
   });
@@ -1076,40 +1079,61 @@ async function processExport({
   const row = await presentationDao.findExport(exportId);
   if (!row) return;
 
+  const format = String(row.format || '').toUpperCase();
+  const heartbeat = () => touchExportHeartbeat(exportId);
+  let releaseSlot = null;
+
   try {
+    // PDF / images each start a browser: cap how many run at once so a burst of exports
+    // can't exhaust memory. Waiting jobs stay QUEUED and keep beating.
+    if (isBrowserExportFormat(format)) {
+      releaseSlot = await withHeartbeat(
+        heartbeat,
+        () => browserExportSlots.acquire(),
+        EXPORT_HEARTBEAT_INTERVAL_MS
+      );
+    }
+
     await presentationDao.updateExport(exportId, { status: 'RENDERING' });
     const deckRaw = await presentationDao.findDeckById(row.deckId);
     if (!deckRaw) {
       throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
     }
     const deck = enrichDeckMediaKeysForExport(deckRaw);
-    const heartbeat = () => touchExportHeartbeat(exportId);
 
-    const format = String(row.format || '').toUpperCase();
-    let buffer;
-    let contentType;
-    let ext;
-
-    if (format === 'PPTX') {
-      buffer = await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat });
-      contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-      ext = 'pptx';
-    } else if (format === 'PDF') {
-      await heartbeat();
-      buffer = await buildPdfBuffer(deck, { slideId });
-      contentType = 'application/pdf';
-      ext = 'pdf';
-    } else if (format === 'PNG' || format === 'JPEG') {
-      const raster = await buildRasterExport(deck, {
-        format,
-        slideId,
-        onSlideProcessed: heartbeat,
-      });
-      buffer = raster.buffer;
-      contentType = raster.contentType;
-      ext = raster.ext;
-    } else {
-      throw new AppError(`Unsupported export format: ${format}`, 400);
+    // Beat throughout: a long PDF render sends no per-slide callbacks.
+    const { buffer, contentType, ext } = await withHeartbeat(
+      heartbeat,
+      async () => {
+        if (format === 'PPTX') {
+          return {
+            buffer: await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat }),
+            contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            ext: 'pptx',
+          };
+        }
+        if (format === 'PDF') {
+          return {
+            buffer: await buildPdfBuffer(deck, { slideId }),
+            contentType: 'application/pdf',
+            ext: 'pdf',
+          };
+        }
+        if (format === 'PNG' || format === 'JPEG') {
+          return buildRasterExport(deck, {
+            format,
+            slideId,
+            deckName: projectName,
+            onSlideProcessed: heartbeat,
+          });
+        }
+        throw new AppError(`Unsupported export format: ${format}`, 400);
+      },
+      EXPORT_HEARTBEAT_INTERVAL_MS
+    );
+    if (releaseSlot) {
+      releaseSlot();
+      releaseSlot = null;
     }
 
     const s3Key = `presentations/${workspaceId}/${deck.id}/exports/${exportId}.${ext}`;
@@ -1150,11 +1174,25 @@ async function processExport({
       projectName,
     });
   } catch (err) {
-    logger.error?.('processExport failed', err) || console.error('processExport failed', err);
-    await presentationDao.updateExport(exportId, {
-      status: 'FAILED',
-      error: normalizeExportError(err),
+    const userMessage = normalizeExportError(err);
+    // The technical cause goes to the log; the user sees a plain message.
+    logger.error('presentation_export_failed', {
+      exportId,
+      deckId: row.deckId,
+      format,
+      slideId: slideId || null,
+      userMessage,
+      error: String(err?.message || err),
+      stack: err?.stack,
     });
+    try {
+      await presentationDao.updateExport(exportId, { status: 'FAILED', error: userMessage });
+    } catch (updateErr) {
+      logger.error('presentation_export_status_update_failed', {
+        exportId,
+        error: String(updateErr?.message || updateErr),
+      });
+    }
     await notifyExportFinished({
       userId,
       workspaceId,
@@ -1164,8 +1202,10 @@ async function processExport({
       format: row.format,
       status: 'FAILED',
       projectName,
-      error: err.message,
+      error: userMessage,
     });
+  } finally {
+    if (releaseSlot) releaseSlot();
   }
 }
 
@@ -1246,11 +1286,8 @@ async function getExport({ workspaceId, presentationId, exportId }) {
   };
 
   if (row.status === 'READY' && row.s3Key) {
-    const ext =
-      String(row.format || 'PPTX').toLowerCase() === 'jpeg'
-        ? 'jpg'
-        : String(row.format || 'pptx').toLowerCase();
-    const filename = safeExportFilename(project?.name, ext);
+    // A multi-slide PNG / JPEG export is a .zip: name it from the stored file, not the format.
+    const filename = safeExportFilename(project?.name, exportFileExt(row));
     const presignedUrl = await s3Service.getPresignedGetUrl(row.s3Key, PRESIGN_EXPIRES_SEC, {
       responseContentDisposition: `attachment; filename="${filename}"`,
     });
@@ -1271,6 +1308,10 @@ module.exports = {
   getExport,
   renderSlideScreenshots,
   buildPptxBuffer,
+  buildPdfBuffer,
+  buildRasterExport,
+  exportJobIsStale,
+  exportQueueStats,
   resolveColor,
   PRESIGN_EXPIRES_SEC,
 };

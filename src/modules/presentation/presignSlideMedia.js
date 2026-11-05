@@ -42,6 +42,27 @@ function ownBucketKey(url) {
   return null;
 }
 
+/**
+ * S3 key for a URL on an S3 host (this app's bucket first, then any S3 URL); null for any
+ * other host. An external image (stock photo, any website) must keep its own URL: reading
+ * its path as an S3 key gives a key that doesn't exist, so the image breaks in exports.
+ */
+function s3UrlKey(url) {
+  const own = ownBucketKey(url);
+  if (own) return own;
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const host = String(new URL(url).hostname || '').toLowerCase();
+    const isS3Host =
+      host === 's3.amazonaws.com' ||
+      /^s3[.-][a-z0-9.-]*amazonaws\.com$/.test(host) ||
+      /\.s3[.-]([a-z0-9-]+\.)*amazonaws\.com$/.test(host);
+    return isS3Host ? s3Service.extractS3KeyFromUrl(url) : null;
+  } catch {
+    return null;
+  }
+}
+
 function isPresignableElement(el) {
   if (!el || typeof el !== 'object' || !el.content || typeof el.content !== 'object') {
     return false;
@@ -60,7 +81,7 @@ function isPresignableElement(el) {
 function resolveElementMediaKey(content = {}) {
   if (content.s3Key) return content.s3Key;
   for (const field of SIGNABLE_URL_FIELDS) {
-    const key = s3Service.extractS3KeyFromUrl(content[field]);
+    const key = s3UrlKey(content[field]);
     if (key) return key;
   }
   return null;
@@ -200,7 +221,7 @@ function enrichDeckMediaKeysForExport(deck) {
     if (next.imageRef && typeof next.imageRef === 'object') {
       const imageRef = { ...next.imageRef };
       if (!imageRef.s3Key) {
-        const key = s3Service.extractS3KeyFromUrl(imageRef.url);
+        const key = s3UrlKey(imageRef.url);
         if (key) imageRef.s3Key = key;
       }
       next.imageRef = imageRef;
@@ -216,8 +237,10 @@ function enrichDeckMediaKeysForExport(deck) {
           }
           const content = { ...el.content };
           if (!content.s3Key) {
-            const elementKey =
-              s3Service.extractS3KeyFromUrl(content.url || content.src) || heroKey || null;
+            const ownUrl = content.url || content.src;
+            // An external URL stays as it is; the slide's hero image only fills an element
+            // that has no picture of its own.
+            const elementKey = ownUrl ? s3UrlKey(ownUrl) : heroKey;
             if (elementKey) content.s3Key = elementKey;
           }
           return { ...el, content };
@@ -233,6 +256,7 @@ function enrichDeckMediaKeysForExport(deck) {
 
 module.exports = {
   ownBucketKey,
+  s3UrlKey,
   attachPresignedMedia,
   attachPresignedMediaToSlides,
   presignPresentationPayload,
