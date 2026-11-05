@@ -193,7 +193,7 @@ test('PNG export of several slides: a working .zip, named .zip, files in deck or
   const row = rows.get(id);
   assert.equal(row.status, 'READY', row.error);
   assert.match(row.s3Key, /\.zip$/);
-  const zip = await JSZip.loadAsync(uploads.get(row.s3Key));
+  const zip = await JSZip.loadAsync(uploads.get(row.s3Key), { checkCRC32: true });
   assert.deepEqual(Object.keys(zip.files), ['Q3 Plan-slide-01.png', 'Q3 Plan-slide-02.png', 'Q3 Plan-slide-03.png']);
   const png = await zip.file('Q3 Plan-slide-01.png').async('nodebuffer');
   assert.equal(png.readUInt32BE(16), 960, 'slide width');
@@ -285,7 +285,7 @@ test('PPTX: a stock photo (not on S3) is embedded, not replaced by a grey box', 
     await run(id);
     const row = rows.get(id);
     assert.equal(row.status, 'READY', row.error);
-    const zip = await JSZip.loadAsync(uploads.get(row.s3Key));
+    const zip = await JSZip.loadAsync(uploads.get(row.s3Key), { checkCRC32: true });
     const xml = await zip.file('ppt/slides/slide1.xml').async('string');
     assert.equal((xml.match(/<p:pic>/g) || []).length, 1, 'the photo is a picture');
     assert.ok(!/<a:t>image<\/a:t>/.test(xml), 'no "image" placeholder');

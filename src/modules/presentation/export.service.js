@@ -16,7 +16,6 @@ const {
   resolveAspectCanvas,
 } = require('./presentation.constants');
 const { firstHexFromFill } = require('./canvasFill');
-const { linkedRuns } = require('./textLinks');
 const {
   bulletsFromContent,
   fetchImageForPptx,
@@ -29,6 +28,8 @@ const {
 } = require('./slideHtml');
 const { FONT_REF_WIDTH } = require('./textFit.util');
 const { elementEffectPptxShadow } = require('./elementEffects');
+const { buildPptxText } = require('./pptxText');
+const exportRenderer = require('./exportRenderer.service');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
 const { normalizeChartContent } = require('./chartContentNormalize');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
@@ -170,22 +171,6 @@ function placementToIn(placement, canvasW, canvasH, slideSize) {
   return pxToIn(m.x, m.y, m.width, m.height, canvasW, canvasH, slideSize);
 }
 
-/** Match editor flex verticalAlign → pptxgenjs valign. */
-function pptxValign(content = {}) {
-  const v = String(content.verticalAlign || content.valign || '').toLowerCase();
-  if (v === 'center' || v === 'middle') return 'middle';
-  if (v === 'bottom' || v === 'flex-end' || v === 'end') return 'bottom';
-  return 'top';
-}
-
-/**
- * Typography px (fontSize, spacing, corner radius) → PowerPoint points. These values are authored
- * for the ~900px editor stage (FONT_REF_WIDTH), not the 1920 placement canvas.
- */
-function stagePxToPt(px, slideSize = DEFAULT_SLIDE_SIZE_IN) {
-  return Math.max(1, Math.round(((Number(px) || 0) * slideSize.w * 72 / FONT_REF_WIDTH) * 10) / 10);
-}
-
 /**
  * pptxgenjs only accepts 6-digit hex and silently swaps anything else for black, so
  * rgb()/rgba() (palette cardBg / divider, translucent fills) are flattened onto the slide bg.
@@ -284,6 +269,31 @@ function chartColorHexes(colors, palette, fallback = '0A84FF') {
   return colors.map((c) => firstHexFromFill(c, palette, fallback));
 }
 
+/** Light ink reads better than dark below luminance 0.179 (equal contrast with black and white). */
+function isDarkHex(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.179;
+}
+
+/** Axis labels, data labels and gridlines readable on the slide background. */
+function chartInkOptions(darkBackground) {
+  const ink = darkBackground ? 'E2E8F0' : '475569';
+  return {
+    catAxisLabelColor: ink,
+    valAxisLabelColor: ink,
+    dataLabelColor: ink,
+    legendColor: ink,
+    valGridLine: { color: darkBackground ? '334155' : 'E2E8F0', size: 0.75 },
+    catGridLine: { style: 'none' },
+  };
+}
+
 function shapeTypeForPptx(shape) {
   const s = String(shape || 'rect').toLowerCase();
   if (s === 'ellipse' || s === 'oval' || s === 'circle') return 'ellipse';
@@ -333,12 +343,12 @@ async function addElementsToPptxSlide(
   brandChartColors = [],
   themeFonts = {},
   slideSize = DEFAULT_SLIDE_SIZE_IN,
-  pptx = null
+  pptx = null,
+  { measuredText = {}, pictures = {}, backgroundIsPicture = false, backgroundHex = 'FFFFFF' } = {}
 ) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
   const canvasH = doc.canvas?.height || CANVAS_HEIGHT;
-  const toPt = (px) => stagePxToPt(px, slideSize);
   // borderRadius is editor-stage px (like fontSize), not placement-canvas px.
   const inPerPx = slideSize.w / FONT_REF_WIDTH;
   // Element effects (shadow, glow…) PowerPoint can show, as a shape / picture shadow.
@@ -353,87 +363,43 @@ async function addElementsToPptxSlide(
     const content = el.content || {};
     const rotate = Number(el.placement?.rotation) || 0;
     if (el.type === 'group') continue;
+    // Drawn as part of the slide background picture.
+    if (
+      backgroundIsPicture &&
+      (content.useAsBackground || (doc.backgroundImageElementId && el.id === doc.backgroundImageElementId))
+    ) {
+      continue;
+    }
+    // Something PowerPoint can't draw natively: the editor's own rendering, as a picture.
+    const picture = pictures[el.id];
+    if (picture?.data && picture.box) {
+      const b = pxToIn(picture.box.x, picture.box.y, picture.box.width, picture.box.height, canvasW, canvasH, slideSize);
+      s.addImage({ data: picture.data, x: b.x, y: b.y, w: b.w, h: b.h });
+      continue;
+    }
 
     if (el.type === 'text' || el.type === 'textbox') {
       const textInk = resolveColorAlpha(content.color || content.colorRole, palette, textColor);
-      const textColorResolved = textInk.color;
-      const fontSizePt = toPt(Number(content.fontSize) || 18);
-      const textOpts = {
-        x: box.x,
-        y: box.y,
-        w: box.w,
-        h: box.h,
-        fontSize: fontSizePt,
-        bold: content.bold === true || Number(content.fontWeight) >= 600,
-        italic: content.italic === true,
-        color: content.fill
-          ? firstHexFromFill(content.fill, palette, textColorResolved)
-          : textColorResolved,
-        align: content.align || 'left',
-        valign: pptxValign(content),
+      // What the editor drew (fit-to-box size, contrast-adjusted colour), when measured.
+      const measured = measuredText[el.id] || null;
+      const measuredColor = !content.fill && /^#?[0-9a-f]{6}$/i.test(String(measured?.color || ''))
+        ? String(measured.color).replace(/^#/, '').toUpperCase()
+        : null;
+      const boxColor =
+        measuredColor ||
+        (content.fill ? firstHexFromFill(content.fill, palette, textInk.color) : textInk.color);
+      const { runs, options } = buildPptxText({
+        content,
+        box,
         rotate,
-      };
-      if (!content.fill && pptxTransparency(textInk.alpha) != null) {
-        textOpts.transparency = pptxTransparency(textInk.alpha);
-      }
-      if (content.wrap === 'nowrap') {
-        textOpts.shrinkText = true;
-        textOpts.wrap = false;
-      }
-      if (content.letterSpacing != null) {
-        // pptxgenjs charSpacing / lineSpacing are in points: em × font size (pt)
-        textOpts.charSpacing = Math.round(Number(content.letterSpacing) * fontSizePt * 10) / 10;
-      }
-      if (content.lineHeight != null) {
-        textOpts.lineSpacing = Math.round(Number(content.lineHeight) * fontSizePt);
-      }
-      const fontFace = resolveExportFontFace(content, el, themeFonts);
-      // Linked text (stored links and web addresses in the text) exports as PowerPoint hyperlinks.
-      const plainLinks =
-        Array.isArray(content.runs) && content.runs.length
-          ? null
-          : linkedRuns([{ text: String(content.text || '') }]);
-      if (plainLinks && plainLinks.some((piece) => piece.href)) {
-        if (fontFace) textOpts.fontFace = fontFace;
-        s.addText(
-          plainLinks.map((piece) => ({
-            text: piece.text,
-            // A hyperlink run doesn't take the box colour from pptxgenjs, so it is given here.
-            options: piece.href
-              ? { hyperlink: { url: piece.href, tooltip: piece.href }, color: textOpts.color }
-              : {},
-          })),
-          textOpts
-        );
-      } else if (Array.isArray(content.runs) && content.runs.length) {
-        const runPayload = linkedRuns(content.runs).map((run) => ({
-          text: String(run.text || ''),
-          options: {
-            fontSize: fontSizePt,
-            bold: run.bold === true || Number(run.fontWeight) >= 600,
-            italic: run.italic === true,
-            color: firstHexFromFill(
-              run.fill || run.color || run.colorRole,
-              palette,
-              textColorResolved
-            ),
-            fontFace: run.fontFamily || fontFace || undefined,
-            ...(run.href ? { hyperlink: { url: run.href, tooltip: run.href } } : {}),
-          },
-        }));
-        s.addText(runPayload, {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          align: content.align || 'left',
-          valign: pptxValign(content),
-          rotate,
-        });
-      } else {
-        if (fontFace) textOpts.fontFace = fontFace;
-        s.addText(String(content.text || ''), textOpts);
-      }
+        slideWidthIn: slideSize.w,
+        color: boxColor,
+        transparency: content.fill ? undefined : pptxTransparency(textInk.alpha),
+        fontFace: resolveExportFontFace(content, el, themeFonts),
+        runColor: (run) => firstHexFromFill(run.fill || run.color || run.colorRole, palette, boxColor),
+        measured,
+      });
+      s.addText(runs, options);
     } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
@@ -573,6 +539,8 @@ async function addElementsToPptxSlide(
             h: box.h,
             showTitle: false,
             showLegend: false,
+            // Default chart ink is dark grey: unreadable on a dark slide.
+            ...chartInkOptions(isDarkHex(backgroundHex)),
           };
           const chartColorSource =
             (Array.isArray(normalized.colors) && normalized.colors.length ? normalized.colors : null) ||
@@ -752,7 +720,17 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
   if (content.notes) s.addNotes(String(content.notes));
 }
 
-async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
+/**
+ * @param {object} deck
+ * @param {{ slideId?: string, onSlideProcessed?: Function, assets?: object }} opts
+ *   assets: what the editor renderer drew (exportRenderer.capturePptxAssets) — textMetrics
+ *   (fitted font sizes, colours), pictures for elements PowerPoint can't draw, background
+ *   pictures. Without it PPTX uses the stored sizes and native shapes only.
+ */
+async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null } = {}) {
+  const textMetrics = assets?.textMetrics || null;
+  const pictures = assets?.pictures || {};
+  const backgrounds = assets?.backgrounds || {};
   const PptxGenJS = require('pptxgenjs');
   const pptx = new PptxGenJS();
   const aspect = resolveAspectCanvas(deck.aspectRatio);
@@ -779,13 +757,17 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
       slide.backgroundColor ||
       palette.bg ||
       'FFFFFF';
-    const s = pptx.addSlide({
-      background: { color: String(slideBg).replace(/^#/, '') },
-    });
+    const backgroundPicture = backgrounds[slide.id] || null;
+    const s = pptx.addSlide();
+    // pptxgenjs ignores a `background` passed to addSlide(): only the setter writes <p:bg>.
+    // (Every exported slide used to come out white, whatever its colour in the editor.)
+    s.background = backgroundPicture
+      ? { data: backgroundPicture, path: 'background.jpg' }
+      : { color: resolveColor(slideBg, palette, 'FFFFFF') };
     const bgFill = slide.elements?.backgroundFill || slide.backgroundFill;
     const bgStart = slide.elements?.backgroundGradientStart || slide.backgroundGradientStart;
     const bgEnd = slide.elements?.backgroundGradientEnd || slide.backgroundGradientEnd;
-    if ((bgFill && bgFill.type === 'gradient') || (bgStart && bgEnd)) {
+    if (!backgroundPicture && ((bgFill && bgFill.type === 'gradient') || (bgStart && bgEnd))) {
       const fillResolved = resolveFillForExport(
         bgFill && bgFill.type === 'gradient'
           ? bgFill
@@ -819,10 +801,25 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
       }
     }
     if (slideHasElements(slide)) {
-      await addElementsToPptxSlide(s, slide, palette, textColor, brandChartColors, themeFonts, {
-        w: aspect.pptxWidthIn || PPTX_WIDTH_IN,
-        h: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
-      }, pptx);
+      await addElementsToPptxSlide(
+        s,
+        slide,
+        palette,
+        textColor,
+        brandChartColors,
+        themeFonts,
+        {
+          w: aspect.pptxWidthIn || PPTX_WIDTH_IN,
+          h: aspect.pptxHeightIn || PPTX_HEIGHT_IN,
+        },
+        pptx,
+        {
+          measuredText: textMetrics?.[slide.id] || {},
+          pictures: pictures[slide.id] || {},
+          backgroundIsPicture: Boolean(backgroundPicture),
+          backgroundHex: resolveColor(slideBg, palette, 'FFFFFF'),
+        }
+      );
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
     }
@@ -836,7 +833,36 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed } = {}) {
   return Buffer.isBuffer(out) ? out : Buffer.from(out);
 }
 
+/**
+ * Run `fn` with the editor renderer (export-render page). If the page can't be reached
+ * (not deployed, not configured, too old) log it and use `fallback`, so export keeps working.
+ */
+async function withEditorRenderer(deck, label, fn, fallback) {
+  if (!exportRenderer.isRendererEnabled()) return fallback();
+  try {
+    return await fn();
+  } catch (err) {
+    if (!(err instanceof exportRenderer.RendererUnavailableError)) throw err;
+    logger.warn('export_renderer_unavailable', {
+      deckId: deck.id,
+      export: label,
+      error: String(err.message || err).slice(0, 500),
+    });
+    return fallback();
+  }
+}
+
 async function buildPdfBuffer(deck, opts = {}) {
+  return withEditorRenderer(
+    deck,
+    'pdf',
+    () => exportRenderer.renderDeckPdf(deck, { slideIds: opts.slideId ? [opts.slideId] : null }),
+    () => buildPdfBufferLegacy(deck, opts)
+  );
+}
+
+/** PDF from the server-side HTML renderer (slideHtml.js) — fallback only. */
+async function buildPdfBufferLegacy(deck, opts = {}) {
   const aspect = resolveAspectCanvas(deck.aspectRatio);
   const slideCount = opts.slideId ? 1 : (deck.slides || []).length;
   // The whole deck loads as one page, so big decks get more time.
@@ -861,13 +887,40 @@ async function buildPdfBuffer(deck, opts = {}) {
   });
 }
 
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(buffer) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buffer.length; i += 1) {
+    crc = CRC32_TABLE[(crc ^ buffer[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** Date / time in the ZIP (MS-DOS) format. */
+function dosDateTime(date = new Date()) {
+  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const day = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { time, day };
+}
+
 /**
- * Minimal ZIP (store only) for multi-slide raster exports.
+ * Minimal ZIP (store only) for multi-slide raster exports. Each entry carries its real CRC32:
+ * Windows Explorer and macOS Archive Utility refuse entries whose checksum doesn't match.
  */
 function buildZipBuffer(files) {
   const parts = [];
   const central = [];
   let offset = 0;
+  const stamp = dosDateTime();
 
   function u16(n) {
     const b = Buffer.alloc(2);
@@ -883,14 +936,15 @@ function buildZipBuffer(files) {
   for (const file of files) {
     const name = Buffer.from(file.name, 'utf8');
     const data = Buffer.isBuffer(file.data) ? file.data : Buffer.from(file.data);
+    const checksum = crc32(data);
     const local = Buffer.concat([
       u32(0x04034b50),
       u16(20),
-      u16(0),
-      u16(0),
-      u16(0),
-      u16(0),
-      u32(0),
+      u16(0x0800), // file names are UTF-8
+      u16(0), // stored
+      u16(stamp.time),
+      u16(stamp.day),
+      u32(checksum),
       u32(data.length),
       u32(data.length),
       u16(name.length),
@@ -904,11 +958,11 @@ function buildZipBuffer(files) {
         u32(0x02014b50),
         u16(20),
         u16(20),
+        u16(0x0800),
         u16(0),
-        u16(0),
-        u16(0),
-        u16(0),
-        u32(0),
+        u16(stamp.time),
+        u16(stamp.day),
+        u32(checksum),
         u32(data.length),
         u32(data.length),
         u16(name.length),
@@ -948,22 +1002,39 @@ async function buildRasterExport(deck, { format, slideId, deckName, onSlideProce
 
   // Files are numbered by the slide's place in the deck: <Deck>-slide-03.png.
   const position = new Map(ordered.map((s, i) => [s.id, i + 1]));
-  let firstFailure = null;
-  const images = await renderSlideScreenshots(deck, {
-    slides,
-    format: type,
-    onSlideProcessed,
-    stopOnFailure: true,
-    fileName: (slide, i) => slideImageFilename(deckName, position.get(slide.id) || i + 1, ext),
-    onSlide: (image, slide, err) => {
-      if (!image && !firstFailure) firstFailure = err || new Error(`Slide ${slide?.id} did not render`);
+  const nameFor = (slideIdValue, i) =>
+    slideImageFilename(deckName, position.get(slideIdValue) || i + 1, ext);
+
+  const images = await withEditorRenderer(
+    deck,
+    type,
+    async () => {
+      const shots = await exportRenderer.renderDeckImages(deck, {
+        slideIds: slides.map((s) => s.id),
+        format: type,
+        onSlide: onSlideProcessed,
+      });
+      return shots.map((shot, i) => ({ name: nameFor(shot.slideId, i), data: shot.data }));
     },
-  });
+    async () => {
+      let firstFailure = null;
+      const shots = await renderSlideScreenshots(deck, {
+        slides,
+        format: type,
+        onSlideProcessed,
+        stopOnFailure: true,
+        fileName: (slide, i) => nameFor(slide.id, i),
+        onSlide: (image, slide, err) => {
+          if (!image && !firstFailure) firstFailure = err || new Error(`Slide ${slide?.id} did not render`);
+        },
+      });
+      if (firstFailure) throw firstFailure;
+      return shots;
+    }
+  );
 
   // A missing slide must fail the export, not ship a partial (or empty) zip.
-  if (firstFailure || images.length !== slides.length) {
-    throw firstFailure || new Error('Some slides did not render');
-  }
+  if (images.length !== slides.length) throw new Error('Some slides did not render');
 
   if (images.length === 1) {
     return {
@@ -1068,6 +1139,24 @@ async function renderSlideScreenshots(
   });
 }
 
+/**
+ * What PPTX takes from the editor renderer: fitted font sizes and colours, pictures of the
+ * elements PowerPoint can't draw, background pictures. Never fails the export: without it
+ * PPTX falls back to stored sizes and native shapes.
+ */
+async function capturePptxAssets(deck, { slideId } = {}) {
+  if (!exportRenderer.isRendererEnabled()) return null;
+  try {
+    return await exportRenderer.capturePptxAssets(deck, { slideIds: slideId ? [slideId] : null });
+  } catch (err) {
+    logger.warn('pptx_renderer_capture_failed', {
+      deckId: deck.id,
+      error: String(err?.message || err).slice(0, 500),
+    });
+    return null;
+  }
+}
+
 async function processExport({
   exportId,
   workspaceId,
@@ -1086,7 +1175,8 @@ async function processExport({
   try {
     // PDF / images each start a browser: cap how many run at once so a burst of exports
     // can't exhaust memory. Waiting jobs stay QUEUED and keep beating.
-    if (isBrowserExportFormat(format)) {
+    // PPTX also opens the browser when it measures text with the editor renderer.
+    if (isBrowserExportFormat(format) || (format === 'PPTX' && exportRenderer.isRendererEnabled())) {
       releaseSlot = await withHeartbeat(
         heartbeat,
         () => browserExportSlots.acquire(),
@@ -1106,8 +1196,9 @@ async function processExport({
       heartbeat,
       async () => {
         if (format === 'PPTX') {
+          const assets = await capturePptxAssets(deck, { slideId });
           return {
-            buffer: await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat }),
+            buffer: await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat, assets }),
             contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             ext: 'pptx',
           };
