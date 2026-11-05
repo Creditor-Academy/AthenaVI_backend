@@ -28,6 +28,7 @@ const {
   buildDeckHtml,
 } = require('./slideHtml');
 const { FONT_REF_WIDTH } = require('./textFit.util');
+const { elementEffectPptxShadow } = require('./elementEffects');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
 const { normalizeChartContent } = require('./chartContentNormalize');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
@@ -327,6 +328,9 @@ async function addElementsToPptxSlide(
   const toPt = (px) => stagePxToPt(px, slideSize);
   // borderRadius is editor-stage px (like fontSize), not placement-canvas px.
   const inPerPx = slideSize.w / FONT_REF_WIDTH;
+  // Element effects (shadow, glow…) PowerPoint can show, as a shape / picture shadow.
+  const effectShadow = (content) =>
+    elementEffectPptxShadow(content, { palette, ptPerStagePx: inPerPx * 72 });
   const elements = [...(doc.elements || [])].sort(
     (a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0)
   );
@@ -460,6 +464,8 @@ async function addElementsToPptxSlide(
           imageOpts.x = box.x + (box.w - imageOpts.w) / 2;
           imageOpts.y = box.y + (box.h - imageOpts.h) / 2;
         }
+        const shadow = effectShadow(content);
+        if (shadow) imageOpts.shadow = shadow;
         s.addImage(imageOpts);
       } else {
         s.addShape('rect', {
@@ -522,6 +528,8 @@ async function addElementsToPptxSlide(
         const shapeOpacity = Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1;
         shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
       }
+      const shadow = effectShadow(content);
+      if (shadow) shapeOpts.shadow = shadow;
       try {
         s.addShape(shape, shapeOpts);
       } catch {
