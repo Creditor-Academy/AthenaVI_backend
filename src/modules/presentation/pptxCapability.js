@@ -44,6 +44,11 @@ function hasNonNativeEffect(content) {
   return Boolean(type && !NATIVE_EFFECTS.has(type));
 }
 
+function maskType(mask) {
+  const type = mask && typeof mask === 'object' ? mask.type : mask;
+  return type && type !== 'none' ? String(type) : null;
+}
+
 function isCurvedText(c = {}) {
   return (
     c.shapeEffect === 'curve' ||
@@ -83,7 +88,8 @@ function rasterReason(el) {
     case 'image':
       // An empty image slot: the editor draws a placeholder picture, not a grey box.
       if (!(c.url || c.src || c.s3Key)) return 'image placeholder';
-      if (c.imageMask && c.imageMask !== 'none') return 'image mask';
+      // Stored as { type: 'circle' | 'oval' | 'hexagon' | 'blob' | 'fade' } (older decks: a string).
+      if (maskType(c.imageMask)) return 'image mask';
       if (c.clipPath) return 'clipped image';
       if (c.filter || c.cssFilter) return 'image filter';
       if (c.edgeFade) return 'edge fade';

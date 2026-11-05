@@ -23,7 +23,9 @@ test('a picture when PowerPoint would draw it wrong or not at all', () => {
   assert.equal(rasterReason(el('shape', { shape: 'rect', borderStyle: 'dashed' })), 'dashed border');
   assert.equal(rasterReason(el('shape', { shape: 'device-frame' })), 'device frame');
   assert.equal(rasterReason(el('shape', { shape: 'rect', effect: { type: 'glitch' } })), 'effect glitch');
+  assert.equal(rasterReason(el('image', { url: 'u', imageMask: { type: 'circle' } })), 'image mask');
   assert.equal(rasterReason(el('image', { url: 'u', imageMask: 'circle' })), 'image mask');
+  assert.equal(rasterReason(el('image', { url: 'u', imageMask: { type: 'none' } })), null);
   assert.equal(rasterReason(el('image', { url: 'u', filter: 'vintage' })), 'image filter');
   assert.equal(rasterReason(el('image', { url: 'u', borderRadius: 12 })), 'rounded corners');
   assert.equal(rasterReason(el('image', { url: 'u', effect: { type: 'outline' } })), 'effect outline');

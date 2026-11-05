@@ -17,3 +17,4 @@ graphify-out
 *.md
 Jenkinsfile
 .cache
+.eval

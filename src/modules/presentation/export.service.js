@@ -33,7 +33,7 @@ const exportRenderer = require('./exportRenderer.service');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
 const { normalizeChartContent } = require('./chartContentNormalize');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
-const { withExportPage } = require('../../shared/utils/exportBrowser');
+const { withExportPage, setContentAndSettle } = require('../../shared/utils/exportBrowser');
 const {
   isBrowserExportFormat,
   createSemaphore,
@@ -201,6 +201,16 @@ function resolveColorAlpha(value, palette, fallback = '111111') {
   return { color, alpha };
 }
 
+/** `transparent`, `none` or a colour with zero alpha. */
+function isTransparentColor(value) {
+  if (value == null || typeof value !== 'string') return false;
+  const raw = value.trim().toLowerCase();
+  if (raw === 'transparent' || raw === 'none') return true;
+  const rgba = /^rgba?\(/.test(raw) ? parseCssColor(raw) : null;
+  if (rgba && rgba.a != null && Number(rgba.a) === 0) return true;
+  return /^#[0-9a-f]{8}$/.test(raw) && raw.endsWith('00');
+}
+
 /** pptxgenjs `transparency` (0–100) for an alpha; undefined when fully opaque. */
 function pptxTransparency(alpha) {
   const a = Math.max(0, Math.min(1, Number(alpha)));
@@ -267,6 +277,20 @@ function resolveFillForExport(fill, palette, fallback = '0A84FF') {
 function chartColorHexes(colors, palette, fallback = '0A84FF') {
   if (!Array.isArray(colors) || !colors.length) return [];
   return colors.map((c) => firstHexFromFill(c, palette, fallback));
+}
+
+/** Long edge of a rasterized graphic: ~150 dpi across a 13.3in slide. */
+const SVG_RASTER_MAX_EDGE = 2048;
+
+/**
+ * Pixel size for an inline SVG graphic in PPTX: 2× its canvas size (crisp icons), capped so a
+ * full-slide graphic isn't drawn at 3840×2160 — that took ~25s per graphic.
+ */
+function svgRasterSize(placement = {}) {
+  const width = (Number(placement.width) || 100) * 2;
+  const height = (Number(placement.height) || 100) * 2;
+  const k = Math.min(1, SVG_RASTER_MAX_EDGE / Math.max(width, height));
+  return { width: Math.round(width * k), height: Math.round(height * k) };
 }
 
 /** Light ink reads better than dark below luminance 0.179 (equal contrast with black and white). */
@@ -407,8 +431,7 @@ async function addElementsToPptxSlide(
       const inlineSvgPng =
         typeof content.svg === 'string' && content.svg.includes('<svg')
           ? await svgMarkupToPngBuffer(content.svg, {
-              width: (Number(el.placement?.width) || 100) * 2,
-              height: (Number(el.placement?.height) || 100) * 2,
+              ...svgRasterSize(el.placement),
               color: graphicTintColor(content, palette),
             })
           : null;
@@ -469,7 +492,7 @@ async function addElementsToPptxSlide(
     } else if (el.type === 'shape') {
       const shape = shapeTypeForPptx(content.shape);
       const fillResolved = resolveFillForExport(content.fill, palette, '0A84FF');
-      const strokeColor = content.stroke || content.line;
+      const strokeColor = isTransparentColor(content.stroke || content.line) ? null : content.stroke || content.line;
       const strokeWidth = content.strokeWidth != null ? Number(content.strokeWidth) : strokeColor ? 1.5 : 0;
       const shapeOpts = {
         x: box.x,
@@ -503,9 +526,13 @@ async function addElementsToPptxSlide(
         // Editor paints rgba fills and multiplies content.opacity on top — mirror both.
         const fill = content.fill;
         const fillSource = fill && typeof fill === 'object' ? fill.color || fill.colorRole : fill;
-        const ink = resolveColorAlpha(fillSource, palette, '0A84FF');
-        const shapeOpacity = Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1;
-        shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
+        // Outlined shapes have a transparent fill: no fill at all (pptxgenjs writes <a:noFill/>),
+        // otherwise pptxgenjs swaps the unknown colour for black.
+        if (!isTransparentColor(fillSource)) {
+          const ink = resolveColorAlpha(fillSource, palette, '0A84FF');
+          const shapeOpacity = Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1;
+          shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
+        }
       }
       const shadow = effectShadow(content);
       if (shadow) shapeOpts.shadow = shadow;
@@ -871,10 +898,8 @@ async function buildPdfBufferLegacy(deck, opts = {}) {
     await page.setViewport({ width: aspect.width, height: aspect.height });
     page.setDefaultNavigationTimeout(contentTimeout);
     page.setDefaultTimeout(contentTimeout);
-    await page.setContent(await buildDeckHtml(deck, opts), {
-      waitUntil: 'networkidle0',
-      timeout: contentTimeout,
-    });
+    // Not waitUntil 'networkidle0': it can wait forever with nothing left loading.
+    await setContentAndSettle(page, await buildDeckHtml(deck, opts), { timeoutMs: contentTimeout });
     const pdf = await page.pdf({
       width: `${aspect.pptxWidthIn}in`,
       height: `${aspect.pptxHeightIn}in`,
@@ -1079,8 +1104,7 @@ async function renderSlideScreenshots(
       const slide = list[i];
       const canvasW = Math.max(320, Math.round(slide.elements?.canvas?.width || CANVAS_WIDTH));
       const canvasH = Math.max(180, Math.round(slide.elements?.canvas?.height || CANVAS_HEIGHT));
-      // A fresh page per slide: with Puppeteer 25 a second setContent(…networkidle0) on the
-      // same page never settles, which made every slide after the first time out.
+      // A fresh page per slide (a second setContent on the same page could hang).
       const page = i === 0 ? firstPage : await browser.newPage();
       // Don't let a single broken remote image hang forever.
       page.setDefaultNavigationTimeout(contentTimeout);
@@ -1090,9 +1114,8 @@ async function renderSlideScreenshots(
         // eslint-disable-next-line no-await-in-loop
         await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
         // eslint-disable-next-line no-await-in-loop
-        await page.setContent(await buildDeckHtml({ ...deck, slides: [slide] }), {
-          waitUntil: 'networkidle0',
-          timeout: contentTimeout,
+        await setContentAndSettle(page, await buildDeckHtml({ ...deck, slides: [slide] }), {
+          timeoutMs: contentTimeout,
         });
         // eslint-disable-next-line no-await-in-loop
         const buf = await page.screenshot({
@@ -1403,6 +1426,7 @@ module.exports = {
   buildRasterExport,
   exportJobIsStale,
   exportQueueStats,
+  svgRasterSize,
   resolveColor,
   PRESIGN_EXPIRES_SEC,
 };
