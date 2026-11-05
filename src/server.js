@@ -18,6 +18,7 @@ const { startPlatformAlertsJob } = require('./shared/jobs/platformAlerts.job');
 const { startWeeklyDigestJob } = require('./shared/jobs/weeklyDigest.job');
 const { startImageGenContextCleanupJob } = require('./shared/jobs/imageGenContextCleanup.job');
 const { recoverInterruptedRenders } = require('./shared/jobs/renderRecovery.job');
+const { checkExportBrowser } = require('./shared/utils/exportBrowser');
 
 const BOOTED_AT = new Date();
 
@@ -48,6 +49,18 @@ const server = app.listen(PORT, () => {
   startWeeklyDigestJob();
   startImageGenContextCleanupJob();
   recoverInterruptedRenders(BOOTED_AT);
+  // PDF / image export needs a headless browser: say loudly at boot if it can't start.
+  // The result is reported at GET /health/export. PPT_EXPORT_BROWSER_CHECK=0 skips it.
+  if (process.env.PPT_EXPORT_BROWSER_CHECK !== '0') {
+    checkExportBrowser().then((check) => {
+      if (check.ok) {
+        logger.info('export_browser_ready', check);
+      } else {
+        logger.error('export_browser_unavailable', check);
+        console.error('PDF/image export browser is NOT available:', check.error);
+      }
+    });
+  }
 });
 // Node closes a request that takes over 5 minutes to arrive (requestTimeout). Media library
 // uploads go up to 1 GB, which takes longer than that on a slow connection.

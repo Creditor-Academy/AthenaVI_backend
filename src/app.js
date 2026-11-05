@@ -70,6 +70,25 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Result of the boot-time export browser check (PDF / PNG / JPEG export). It never launches
+// a browser per request, so it is safe to leave public.
+app.get('/health/export', (req, res) => {
+    const { lastExportBrowserCheck } = require('./shared/utils/exportBrowser');
+    const { exportQueueStats } = require('./modules/presentation/export.service');
+    const check = lastExportBrowserCheck();
+    if (!check) {
+        return res.status(200).json({ status: 'PENDING', exports: exportQueueStats() });
+    }
+    return res.status(check.ok ? 200 : 503).json({
+        status: check.ok ? 'UP' : 'DOWN',
+        browser: check.source,
+        version: check.version || null,
+        error: check.ok ? null : 'Export browser failed to start',
+        checkedAt: check.checkedAt,
+        exports: exportQueueStats(),
+    });
+});
+
 const userRoutes = require('./modules/user/user.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const workspaceRoutes = require('./modules/workspace/workspace.routes');
