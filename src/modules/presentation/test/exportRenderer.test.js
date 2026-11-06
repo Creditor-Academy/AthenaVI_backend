@@ -111,7 +111,8 @@ const DECK = {
         backgroundColor: '#FFFFFF',
         elements: [
           { id: 'title', type: 'text', layer: 2, slotId: 'TITLE', placement: P(100, 80, 1200, 160), content: { text: 'Fitted title', fontSize: 40 } },
-          { id: 'hex', type: 'shape', layer: 1, placement: P(1300, 300, 400, 400), content: { shape: 'hexagon', fill: '#F97316', clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)' } },
+          { id: 'hex', type: 'shape', layer: 1, placement: P(1300, 300, 400, 400), content: { shape: 'blob', fill: '#F97316', clipPath: 'circle(40% at 50% 50%)' } },
+          { id: 'tri', type: 'shape', layer: 1, placement: P(800, 300, 300, 300), content: { shape: 'triangle-up', fill: '#14B8A6', clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' } },
           { id: 'box', type: 'shape', layer: 1, placement: P(100, 600, 400, 300), content: { shape: 'rect', fill: '#2563EB' } },
         ],
       },
@@ -228,11 +229,11 @@ test('PPTX through the renderer: measured text, pictures for odd shapes, backgro
   useRenderer();
   const assets = await exportRenderer.capturePptxAssets(DECK);
   assert.equal(assets.textMetrics.a.title.fontSize, 20);
-  assert.deepEqual(Object.keys(assets.pictures.a), ['hex'], 'only the clip-path shape becomes a picture');
+  assert.deepEqual(Object.keys(assets.pictures.a), ['hex'], 'only the non-polygon clip-path shape becomes a picture');
   assert.ok(assets.backgrounds.b.startsWith('image/jpeg;base64,'));
   assert.ok(!assets.backgrounds.a, 'a plain colour stays a colour');
 
-  // The hexagon picture is transparent around the hexagon (its corners are empty).
+  // The circle-clipped shape's picture is transparent around it (its corners are empty).
   const png = Buffer.from(assets.pictures.a.hex.data.split(',')[1], 'base64');
   const { data, info } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
   assert.equal(data[3], 0, 'top-left corner is transparent');
@@ -246,7 +247,8 @@ test('PPTX through the renderer: measured text, pictures for odd shapes, backgro
   const zip = await JSZip.loadAsync(pptx);
   const s1 = await zip.file('ppt/slides/slide1.xml').async('string');
   const s2 = await zip.file('ppt/slides/slide2.xml').async('string');
-  assert.equal((s1.match(/<p:pic>/g) || []).length, 1, 'the hexagon is a picture');
+  assert.equal((s1.match(/<p:pic>/g) || []).length, 1, 'the circle-clipped shape is a picture');
+  assert.match(s1, /<a:custGeom>[\s\S]*?<a:srgbClr val="14B8A6"/, 'the polygon triangle is a native custom shape');
   assert.match(s1, /<a:prstGeom prst="rect">[\s\S]*<a:srgbClr val="2563EB"/, 'the plain box stays a shape');
   assert.match(s1, /sz="2130"/, 'title at the fitted 20 stage px');
   assert.match(s1, /<a:srgbClr val="123456"/, 'title in the colour the editor drew');

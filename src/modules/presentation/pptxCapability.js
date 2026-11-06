@@ -3,9 +3,21 @@
  * exported as a picture cut from the editor renderer so they look the way they do in the
  * editor instead of turning into a plain rectangle or disappearing.
  *
- * Text, charts and tables stay native (editable) unless the text is curved. Pictures keep
+ * Native (editable): text (with shadow / outline / glow / highlight / gradient), plain and
+ * clip-path polygon shapes, gradients, dashed borders, photos, charts, tables. Pictures keep
  * their exact place and layer.
+ *
+ * `target`: 'powerpoint' (default) or 'google-slides'. Google Slides can't show gradient
+ * fills, glow or hollow text, so for it those become pictures too.
  */
+
+const { parsePolygonClipPath } = require('./pptxShapes');
+
+const TARGETS = new Set(['powerpoint', 'google-slides']);
+function normalizeTarget(target) {
+  const t = String(target || '').toLowerCase();
+  return TARGETS.has(t) ? t : 'powerpoint';
+}
 
 /** Shape kinds pptxgenjs draws with the same outline as the editor (no clip-path polygon). */
 const NATIVE_SHAPE_KINDS = new Set([
@@ -23,8 +35,10 @@ const NATIVE_SHAPE_KINDS = new Set([
   'line-v',
 ]);
 
-/** Element effects PowerPoint has a native form for (exported as a shape / picture shadow). */
+/** Element effects PowerPoint has a native form for: a shadow, or a glow. */
 const NATIVE_EFFECTS = new Set(['shadow', 'lift', 'glow', 'neon', 'echo']);
+/** Text effects with a native form (shadow, outline, glow, highlight); the rest are pictures. */
+const NATIVE_TEXT_EFFECTS = new Set(['shadow', 'lift', 'outline', 'hollow', 'neon', 'background']);
 
 function isGradientFill(fill) {
   return Boolean(
@@ -63,23 +77,28 @@ function isCurvedText(c = {}) {
  * Why an element should be a picture in PPTX, or null when it can be native.
  * @returns {string|null}
  */
-function rasterReason(el) {
+function rasterReason(el, { target = 'powerpoint' } = {}) {
   if (!el || typeof el !== 'object') return null;
   const c = el.content || {};
+  const slides = normalizeTarget(target) === 'google-slides';
   switch (el.type) {
     case 'text':
     case 'textbox':
       if (isCurvedText(c)) return 'curved text';
-      if (c.textEffect && c.textEffect !== 'none') return `text effect ${c.textEffect}`;
-      if (isGradientFill(c.fill) || isGradientFill(c.color)) return 'gradient text';
+      if (c.textEffect && c.textEffect !== 'none' && !NATIVE_TEXT_EFFECTS.has(c.textEffect)) {
+        return `text effect ${c.textEffect}`;
+      }
+      if (slides && (c.textEffect === 'hollow' || c.textEffect === 'neon')) return `text effect ${c.textEffect}`;
+      if (slides && (isGradientFill(c.fill) || isGradientFill(c.color))) return 'gradient text';
       return null;
     case 'shape': {
       const kind = String(c.shape || 'rect').toLowerCase();
       if (c.deviceFrame || kind === 'device-frame') return 'device frame';
-      if (c.clipPath) return `shape ${kind}`;
-      if (!NATIVE_SHAPE_KINDS.has(kind)) return `shape ${kind}`;
-      if (isGradientFill(c.fill)) return 'gradient fill';
-      if (c.borderStyle && c.borderStyle !== 'solid') return `${c.borderStyle} border`;
+      if (c.clipPath && !parsePolygonClipPath(c.clipPath)) return `shape ${kind}`;
+      if (!c.clipPath && !NATIVE_SHAPE_KINDS.has(kind)) return `shape ${kind}`;
+      if (c.clipPath && c.borderStyle && c.borderStyle !== 'solid') return `${c.borderStyle} border`;
+      if (c.borderStyle && !['solid', 'dashed', 'dotted'].includes(c.borderStyle)) return `${c.borderStyle} border`;
+      if (slides && isGradientFill(c.fill)) return 'gradient fill';
       if (c.boxShadow || c.shadow) return 'shadow';
       if (c.screenUrl || c.url || c.src) return 'image in shape';
       if (hasNonNativeEffect(c)) return `effect ${effectType(c)}`;
@@ -116,10 +135,14 @@ function captureMargin(el) {
   return 2;
 }
 
-/** The slide's background can't be a PPTX colour: an image, or a gradient. */
-function needsBackgroundPicture(slide) {
+/**
+ * The slide's background must be a picture: an image (always), or a gradient for Google
+ * Slides (PowerPoint gets a native gradient background).
+ */
+function needsBackgroundPicture(slide, { target = 'powerpoint' } = {}) {
   const doc = slide?.elements || {};
   if (doc.backgroundImage || slide?.backgroundImage) return true;
+  if (normalizeTarget(target) !== 'google-slides') return false;
   const fill = doc.backgroundFill || slide?.backgroundFill;
   if (isGradientFill(fill)) return true;
   const start = doc.backgroundGradientStart || slide?.backgroundGradientStart;
@@ -128,24 +151,32 @@ function needsBackgroundPicture(slide) {
 }
 
 /**
- * What to capture for each slide.
+ * What to capture for each slide. Charts are always captured too, but only used if the native
+ * chart can't be built (`fallbackOnly`).
  * @returns {Array<{ slideId: string, background: boolean,
- *   elements: Array<{ id: string, reason: string, margin: number }> }>}
+ *   elements: Array<{ id: string, reason: string, margin: number, fallbackOnly?: boolean }> }>}
  */
-function pptxRasterPlan(slides = []) {
+function pptxRasterPlan(slides = [], { target = 'powerpoint' } = {}) {
   return slides.map((slide) => {
     const elements = [];
     for (const el of slide?.elements?.elements || []) {
       if (!el?.id || el.type === 'group') continue;
-      const reason = rasterReason(el);
+      if (el.type === 'chart') {
+        elements.push({ id: el.id, reason: 'chart (used only if the native chart fails)', margin: 2, fallbackOnly: true });
+        continue;
+      }
+      const reason = rasterReason(el, { target });
       if (reason) elements.push({ id: el.id, reason, margin: captureMargin(el) });
     }
-    return { slideId: slide.id, background: needsBackgroundPicture(slide), elements };
+    return { slideId: slide.id, background: needsBackgroundPicture(slide, { target }), elements };
   });
 }
 
 module.exports = {
   NATIVE_SHAPE_KINDS,
+  NATIVE_TEXT_EFFECTS,
+  normalizeTarget,
+  isGradientFill,
   rasterReason,
   captureMargin,
   needsBackgroundPicture,

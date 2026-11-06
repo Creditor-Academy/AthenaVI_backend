@@ -27,11 +27,15 @@ const {
   buildDeckHtml,
 } = require('./slideHtml');
 const { FONT_REF_WIDTH } = require('./textFit.util');
-const { elementEffectPptxShadow } = require('./elementEffects');
-const { buildPptxText } = require('./pptxText');
+const { elementEffectPptxShadow, normalizeElementEffect } = require('./elementEffects');
+const { buildPptxText, stagePxToPoints } = require('./pptxText');
+const { editorChartSpec, pptxChartArgs } = require('./pptxChart');
+const { buildPptxTable } = require('./pptxTable');
+const { parsePolygonClipPath, custGeomPoints, dashTypeFor } = require('./pptxShapes');
+const { PptxPatches, applyPptxPatches } = require('./pptxXmlPatches');
+const { isGradientFill, normalizeTarget } = require('./pptxCapability');
 const exportRenderer = require('./exportRenderer.service');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
-const { normalizeChartContent } = require('./chartContentNormalize');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
 const { withExportPage, setContentAndSettle } = require('../../shared/utils/exportBrowser');
 const {
@@ -249,36 +253,6 @@ function resolvePaletteColor(value, palette, fallback) {
   return key.replace(/^#/, '');
 }
 
-function resolveFillForExport(fill, palette, fallback = '0A84FF') {
-  if (!fill) return { kind: 'solid', color: resolveColor(null, palette, fallback) };
-  if (typeof fill === 'string') {
-    return { kind: 'solid', color: resolveColor(fill, palette, fallback) };
-  }
-  if (fill.type === 'gradient' || fill.kind === 'radial' || Array.isArray(fill.stops)) {
-    const stops = Array.isArray(fill.stops) ? fill.stops : [];
-    const colors = (stops.length
-      ? stops
-      : [{ color: fill.from || fill.start }, { color: fill.to || fill.end }]
-    ).map((s) => resolveColor(s?.color || s?.colorRole || s, palette, fallback));
-    return {
-      kind: 'gradient',
-      colors,
-      direction: fill.direction || '135deg',
-      angle: fill.angle != null ? Number(fill.angle) : 135,
-      radial: fill.kind === 'radial' || fill.gradientKind === 'radial',
-    };
-  }
-  return {
-    kind: 'solid',
-    color: resolveColor(fill.color || fill.colorRole, palette, fallback),
-  };
-}
-
-function chartColorHexes(colors, palette, fallback = '0A84FF') {
-  if (!Array.isArray(colors) || !colors.length) return [];
-  return colors.map((c) => firstHexFromFill(c, palette, fallback));
-}
-
 /** Long edge of a rasterized graphic: ~150 dpi across a 13.3in slide. */
 const SVG_RASTER_MAX_EDGE = 2048;
 
@@ -305,19 +279,6 @@ function isDarkHex(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.179;
 }
 
-/** Axis labels, data labels and gridlines readable on the slide background. */
-function chartInkOptions(darkBackground) {
-  const ink = darkBackground ? 'E2E8F0' : '475569';
-  return {
-    catAxisLabelColor: ink,
-    valAxisLabelColor: ink,
-    dataLabelColor: ink,
-    legendColor: ink,
-    valGridLine: { color: darkBackground ? '334155' : 'E2E8F0', size: 0.75 },
-    catGridLine: { style: 'none' },
-  };
-}
-
 function shapeTypeForPptx(shape) {
   const s = String(shape || 'rect').toLowerCase();
   if (s === 'ellipse' || s === 'oval' || s === 'circle') return 'ellipse';
@@ -335,16 +296,78 @@ function shapeTypeForPptx(shape) {
   return 'rect';
 }
 
-/** pptxgenjs v4: addChart(typeEnum, data[], opts) — not the v3 categories/series object shape. */
-function resolvePptxChartTypeEnum(pptx, chartType) {
-  const { mapChartType } = require('./elementContent.normalize');
-  const t = mapChartType(chartType);
-  const ChartType = pptx.ChartType || pptx.charts || {};
-  if (t === 'doughnut' || t === 'donut') return ChartType.doughnut || ChartType.donut || 'doughnut';
-  if (t === 'pie') return ChartType.pie || 'pie';
-  if (t === 'line') return ChartType.line || 'line';
-  if (t === 'area') return ChartType.area || 'area';
-  return ChartType.bar || 'bar';
+/**
+ * An editor gradient fill ({ type: 'gradient', stops: [{ color, at }], angle, kind }) as
+ * patch input: resolved stop colours (palette roles, rgba alpha), the CSS angle (editor
+ * default 135°), radial or not. Mirrors the editor's cssGradientFromFill.
+ */
+function editorGradient(fill, palette) {
+  const raw = Array.isArray(fill?.stops) && fill.stops.length
+    ? fill.stops
+    : [{ color: fill?.from || fill?.start || palette.gradientStart || '#3B82F6' }, { color: fill?.to || fill?.end || palette.gradientEnd || '#8B5CF6' }];
+  const stops = raw.map((stop, i) => {
+    const ink = resolveColorAlpha(stop?.color || stop?.colorRole || stop, palette, '94A3B8');
+    const offset = stop?.at != null ? stop.at : stop?.offset;
+    const at = offset != null ? (Number(offset) <= 1 ? Number(offset) : Number(offset) / 100) : i / Math.max(1, raw.length - 1);
+    return { color: ink.color, alpha: ink.alpha, at };
+  });
+  return {
+    stops,
+    angle: fill?.angle != null ? Number(fill.angle) : 135,
+    radial: fill?.kind === 'radial' || fill?.gradientKind === 'radial',
+  };
+}
+
+/** The editor's text effects that have a native PPTX form (see pptxCapability). */
+function textEffectPatch(content, palette, inkHex, pt) {
+  const c = content || {};
+  const colorAlpha = (value, fallback) => {
+    const ink = resolveColorAlpha(value || fallback, palette, fallback);
+    return { color: ink.color, alpha: ink.alpha };
+  };
+  switch (c.textEffect) {
+    case 'shadow': {
+      const { color, alpha } = colorAlpha(c.shadowColor, 'rgba(0, 0, 0, 0.45)');
+      return {
+        shadow: {
+          color,
+          alpha,
+          blurPt: pt(c.shadowBlur != null ? c.shadowBlur : 4),
+          distPt: pt(c.shadowOffset != null ? c.shadowOffset : 4),
+          angleDeg: c.shadowAngle != null ? c.shadowAngle : 45,
+        },
+      };
+    }
+    case 'lift': {
+      const i = (c.liftIntensity != null ? c.liftIntensity : 50) / 100;
+      const blur = 8 + i * 20;
+      return { shadow: { color: '000000', alpha: 0.2 + i * 0.3, blurPt: pt(blur), distPt: pt(blur / 2), angleDeg: 90 } };
+    }
+    case 'outline':
+      return { outline: { widthPt: pt(c.outlineThickness != null ? c.outlineThickness : 2), color: colorAlpha(c.outlineColor, '#000000').color } };
+    case 'hollow':
+      return {
+        outline: { widthPt: pt(c.hollowThickness != null ? c.hollowThickness : 2), color: c.hollowColor ? colorAlpha(c.hollowColor, inkHex).color : inkHex },
+        noFill: true,
+      };
+    case 'neon': {
+      const i = (c.neonIntensity != null ? c.neonIntensity : 70) / 100;
+      return { glow: { color: c.neonColor ? colorAlpha(c.neonColor, inkHex).color : inkHex, radiusPt: pt(8 + i * 10), alpha: 0.75 } };
+    }
+    case 'background':
+      return { highlight: colorAlpha(c.textBgColor, '#FEF08A').color };
+    default:
+      return null;
+  }
+}
+
+/** Element glow / neon as a native PPTX glow (instead of a shadow look-alike). */
+function elementGlowPatch(content, palette, pt) {
+  const fx = content?.effect && normalizeElementEffect(content.effect);
+  if (!fx || (fx.type !== 'glow' && fx.type !== 'neon')) return null;
+  const ink = resolveColorAlpha(fx.color, palette, 'FACC15');
+  const radiusPx = fx.type === 'glow' ? fx.size : 6 + (fx.intensity / 100) * 8;
+  return { kind: 'glow', color: ink.color, radiusPt: pt(radiusPx), alpha: fx.type === 'neon' ? 0.8 : 0.6 };
 }
 
 function resolveExportFontFace(content, el, themeFonts = {}) {
@@ -364,11 +387,20 @@ async function addElementsToPptxSlide(
   slide,
   palette,
   textColor,
-  brandChartColors = [],
+  _brandChartColors = [],
   themeFonts = {},
   slideSize = DEFAULT_SLIDE_SIZE_IN,
   pptx = null,
-  { measuredText = {}, pictures = {}, backgroundIsPicture = false, backgroundHex = 'FFFFFF' } = {}
+  {
+    measuredText = {},
+    measuredTables = {},
+    pictures = {},
+    backgroundIsPicture = false,
+    backgroundHex = 'FFFFFF',
+    patches = null,
+    slideNumber = 1,
+    report = null,
+  } = {}
 ) {
   const doc = slide.elements;
   const canvasW = doc.canvas?.width || CANVAS_WIDTH;
@@ -381,6 +413,25 @@ async function addElementsToPptxSlide(
   const elements = [...(doc.elements || [])].sort(
     (a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0)
   );
+  // Sizes authored on the 900px editor stage → points / inches on this slide.
+  const pt = (px) => stagePxToPoints(px, slideSize.w);
+  const inch = (px) => (Number(px) || 0) * inPerPx;
+  // XML patches for one object (gradients, glow, text effects): a name pptxgenjs writes, so
+  // the patch can find it afterwards.
+  const tag = (list) => {
+    const wanted = list.filter(Boolean);
+    if (!patches || !wanted.length) return {};
+    const objectName = patches.name();
+    wanted.forEach((patch) => patches.add(slideNumber, { ...patch, name: objectName }));
+    return { objectName };
+  };
+  const count = (kind, key) => {
+    if (!report) return;
+    report[kind] = report[kind] || {};
+    report[kind][key] = (report[kind][key] || 0) + 1;
+  };
+  // Text drawn as a picture can't be edited: keep it in the speaker notes.
+  const picturedText = [];
 
   for (const el of elements) {
     const box = placementToIn(el.placement, canvasW, canvasH, slideSize);
@@ -396,11 +447,23 @@ async function addElementsToPptxSlide(
     }
     // Something PowerPoint can't draw natively: the editor's own rendering, as a picture.
     const picture = pictures[el.id];
-    if (picture?.data && picture.box) {
+    const addPicture = () => {
       const b = pxToIn(picture.box.x, picture.box.y, picture.box.width, picture.box.height, canvasW, canvasH, slideSize);
-      s.addImage({ data: picture.data, x: b.x, y: b.y, w: b.w, h: b.h });
+      const link = (el.type === 'embed' || el.type === 'link') && /^https?:\/\//i.test(String(content.url || ''))
+        ? { hyperlink: { url: String(content.url), tooltip: content.title || String(content.url) } }
+        : {};
+      s.addImage({ data: picture.data, x: b.x, y: b.y, w: b.w, h: b.h, ...link });
+      count('pictures', picture.reason || el.type);
+    };
+    if (picture?.data && picture.box && !picture.fallbackOnly) {
+      addPicture();
+      if ((el.type === 'text' || el.type === 'textbox') && String(content.text || '').trim()) {
+        picturedText.push(String(content.text).trim());
+      }
       continue;
     }
+    // Element opacity (the editor's frame opacity) multiplies every fill and line.
+    const elementOpacity = Number.isFinite(Number(el.placement?.opacity)) ? Math.max(0, Math.min(1, Number(el.placement.opacity))) : 1;
 
     if (el.type === 'text' || el.type === 'textbox') {
       const textInk = resolveColorAlpha(content.color || content.colorRole, palette, textColor);
@@ -418,12 +481,19 @@ async function addElementsToPptxSlide(
         rotate,
         slideWidthIn: slideSize.w,
         color: boxColor,
-        transparency: content.fill ? undefined : pptxTransparency(textInk.alpha),
+        transparency: content.fill ? pptxTransparency(elementOpacity) : pptxTransparency(textInk.alpha * elementOpacity),
         fontFace: resolveExportFontFace(content, el, themeFonts),
         runColor: (run) => firstHexFromFill(run.fill || run.color || run.colorRole, palette, boxColor),
         measured,
       });
+      const effect = textEffectPatch(content, palette, boxColor, pt);
+      const gradientText = isGradientFill(content.fill) ? editorGradient(content.fill, palette) : null;
+      Object.assign(
+        options,
+        tag([effect || gradientText ? { kind: 'text', ...(effect || {}), ...(gradientText ? { gradient: gradientText } : {}) } : null])
+      );
       s.addText(runs, options);
+      count('native', 'text');
     } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
       const key = content.s3Key || slide.imageRef?.s3Key || null;
@@ -435,9 +505,11 @@ async function addElementsToPptxSlide(
               color: graphicTintColor(content, palette),
             })
           : null;
+      // A crop stays a real PowerPoint crop (re-croppable): the whole photo is embedded.
+      const crop = el.type === 'image' && !inlineSvgPng ? normalizeCrop(content.crop) : null;
       const image = inlineSvgPng
         ? await imageBufferToPptxImage(inlineSvgPng)
-        : await fetchImageForPptx(url, key, { crop: el.type === 'image' ? content.crop : null });
+        : await fetchImageForPptx(url, key);
       if (image) {
         const { flipH, flipV } = contentFlipFlags(content);
         const imageOpts = {
@@ -451,11 +523,16 @@ async function addElementsToPptxSlide(
           flipV,
         };
         // Editor renders photos with object-fit: cover (default) — crop instead of stretching.
-        // A cropped image was already cut to the region, whose ratio matches the box → cover.
-        const fit = normalizeCrop(content.crop) && el.type === 'image'
-          ? 'cover'
-          : String(content.fit || (inlineSvgPng ? 'contain' : 'cover')).toLowerCase();
-        if (fit === 'cover' && image.width && image.height) {
+        const fit = String(content.fit || (inlineSvgPng ? 'contain' : 'cover')).toLowerCase();
+        if (crop) {
+          // The editor stretches the crop region to the element box: so does srcRect. The image
+          // is given its full size, of which the crop region is exactly the box.
+          const fullW = box.w / crop.width;
+          const fullH = box.h / crop.height;
+          imageOpts.w = fullW;
+          imageOpts.h = fullH;
+          imageOpts.sizing = { type: 'crop', x: crop.x * fullW, y: crop.y * fullH, w: box.w, h: box.h };
+        } else if (fit === 'cover' && image.width && image.height) {
           imageOpts.h = box.w * (image.height / image.width);
           imageOpts.sizing = { type: 'cover', w: box.w, h: box.h };
         } else if (fit === 'contain' && image.width && image.height) {
@@ -466,9 +543,13 @@ async function addElementsToPptxSlide(
           imageOpts.x = box.x + (box.w - imageOpts.w) / 2;
           imageOpts.y = box.y + (box.h - imageOpts.h) / 2;
         }
-        const shadow = effectShadow(content);
+        if (elementOpacity < 1) imageOpts.transparency = Math.round((1 - elementOpacity) * 100);
+        const glow = elementGlowPatch(content, palette, pt);
+        const shadow = glow ? null : effectShadow(content);
         if (shadow) imageOpts.shadow = shadow;
+        Object.assign(imageOpts, tag([glow]));
         s.addImage(imageOpts);
+        count('native', el.type);
       } else {
         s.addShape('rect', {
           x: box.x,
@@ -490,10 +571,13 @@ async function addElementsToPptxSlide(
         });
       }
     } else if (el.type === 'shape') {
-      const shape = shapeTypeForPptx(content.shape);
-      const fillResolved = resolveFillForExport(content.fill, palette, '0A84FF');
+      // Library shapes cut with a clip-path polygon → native custom geometry.
+      const polygon = content.clipPath ? parsePolygonClipPath(content.clipPath) : null;
+      const shape = polygon ? (pptx?.ShapeType?.custGeom || 'custGeom') : shapeTypeForPptx(content.shape);
       const strokeColor = isTransparentColor(content.stroke || content.line) ? null : content.stroke || content.line;
+      // Stroke widths are editor-stage px, like font sizes.
       const strokeWidth = content.strokeWidth != null ? Number(content.strokeWidth) : strokeColor ? 1.5 : 0;
+      const dashType = dashTypeFor(content.borderStyle);
       const shapeOpts = {
         x: box.x,
         y: box.y,
@@ -502,26 +586,30 @@ async function addElementsToPptxSlide(
         line: strokeColor
           ? (() => {
               const ink = resolveColorAlpha(strokeColor, palette, 'E5E5E5');
-              return withTransparency({ color: ink.color, width: strokeWidth || 1.5 }, ink.alpha);
+              return withTransparency(
+                { color: ink.color, width: Math.max(0.25, pt(strokeWidth || 1.5)), ...(dashType ? { dashType } : {}) },
+                ink.alpha * elementOpacity
+              );
             })()
           : { type: 'none' },
         rotate,
+        ...(polygon ? { points: custGeomPoints(polygon, box) } : {}),
       };
-      if (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill') {
+      if (!polygon && (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill')) {
         // pptxgenjs rectRadius is in inches, capped at half the shorter side.
         const maxRadius = Math.min(box.w, box.h) / 2;
         const r = Number(content.borderRadius);
         shapeOpts.rectRadius =
           content.shape === 'pill' ? maxRadius : Math.min(maxRadius, (Number.isFinite(r) ? r : 16) * inPerPx);
       }
-      if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
-        shapeOpts.fill = {
-          type: 'gradient',
-          color: fillResolved.colors[0],
-          color2: fillResolved.colors[fillResolved.colors.length - 1],
-          gradientType: fillResolved.radial ? 'radial' : 'linear',
-          angle: Number.isFinite(fillResolved.angle) ? fillResolved.angle : 135,
-        };
+      const shapeOpacity = (Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1) * elementOpacity;
+      let gradient = null;
+      if (isGradientFill(content.fill)) {
+        // pptxgenjs has no gradient fill: write the first colour, then swap in a native
+        // <a:gradFill> after the file is written (pptxXmlPatches).
+        gradient = editorGradient(content.fill, palette);
+        if (shapeOpacity < 1) gradient.stops = gradient.stops.map((st) => ({ ...st, alpha: (st.alpha ?? 1) * shapeOpacity }));
+        shapeOpts.fill = { color: gradient.stops[0].color };
       } else {
         // Editor paints rgba fills and multiplies content.opacity on top — mirror both.
         const fill = content.fill;
@@ -530,124 +618,65 @@ async function addElementsToPptxSlide(
         // otherwise pptxgenjs swaps the unknown colour for black.
         if (!isTransparentColor(fillSource)) {
           const ink = resolveColorAlpha(fillSource, palette, '0A84FF');
-          const shapeOpacity = Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1;
           shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
         }
       }
-      const shadow = effectShadow(content);
+      const glow = elementGlowPatch(content, palette, pt);
+      const shadow = glow ? null : effectShadow(content);
       if (shadow) shapeOpts.shadow = shadow;
+      Object.assign(shapeOpts, tag([gradient ? { kind: 'shapeGradient', gradient } : null, glow]));
       try {
         s.addShape(shape, shapeOpts);
       } catch {
-        s.addShape('rect', { ...shapeOpts, shape: undefined });
+        s.addShape('rect', { ...shapeOpts, points: undefined });
       }
+      count('native', polygon ? 'custom shape' : 'shape');
     } else if (el.type === 'chart') {
-      const normalized = normalizeChartContent(content, palette);
-      let labels = Array.isArray(normalized.labels) ? normalized.labels : [];
-      let series = Array.isArray(normalized.series) ? normalized.series : [];
-      const values = Array.isArray(series[0]?.values) ? series[0].values : [];
-      if (!labels.length && values.length) {
-        labels = values.map((_, i) => `Item ${i + 1}`);
-      }
-      if (labels.length && values.length && !series.length) {
-        series = [{ name: 'Series', values }];
-      }
-      if (labels.length && series.length && values.length && pptx) {
-        try {
-          const chartData = series.map((ser) => ({
-            name: ser.name || 'Series',
-            labels,
-            values: (ser.values || []).map((v) => Number(v) || 0),
-          }));
-          const chartOpts = {
-            x: box.x,
-            y: box.y,
-            w: box.w,
-            h: box.h,
-            showTitle: false,
-            showLegend: false,
-            // Default chart ink is dark grey: unreadable on a dark slide.
-            ...chartInkOptions(isDarkHex(backgroundHex)),
-          };
-          const chartColorSource =
-            (Array.isArray(normalized.colors) && normalized.colors.length ? normalized.colors : null) ||
-            (Array.isArray(content.colors) && content.colors.length ? content.colors : null) ||
-            (Array.isArray(brandChartColors) && brandChartColors.length ? brandChartColors : null);
-          if (chartColorSource?.length) {
-            chartOpts.chartColors = chartColorHexes(chartColorSource, palette, '0A84FF');
-          }
-          s.addChart(
-            resolvePptxChartTypeEnum(pptx, normalized.chartType || content.chartType || content.chartTypeRaw),
-            chartData,
-            chartOpts
-          );
-        } catch (chartErr) {
-          logger.warn?.('pptx_chart_export_failed', {
-            slideId: slide.id,
-            error: chartErr?.message || chartErr,
-          });
-          s.addText('Chart', {
-            x: box.x,
-            y: box.y,
-            w: box.w,
-            h: box.h,
-            fontSize: 14,
-            color: textColor,
-            align: 'center',
-            valign: 'middle',
-          });
-        }
+      // Drawn like the editor's chart (PptChartRenderer): first series, its colours and labels.
+      const spec = editorChartSpec(content, palette);
+      if (spec.kind === 'kpi') {
+        s.addText(
+          [
+            { text: spec.kpi.value, options: { fontSize: pt(32), bold: true, color: String(spec.colors[0]).replace(/^#/, ''), breakLine: true } },
+            { text: spec.kpi.label, options: { fontSize: pt(12), color: isDarkHex(backgroundHex) ? 'CBD5E1' : '64748B' } },
+          ],
+          { x: box.x, y: box.y, w: box.w, h: box.h, align: 'center', valign: 'middle', margin: [0, 0, 0, 0], rotate, ...(themeFonts.body ? { fontFace: themeFonts.body } : {}) }
+        );
+        count('native', 'kpi');
       } else {
-        s.addShape('rect', {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          fill: { color: 'F5F5F5' },
-          line: { color: 'CCCCCC', width: 1 },
-        });
-        s.addText('Chart', {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          fontSize: 14,
-          color: '666666',
-          align: 'center',
-          valign: 'middle',
-        });
+        try {
+          const args = pptxChartArgs(spec, pptx, box, { pt, dark: isDarkHex(backgroundHex), fontFace: themeFonts.body || null });
+          s.addChart(args.type, args.data, args.options);
+          count('native', `chart ${spec.kind}`);
+        } catch (chartErr) {
+          logger.warn?.('pptx_chart_export_failed', { slideId: slide.id, error: chartErr?.message || chartErr });
+          if (picture?.data && picture.box) {
+            // The editor's chart as a picture, never an empty "Chart" box.
+            addPicture();
+          } else {
+            s.addText('Chart', { x: box.x, y: box.y, w: box.w, h: box.h, fontSize: 14, color: textColor, align: 'center', valign: 'middle' });
+          }
+        }
       }
     } else if (el.type === 'table') {
-      const rows = Array.isArray(content.rows)
-        ? content.rows
-        : Array.isArray(content.cells)
-          ? content.cells
-          : [];
-      if (rows.length) {
-        s.addTable(
-          rows.map((row, rowIdx) =>
-            (Array.isArray(row) ? row : [row]).map((cell) => ({
-              text: String(cell ?? ''),
-              options: {
-                color: textColor,
-                fontSize: 12,
-                bold: content.hasHeader && rowIdx === 0,
-              },
-            }))
-          ),
-          { x: box.x, y: box.y, w: box.w, h: box.h, border: [{ pt: 0.5, color: 'CCCCCC' }] }
-        );
+      // The editor's table card and grid, from the render page's measurement when there is one.
+      const stageScale = FONT_REF_WIDTH / canvasW;
+      const table = buildPptxTable({
+        content,
+        box,
+        measured: measuredTables[el.id] || null,
+        inch,
+        pt,
+        stageW: (Number(el.placement?.width) || 100) * stageScale,
+        stageH: (Number(el.placement?.height) || 100) * stageScale,
+        fontFace: themeFonts.body || null,
+      });
+      if (table) {
+        if (table.card) s.addShape(pptx?.ShapeType?.roundRect || 'roundRect', table.card);
+        s.addTable(table.rows, table.options);
+        count('native', 'table');
       } else {
-        s.addText('Table', {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          fontSize: 14,
-          color: '666666',
-          align: 'center',
-          valign: 'middle',
-        });
+        s.addText('Table', { x: box.x, y: box.y, w: box.w, h: box.h, fontSize: 14, color: '666666', align: 'center', valign: 'middle' });
       }
     } else if (el.type === 'embed') {
       const title = content.title || content.provider || 'Link';
@@ -674,8 +703,10 @@ async function addElementsToPptxSlide(
     }
   }
 
-  const notes = slide.content?.notes;
-  if (notes) s.addNotes(String(notes));
+  const notes = [slide.content?.notes ? String(slide.content.notes) : '', picturedText.length ? `Text shown as a picture on this slide:\n${picturedText.join('\n')}` : '']
+    .filter(Boolean)
+    .join('\n\n');
+  if (notes) s.addNotes(notes);
 }
 
 async function addLegacyToPptxSlide(s, slide, textColor) {
@@ -754,8 +785,11 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
  *   (fitted font sizes, colours), pictures for elements PowerPoint can't draw, background
  *   pictures. Without it PPTX uses the stored sizes and native shapes only.
  */
-async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null } = {}) {
+async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null, report = null } = {}) {
   const textMetrics = assets?.textMetrics || null;
+  const tableMetrics = assets?.tableMetrics || {};
+  const patches = new PptxPatches();
+  let slideNumber = 0;
   const pictures = assets?.pictures || {};
   const backgrounds = assets?.backgrounds || {};
   const PptxGenJS = require('pptxgenjs');
@@ -778,6 +812,7 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null 
   const textColor = String(palette.text || '111111').replace(/^#/, '');
 
   for (const slide of slides) {
+    slideNumber += 1;
     const slideBg =
       slide.content?.background?.color ||
       slide.elements?.backgroundColor ||
@@ -794,9 +829,9 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null 
     const bgFill = slide.elements?.backgroundFill || slide.backgroundFill;
     const bgStart = slide.elements?.backgroundGradientStart || slide.backgroundGradientStart;
     const bgEnd = slide.elements?.backgroundGradientEnd || slide.backgroundGradientEnd;
-    if (!backgroundPicture && ((bgFill && bgFill.type === 'gradient') || (bgStart && bgEnd))) {
-      const fillResolved = resolveFillForExport(
-        bgFill && bgFill.type === 'gradient'
+    if (!backgroundPicture && (isGradientFill(bgFill) || (bgStart && bgEnd))) {
+      const gradient = editorGradient(
+        isGradientFill(bgFill)
           ? bgFill
           : {
               type: 'gradient',
@@ -807,25 +842,11 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null 
                 { color: bgEnd, at: 1 },
               ],
             },
-        palette,
-        slideBg
+        palette
       );
-      if (fillResolved.kind === 'gradient' && fillResolved.colors.length >= 2) {
-        s.addShape('rect', {
-          x: 0,
-          y: 0,
-          w: '100%',
-          h: '100%',
-          line: { type: 'none' },
-          fill: {
-            type: 'gradient',
-            color: fillResolved.colors[0],
-            color2: fillResolved.colors[fillResolved.colors.length - 1],
-            gradientType: fillResolved.radial ? 'radial' : 'linear',
-            angle: Number.isFinite(fillResolved.angle) ? fillResolved.angle : 135,
-          },
-        });
-      }
+      // Native gradient background (pptxgenjs writes the first colour; the patch swaps it).
+      s.background = { color: gradient.stops[0].color };
+      patches.add(slideNumber, { kind: 'backgroundGradient', gradient });
     }
     if (slideHasElements(slide)) {
       await addElementsToPptxSlide(
@@ -842,9 +863,13 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null 
         pptx,
         {
           measuredText: textMetrics?.[slide.id] || {},
+          measuredTables: tableMetrics?.[slide.id] || {},
           pictures: pictures[slide.id] || {},
           backgroundIsPicture: Boolean(backgroundPicture),
           backgroundHex: resolveColor(slideBg, palette, 'FFFFFF'),
+          patches,
+          slideNumber,
+          report,
         }
       );
     } else {
@@ -857,7 +882,10 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null 
   }
 
   const out = await pptx.write({ outputType: 'nodebuffer' });
-  return Buffer.isBuffer(out) ? out : Buffer.from(out);
+  const written = Buffer.isBuffer(out) ? out : Buffer.from(out);
+  if (report) report.patches = patches.size;
+  // Gradients, glow and text effects pptxgenjs can't write.
+  return applyPptxPatches(written, patches);
 }
 
 /**
@@ -1167,10 +1195,13 @@ async function renderSlideScreenshots(
  * elements PowerPoint can't draw, background pictures. Never fails the export: without it
  * PPTX falls back to stored sizes and native shapes.
  */
-async function capturePptxAssets(deck, { slideId } = {}) {
+async function capturePptxAssets(deck, { slideId, target } = {}) {
   if (!exportRenderer.isRendererEnabled()) return null;
   try {
-    return await exportRenderer.capturePptxAssets(deck, { slideIds: slideId ? [slideId] : null });
+    return await exportRenderer.capturePptxAssets(deck, {
+      slideIds: slideId ? [slideId] : null,
+      target: normalizeTarget(target),
+    });
   } catch (err) {
     logger.warn('pptx_renderer_capture_failed', {
       deckId: deck.id,
@@ -1187,6 +1218,7 @@ async function processExport({
   projectId,
   projectName,
   slideId,
+  pptxTarget = 'powerpoint',
 }) {
   const row = await presentationDao.findExport(exportId);
   if (!row) return;
@@ -1219,9 +1251,19 @@ async function processExport({
       heartbeat,
       async () => {
         if (format === 'PPTX') {
-          const assets = await capturePptxAssets(deck, { slideId });
+          const assets = await capturePptxAssets(deck, { slideId, target: pptxTarget });
+          const report = {};
+          const pptxBuffer = await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat, assets, report });
+          // What became a picture (PowerPoint can't draw it) and what stayed editable.
+          logger.info('pptx_export_report', {
+            exportId,
+            deckId: deck.id,
+            target: normalizeTarget(pptxTarget),
+            measured: Boolean(assets),
+            ...report,
+          });
           return {
-            buffer: await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat, assets }),
+            buffer: pptxBuffer,
             contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             ext: 'pptx',
           };
@@ -1323,7 +1365,7 @@ async function processExport({
   }
 }
 
-async function queueExport({ workspaceId, presentationId, userId, format, slideId }) {
+async function queueExport({ workspaceId, presentationId, userId, format, slideId, pptxTarget }) {
   const { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
@@ -1356,6 +1398,7 @@ async function queueExport({ workspaceId, presentationId, userId, format, slideI
       projectId: project.id,
       projectName: project.name,
       slideId: slideId || null,
+      pptxTarget: normalizeTarget(pptxTarget),
     });
   });
 

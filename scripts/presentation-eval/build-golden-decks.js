@@ -323,7 +323,8 @@ async function kitchenSink() {
 
   // 6. Effects: every element effect on a shape, every text effect on a heading
   const elementEffects = ['shadow', 'lift', 'glow', 'outline', 'echo', 'neon', 'glitch', 'blur'];
-  const textEffects = ['drop', 'glow', 'echo', 'outline', 'background', 'splice', 'hollow', 'neon', 'glitch'];
+  // The editor's text effects (textEffectsUtils STYLE_EFFECT_OPTIONS).
+  const textEffects = ['shadow', 'lift', 'echo', 'outline', 'background', 'splice', 'hollow', 'neon', 'glitch'];
   slides.push(
     slide('ks-effects', slides.length + 1, [
       ...elementEffects.map((type, i) => ({

@@ -231,20 +231,25 @@ const PICTURE_SCALE = 1.5;
 /**
  * Everything PPTX takes from the editor renderer, in one browser session:
  * - textMetrics: fitted font size and colour of every text element;
+ * - tableMetrics: tables as drawn (cells, sizes, colours, borders);
  * - pictures: elements PowerPoint can't draw natively (pptxCapability), each a transparent PNG
  *   with its box in canvas px (shadows / glows included);
  * - backgrounds: slide backgrounds that are an image or gradient, as JPEG.
  */
-async function capturePptxAssets(deck, { slideIds = null } = {}) {
+async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' } = {}) {
   const { pptxRasterPlan } = require('./pptxCapability');
   const canvasWidth = resolveAspectCanvas(deck.aspectRatio).width;
   const deviceScaleFactor = (canvasWidth / STAGE_WIDTH) * PICTURE_SCALE;
   const wanted = Array.isArray(slideIds) && slideIds.length ? new Set(slideIds) : null;
-  const plan = pptxRasterPlan((deck.slides || []).filter((s) => !wanted || wanted.has(s.id)));
+  const plan = pptxRasterPlan((deck.slides || []).filter((s) => !wanted || wanted.has(s.id)), { target });
 
   return withExportPage(async (page) => {
     const { rendererVersion } = await openRenderedDeck(page, deck, { slideIds, deviceScaleFactor });
     const textMetrics = await page.evaluate(() => window.__athenaExport.measure());
+    // Tables as drawn (older render pages don't measure them: PPTX then uses the CSS defaults).
+    const tableMetrics = await page.evaluate(() =>
+      typeof window.__athenaExport.measureTables === 'function' ? window.__athenaExport.measureTables() : {}
+    );
     const pictures = {};
     const backgrounds = {};
     const capture = async (target, type) => {
@@ -278,13 +283,14 @@ async function capturePptxAssets(deck, { slideIds = null } = {}) {
             data: `image/png;base64,${shot.data.toString('base64')}`,
             box: shot.box,
             reason: el.reason,
+            ...(el.fallbackOnly ? { fallbackOnly: true } : {}),
           };
         }
       }
     } finally {
       await page.evaluate(() => window.__athenaExport.release()).catch(() => {});
     }
-    return { textMetrics, pictures, backgrounds, rendererVersion };
+    return { textMetrics, tableMetrics, pictures, backgrounds, rendererVersion };
   });
 }
 
