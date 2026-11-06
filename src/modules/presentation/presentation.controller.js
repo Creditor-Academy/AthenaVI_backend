@@ -421,7 +421,7 @@ const regenerateSlide = asyncHandler(async (req, res) => {
 const queueExport = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const userId = req.user.id;
-  const { format, slideId } = req.body;
+  const { format, slideId, pptxTarget } = req.body;
 
   const data = await presentationService.queueExport({
     workspaceId,
@@ -429,6 +429,7 @@ const queueExport = asyncHandler(async (req, res) => {
     userId,
     format,
     slideId,
+    pptxTarget,
   });
 
   return successResponse(req, res, data, 202, messages.PRESENTATION_EXPORT_QUEUED);

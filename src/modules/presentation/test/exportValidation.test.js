@@ -20,3 +20,9 @@ test('export accepts a single-slide request and still rejects bad input', () => 
   assert.ok(check({ format: 'DOCX' }), 'unknown format rejected');
   assert.ok(check({ slideId: 'slide-7' }), 'format is required');
 });
+
+test('PPTX can be made for PowerPoint or Google Slides', () => {
+  assert.strictEqual(check({ format: 'PPTX', pptxTarget: 'powerpoint' }), null);
+  assert.strictEqual(check({ format: 'PPTX', pptxTarget: 'google-slides' }), null);
+  assert.ok(check({ format: 'PPTX', pptxTarget: 'keynote' }), 'unknown target rejected');
+});

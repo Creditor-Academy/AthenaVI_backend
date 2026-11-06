@@ -120,6 +120,33 @@ async function withExportPage(fn, { args = [] } = {}) {
   }
 }
 
+/**
+ * Load HTML and wait until it is fully drawn: the `load` event (stylesheets, images in the
+ * markup), then web fonts, then any image still decoding. Used instead of
+ * waitUntil 'networkidle0', which can wait forever with nothing left loading — every PDF
+ * export failed with "Navigation timeout" that way.
+ */
+async function setContentAndSettle(page, html, { timeoutMs = 60_000 } = {}) {
+  await page.setContent(html, { waitUntil: 'load', timeout: timeoutMs });
+  await page.evaluate(
+    /* global document, requestAnimationFrame */
+    async (limitMs) => {
+      const deadline = new Promise((resolve) => setTimeout(resolve, limitMs));
+      const images = [...document.images].map((img) =>
+        img.complete
+          ? null
+          : new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+            })
+      );
+      await Promise.race([Promise.all([document.fonts ? document.fonts.ready : null, ...images]), deadline]);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    },
+    Math.max(1_000, timeoutMs - 1_000)
+  );
+}
+
 let lastCheck = null;
 
 /**
@@ -167,6 +194,7 @@ module.exports = {
   resolveExportBrowser,
   launchExportBrowser,
   withExportPage,
+  setContentAndSettle,
   checkExportBrowser,
   lastExportBrowserCheck,
 };

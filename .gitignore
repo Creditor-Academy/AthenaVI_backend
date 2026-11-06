@@ -35,3 +35,5 @@ Thumbs.db
 
 # Graphify (local graph outputs + AST cache; regenerate with `graphify update .`)
 graphify-out/
+# Export fidelity harness output (scripts/presentation-eval/export-fidelity.js)
+.eval/

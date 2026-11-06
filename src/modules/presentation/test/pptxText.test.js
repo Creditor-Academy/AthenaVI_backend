@@ -136,3 +136,40 @@ test('PPTX XML: zero insets, no autofit, bullets, caps text, exact spacing, meas
   // The slide background colour is written (pptxgenjs ignores it when passed to addSlide).
   assert.match(xml, /<p:bg><p:bgPr><a:solidFill><a:srgbClr val="0F172A"/);
 });
+
+test('outlined shapes (transparent fill) have no fill, not a black one', async () => {
+  const shape = (id, fill, extra = {}) => ({
+    id,
+    type: 'shape',
+    layer: 1,
+    placement: { x: 100, y: 100, width: 300, height: 200 },
+    content: { shape: 'rect', fill, stroke: '#475569', strokeWidth: 3, ...extra },
+  });
+  const deck = {
+    aspectRatio: '16:9',
+    themeTokens: { palette: { bg: '#FFFFFF' } },
+    slides: [
+      {
+        id: 's1',
+        order: 1,
+        content: {},
+        elements: {
+          canvas: { width: 1920, height: 1080 },
+          elements: [shape('a', 'transparent'), shape('b', 'rgba(0,0,0,0)'), shape('c', '#2563EB', { stroke: 'transparent' })],
+        },
+      },
+    ],
+  };
+  const xml = await (await JSZip.loadAsync(await buildPptxBuffer(deck))).file('ppt/slides/slide1.xml').async('string');
+  assert.doesNotMatch(xml, /<a:srgbClr val="000000"/, 'nothing painted black');
+  assert.equal((xml.match(/<a:noFill\/>/g) || []).length, 2, 'two outlined shapes without fill');
+  assert.match(xml, /<a:srgbClr val="2563EB"/);
+  assert.match(xml, /<a:srgbClr val="2563EB"\/><\/a:solidFill><a:ln><\/a:ln>/, 'a transparent stroke draws no line');
+});
+
+test('graphics are rasterized at 2× but never larger than 2048px on the long edge', () => {
+  const { svgRasterSize } = require('../export.service');
+  assert.deepEqual(svgRasterSize({ width: 46, height: 46 }), { width: 92, height: 92 });
+  assert.deepEqual(svgRasterSize({ width: 1920, height: 1080 }), { width: 2048, height: 1152 });
+  assert.deepEqual(svgRasterSize({}), { width: 200, height: 200 });
+});

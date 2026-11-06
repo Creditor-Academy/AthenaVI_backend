@@ -662,6 +662,9 @@ const exportDeckSchema = Joi.object({
     format: Joi.string().valid('PPTX', 'PDF', 'PNG', 'JPEG').required(),
     // null / '' = whole deck (export modal sends slideId: null)
     slideId: Joi.string().trim().allow(null, '').optional(),
+    // PPTX only: which app the file is made for. Google Slides can't show gradients or glow,
+    // so those are exported as pictures for it.
+    pptxTarget: Joi.string().valid('powerpoint', 'google-slides').optional(),
   }).required(),
 });
 
