@@ -33,7 +33,9 @@ const { parseColor, hex6 } = require('./pptxColor');
 const { editorChartSpec, pptxChartArgs } = require('./pptxChart');
 const { buildPptxTable } = require('./pptxTable');
 const { parsePolygonClipPath, custGeomPoints, dashTypeFor } = require('./pptxShapes');
-const { PptxPatches, applyPptxPatches } = require('./pptxXmlPatches');
+const JSZip = require('jszip');
+const { PptxPatches, applyPptxPatchesToZip } = require('./pptxXmlPatches');
+const { primaryFamily, embedPptxFonts, fontEmbeddingEnabled } = require('./pptxFonts');
 const { isGradientFill, normalizeTarget } = require('./pptxCapability');
 const exportRenderer = require('./exportRenderer.service');
 const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
@@ -369,16 +371,32 @@ function elementGlowPatch(content, palette, pt) {
   return { kind: 'glow', color: ink.color, radiusPt: pt(radiusPx), alpha: fx.type === 'neon' ? 0.8 : 0.6 };
 }
 
-function resolveExportFontFace(content, el, themeFonts = {}) {
-  if (content.fontFamily) return content.fontFamily;
-  const role = String(el.role || content.role || '').toLowerCase();
-  if (role === 'title' || role === 'heading' || role === 'headline' || role === 'stat_value') {
-    return themeFonts.heading || themeFonts.body || null;
-  }
-  if (role === 'subtitle' || role === 'subheading') {
-    return themeFonts.subheading || themeFonts.heading || themeFonts.body || null;
-  }
-  return themeFonts.body || themeFonts.subheading || themeFonts.heading || null;
+/**
+ * The deck's heading and body fonts as the editor resolves them (googleFonts.js
+ * themeFontFamilies): Inter when the theme names none.
+ */
+function editorThemeFonts(themeTokens) {
+  const fonts = themeTokens?.fonts || {};
+  const pick = (...names) => names.map(primaryFamily).find(Boolean) || null;
+  return {
+    heading: pick(fonts.heading, fonts.subheading) || 'Inter',
+    body: pick(fonts.body, fonts.subheading, fonts.heading) || 'Inter',
+  };
+}
+
+/**
+ * The font a text element is drawn in: what the render page measured, else the editor's own
+ * rule (PptCanvasElement): the element's font, else the heading font for title / heading roles
+ * and HEADING / TITLE slots, else the body font.
+ */
+function resolveExportFontFace(content, el, themeFonts = {}, measured = null) {
+  const drawn = primaryFamily(measured?.fontFamily);
+  if (drawn) return drawn;
+  const own = primaryFamily(content.fontFamily);
+  if (own) return own;
+  const slot = String(el?.slotId || '').toUpperCase();
+  const isHeading = el?.role === 'heading' || el?.role === 'title' || slot.includes('HEADING') || slot.includes('TITLE');
+  return (isHeading ? themeFonts.heading : themeFonts.body) || themeFonts.body || themeFonts.heading || null;
 }
 
 async function addElementsToPptxSlide(
@@ -485,7 +503,7 @@ async function addElementsToPptxSlide(
         slideWidthIn: slideSize.w,
         color: boxColor,
         transparency: gradientInk ? pptxTransparency(elementOpacity) : pptxTransparency(textInk.alpha * elementOpacity),
-        fontFace: resolveExportFontFace(content, el, themeFonts),
+        fontFace: resolveExportFontFace(content, el, themeFonts, measured),
         runColor: (run) => firstHexFromFill(run.fill || run.color || run.colorRole, palette, boxColor),
         measured,
       });
@@ -778,7 +796,13 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
  *   (fitted font sizes, colours), pictures for elements PowerPoint can't draw, background
  *   pictures. Without it PPTX uses the stored sizes and native shapes only.
  */
-async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null, report = null } = {}) {
+/**
+ * @param {object} deck
+ * @param {object} [opts]
+ * @param {boolean} [opts.embedFonts]  embed the deck's Google Fonts (PowerPoint target); off by
+ *   default so tests and offline callers never reach the network.
+ */
+async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null, report = null, embedFonts = false } = {}) {
   const textMetrics = assets?.textMetrics || null;
   const tableMetrics = assets?.tableMetrics || {};
   const patches = new PptxPatches();
@@ -798,7 +822,9 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null,
 
   const palette = deck.themeTokens?.palette || {};
   const brandChartColors = deck.themeTokens?.brand?.chartColors || [];
-  const themeFonts = deck.themeTokens?.fonts || {};
+  const themeFonts = editorThemeFonts(deck.themeTokens);
+  // The theme's fonts, so text added later in PowerPoint uses the deck's fonts too.
+  pptx.theme = { headFontFace: themeFonts.heading, bodyFontFace: themeFonts.body };
   let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
   if (slideId) slides = slides.filter((s) => s.id === slideId);
   const bgColor = String(palette.bg || 'FFFFFF').replace(/^#/, '');
@@ -879,8 +905,21 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null,
   const out = await pptx.write({ outputType: 'nodebuffer' });
   const written = Buffer.isBuffer(out) ? out : Buffer.from(out);
   if (report) report.patches = patches.size;
+  const wantFonts = embedFonts && fontEmbeddingEnabled();
+  if (!patches.size && !wantFonts) return written;
+  const zip = await JSZip.loadAsync(written);
   // Gradients, glow and text effects pptxgenjs can't write.
-  return applyPptxPatches(written, patches);
+  await applyPptxPatchesToZip(zip, patches);
+  if (wantFonts) {
+    // The fonts the slides use, inside the file, so PowerPoint wraps text like the editor.
+    try {
+      const fonts = await embedPptxFonts(zip);
+      if (report) report.fonts = fonts;
+    } catch (err) {
+      logger.warn('pptx_font_embed_failed', { deckId: deck.id, error: String(err?.message || err).slice(0, 300) });
+    }
+  }
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
 /**
@@ -1248,7 +1287,14 @@ async function processExport({
         if (format === 'PPTX') {
           const assets = await capturePptxAssets(deck, { slideId, target: pptxTarget });
           const report = {};
-          const pptxBuffer = await buildPptxBuffer(deck, { slideId, onSlideProcessed: heartbeat, assets, report });
+          const pptxBuffer = await buildPptxBuffer(deck, {
+            slideId,
+            onSlideProcessed: heartbeat,
+            assets,
+            report,
+            // Google Slides ignores embedded fonts (it uses Google Fonts by name); PowerPoint needs them.
+            embedFonts: normalizeTarget(pptxTarget) === 'powerpoint',
+          });
           // What became a picture (PowerPoint can't draw it) and what stayed editable.
           logger.info('pptx_export_report', {
             exportId,
@@ -1466,5 +1512,7 @@ module.exports = {
   exportQueueStats,
   svgRasterSize,
   resolveColor,
+  resolveExportFontFace,
+  editorThemeFonts,
   PRESIGN_EXPIRES_SEC,
 };

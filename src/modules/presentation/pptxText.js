@@ -9,6 +9,7 @@
 
 const { FONT_REF_WIDTH } = require('./textFit.util');
 const { linkedRuns } = require('./textLinks');
+const { primaryFamily } = require('./pptxFonts');
 
 /** Editor defaults (PptCanvasElement): font size 22, line height 1.25, no padding. */
 const EDITOR_DEFAULT_FONT_PX = 22;
@@ -117,25 +118,31 @@ function textPieces(content = {}) {
 }
 
 /**
- * Colour lookup by character position from the runs the editor drew (measured on the render
- * page, contrast-adjusted). Line breaks aren't drawn as characters, so they're ignored on both
- * sides. Returns null when the drawn text doesn't line up with the content.
+ * Lookup by character position into the runs the editor drew (measured on the render page:
+ * contrast-adjusted colour, font family). Line breaks aren't drawn as characters, so they're
+ * ignored on both sides. Returns null when the drawn text doesn't line up with the content.
  */
-function drawnRunColors(measuredRuns, pieces) {
+function drawnRuns(measuredRuns, pieces) {
   if (!Array.isArray(measuredRuns) || !measuredRuns.length) return null;
   const strip = (t) => String(t ?? '').replace(/[\r\n]/g, '');
-  const drawn = measuredRuns.map((r) => ({ len: strip(r.text).length, color: r.color }));
+  const drawn = measuredRuns.map((r) => ({ len: strip(r.text).length, run: r }));
   const total = drawn.reduce((n, r) => n + r.len, 0);
   const content = pieces.reduce((n, p) => n + strip(p.text).length, 0);
   if (!total || total !== content) return null;
   return (offset) => {
     let at = 0;
     for (const r of drawn) {
-      if (offset < at + r.len) return r.color || null;
+      if (offset < at + r.len) return r.run;
       at += r.len;
     }
     return null;
   };
+}
+
+/** The drawn run colour by character position (see drawnRuns). */
+function drawnRunColors(measuredRuns, pieces) {
+  const runAt = drawnRuns(measuredRuns, pieces);
+  return runAt && ((offset) => runAt(offset)?.color || null);
 }
 
 /** Split pieces into paragraphs at line breaks (each piece keeps its style). */
@@ -202,7 +209,7 @@ function buildPptxText({
 
   const allPieces = textPieces(content);
   const paragraphs = splitParagraphs(allPieces);
-  const colorAt = drawnRunColors(measured?.runs, allPieces);
+  const runAt = drawnRuns(measured?.runs, allPieces);
   const hexOf = (c) => (/^#?[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).replace(/^#/, '').toUpperCase() : null);
   let offset = 0;
   const runs = [];
@@ -222,13 +229,16 @@ function buildPptxText({
         ...(own.italic != null ? { italic: own.italic === true } : {}),
         ...(own.underline ? { underline: { style: 'sng' } } : {}),
         ...(own.strikethrough ? { strike: 'sngStrike' } : {}),
-        ...(own.fontFamily ? { fontFace: own.fontFamily } : {}),
+        ...(primaryFamily(own.fontFamily) ? { fontFace: primaryFamily(own.fontFamily) } : {}),
         ...(own.fill || own.color || own.colorRole ? { color: runColor(own) } : {}),
         ...(own.href ? { hyperlink: { url: own.href, tooltip: own.href } } : {}),
       };
-      // The colour the editor drew for this run wins (its colours are contrast-adjusted).
-      const drawnColor = colorAt && piece.text ? hexOf(colorAt(offset)) : null;
+      // The colour and font the editor drew for this run win (its colours are contrast-adjusted).
+      const drawn = runAt && piece.text ? runAt(offset) : null;
+      const drawnColor = hexOf(drawn?.color);
       if (drawnColor) options.color = drawnColor;
+      const drawnFont = primaryFamily(drawn?.fontFamily);
+      if (drawnFont) options.fontFace = drawnFont;
       offset += String(piece.text ?? '').length;
       if (!last && i === items.length - 1) options.breakLine = true;
       runs.push({ text: applyTextTransform(piece.text, transform), options });

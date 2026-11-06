@@ -181,6 +181,13 @@ function applyToSlide(xml, patches) {
 async function applyPptxPatches(buffer, patches) {
   if (!patches || !patches.size) return buffer;
   const zip = await JSZip.loadAsync(buffer);
+  await applyPptxPatchesToZip(zip, patches);
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+/** Apply the patches to the slides of a loaded PPTX (JSZip), in place. */
+async function applyPptxPatchesToZip(zip, patches) {
+  if (!patches || !patches.size) return;
   const bySlide = new Map();
   for (const p of patches.items) {
     if (!bySlide.has(p.slideNumber)) bySlide.set(p.slideNumber, []);
@@ -192,12 +199,12 @@ async function applyPptxPatches(buffer, patches) {
     const xml = await file.async('string');
     zip.file(`ppt/slides/slide${slideNumber}.xml`, applyToSlide(xml, list));
   }
-  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
 module.exports = {
   PptxPatches,
   applyPptxPatches,
+  applyPptxPatchesToZip,
   gradFillXml,
   glowXml,
   outerShadowXml,

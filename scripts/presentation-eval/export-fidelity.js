@@ -12,6 +12,8 @@
  *                        http://localhost:5173/export-render.html — run the frontend dev server)
  *   --compare file       an earlier scores.json: the report shows the change against it
  *   --skip-pptx          PDF only (no LibreOffice needed)
+ *   --no-fonts           don't embed the deck's fonts in the PPTX (they are by default, as in a
+ *                        PowerPoint export)
  *   --legacy             measure the fallback renderer (PPT_EXPORT_RENDERER=legacy) instead of
  *                        the render page; the reference is still the render page
  *   --legacy-pdf-timeout ms  page timeout for an old checkout's PDF (default 60000)
@@ -268,7 +270,8 @@ async function runDeck({ name, current, measured, assetBase, outDir, soffice, ra
   if (!skipPptx) {
     try {
       const assets = measured.renderer?.capturePptxAssets ? await measured.renderer.capturePptxAssets(deck) : null;
-      const pptx = await measured.exportService.buildPptxBuffer(deck, assets ? { assets } : {});
+      // Fonts embedded like a PowerPoint export (LibreOffice reads them), unless --no-fonts.
+      const pptx = await measured.exportService.buildPptxBuffer(deck, { ...(assets ? { assets } : {}), embedFonts: !flag('no-fonts') });
       const pptxPath = path.join(dir, 'export.pptx');
       fs.writeFileSync(pptxPath, pptx);
       pptxPages = rasterizePdf(rasterizer, pptxToPdf(soffice, pptxPath, path.join(dir, 'lo')), path.join(dir, 'pptx'), width);
