@@ -29,6 +29,7 @@ const {
 const { FONT_REF_WIDTH } = require('./textFit.util');
 const { elementEffectPptxShadow, normalizeElementEffect } = require('./elementEffects');
 const { buildPptxText, stagePxToPoints } = require('./pptxText');
+const { parseColor, hex6 } = require('./pptxColor');
 const { editorChartSpec, pptxChartArgs } = require('./pptxChart');
 const { buildPptxTable } = require('./pptxTable');
 const { parsePolygonClipPath, custGeomPoints, dashTypeFor } = require('./pptxShapes');
@@ -180,11 +181,12 @@ function placementToIn(placement, canvasW, canvasH, slideSize) {
  * rgb()/rgba() (palette cardBg / divider, translucent fills) are flattened onto the slide bg.
  */
 function toPptxHex(value, palette, fallback) {
-  const raw = String(value || '').trim();
-  if (!/^rgba?\(/i.test(raw)) return raw.replace(/^#/, '');
-  const rgba = parseCssColor(raw);
-  if (!rgba) return String(fallback).replace(/^#/, '');
-  return compositeRgbaOnHex(rgba, palette?.bg || '#FFFFFF').replace(/^#/, '').toUpperCase();
+  // #RRGGBBAA, #RGB, rgb()/rgba(), hsl(), names… (pptxgenjs turns anything else black).
+  const parsed = parseColor(value);
+  if (!parsed) return hex6(fallback);
+  if (parsed.alpha >= 1) return parsed.hex;
+  const rgba = parseCssColor(`#${parsed.hex}`);
+  return compositeRgbaOnHex({ ...rgba, a: parsed.alpha }, palette?.bg || '#FFFFFF').replace(/^#/, '').toUpperCase();
 }
 
 function resolveColor(value, palette, fallback = '111111') {
@@ -197,12 +199,9 @@ function resolveColor(value, palette, fallback = '111111') {
  * becoming an opaque slab over the photo.
  */
 function resolveColorAlpha(value, palette, fallback = '111111') {
-  const raw = String(resolvePaletteColor(value, palette, fallback) || '').trim();
-  const rgba = /^rgba?\(/i.test(raw) ? parseCssColor(raw) : null;
-  if (!rgba) return { color: toPptxHex(raw, palette, fallback), alpha: 1 };
-  const alpha = rgba.a == null ? 1 : Math.max(0, Math.min(1, Number(rgba.a)));
-  const color = compositeRgbaOnHex({ ...rgba, a: 1 }, '#FFFFFF').replace(/^#/, '').toUpperCase();
-  return { color, alpha };
+  const parsed = parseColor(resolvePaletteColor(value, palette, fallback));
+  if (!parsed) return { color: hex6(fallback), alpha: 1 };
+  return { color: parsed.hex, alpha: parsed.alpha };
 }
 
 /** `transparent`, `none` or a colour with zero alpha. */
@@ -469,19 +468,23 @@ async function addElementsToPptxSlide(
       const textInk = resolveColorAlpha(content.color || content.colorRole, palette, textColor);
       // What the editor drew (fit-to-box size, contrast-adjusted colour), when measured.
       const measured = measuredText[el.id] || null;
-      const measuredColor = !content.fill && /^#?[0-9a-f]{6}$/i.test(String(measured?.color || ''))
+      // The editor paints text with `fill` only when it is a gradient; a plain `fill` doesn't
+      // change the ink (PptCanvasElement textPaintStyle). Treating it as the colour made
+      // eyebrows and stats come out in the wrong colour.
+      const gradientInk = isGradientFill(content.fill);
+      const measuredColor = !gradientInk && /^#?[0-9a-f]{6}$/i.test(String(measured?.color || ''))
         ? String(measured.color).replace(/^#/, '').toUpperCase()
         : null;
       const boxColor =
         measuredColor ||
-        (content.fill ? firstHexFromFill(content.fill, palette, textInk.color) : textInk.color);
+        (gradientInk ? firstHexFromFill(content.fill, palette, textInk.color) : textInk.color);
       const { runs, options } = buildPptxText({
         content,
         box,
         rotate,
         slideWidthIn: slideSize.w,
         color: boxColor,
-        transparency: content.fill ? pptxTransparency(elementOpacity) : pptxTransparency(textInk.alpha * elementOpacity),
+        transparency: gradientInk ? pptxTransparency(elementOpacity) : pptxTransparency(textInk.alpha * elementOpacity),
         fontFace: resolveExportFontFace(content, el, themeFonts),
         runColor: (run) => firstHexFromFill(run.fill || run.color || run.colorRole, palette, boxColor),
         measured,
@@ -551,29 +554,18 @@ async function addElementsToPptxSlide(
         s.addImage(imageOpts);
         count('native', el.type);
       } else {
-        s.addShape('rect', {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          fill: { color: 'DDDDDD' },
-          line: { color: 'AAAAAA', width: 1 },
-        });
-        s.addText(el.type === 'icon' ? content.icon || 'icon' : el.type === 'graphic' ? 'graphic' : 'image', {
-          x: box.x,
-          y: box.y,
-          w: box.w,
-          h: box.h,
-          fontSize: 12,
-          color: '666666',
-          align: 'center',
-          valign: 'middle',
-        });
+        // The picture couldn't be loaded: the editor shows nothing there (a broken image), so
+        // neither does the export — a grey "image" box used to cover the slide's content.
+        logger.warn?.('pptx_image_unavailable', { slideId: slide.id, elementId: el.id, type: el.type });
+        count('missing', el.type);
       }
     } else if (el.type === 'shape') {
       // Library shapes cut with a clip-path polygon → native custom geometry.
       const polygon = content.clipPath ? parsePolygonClipPath(content.clipPath) : null;
-      const shape = polygon ? (pptx?.ShapeType?.custGeom || 'custGeom') : shapeTypeForPptx(content.shape);
+      let shape = polygon ? (pptx?.ShapeType?.custGeom || 'custGeom') : shapeTypeForPptx(content.shape);
+      // The editor rounds any rectangle with a border radius (AI layouts store shape: 'rect' +
+      // borderRadius). PowerPoint only rounds a roundRect, so those came out square.
+      if (shape === 'rect' && Number(content.borderRadius) > 0) shape = 'roundRect';
       const strokeColor = isTransparentColor(content.stroke || content.line) ? null : content.stroke || content.line;
       // Stroke widths are editor-stage px, like font sizes.
       const strokeWidth = content.strokeWidth != null ? Number(content.strokeWidth) : strokeColor ? 1.5 : 0;
@@ -646,7 +638,8 @@ async function addElementsToPptxSlide(
       } else {
         try {
           const args = pptxChartArgs(spec, pptx, box, { pt, dark: isDarkHex(backgroundHex), fontFace: themeFonts.body || null });
-          s.addChart(args.type, args.data, args.options);
+          if (args.combo) s.addChart(args.combo, args.options);
+          else s.addChart(args.type, args.data, args.options);
           count('native', `chart ${spec.kind}`);
         } catch (chartErr) {
           logger.warn?.('pptx_chart_export_failed', { slideId: slide.id, error: chartErr?.message || chartErr });
@@ -811,8 +804,10 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null,
   const bgColor = String(palette.bg || 'FFFFFF').replace(/^#/, '');
   const textColor = String(palette.text || '111111').replace(/^#/, '');
 
-  for (const slide of slides) {
+  for (const original of slides) {
     slideNumber += 1;
+    // Build from the elements the editor drew when the render page reported them.
+    const slide = exportRenderer.withStageElements(original, assets?.stageSlides?.[original.id]);
     const slideBg =
       slide.content?.background?.color ||
       slide.elements?.backgroundColor ||

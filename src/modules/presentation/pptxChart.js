@@ -168,20 +168,29 @@ function pptxChartArgs(spec, pptx, box, { pt, dark = false, fontFace = null } = 
 
   if (spec.kind === 'line' || spec.kind === 'area') {
     const color = noHash(spec.colors[0]);
+    const lineOptions = {
+      chartColors: [color],
+      lineSize: 2.5,
+      lineSmooth: true,
+      lineDataSymbol: 'circle',
+      lineDataSymbolSize: 7,
+      lineDataSymbolLineColor: color,
+    };
+    if (spec.kind === 'area') {
+      // The editor draws an area chart as a smooth line with dots over a soft fill. A native
+      // area series has no outline or markers, so it's a combo: the fill, then the line on top.
+      return {
+        combo: [
+          { type: ChartType.area || 'area', data, options: { chartColors: [color], chartColorsOpacity: 30 } },
+          { type: ChartType.line || 'line', data, options: lineOptions },
+        ],
+        options: { ...common, ...axes },
+      };
+    }
     return {
-      type: spec.kind === 'area' ? ChartType.area || 'area' : ChartType.line || 'line',
+      type: ChartType.line || 'line',
       data,
-      options: {
-        ...common,
-        ...axes,
-        chartColors: [color],
-        lineSize: 2.5,
-        lineSmooth: true,
-        lineDataSymbol: 'circle',
-        lineDataSymbolSize: 7,
-        lineDataSymbolLineColor: color,
-        ...(spec.kind === 'area' ? { chartColorsOpacity: 35 } : {}),
-      },
+      options: { ...common, ...axes, ...lineOptions },
     };
   }
 

@@ -74,10 +74,68 @@ function bulletFor(listType) {
 }
 
 /** Pieces of text with their own style / link, in order. */
+const runText = (runs) => runs.map((r) => String(r?.text ?? '')).join('');
+
+/** The first `length` characters of the runs (a run cut at the boundary keeps its style). */
+function sliceRuns(runs, length) {
+  const out = [];
+  let left = length;
+  for (const run of runs) {
+    if (left <= 0) break;
+    const text = String(run?.text ?? '');
+    out.push({ ...run, text: text.slice(0, left) });
+    left -= text.length;
+  }
+  return out;
+}
+
+/**
+ * The runs the editor actually draws (pptTextContent collapseDuplicatedRuns +
+ * contentUsesFullRuns): runs that repeat the text are cut back to it, and runs that don't
+ * cover the whole text are ignored in favour of the plain text. Without this, exports
+ * doubled some titles or dropped text the editor shows.
+ */
+function editorRuns(content = {}) {
+  const runs = Array.isArray(content.runs) ? content.runs : [];
+  if (!runs.length) return null;
+  const text = String(content.text ?? '');
+  const joined = runText(runs);
+  let used = runs;
+  if (text && joined.length > text.length && joined.startsWith(text)) {
+    used = sliceRuns(runs, text.length);
+  } else if (joined.length >= 4 && joined.length % 2 === 0 && joined.slice(0, joined.length / 2) === joined.slice(joined.length / 2)) {
+    used = sliceRuns(runs, joined.length / 2);
+  }
+  return runText(used).length >= text.length ? used : null;
+}
+
+/** Pieces of text with their own style / link, in order. */
 function textPieces(content = {}) {
-  const runs = Array.isArray(content.runs) && content.runs.length ? content.runs : null;
+  const runs = editorRuns(content);
   if (runs) return linkedRuns(runs);
   return linkedRuns([{ text: String(content.text ?? '') }]);
+}
+
+/**
+ * Colour lookup by character position from the runs the editor drew (measured on the render
+ * page, contrast-adjusted). Line breaks aren't drawn as characters, so they're ignored on both
+ * sides. Returns null when the drawn text doesn't line up with the content.
+ */
+function drawnRunColors(measuredRuns, pieces) {
+  if (!Array.isArray(measuredRuns) || !measuredRuns.length) return null;
+  const strip = (t) => String(t ?? '').replace(/[\r\n]/g, '');
+  const drawn = measuredRuns.map((r) => ({ len: strip(r.text).length, color: r.color }));
+  const total = drawn.reduce((n, r) => n + r.len, 0);
+  const content = pieces.reduce((n, p) => n + strip(p.text).length, 0);
+  if (!total || total !== content) return null;
+  return (offset) => {
+    let at = 0;
+    for (const r of drawn) {
+      if (offset < at + r.len) return r.color || null;
+      at += r.len;
+    }
+    return null;
+  };
 }
 
 /** Split pieces into paragraphs at line breaks (each piece keeps its style). */
@@ -142,7 +200,11 @@ function buildPptxText({
     ...(transparency != null ? { transparency } : {}),
   };
 
-  const paragraphs = splitParagraphs(textPieces(content));
+  const allPieces = textPieces(content);
+  const paragraphs = splitParagraphs(allPieces);
+  const colorAt = drawnRunColors(measured?.runs, allPieces);
+  const hexOf = (c) => (/^#?[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).replace(/^#/, '').toUpperCase() : null);
+  let offset = 0;
   const runs = [];
   paragraphs.forEach((pieces, pIndex) => {
     const last = pIndex === paragraphs.length - 1;
@@ -164,6 +226,10 @@ function buildPptxText({
         ...(own.fill || own.color || own.colorRole ? { color: runColor(own) } : {}),
         ...(own.href ? { hyperlink: { url: own.href, tooltip: own.href } } : {}),
       };
+      // The colour the editor drew for this run wins (its colours are contrast-adjusted).
+      const drawnColor = colorAt && piece.text ? hexOf(colorAt(offset)) : null;
+      if (drawnColor) options.color = drawnColor;
+      offset += String(piece.text ?? '').length;
       if (!last && i === items.length - 1) options.breakLine = true;
       runs.push({ text: applyTextTransform(piece.text, transform), options });
     });
@@ -200,6 +266,8 @@ function buildPptxText({
 
 module.exports = {
   buildPptxText,
+  editorRuns,
+  drawnRunColors,
   resolveFontPx,
   stagePxToPoints,
   applyTextTransform,

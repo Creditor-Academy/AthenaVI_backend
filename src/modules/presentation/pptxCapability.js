@@ -141,7 +141,7 @@ function captureMargin(el) {
  */
 function needsBackgroundPicture(slide, { target = 'powerpoint' } = {}) {
   const doc = slide?.elements || {};
-  if (doc.backgroundImage || slide?.backgroundImage) return true;
+  if (doc.backgroundImage || slide?.backgroundImage || doc.backgroundFromElement) return true;
   if (normalizeTarget(target) !== 'google-slides') return false;
   const fill = doc.backgroundFill || slide?.backgroundFill;
   if (isGradientFill(fill)) return true;

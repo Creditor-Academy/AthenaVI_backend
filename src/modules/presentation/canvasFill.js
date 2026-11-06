@@ -3,9 +3,13 @@
  * Accepts hex strings, color roles, or { type: 'solid'|'gradient', kind, angle, stops }.
  */
 
+/**
+ * 6-digit hex without '#' (PPTX). Any CSS colour is accepted — #RRGGBBAA, rgba(), names —
+ * because pptxgenjs paints anything that isn't 6-digit hex black.
+ */
 function hexNoHash(value, fallback = '111111') {
-  const raw = String(value || fallback).trim();
-  return raw.replace(/^#/, '') || fallback.replace(/^#/, '');
+  const { hex6 } = require('./pptxColor');
+  return hex6(value || fallback, fallback);
 }
 
 function resolveToken(value, palette, fallback) {

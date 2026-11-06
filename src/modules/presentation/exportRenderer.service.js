@@ -225,6 +225,28 @@ async function measureDeckText(deck, { slideIds = null } = {}) {
   });
 }
 
+/**
+ * A slide with the elements the editor drew in place of the saved ones (same canvas, background
+ * and other slide settings). Unchanged when the render page didn't report them.
+ */
+function withStageElements(slide, stage) {
+  if (!stage || !Array.isArray(stage.elements)) return slide;
+  const doc = slide.elements && typeof slide.elements === 'object' ? slide.elements : {};
+  // Background elements are drawn as the slide background, not as elements.
+  const hadBackgroundElement = (doc.elements || []).some(
+    (el) => el?.content?.useAsBackground || (doc.backgroundImageElementId && el?.id === doc.backgroundImageElementId)
+  );
+  return {
+    ...slide,
+    elements: {
+      ...doc,
+      canvas: stage.canvas || doc.canvas,
+      elements: stage.elements,
+      ...(hadBackgroundElement && !doc.backgroundImage ? { backgroundFromElement: true } : {}),
+    },
+  };
+}
+
 /** Pictures are cut at 1.5× the deck's canvas resolution (2880px wide for 16:9). */
 const PICTURE_SCALE = 1.5;
 
@@ -241,10 +263,18 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
   const canvasWidth = resolveAspectCanvas(deck.aspectRatio).width;
   const deviceScaleFactor = (canvasWidth / STAGE_WIDTH) * PICTURE_SCALE;
   const wanted = Array.isArray(slideIds) && slideIds.length ? new Set(slideIds) : null;
-  const plan = pptxRasterPlan((deck.slides || []).filter((s) => !wanted || wanted.has(s.id)), { target });
 
   return withExportPage(async (page) => {
     const { rendererVersion } = await openRenderedDeck(page, deck, { slideIds, deviceScaleFactor });
+    // The elements the editor drew (normalised, layout-finished, without the ones it doesn't
+    // paint). PPTX is built from these; older render pages don't report them.
+    const stageSlides = await page.evaluate(() =>
+      typeof window.__athenaExport.stageSlides === 'function' ? window.__athenaExport.stageSlides() : {}
+    );
+    const planSlides = (deck.slides || [])
+      .filter((s) => !wanted || wanted.has(s.id))
+      .map((s) => withStageElements(s, stageSlides[s.id]));
+    const plan = pptxRasterPlan(planSlides, { target });
     const textMetrics = await page.evaluate(() => window.__athenaExport.measure());
     // Tables as drawn (older render pages don't measure them: PPTX then uses the CSS defaults).
     const tableMetrics = await page.evaluate(() =>
@@ -290,7 +320,7 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
     } finally {
       await page.evaluate(() => window.__athenaExport.release()).catch(() => {});
     }
-    return { textMetrics, tableMetrics, pictures, backgrounds, rendererVersion };
+    return { textMetrics, tableMetrics, pictures, backgrounds, stageSlides, rendererVersion };
   });
 }
 
@@ -303,5 +333,6 @@ module.exports = {
   renderDeckImages,
   measureDeckText,
   capturePptxAssets,
+  withStageElements,
   allowRequest,
 };
