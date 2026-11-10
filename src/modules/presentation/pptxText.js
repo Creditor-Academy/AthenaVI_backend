@@ -223,9 +223,13 @@ function buildPptxText({
       const options = {
         ...baseRun,
         ...paragraphOpts,
-        ...(own.bold != null || Number(own.fontWeight) >= 600
-          ? { bold: own.bold === true || Number(own.fontWeight) >= 600 }
-          : {}),
+        // Same rule as the editor canvas: the run's weight first, then its bold flag. A plain
+        // word inside a bold heading (weight 400) stays plain.
+        ...(Number.isFinite(Number.parseInt(own.fontWeight, 10))
+          ? { bold: Number.parseInt(own.fontWeight, 10) >= 600 }
+          : own.bold != null
+            ? { bold: own.bold === true }
+            : {}),
         ...(own.italic != null ? { italic: own.italic === true } : {}),
         ...(own.underline ? { underline: { style: 'sng' } } : {}),
         ...(own.strikethrough ? { strike: 'sngStrike' } : {}),

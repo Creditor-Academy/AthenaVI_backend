@@ -38,7 +38,7 @@ const { PptxPatches, applyPptxPatchesToZip } = require('./pptxXmlPatches');
 const { primaryFamily, embedPptxFonts, fontEmbeddingEnabled } = require('./pptxFonts');
 const { isGradientFill, normalizeTarget } = require('./pptxCapability');
 const exportRenderer = require('./exportRenderer.service');
-const { enrichDeckMediaKeysForExport } = require('./presignSlideMedia');
+const { enrichDeckMediaKeysForExport, inlineGraphicSvgsForExport, s3UrlKey } = require('./presignSlideMedia');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
 const { withExportPage, setContentAndSettle } = require('../../shared/utils/exportBrowser');
 const {
@@ -517,7 +517,12 @@ async function addElementsToPptxSlide(
       count('native', 'text');
     } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
-      const key = content.s3Key || slide.imageRef?.s3Key || null;
+      // The element's own picture first. The slide's hero photo only fills an image element
+      // that has no picture of its own — an icon or a linked photo never becomes the hero.
+      const key =
+        content.s3Key ||
+        (url ? s3UrlKey(url) : null) ||
+        (!url && el.type === 'image' ? slide.imageRef?.s3Key || null : null);
       // Inline SVG (compiled diagrams/graphics) takes precedence, matching the editor renderer.
       const inlineSvgPng =
         typeof content.svg === 'string' && content.svg.includes('<svg')
@@ -1278,7 +1283,9 @@ async function processExport({
     if (!deckRaw) {
       throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
     }
-    const deck = enrichDeckMediaKeysForExport(deckRaw);
+    // Stable S3 keys for media (stored links expire), and library SVG graphics inlined so
+    // every renderer can draw and tint them without fetching.
+    const deck = await inlineGraphicSvgsForExport(enrichDeckMediaKeysForExport(deckRaw));
 
     // Beat throughout: a long PDF render sends no per-slide callbacks.
     const { buffer, contentType, ext } = await withHeartbeat(

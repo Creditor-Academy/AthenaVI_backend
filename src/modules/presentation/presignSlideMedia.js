@@ -6,6 +6,7 @@ const PRESIGN_TTL_SECONDS =
     : 3600;
 
 const SIGNABLE_URL_FIELDS = ['url', 'src', 'screenUrl', 'thumbnailUrl', 'previewUrl'];
+const MEDIA_TYPES = new Set(['image', 'icon', 'graphic']);
 
 function isHeroMediaSlot(el) {
   const slotId = String(el?.slotId || '').toUpperCase();
@@ -68,7 +69,9 @@ function isPresignableElement(el) {
     return false;
   }
   const type = String(el.type || '').toLowerCase();
-  if (type === 'image' || type === 'icon') return true;
+  // Library graphics store a presigned link like images do; unsigned again they break once it
+  // expires (an hour later) — in the editor and in every export.
+  if (type === 'image' || type === 'icon' || type === 'graphic') return true;
   if (type !== 'shape') return false;
   return Boolean(
     el.content.s3Key ||
@@ -232,15 +235,15 @@ function enrichDeckMediaKeysForExport(deck) {
       next.elements = {
         ...next.elements,
         elements: next.elements.elements.map((el) => {
-          if (!el || el.type !== 'image' || !el.content || typeof el.content !== 'object') {
+          if (!el || !MEDIA_TYPES.has(el.type) || !el.content || typeof el.content !== 'object') {
             return el;
           }
           const content = { ...el.content };
           if (!content.s3Key) {
             const ownUrl = content.url || content.src;
-            // An external URL stays as it is; the slide's hero image only fills an element
-            // that has no picture of its own.
-            const elementKey = ownUrl ? s3UrlKey(ownUrl) : heroKey;
+            // An external URL stays as it is; the slide's hero image only fills an image
+            // element that has no picture of its own (never an icon or graphic).
+            const elementKey = ownUrl ? s3UrlKey(ownUrl) : el.type === 'image' ? heroKey : null;
             if (elementKey) content.s3Key = elementKey;
           }
           return { ...el, content };
@@ -254,7 +257,58 @@ function enrichDeckMediaKeysForExport(deck) {
   return { ...deck, slides };
 }
 
+const MAX_INLINE_SVG_BYTES = 512 * 1024;
+
+/**
+ * Library graphics are SVG files in our bucket. The export renderer draws a recolourable one
+ * by fetching its markup — a request the export page isn't allowed to make to another site —
+ * so it came out black (or missing, once its stored link expired). Put the markup on the
+ * element instead (`content.svg`, which every renderer sanitises and tints, as for AI
+ * graphics). Best effort: an SVG that can't be read keeps its link.
+ * @param {object} deck — after enrichDeckMediaKeysForExport
+ * @returns {Promise<object>}
+ */
+async function inlineGraphicSvgsForExport(deck) {
+  if (!deck || typeof deck !== 'object' || !Array.isArray(deck.slides)) return deck;
+  const cache = new Map();
+  const readSvg = (key) => {
+    if (!cache.has(key)) {
+      cache.set(
+        key,
+        s3Service
+          .getObjectBuffer(key)
+          .then((buf) => {
+            if (!buf || buf.length > MAX_INLINE_SVG_BYTES) return null;
+            const text = buf.toString('utf8');
+            return /<svg[\s>]/i.test(text) ? text : null;
+          })
+          .catch(() => null)
+      );
+    }
+    return cache.get(key);
+  };
+  const slides = await Promise.all(
+    deck.slides.map(async (slide) => {
+      const list = slide?.elements?.elements;
+      if (!Array.isArray(list)) return slide;
+      const elements = await Promise.all(
+        list.map(async (el) => {
+          if (el?.type !== 'graphic' || !el.content || typeof el.content !== 'object') return el;
+          if (typeof el.content.svg === 'string' && el.content.svg.includes('<svg')) return el;
+          const key = el.content.s3Key || ownBucketKey(el.content.src) || ownBucketKey(el.content.url);
+          if (!key || !/\.svg$/i.test(key)) return el;
+          const svg = await readSvg(key);
+          return svg ? { ...el, content: { ...el.content, s3Key: key, svg } } : el;
+        })
+      );
+      return { ...slide, elements: { ...slide.elements, elements } };
+    })
+  );
+  return { ...deck, slides };
+}
+
 module.exports = {
+  inlineGraphicSvgsForExport,
   ownBucketKey,
   s3UrlKey,
   attachPresignedMedia,

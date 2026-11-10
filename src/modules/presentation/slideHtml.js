@@ -233,7 +233,8 @@ async function resolveImageSrc(content, opts = {}) {
     if (png) return `data:image/png;base64,${png.toString('base64')}`;
   }
   const url = content?.url || content?.src || null;
-  const s3Key = content?.s3Key || opts.imageRef?.s3Key || null;
+  // The slide's hero photo only stands in when the element has no picture of its own.
+  const s3Key = content?.s3Key || (url ? null : opts.imageRef?.s3Key) || null;
   if (opts.inlineImages) {
     const buffer = await fetchImageBuffer(url, s3Key);
     if (buffer) return `data:${sniffImageMime(buffer) || 'image/jpeg'};base64,${buffer.toString('base64')}`;

@@ -128,3 +128,98 @@ describe('external images keep their own URL', () => {
     assert.equal(slide.elements.elements[1].content.url, 'https://signed.example/ppt/x.jpg');
   });
 });
+
+describe('library graphics (SVG icons) in the editor and in exports', () => {
+  const { inlineGraphicSvgsForExport } = require('../presignSlideMedia');
+  const originalGet = s3Service.getObjectBuffer;
+  const originalBucket = process.env.AWS_S3_BUCKET;
+  const GRAPHIC = 'https://b.s3.us-east-1.amazonaws.com/presentations/_system/graphics/abc/original.svg?X-Amz-Date=20261019T061645Z&X-Amz-Expires=3600';
+  const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="currentColor" d="M0 0h16v16z"/></svg>';
+
+  afterEach(() => {
+    s3Service.getObjectBuffer = originalGet;
+    if (originalBucket === undefined) delete process.env.AWS_S3_BUCKET;
+    else process.env.AWS_S3_BUCKET = originalBucket;
+  });
+
+  it('a graphic gets a fresh link (its stored one expires after an hour)', async () => {
+    mockSign();
+    assert.equal(isPresignableElement({ type: 'graphic', content: { src: GRAPHIC } }), true);
+    const slide = await attachPresignedMedia({
+      elements: { elements: [{ id: 'g', type: 'graphic', content: { src: GRAPHIC, colorMode: 'recolorable' } }] },
+    });
+    const { content } = slide.elements.elements[0];
+    assert.equal(content.src, 'https://signed.example/presentations/_system/graphics/abc/original.svg');
+    assert.equal(content.colorMode, 'recolorable');
+  });
+
+  it('export: icons and graphics never take the slide hero photo', () => {
+    const deck = enrichDeckMediaKeysForExport({
+      slides: [
+        {
+          id: 's1',
+          imageRef: { s3Key: 'hero/key.jpg' },
+          elements: {
+            elements: [
+              { id: 'g', type: 'graphic', content: { src: GRAPHIC } },
+              { id: 'g2', type: 'graphic', content: {} },
+              { id: 'i', type: 'icon', content: {} },
+            ],
+          },
+        },
+      ],
+    });
+    const [g, g2, i] = deck.slides[0].elements.elements;
+    assert.equal(g.content.s3Key, 'presentations/_system/graphics/abc/original.svg');
+    assert.equal(g2.content.s3Key, undefined);
+    assert.equal(i.content.s3Key, undefined);
+  });
+
+  it('export: a library SVG is read from the bucket once and put on the element', async () => {
+    process.env.AWS_S3_BUCKET = 'b';
+    const reads = [];
+    s3Service.getObjectBuffer = async (key) => {
+      reads.push(key);
+      return Buffer.from(SVG);
+    };
+    const deck = await inlineGraphicSvgsForExport({
+      slides: [
+        { id: 's1', elements: { elements: [{ id: 'a', type: 'graphic', content: { src: GRAPHIC } }] } },
+        {
+          id: 's2',
+          elements: {
+            elements: [
+              { id: 'b', type: 'graphic', content: { src: GRAPHIC } },
+              { id: 'c', type: 'graphic', content: { svg: '<svg id="own"/>' } },
+              { id: 'd', type: 'graphic', content: { src: 'https://cdn.example.com/x.svg' } },
+              { id: 'e', type: 'image', content: { src: GRAPHIC } },
+            ],
+          },
+        },
+      ],
+    });
+    assert.deepEqual(reads, ['presentations/_system/graphics/abc/original.svg'], 'one read per file');
+    const [b, c, d, e] = deck.slides[1].elements.elements;
+    assert.equal(deck.slides[0].elements.elements[0].content.svg, SVG);
+    assert.equal(b.content.svg, SVG);
+    assert.equal(c.content.svg, '<svg id="own"/>', 'markup already on the element is kept');
+    assert.equal(d.content.svg, undefined, 'another site is never read');
+    assert.equal(e.content.svg, undefined, 'only graphics');
+  });
+
+  it('export: an unreadable or non-SVG file leaves the graphic as it was', async () => {
+    process.env.AWS_S3_BUCKET = 'b';
+    s3Service.getObjectBuffer = async () => Buffer.from('<Error>AccessDenied</Error>');
+    const deck = await inlineGraphicSvgsForExport({
+      slides: [{ id: 's', elements: { elements: [{ id: 'a', type: 'graphic', content: { src: GRAPHIC } }] } }],
+    });
+    assert.equal(deck.slides[0].elements.elements[0].content.svg, undefined);
+    s3Service.getObjectBuffer = async () => {
+      throw new Error('NoSuchKey');
+    };
+    const again = await inlineGraphicSvgsForExport({
+      slides: [{ id: 's', elements: { elements: [{ id: 'a', type: 'graphic', content: { src: GRAPHIC } }] } }],
+    });
+    assert.equal(again.slides[0].elements.elements[0].content.svg, undefined);
+  });
+});
