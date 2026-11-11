@@ -163,7 +163,7 @@ test('browser images: charged the export fee once per download id, checked like 
 
 // ── Real renders ──────────────────────────────────────────────────────────────
 
-test('PNG of slides 2, 4 and 5 at 2×: a zip of three 1920×1080 files named by deck position', async (t) => {
+test('PNG of slides 2, 4 and 5 at 2×: a zip of three 1920×1080 files named by page number', async (t) => {
   if (!browserOk) return t.skip('no export browser on this machine');
   currentDeck = fiveSlides();
   const id = queueRow('PNG');
@@ -171,8 +171,8 @@ test('PNG of slides 2, 4 and 5 at 2×: a zip of three 1920×1080 files named by 
   const row = rows.get(id);
   assert.equal(row.status, 'READY', row.error);
   const zip = await JSZip.loadAsync(uploads.get(row.s3Key), { checkCRC32: true });
-  assert.deepEqual(Object.keys(zip.files), ['Q3 Plan-slide-02.png', 'Q3 Plan-slide-04.png', 'Q3 Plan-slide-05.png']);
-  const meta = await sharp(await zip.file('Q3 Plan-slide-04.png').async('nodebuffer')).metadata();
+  assert.deepEqual(Object.keys(zip.files), ['2.png', '4.png', '5.png']);
+  const meta = await sharp(await zip.file('4.png').async('nodebuffer')).metadata();
   assert.deepEqual([meta.width, meta.height], [1920, 1080]);
 });
 
