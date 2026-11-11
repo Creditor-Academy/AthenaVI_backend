@@ -421,7 +421,7 @@ const regenerateSlide = asyncHandler(async (req, res) => {
 const queueExport = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const userId = req.user.id;
-  const { format, slideId, pptxTarget } = req.body;
+  const { format, slideId, slideIds, pptxTarget, scale, quality, transparent } = req.body;
 
   const data = await presentationService.queueExport({
     workspaceId,
@@ -429,10 +429,28 @@ const queueExport = asyncHandler(async (req, res) => {
     userId,
     format,
     slideId,
+    slideIds,
     pptxTarget,
+    scale,
+    quality,
+    transparent,
   });
 
   return successResponse(req, res, data, 202, messages.PRESENTATION_EXPORT_QUEUED);
+});
+
+const chargeBrowserExport = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId } = req.params;
+  const { format, slideIds, downloadId } = req.body;
+  const data = await presentationService.chargeBrowserExport({
+    workspaceId,
+    presentationId,
+    userId: req.user.id,
+    format,
+    slideIds,
+    downloadId,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_EXPORT_FETCHED);
 });
 
 const getExport = asyncHandler(async (req, res) => {
@@ -576,6 +594,7 @@ module.exports = {
   reorderElements,
   regenerateSlide,
   queueExport,
+  chargeBrowserExport,
   getExport,
   creditEstimate,
   listPresentationTemplates,

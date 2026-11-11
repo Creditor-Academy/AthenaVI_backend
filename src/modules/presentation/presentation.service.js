@@ -852,6 +852,7 @@ module.exports = {
   setSlideAssignee: async (...args) =>
     presignPresentationPayload(await deckGeneration.setSlideAssignee(...args)),
   queueExport: exportService.queueExport,
+  chargeBrowserExport: exportService.chargeBrowserExport,
   getExport: exportService.getExport,
   listThemes: themeService.listThemes,
   ...slideEditor,
