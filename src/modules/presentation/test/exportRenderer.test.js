@@ -213,7 +213,7 @@ test('images through the renderer: exactly 1920 × 1080 each, numbered in deck o
   const out = await exportService.buildRasterExport(DECK, { format: 'PNG', deckName: 'Deck' });
   assert.equal(out.ext, 'zip');
   const zip = await JSZip.loadAsync(out.buffer, { checkCRC32: true });
-  assert.deepEqual(Object.keys(zip.files), ['Deck-slide-01.png', 'Deck-slide-02.png']);
+  assert.deepEqual(Object.keys(zip.files), ['1.png', '2.png']);
   for (const name of Object.keys(zip.files)) {
     const meta = await sharp(await zip.file(name).async('nodebuffer')).metadata();
     assert.deepEqual([meta.width, meta.height], [1920, 1080], name);

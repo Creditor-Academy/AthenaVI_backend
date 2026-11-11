@@ -1131,7 +1131,7 @@ async function buildRasterExport(
   const slides = selectExportSlides(deck, { slideId, slideIds });
   if (!slides.length) throw new AppError('No slides to export', 400);
 
-  // Files are numbered by the slide's place in the deck: <Deck>-slide-03.png.
+  // Files are named by the slide's page number in the deck, as Canva does: 3.png.
   const position = new Map(ordered.map((s, i) => [s.id, i + 1]));
   const nameFor = (slideIdValue, i) =>
     slideImageFilename(deckName, position.get(slideIdValue) || i + 1, ext);

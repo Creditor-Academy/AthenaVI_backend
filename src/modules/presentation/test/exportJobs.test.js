@@ -145,13 +145,13 @@ test('heartbeat: beats while the work runs and stops afterwards', async () => {
   await assert.rejects(withHeartbeat(() => {}, async () => { throw new Error('boom'); }, 10), /boom/);
 });
 
-test('file names: zip exports are named .zip; slide images are numbered by deck position', () => {
+test('file names: zip exports are named .zip; slide images are named by page number, as Canva does', () => {
   assert.equal(exportFileExt({ format: 'PNG', s3Key: 'presentations/w/d/exports/e1.zip' }), 'zip');
   assert.equal(exportFileExt({ format: 'PNG', s3Key: 'presentations/w/d/exports/e1.png' }), 'png');
   assert.equal(exportFileExt({ format: 'JPEG' }), 'jpg');
   assert.equal(exportFileExt({ format: 'PDF', s3Key: null }), 'pdf');
-  assert.equal(slideImageFilename('Q3 Plan: "final"', 3, 'png'), 'Q3 Plan final-slide-03.png');
-  assert.equal(slideImageFilename('', 12, 'jpg'), 'presentation-slide-12.jpg');
+  assert.equal(slideImageFilename('Q3 Plan: "final"', 3, 'png'), '3.png');
+  assert.equal(slideImageFilename('', 12, 'jpg'), '12.jpg');
 });
 
 test('PDF timeout grows with the deck and is capped', () => {
@@ -194,8 +194,8 @@ test('PNG export of several slides: a working .zip, named .zip, files in deck or
   assert.equal(row.status, 'READY', row.error);
   assert.match(row.s3Key, /\.zip$/);
   const zip = await JSZip.loadAsync(uploads.get(row.s3Key), { checkCRC32: true });
-  assert.deepEqual(Object.keys(zip.files), ['Q3 Plan-slide-01.png', 'Q3 Plan-slide-02.png', 'Q3 Plan-slide-03.png']);
-  const png = await zip.file('Q3 Plan-slide-01.png').async('nodebuffer');
+  assert.deepEqual(Object.keys(zip.files), ['1.png', '2.png', '3.png']);
+  const png = await zip.file('1.png').async('nodebuffer');
   assert.equal(png.readUInt32BE(16), 960, 'slide width');
 
   const status = await exportService.getExport({ workspaceId: 'w1', presentationId: 'p1', exportId: id });

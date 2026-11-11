@@ -100,9 +100,12 @@ function exportFileExt(row = {}) {
   return format === 'jpeg' ? 'jpg' : format;
 }
 
-/** `<Deck>-slide-03.png` — numbered by the slide's position in the deck. */
+/**
+ * A slide image inside a multi-page download, named the way Canva names pages: `3.png`, the
+ * slide's page number in the deck. The zip itself carries the deck name (`<Deck>.zip`).
+ */
 function slideImageFilename(deckName, position, ext) {
-  return `${safeFileBase(deckName)}-slide-${String(position).padStart(2, '0')}.${ext}`;
+  return `${Math.max(1, Math.round(Number(position)) || 1)}.${ext}`;
 }
 
 const MESSAGES = {
