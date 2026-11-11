@@ -802,12 +802,45 @@ async function addLegacyToPptxSlide(s, slide, textColor) {
  *   pictures. Without it PPTX uses the stored sizes and native shapes only.
  */
 /**
+ * The slide ids an export covers, or null for the whole deck. `slideIds` (any set) wins over
+ * the older single `slideId`.
+ */
+function exportSlideIds({ slideId = null, slideIds = null } = {}) {
+  if (Array.isArray(slideIds) && slideIds.length) return [...new Set(slideIds.map(String))];
+  return slideId ? [String(slideId)] : null;
+}
+
+/** The deck's slides an export covers, always in deck order. */
+function selectExportSlides(deck, selection = {}) {
+  const ordered = [...(deck?.slides || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const ids = exportSlideIds(selection);
+  if (!ids) return ordered;
+  const wanted = new Set(ids);
+  return ordered.filter((s) => wanted.has(s.id));
+}
+
+/** Image options from the request, clamped to what the renderers support. */
+function imageExportOptions({ scale, quality, transparent, format } = {}) {
+  const s = Number(scale);
+  const q = Number(quality);
+  return {
+    scale: [1, 2, 3].includes(s) ? s : 1,
+    quality: quality != null && Number.isFinite(q) ? Math.min(100, Math.max(60, Math.round(q))) : 90,
+    // JPEG has no transparency.
+    transparent: Boolean(transparent) && String(format || '').toUpperCase() === 'PNG',
+  };
+}
+
+/**
  * @param {object} deck
  * @param {object} [opts]
  * @param {boolean} [opts.embedFonts]  embed the deck's Google Fonts (PowerPoint target); off by
  *   default so tests and offline callers never reach the network.
  */
-async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null, report = null, embedFonts = false } = {}) {
+async function buildPptxBuffer(
+  deck,
+  { slideId, slideIds, onSlideProcessed, assets = null, report = null, embedFonts = false } = {}
+) {
   const textMetrics = assets?.textMetrics || null;
   const tableMetrics = assets?.tableMetrics || {};
   const patches = new PptxPatches();
@@ -830,8 +863,7 @@ async function buildPptxBuffer(deck, { slideId, onSlideProcessed, assets = null,
   const themeFonts = editorThemeFonts(deck.themeTokens);
   // The theme's fonts, so text added later in PowerPoint uses the deck's fonts too.
   pptx.theme = { headFontFace: themeFonts.heading, bodyFontFace: themeFonts.body };
-  let slides = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
-  if (slideId) slides = slides.filter((s) => s.id === slideId);
+  const slides = selectExportSlides(deck, { slideId, slideIds });
   const bgColor = String(palette.bg || 'FFFFFF').replace(/^#/, '');
   const textColor = String(palette.text || '111111').replace(/^#/, '');
 
@@ -950,7 +982,7 @@ async function buildPdfBuffer(deck, opts = {}) {
   return withEditorRenderer(
     deck,
     'pdf',
-    () => exportRenderer.renderDeckPdf(deck, { slideIds: opts.slideId ? [opts.slideId] : null }),
+    () => exportRenderer.renderDeckPdf(deck, { slideIds: exportSlideIds(opts) }),
     () => buildPdfBufferLegacy(deck, opts)
   );
 }
@@ -958,7 +990,8 @@ async function buildPdfBuffer(deck, opts = {}) {
 /** PDF from the server-side HTML renderer (slideHtml.js) — fallback only. */
 async function buildPdfBufferLegacy(deck, opts = {}) {
   const aspect = resolveAspectCanvas(deck.aspectRatio);
-  const slideCount = opts.slideId ? 1 : (deck.slides || []).length;
+  const slides = selectExportSlides(deck, opts);
+  const slideCount = slides.length;
   // The whole deck loads as one page, so big decks get more time.
   const contentTimeout = pdfRenderTimeoutMs(slideCount, PUPPETEER_EXPORT_TIMEOUT_MS);
   return withExportPage(async (page) => {
@@ -966,7 +999,9 @@ async function buildPdfBufferLegacy(deck, opts = {}) {
     page.setDefaultNavigationTimeout(contentTimeout);
     page.setDefaultTimeout(contentTimeout);
     // Not waitUntil 'networkidle0': it can wait forever with nothing left loading.
-    await setContentAndSettle(page, await buildDeckHtml(deck, opts), { timeoutMs: contentTimeout });
+    await setContentAndSettle(page, await buildDeckHtml(deck, { ...opts, slideId: null, slides }), {
+      timeoutMs: contentTimeout,
+    });
     const pdf = await page.pdf({
       width: `${aspect.pptxWidthIn}in`,
       height: `${aspect.pptxHeightIn}in`,
@@ -1085,11 +1120,15 @@ function buildZipBuffer(files) {
   return Buffer.concat([...parts, centralBuf, end]);
 }
 
-async function buildRasterExport(deck, { format, slideId, deckName, onSlideProcessed } = {}) {
+async function buildRasterExport(
+  deck,
+  { format, slideId, slideIds, deckName, onSlideProcessed, scale, quality, transparent } = {}
+) {
   const type = String(format || 'PNG').toUpperCase() === 'JPEG' ? 'jpeg' : 'png';
   const ext = type === 'jpeg' ? 'jpg' : 'png';
-  const ordered = [...(deck.slides || [])].sort((a, b) => a.order - b.order);
-  const slides = slideId ? ordered.filter((s) => s.id === slideId) : ordered;
+  const image = imageExportOptions({ scale, quality, transparent, format: type === 'jpeg' ? 'JPEG' : 'PNG' });
+  const ordered = selectExportSlides(deck);
+  const slides = selectExportSlides(deck, { slideId, slideIds });
   if (!slides.length) throw new AppError('No slides to export', 400);
 
   // Files are numbered by the slide's place in the deck: <Deck>-slide-03.png.
@@ -1104,6 +1143,9 @@ async function buildRasterExport(deck, { format, slideId, deckName, onSlideProce
       const shots = await exportRenderer.renderDeckImages(deck, {
         slideIds: slides.map((s) => s.id),
         format: type,
+        scale: image.scale,
+        quality: image.quality,
+        transparent: image.transparent,
         onSlide: onSlideProcessed,
       });
       return shots.map((shot, i) => ({ name: nameFor(shot.slideId, i), data: shot.data }));
@@ -1113,6 +1155,8 @@ async function buildRasterExport(deck, { format, slideId, deckName, onSlideProce
       const shots = await renderSlideScreenshots(deck, {
         slides,
         format: type,
+        scale: image.scale,
+        quality: image.quality,
         onSlideProcessed,
         stopOnFailure: true,
         fileName: (slide, i) => nameFor(slide.id, i),
@@ -1153,7 +1197,16 @@ async function buildRasterExport(deck, { format, slideId, deckName, onSlideProce
  */
 async function renderSlideScreenshots(
   deck,
-  { slides, format = 'jpeg', onSlide, onSlideProcessed, fileName, stopOnFailure = false } = {}
+  {
+    slides,
+    format = 'jpeg',
+    scale = 1,
+    quality = 82,
+    onSlide,
+    onSlideProcessed,
+    fileName,
+    stopOnFailure = false,
+  } = {}
 ) {
   const type = String(format || 'jpeg').toLowerCase() === 'png' ? 'png' : 'jpeg';
   const list = Array.isArray(slides) && slides.length
@@ -1162,7 +1215,8 @@ async function renderSlideScreenshots(
   if (!list.length) return [];
 
   const contentTimeout = PUPPETEER_EXPORT_TIMEOUT_MS;
-  const jpegQuality = 82;
+  const jpegQuality = Math.min(100, Math.max(1, Math.round(Number(quality) || 82)));
+  const deviceScaleFactor = Number(scale) > 0 ? Number(scale) : 1;
 
   return withExportPage(async (firstPage) => {
     const browser = firstPage.browser();
@@ -1179,7 +1233,7 @@ async function renderSlideScreenshots(
       let failed = false;
       try {
         // eslint-disable-next-line no-await-in-loop
-        await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor: 1 });
+        await page.setViewport({ width: canvasW, height: canvasH, deviceScaleFactor });
         // eslint-disable-next-line no-await-in-loop
         await setContentAndSettle(page, await buildDeckHtml({ ...deck, slides: [slide] }), {
           timeoutMs: contentTimeout,
@@ -1234,11 +1288,11 @@ async function renderSlideScreenshots(
  * elements PowerPoint can't draw, background pictures. Never fails the export: without it
  * PPTX falls back to stored sizes and native shapes.
  */
-async function capturePptxAssets(deck, { slideId, target } = {}) {
+async function capturePptxAssets(deck, { slideId, slideIds, target } = {}) {
   if (!exportRenderer.isRendererEnabled()) return null;
   try {
     return await exportRenderer.capturePptxAssets(deck, {
-      slideIds: slideId ? [slideId] : null,
+      slideIds: exportSlideIds({ slideId, slideIds }),
       target: normalizeTarget(target),
     });
   } catch (err) {
@@ -1257,7 +1311,9 @@ async function processExport({
   projectId,
   projectName,
   slideId,
+  slideIds = null,
   pptxTarget = 'powerpoint',
+  image = {},
 }) {
   const row = await presentationDao.findExport(exportId);
   if (!row) return;
@@ -1292,10 +1348,11 @@ async function processExport({
       heartbeat,
       async () => {
         if (format === 'PPTX') {
-          const assets = await capturePptxAssets(deck, { slideId, target: pptxTarget });
+          const assets = await capturePptxAssets(deck, { slideId, slideIds, target: pptxTarget });
           const report = {};
           const pptxBuffer = await buildPptxBuffer(deck, {
             slideId,
+            slideIds,
             onSlideProcessed: heartbeat,
             assets,
             report,
@@ -1318,7 +1375,7 @@ async function processExport({
         }
         if (format === 'PDF') {
           return {
-            buffer: await buildPdfBuffer(deck, { slideId }),
+            buffer: await buildPdfBuffer(deck, { slideId, slideIds }),
             contentType: 'application/pdf',
             ext: 'pdf',
           };
@@ -1327,8 +1384,10 @@ async function processExport({
           return buildRasterExport(deck, {
             format,
             slideId,
+            slideIds,
             deckName: projectName,
             onSlideProcessed: heartbeat,
+            ...image,
           });
         }
         throw new AppError(`Unsupported export format: ${format}`, 400);
@@ -1348,7 +1407,13 @@ async function processExport({
       userId,
       feature: PPT_FEATURE.EXPORT,
       idempotencyKey: `ppt:export:${exportId}`,
-      metadata: { deckId: deck.id, exportId, format, slideId: slideId || null },
+      metadata: {
+        deckId: deck.id,
+        exportId,
+        format,
+        slideId: slideId || null,
+        slideCount: selectExportSlides(deck, { slideId, slideIds }).length,
+      },
     });
 
     const creditsCharged = chargeResult.skipped
@@ -1385,6 +1450,7 @@ async function processExport({
       deckId: row.deckId,
       format,
       slideId: slideId || null,
+      slideIds: slideIds || null,
       userMessage,
       error: String(err?.message || err),
       stack: err?.stack,
@@ -1413,7 +1479,27 @@ async function processExport({
   }
 }
 
-async function queueExport({ workspaceId, presentationId, userId, format, slideId, pptxTarget }) {
+/** The requested slide ids, checked against the deck (404 for one that isn't in it). */
+function checkedSlideIds(deck, { slideId = null, slideIds = null } = {}) {
+  const ids = exportSlideIds({ slideId, slideIds });
+  if (!ids) return null;
+  const known = new Set((deck.slides || []).map((s) => s.id));
+  if (ids.some((id) => !known.has(id))) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+  return ids;
+}
+
+async function queueExport({
+  workspaceId,
+  presentationId,
+  userId,
+  format,
+  slideId,
+  slideIds,
+  pptxTarget,
+  scale,
+  quality,
+  transparent,
+}) {
   const { deck, project } = await loadPresentationDeck(presentationId, {
     requireWorkspaceId: workspaceId,
   });
@@ -1423,10 +1509,8 @@ async function queueExport({ workspaceId, presentationId, userId, format, slideI
     throw new AppError('format must be PPTX, PDF, PNG, or JPEG', 400);
   }
 
-  if (slideId) {
-    const found = (deck.slides || []).some((s) => s.id === slideId);
-    if (!found) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
-  }
+  const selectedIds = checkedSlideIds(deck, { slideId, slideIds });
+  const image = imageExportOptions({ scale, quality, transparent, format: normalizedFormat });
 
   const exportAc = presentationCredit.getFlatAc(PPT_FEATURE.EXPORT);
   await presentationCredit.assertAfford(workspaceId, userId, exportAc);
@@ -1445,8 +1529,11 @@ async function queueExport({ workspaceId, presentationId, userId, format, slideI
       userId,
       projectId: project.id,
       projectName: project.name,
-      slideId: slideId || null,
+      // One slide keeps the single-slide id too (logs, credit metadata).
+      slideId: selectedIds && selectedIds.length === 1 ? selectedIds[0] : null,
+      slideIds: selectedIds,
       pptxTarget: normalizeTarget(pptxTarget),
+      image,
     });
   });
 
@@ -1455,8 +1542,46 @@ async function queueExport({ workspaceId, presentationId, userId, format, slideI
     format: normalizedFormat,
     status: 'QUEUED',
     estimatedCredits: exportAc,
-    slideId: slideId || null,
+    slideId: selectedIds && selectedIds.length === 1 ? selectedIds[0] : null,
+    slideIds: selectedIds,
   };
+}
+
+/**
+ * Slide images made in the browser cost the same flat export fee as a server export, charged
+ * once per download (`downloadId`, chosen by the browser, makes a retried request free).
+ */
+async function chargeBrowserExport({ workspaceId, presentationId, userId, format, slideIds, downloadId }) {
+  const { deck } = await loadPresentationDeck(presentationId, { requireWorkspaceId: workspaceId });
+  const normalizedFormat = String(format || '').toUpperCase();
+  if (!['PNG', 'JPEG'].includes(normalizedFormat)) {
+    throw new AppError('format must be PNG or JPEG', 400);
+  }
+  const ids = checkedSlideIds(deck, { slideIds });
+  if (!ids) throw new AppError('Choose at least one slide', 400);
+
+  const exportAc = presentationCredit.getFlatAc(PPT_FEATURE.EXPORT);
+  await presentationCredit.assertAfford(workspaceId, userId, exportAc);
+  const chargeResult = await presentationCredit.chargeFlat({
+    workspaceId,
+    userId,
+    feature: PPT_FEATURE.EXPORT,
+    idempotencyKey: `ppt:export:browser:${deck.id}:${downloadId}`,
+    metadata: { deckId: deck.id, format: normalizedFormat, slideCount: ids.length, source: 'browser' },
+  });
+  const creditsCharged = chargeResult.skipped
+    ? 0
+    : chargeResult.charged || chargeResult.pricing?.athenaCredits || 0;
+  if (!chargeResult.skipped && creditsCharged > 0) {
+    await presentationDao.incrementDeckCreditsCharged(deck.id, creditsCharged);
+  }
+  logger.info('presentation_export_browser', {
+    deckId: deck.id,
+    format: normalizedFormat,
+    slideCount: ids.length,
+    creditsCharged,
+  });
+  return { format: normalizedFormat, slideCount: ids.length, creditsCharged };
 }
 
 async function getExport({ workspaceId, presentationId, exportId }) {
@@ -1509,12 +1634,15 @@ async function getExport({ workspaceId, presentationId, exportId }) {
 
 module.exports = {
   queueExport,
+  chargeBrowserExport,
   processExport,
   getExport,
   renderSlideScreenshots,
   buildPptxBuffer,
   buildPdfBuffer,
   buildRasterExport,
+  selectExportSlides,
+  imageExportOptions,
   exportJobIsStale,
   exportQueueStats,
   svgRasterSize,

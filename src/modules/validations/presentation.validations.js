@@ -13,6 +13,12 @@ const presentationIdParam = Joi.string().required();
 const workspaceIdParam = Joi.string().uuid().required();
 const slideIdParam = Joi.string().required();
 const exportIdParam = Joi.string().required();
+/** A set of slides to export: at least one, no repeats, at most a full deck. */
+const exportSlideIdsField = Joi.array()
+  .items(Joi.string().trim().min(1).max(128))
+  .min(1)
+  .max(DECK_SLIDE_MAX)
+  .unique();
 const elementIdParam = Joi.string().required();
 const templateIdField = Joi.string().trim().min(1);
 
@@ -660,11 +666,32 @@ const exportDeckSchema = Joi.object({
   }),
   body: Joi.object({
     format: Joi.string().valid('PPTX', 'PDF', 'PNG', 'JPEG').required(),
-    // null / '' = whole deck (export modal sends slideId: null)
+    // null / '' = whole deck. Kept for older clients; `slideIds` takes any set of slides.
     slideId: Joi.string().trim().allow(null, '').optional(),
+    // The slides to export (any order; the file keeps deck order). Missing = whole deck.
+    slideIds: exportSlideIdsField.optional(),
     // PPTX only: which app the file is made for. Google Slides can't show gradients or glow,
     // so those are exported as pictures for it.
     pptxTarget: Joi.string().valid('powerpoint', 'google-slides').optional(),
+    // PNG / JPEG only: size (1× = the canvas size, 1920×1080 for 16:9), JPEG quality, and a
+    // transparent background (PNG; the slide background is left out).
+    scale: Joi.number().valid(1, 2, 3).optional(),
+    quality: Joi.number().integer().min(60).max(100).optional(),
+    transparent: Joi.boolean().optional(),
+  }).required(),
+});
+
+/** Slide images made in the browser: charge the export fee once per download. */
+const browserExportSchema = Joi.object({
+  params: Joi.object({
+    workspaceId: workspaceIdParam,
+    presentationId: presentationIdParam,
+  }),
+  body: Joi.object({
+    format: Joi.string().valid('PNG', 'JPEG').required(),
+    slideIds: exportSlideIdsField.required(),
+    // Chosen by the browser for this download, so a retried request is charged once.
+    downloadId: Joi.string().guid({ version: ['uuidv4'] }).required(),
   }).required(),
 });
 
@@ -1191,6 +1218,7 @@ module.exports = {
   reorderElementsSchema,
   regenerateSlideSchema,
   exportDeckSchema,
+  browserExportSchema,
   exportByIdSchema,
   creditEstimateSchema,
   suggestVibePaletteSchema,

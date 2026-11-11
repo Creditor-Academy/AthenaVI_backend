@@ -20,6 +20,8 @@ const { resolveAspectCanvas } = require('./presentation.constants');
 
 /** The page's window.__athenaExport.version this backend needs. */
 const MIN_RENDERER_VERSION = 1;
+/** The first page version that can leave slide backgrounds out (transparent PNG). */
+const TRANSPARENT_RENDERER_VERSION = 2;
 /** The editor stage width the page lays slides out at (EDITOR_STAGE_WIDTH in the frontend). */
 const STAGE_WIDTH = 900;
 
@@ -106,7 +108,7 @@ function allowRequest(request, renderOrigin) {
  * Open the render page and draw the deck on it.
  * @returns {Promise<{ slides: Array<{ id, stageWidth, stageHeight, canvasWidth, canvasHeight }>, failedImages: string[] }>}
  */
-async function openRenderedDeck(page, deck, { slideIds = null, deviceScaleFactor = 1 } = {}) {
+async function openRenderedDeck(page, deck, { slideIds = null, deviceScaleFactor = 1, transparent = false } = {}) {
   const url = exportRenderUrl();
   if (!url) throw new RendererUnavailableError('Export renderer is not configured');
   const origin = new URL(url).origin;
@@ -138,9 +140,12 @@ async function openRenderedDeck(page, deck, { slideIds = null, deviceScaleFactor
   const payload = await deckPayload(deck, { slideIds });
   const timeoutMs = renderTimeoutMs(payload.slides.length);
   page.setDefaultTimeout(timeoutMs + 30_000);
+  if (transparent && Number(version) < TRANSPARENT_RENDERER_VERSION) {
+    logger.warn('export_renderer_no_transparency', { deckId: deck.id, version });
+  }
   const result = await page.evaluate(
     (data) => window.__athenaExport.render(data),
-    { deck: payload, timeoutMs }
+    { deck: payload, timeoutMs, transparent: Boolean(transparent) }
   );
   if (result?.failedImages?.length) {
     logger.warn('export_render_images_failed', {
@@ -176,12 +181,17 @@ async function renderDeckPdf(deck, { slideIds = null } = {}) {
  * One image per slide, at the deck's canvas size × `scale` (1920×1080 for a 16:9 deck at 1×).
  * @returns {Promise<Array<{ slideId: string, data: Buffer }>>}
  */
-async function renderDeckImages(deck, { slideIds = null, format = 'png', scale = 1, quality = 90, onSlide } = {}) {
+async function renderDeckImages(
+  deck,
+  { slideIds = null, format = 'png', scale = 1, quality = 90, transparent = false, onSlide } = {}
+) {
   const type = String(format).toLowerCase() === 'jpeg' || String(format).toLowerCase() === 'jpg' ? 'jpeg' : 'png';
+  // Only PNG has transparency: the page leaves slide backgrounds out and Chrome keeps the alpha.
+  const clear = type === 'png' && Boolean(transparent);
   const canvasWidth = resolveAspectCanvas(deck.aspectRatio).width;
   const deviceScaleFactor = (canvasWidth / STAGE_WIDTH) * (Number(scale) > 0 ? Number(scale) : 1);
   return withExportPage(async (page) => {
-    const { slides } = await openRenderedDeck(page, deck, { slideIds, deviceScaleFactor });
+    const { slides } = await openRenderedDeck(page, deck, { slideIds, deviceScaleFactor, transparent: clear });
     const images = [];
     for (const slide of slides) {
       // Exact clip from the slide's own box: a 900px stage of a 1080px slide is 506.25px tall,
@@ -196,6 +206,7 @@ async function renderDeckImages(deck, { slideIds = null, format = 'png', scale =
         await page.screenshot({
           type,
           ...(type === 'jpeg' ? { quality } : {}),
+          ...(clear ? { omitBackground: true } : {}),
           clip: { x: 0, y: top, width: STAGE_WIDTH, height: stageHeight },
           captureBeyondViewport: true,
         })

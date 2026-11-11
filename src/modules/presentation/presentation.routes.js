@@ -313,6 +313,13 @@ router.post(
   presentationController.queueExport
 );
 
+// Slide images made in the browser (no server job): charges the export fee once per download.
+router.post(
+  '/:presentationId/export/browser',
+  validate(presentationValidations.browserExportSchema),
+  presentationController.chargeBrowserExport
+);
+
 router.get(
   '/:presentationId/export/:exportId',
   validate(presentationValidations.exportByIdSchema),
