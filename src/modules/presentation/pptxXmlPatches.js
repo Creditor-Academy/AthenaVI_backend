@@ -2,7 +2,9 @@
  * Things pptxgenjs can't write, added to the PPTX XML after it has been generated:
  *   - gradient fills on shapes, text and slide backgrounds (<a:gradFill>);
  *   - glow on shapes and pictures (<a:glow>);
- *   - text effects: shadow, glow, outline, hollow text, highlight.
+ *   - text effects: shadow, glow, outline, hollow text, highlight;
+ *   - custom geometry on pictures (masks, rounded corners), all-caps text;
+ *   - native groups (<p:grpSp>), applied after every other patch.
  *
  * During the build each element that needs a patch gets a unique objectName (`athena-12`),
  * which pptxgenjs writes as <p:cNvPr name="…">; the patch finds the shape by that name.
@@ -12,6 +14,8 @@
  */
 
 const JSZip = require('jszip');
+const { pathToCustGeomXml } = require('./pptxShapes');
+const { wrapGroup, findNamedObject } = require('./pptxGroups');
 
 const EMU_PER_PT = 12700;
 
@@ -68,19 +72,23 @@ function outerShadowXml({ color = '#000000', alpha = 0.45, blurPt = 3, distPt = 
   return `<a:outerShdw blurRad="${Math.round(blurPt * EMU_PER_PT)}" dist="${Math.round(distPt * EMU_PER_PT)}" dir="${dir}" algn="ctr" rotWithShape="0">${colorXml(color, alpha)}</a:outerShdw>`;
 }
 
-/** The XML of the shape / picture named `name`: { start, end } in `xml`, or null. */
+/** The XML of the object named `name`: { start, end } in `xml`, or null. */
 function findObject(xml, name) {
-  const at = xml.indexOf(`name="${name}"`);
-  if (at < 0) return null;
-  const candidates = ['<p:sp>', '<p:pic>']
-    .map((tag) => ({ tag, start: xml.lastIndexOf(tag, at) }))
-    .filter((c) => c.start >= 0)
-    .sort((a, b) => b.start - a.start);
-  if (!candidates.length) return null;
-  const { tag, start } = candidates[0];
-  const close = tag === '<p:sp>' ? '</p:sp>' : '</p:pic>';
-  const end = xml.indexOf(close, at);
-  return end < 0 ? null : { start, end: end + close.length };
+  return findNamedObject(xml, name);
+}
+
+/** Replace a picture's (or shape's) preset geometry with custom geometry. */
+function replaceGeometry(obj, segments) {
+  if (!Array.isArray(segments) || !segments.length) return obj;
+  return obj.replace(/<a:prstGeom\b[\s\S]*?<\/a:prstGeom>|<a:prstGeom\b[^>]*\/>/, pathToCustGeomXml(segments));
+}
+
+/** Draw every run in capitals (PowerPoint's Format › Font › All Caps), keeping the typed text. */
+function capsRuns(obj) {
+  return obj.replace(/<a:rPr\b([^>]*?)(\/?)>/g, (whole, attrs, selfClose) => {
+    const cleaned = attrs.replace(/\scap="[^"]*"/, '');
+    return `<a:rPr${cleaned} cap="all"${selfClose}>`;
+  });
 }
 
 /** Replace the shape fill (the first fill in spPr, before <a:ln>) with `fillXml`. */
@@ -143,6 +151,10 @@ function applyToObject(objXml, patch) {
       return replaceShapeFill(objXml, gradFillXml(patch.gradient));
     case 'glow':
       return addShapeEffect(objXml, glowXml(patch));
+    case 'geometry':
+      return replaceGeometry(objXml, patch.segments);
+    case 'caps':
+      return capsRuns(objXml);
     case 'text': {
       const effects = [patch.glow ? glowXml(patch.glow) : '', patch.shadow ? outerShadowXml(patch.shadow) : ''].join('');
       return rewriteRuns(objXml, {
@@ -161,7 +173,13 @@ function applyToObject(objXml, patch) {
 
 function applyToSlide(xml, patches) {
   let out = xml;
-  for (const patch of patches) {
+  // Groups last: they wrap objects the other patches still need to find on their own.
+  const ordered = [...patches.filter((p) => p.kind !== 'group'), ...patches.filter((p) => p.kind === 'group')];
+  for (const patch of ordered) {
+    if (patch.kind === 'group') {
+      out = wrapGroup(out, patch.members || [], patch.name || 'Group');
+      continue;
+    }
     if (patch.kind === 'backgroundGradient') {
       out = out.replace(
         /<p:bg><p:bgPr>[\s\S]*?<\/p:bgPr><\/p:bg>/,
