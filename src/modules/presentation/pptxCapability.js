@@ -11,7 +11,7 @@
  * fills, glow or hollow text, so for it those become pictures too.
  */
 
-const { parsePolygonClipPath } = require('./pptxShapes');
+const { parsePolygonClipPath, clipPathToPolygon } = require('./pptxShapes');
 
 const TARGETS = new Set(['powerpoint', 'google-slides']);
 function normalizeTarget(target) {
@@ -74,10 +74,25 @@ function isCurvedText(c = {}) {
 }
 
 /**
+ * A picture frame as measured on the render page can be cut natively: its clip-path converts to
+ * a polygon (oval, arch, hexagon, blob masks) or it only has rounded corners.
+ */
+function nativePictureGeometry(measured, content = {}) {
+  if (!measured || measured.kind !== 'media') return false;
+  if (String(content.fit || 'cover').toLowerCase() === 'contain') return false;
+  if (measured.clipPath) return Boolean(clipPathToPolygon(measured.clipPath, measured.w, measured.h));
+  return true;
+}
+
+/**
  * Why an element should be a picture in PPTX, or null when it can be native.
+ * @param {object} el
+ * @param {{ target?: string, measuredShape?: object|null }} [opts]  measuredShape: the element as
+ *   drawn on the render page (radii, border, clip-path); without it only the shapes and masks
+ *   the backend knows natively avoid becoming pictures.
  * @returns {string|null}
  */
-function rasterReason(el, { target = 'powerpoint' } = {}) {
+function rasterReason(el, { target = 'powerpoint', measuredShape = null } = {}) {
   if (!el || typeof el !== 'object') return null;
   const c = el.content || {};
   const slides = normalizeTarget(target) === 'google-slides';
@@ -94,9 +109,15 @@ function rasterReason(el, { target = 'powerpoint' } = {}) {
     case 'shape': {
       const kind = String(c.shape || 'rect').toLowerCase();
       if (c.deviceFrame || kind === 'device-frame') return 'device frame';
-      if (c.clipPath && !parsePolygonClipPath(c.clipPath)) return `shape ${kind}`;
-      if (!c.clipPath && !NATIVE_SHAPE_KINDS.has(kind)) return `shape ${kind}`;
-      if (c.clipPath && c.borderStyle && c.borderStyle !== 'solid') return `${c.borderStyle} border`;
+      // The clip-path the editor drew with: the element's own, else the library shape's
+      // (arrow lines, chevrons…), as measured on the render page.
+      const clip = c.clipPath || (measuredShape?.kind === 'clip' ? measuredShape.clipPath : null);
+      if (clip && !parsePolygonClipPath(clip)) return `shape ${kind}`;
+      // Box shapes (any border-radius, elliptical corners included) and lines are native
+      // custom geometry when the render page measured how they were drawn.
+      const measuredGeometry = !clip && ['box', 'line'].includes(measuredShape?.kind);
+      if (!clip && !measuredGeometry && !NATIVE_SHAPE_KINDS.has(kind)) return `shape ${kind}`;
+      if (clip && c.borderStyle && c.borderStyle !== 'solid') return `${c.borderStyle} border`;
       if (c.borderStyle && !['solid', 'dashed', 'dotted'].includes(c.borderStyle)) return `${c.borderStyle} border`;
       if (slides && isGradientFill(c.fill)) return 'gradient fill';
       if (c.boxShadow || c.shadow) return 'shadow';
@@ -107,13 +128,20 @@ function rasterReason(el, { target = 'powerpoint' } = {}) {
     case 'image':
       // An empty image slot: the editor draws a placeholder picture, not a grey box.
       if (!(c.url || c.src || c.s3Key)) return 'image placeholder';
-      // Stored as { type: 'circle' | 'oval' | 'hexagon' | 'blob' | 'fade' } (older decks: a string).
-      if (maskType(c.imageMask)) return 'image mask';
-      if (c.clipPath) return 'clipped image';
       if (c.filter || c.cssFilter) return 'image filter';
       if (c.edgeFade) return 'edge fade';
-      if (Number(c.borderRadius) > 0) return 'rounded corners';
       if (c.deviceFrame) return 'device frame';
+      if (Number(measuredShape?.borderWidth) > 0) return 'image border';
+      {
+        // Masks (oval, arch, hexagon, blob…) and rounded corners: native picture geometry when
+        // the render page measured the frame; a picture otherwise.
+        const shaped = maskType(c.imageMask) || c.clipPath || Number(c.borderRadius) > 0;
+        if (shaped && !nativePictureGeometry(measuredShape, c)) {
+          if (maskType(c.imageMask)) return 'image mask';
+          if (c.clipPath) return 'clipped image';
+          return 'rounded corners';
+        }
+      }
       if (hasNonNativeEffect(c)) return `effect ${effectType(c)}`;
       return null;
     case 'icon':
@@ -156,8 +184,9 @@ function needsBackgroundPicture(slide, { target = 'powerpoint' } = {}) {
  * @returns {Array<{ slideId: string, background: boolean,
  *   elements: Array<{ id: string, reason: string, margin: number, fallbackOnly?: boolean }> }>}
  */
-function pptxRasterPlan(slides = [], { target = 'powerpoint' } = {}) {
+function pptxRasterPlan(slides = [], { target = 'powerpoint', shapeMetrics = {} } = {}) {
   return slides.map((slide) => {
+    const measured = shapeMetrics?.[slide.id] || {};
     const elements = [];
     for (const el of slide?.elements?.elements || []) {
       if (!el?.id || el.type === 'group') continue;
@@ -165,7 +194,7 @@ function pptxRasterPlan(slides = [], { target = 'powerpoint' } = {}) {
         elements.push({ id: el.id, reason: 'chart (used only if the native chart fails)', margin: 2, fallbackOnly: true });
         continue;
       }
-      const reason = rasterReason(el, { target });
+      const reason = rasterReason(el, { target, measuredShape: measured[el.id] || null });
       if (reason) elements.push({ id: el.id, reason, margin: captureMargin(el) });
     }
     return { slideId: slide.id, background: needsBackgroundPicture(slide, { target }), elements };
@@ -173,6 +202,7 @@ function pptxRasterPlan(slides = [], { target = 'powerpoint' } = {}) {
 }
 
 module.exports = {
+  nativePictureGeometry,
   NATIVE_SHAPE_KINDS,
   NATIVE_TEXT_EFFECTS,
   normalizeTarget,

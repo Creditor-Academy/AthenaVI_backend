@@ -171,7 +171,9 @@ function splitParagraphs(pieces) {
  * @param {string|null} args.fontFace
  * @param {(run:object)=>string} args.runColor  hex for a run with its own colour
  * @param {{fontSize?:number}|null} args.measured  what the renderer drew
- * @returns {{ runs: object[], options: object }}
+ * @param {boolean} [args.nativeCaps]  uppercase as PowerPoint's All Caps (the typed text stays
+ *   as it is) instead of changing the text; the caller adds the `caps` patch
+ * @returns {{ runs: object[], options: object, fontPt: number, caps: boolean, grown: boolean }}
  */
 function buildPptxText({
   content = {},
@@ -183,6 +185,7 @@ function buildPptxText({
   fontFace,
   runColor,
   measured = null,
+  nativeCaps = false,
 }) {
   const fontPx = resolveFontPx(content, measured);
   const fontPt = round1(stagePxToPoints(fontPx, slideWidthIn));
@@ -193,7 +196,8 @@ function buildPptxText({
   const bold = content.bold === true || Number(content.fontWeight) >= 600;
   const charSpacing = letterSpacingPoints(content.letterSpacing, fontPt, slideWidthIn);
   const bullet = bulletFor(content.listType);
-  const transform = content.textTransform;
+  const caps = nativeCaps && String(content.textTransform || '').toLowerCase() === 'uppercase';
+  const transform = caps ? null : content.textTransform;
 
   const baseRun = {
     fontSize: fontPt,
@@ -243,6 +247,11 @@ function buildPptxText({
       if (drawnColor) options.color = drawnColor;
       const drawnFont = primaryFamily(drawn?.fontFamily);
       if (drawnFont) options.fontFace = drawnFont;
+      // A run drawn bigger or smaller than the rest keeps its own size.
+      const drawnSize = Number(drawn?.fontSize);
+      if (Number.isFinite(drawnSize) && drawnSize > 0 && Math.abs(drawnSize - fontPx) > 0.5) {
+        options.fontSize = round1(stagePxToPoints(drawnSize, slideWidthIn));
+      }
       offset += String(piece.text ?? '').length;
       if (!last && i === items.length - 1) options.breakLine = true;
       runs.push({ text: applyTextTransform(piece.text, transform), options });
@@ -275,7 +284,18 @@ function buildPptxText({
   };
   if (fontFace) options.fontFace = fontFace;
 
-  return { runs, options, fontPt };
+  // Text longer than its box (the editor clips it): like Canva, keep every line and make the
+  // box tall enough for all of it; "Resize shape to fit text" keeps it so while editing.
+  const contentH = Number(measured?.contentHeight);
+  const frameH = Number(measured?.frameHeight);
+  const grown = Number.isFinite(contentH) && Number.isFinite(frameH) && frameH > 0 && contentH > frameH + 1;
+  if (grown) {
+    options.h = box.h * (contentH / frameH);
+    options.valign = 'top';
+    options.fit = 'resize';
+  }
+
+  return { runs, options, fontPt, caps, grown };
 }
 
 module.exports = {

@@ -267,7 +267,10 @@ const PICTURE_SCALE = 1.5;
  * - tableMetrics: tables as drawn (cells, sizes, colours, borders);
  * - pictures: elements PowerPoint can't draw natively (pptxCapability), each a transparent PNG
  *   with its box in canvas px (shadows / glows included);
- * - backgrounds: slide backgrounds that are an image or gradient, as JPEG.
+ * - backgrounds: slide backgrounds that are an image or gradient, as JPEG;
+ * - shapeMetrics: shapes and picture frames as drawn (radii, border, clip-path), so they can be
+ *   native PowerPoint geometry instead of pictures;
+ * - fallbackMetrics: slides with no elements, as drawn (title, text and image boxes).
  */
 async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' } = {}) {
   const { pptxRasterPlan } = require('./pptxCapability');
@@ -285,7 +288,15 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
     const planSlides = (deck.slides || [])
       .filter((s) => !wanted || wanted.has(s.id))
       .map((s) => withStageElements(s, stageSlides[s.id]));
-    const plan = pptxRasterPlan(planSlides, { target });
+    // Older render pages (before version 3) don't measure these: shapes and masks they can't
+    // describe stay pictures, and an empty slide uses the backend's own layout.
+    const shapeMetrics = await page.evaluate(() =>
+      typeof window.__athenaExport.measureShapes === 'function' ? window.__athenaExport.measureShapes() : {}
+    );
+    const fallbackMetrics = await page.evaluate(() =>
+      typeof window.__athenaExport.measureFallback === 'function' ? window.__athenaExport.measureFallback() : {}
+    );
+    const plan = pptxRasterPlan(planSlides, { target, shapeMetrics });
     const textMetrics = await page.evaluate(() => window.__athenaExport.measure());
     // Tables as drawn (older render pages don't measure them: PPTX then uses the CSS defaults).
     const tableMetrics = await page.evaluate(() =>
@@ -331,7 +342,7 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
     } finally {
       await page.evaluate(() => window.__athenaExport.release()).catch(() => {});
     }
-    return { textMetrics, tableMetrics, pictures, backgrounds, stageSlides, rendererVersion };
+    return { textMetrics, tableMetrics, shapeMetrics, fallbackMetrics, pictures, backgrounds, stageSlides, rendererVersion };
   });
 }
 

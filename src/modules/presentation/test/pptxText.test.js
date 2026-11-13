@@ -130,11 +130,22 @@ test('PPTX XML: zero insets, no autofit, bullets, caps text, exact spacing, meas
   assert.doesNotMatch(xml, /normAutofit|spAutoFit/);
   assert.equal((xml.match(/<a:buChar char="&#x2022;"/g) || []).length, 2);
   assert.match(xml, /<a:lnSpc><a:spcPts val="2660"\/>/, 'exact 1.25 × 21.3pt');
-  assert.match(xml, /<a:t>ONE<\/a:t>/);
+  // PowerPoint: uppercase is All Caps on the run, the typed text stays as typed (editable).
+  assert.match(xml, /<a:t>One<\/a:t>/);
+  assert.equal((xml.match(/<a:rPr[^>]*cap="all"/g) || []).length, 2);
   assert.match(xml, /sz="2130"/, 'measured 20 stage px → 21.3pt');
   assert.match(xml, /<a:srgbClr val="ABCDEF"/, 'the colour the editor drew');
   // The slide background colour is written (pptxgenjs ignores it when passed to addSlide).
   assert.match(xml, /<p:bg><p:bgPr><a:solidFill><a:srgbClr val="0F172A"/);
+
+  // Google Slides: the text itself is uppercased (All Caps may not survive the import).
+  const forSlides = await buildPptxBuffer(deck, {
+    target: 'google-slides',
+    assets: { textMetrics: { s1: { t1: { fontSize: 20, color: '#ABCDEF' } } } },
+  });
+  const slidesXml = await (await JSZip.loadAsync(forSlides)).file('ppt/slides/slide1.xml').async('string');
+  assert.match(slidesXml, /<a:t>ONE<\/a:t>/);
+  assert.doesNotMatch(slidesXml, /cap="all"/);
 });
 
 test('outlined shapes (transparent fill) have no fill, not a black one', async () => {

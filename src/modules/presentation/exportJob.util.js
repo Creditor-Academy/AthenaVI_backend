@@ -152,6 +152,62 @@ function normalizeExportError(err) {
   return MESSAGES.generic;
 }
 
+/** Plain words for why something became a picture in a PPTX (pptxCapability reasons). */
+const PICTURE_LABELS = [
+  [/^curved text/, 'curved text'],
+  [/^text effect/, 'text effects'],
+  [/^gradient text/, 'gradient text'],
+  [/^icon \/ graphic/, 'icons and graphics'],
+  [/^image placeholder/, 'empty picture frames'],
+  [/^(image mask|clipped image|rounded corners)/, 'photos with a shape mask'],
+  [/^image filter/, 'photo filters'],
+  [/^edge fade/, 'faded photo edges'],
+  [/^image border/, 'photos with a border'],
+  [/^device frame/, 'device frames'],
+  [/^image in shape/, 'pictures inside shapes'],
+  [/^gradient fill/, 'gradient fills'],
+  [/^(shadow|effect)/, 'effects'],
+  [/border$/, 'shapes with special borders'],
+  [/^shape/, 'shapes'],
+  [/^embed/, 'embedded media'],
+  [/^chart/, 'charts'],
+];
+
+function pictureLabel(reason) {
+  const r = String(reason || '').toLowerCase();
+  return (PICTURE_LABELS.find(([re]) => re.test(r)) || [null, 'other items'])[1];
+}
+
+/**
+ * What a PPTX contains, for the export dialog: how many objects stayed editable, what became a
+ * picture and why (in plain words), the fonts inside the file, native groups, and text boxes
+ * grown to show all their text. Built from buildPptxBuffer's report.
+ */
+function pptxReportSummary(report = {}) {
+  const sum = (obj) => Object.values(obj || {}).reduce((n, v) => n + (Number(v) || 0), 0);
+  const pictures = new Map();
+  for (const [reason, n] of Object.entries(report.pictures || {})) {
+    const label = pictureLabel(reason);
+    pictures.set(label, (pictures.get(label) || 0) + (Number(n) || 0));
+  }
+  const family = (name) => String(name || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const unique = (list) => [...new Set((list || []).map(family).filter(Boolean))];
+  return {
+    editable: sum(report.native),
+    pictures: [...pictures].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count),
+    missing: sum(report.missing),
+    fonts: unique(report.fonts?.embedded),
+    fontsMissing: unique(report.fonts?.unavailable),
+    groups: Number(report.groups?.native) || 0,
+    grownText: Number(report.text?.['grown to fit']) || 0,
+  };
+}
+
+/** Where a PPTX export's report is kept, next to the file. */
+function exportReportKey(s3Key) {
+  return s3Key ? `${s3Key}.report.json` : null;
+}
+
 module.exports = {
   BROWSER_EXPORT_FORMATS,
   isBrowserExportFormat,
@@ -163,5 +219,7 @@ module.exports = {
   exportFileExt,
   slideImageFilename,
   normalizeExportError,
+  pptxReportSummary,
+  exportReportKey,
   EXPORT_ERROR_MESSAGES: MESSAGES,
 };

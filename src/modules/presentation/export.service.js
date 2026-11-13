@@ -32,7 +32,18 @@ const { buildPptxText, stagePxToPoints } = require('./pptxText');
 const { parseColor, hex6 } = require('./pptxColor');
 const { editorChartSpec, pptxChartArgs } = require('./pptxChart');
 const { buildPptxTable } = require('./pptxTable');
-const { parsePolygonClipPath, custGeomPoints, dashTypeFor } = require('./pptxShapes');
+const {
+  parsePolygonClipPath,
+  custGeomPoints,
+  dashTypeFor,
+  roundedBoxPath,
+  isSquareBox,
+  clipPathToPolygon,
+  polygonPath,
+  pathToCustGeomPoints,
+} = require('./pptxShapes');
+const { orderForGroups } = require('./pptxGroups');
+const { shrinkPhotoForPptx } = require('./pptxMedia');
 const JSZip = require('jszip');
 const { PptxPatches, applyPptxPatchesToZip } = require('./pptxXmlPatches');
 const { primaryFamily, embedPptxFonts, fontEmbeddingEnabled } = require('./pptxFonts');
@@ -50,6 +61,8 @@ const {
   exportFileExt,
   slideImageFilename,
   normalizeExportError,
+  pptxReportSummary,
+  exportReportKey,
 } = require('./exportJob.util');
 
 const PRESIGN_EXPIRES_SEC = 3600;
@@ -417,6 +430,8 @@ async function addElementsToPptxSlide(
     patches = null,
     slideNumber = 1,
     report = null,
+    measuredShapes = {},
+    target = 'powerpoint',
   } = {}
 ) {
   const doc = slide.elements;
@@ -427,19 +442,35 @@ async function addElementsToPptxSlide(
   // Element effects (shadow, glow…) PowerPoint can show, as a shape / picture shadow.
   const effectShadow = (content) =>
     elementEffectPptxShadow(content, { palette, ptPerStagePx: inPerPx * 72 });
-  const elements = [...(doc.elements || [])].sort(
+  const layered = [...(doc.elements || [])].sort(
     (a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0)
   );
+  // Editor groups become native PowerPoint groups: their members are drawn one after another
+  // (moved together only where that changes nothing on the slide).
+  const grouping = orderForGroups(layered, (el) => {
+    const p = el.placement || {};
+    return { x: Number(p.x) || 0, y: Number(p.y) || 0, w: Number(p.width) || 0, h: Number(p.height) || 0 };
+  });
+  const elements = grouping.order;
+  const groupOf = new Map();
+  for (const g of grouping.groups) for (const id of g.ids) groupOf.set(id, g.groupId);
+  const groupMembers = new Map();
   // Sizes authored on the 900px editor stage → points / inches on this slide.
   const pt = (px) => stagePxToPoints(px, slideSize.w);
   const inch = (px) => (Number(px) || 0) * inPerPx;
-  // XML patches for one object (gradients, glow, text effects): a name pptxgenjs writes, so
-  // the patch can find it afterwards.
-  const tag = (list) => {
+  // A name for one written object (pptxgenjs writes it as <p:cNvPr name>) when an XML patch
+  // must find it afterwards (gradients, glow, text effects, picture geometry) or it belongs to a
+  // group. An element can write more than one object (a table's card and grid).
+  const named = (el, list = []) => {
     const wanted = list.filter(Boolean);
-    if (!patches || !wanted.length) return {};
+    const groupId = el ? groupOf.get(el.id) : null;
+    if (!patches || (!wanted.length && !groupId)) return {};
     const objectName = patches.name();
     wanted.forEach((patch) => patches.add(slideNumber, { ...patch, name: objectName }));
+    if (groupId) {
+      if (!groupMembers.has(groupId)) groupMembers.set(groupId, []);
+      groupMembers.get(groupId).push(objectName);
+    }
     return { objectName };
   };
   const count = (kind, key) => {
@@ -469,7 +500,7 @@ async function addElementsToPptxSlide(
       const link = (el.type === 'embed' || el.type === 'link') && /^https?:\/\//i.test(String(content.url || ''))
         ? { hyperlink: { url: String(content.url), tooltip: content.title || String(content.url) } }
         : {};
-      s.addImage({ data: picture.data, x: b.x, y: b.y, w: b.w, h: b.h, ...link });
+      s.addImage({ data: picture.data, x: b.x, y: b.y, w: b.w, h: b.h, ...link, ...named(el) });
       count('pictures', picture.reason || el.type);
     };
     if (picture?.data && picture.box && !picture.fallbackOnly) {
@@ -496,7 +527,7 @@ async function addElementsToPptxSlide(
       const boxColor =
         measuredColor ||
         (gradientInk ? firstHexFromFill(content.fill, palette, textInk.color) : textInk.color);
-      const { runs, options } = buildPptxText({
+      const { runs, options, caps, grown } = buildPptxText({
         content,
         box,
         rotate,
@@ -506,15 +537,22 @@ async function addElementsToPptxSlide(
         fontFace: resolveExportFontFace(content, el, themeFonts, measured),
         runColor: (run) => firstHexFromFill(run.fill || run.color || run.colorRole, palette, boxColor),
         measured,
+        // PowerPoint keeps uppercase as All Caps (the typed text stays editable as typed).
+        // Google Slides may not honour it, so there the text itself is uppercased.
+        nativeCaps: target === 'powerpoint',
       });
       const effect = textEffectPatch(content, palette, boxColor, pt);
       const gradientText = isGradientFill(content.fill) ? editorGradient(content.fill, palette) : null;
       Object.assign(
         options,
-        tag([effect || gradientText ? { kind: 'text', ...(effect || {}), ...(gradientText ? { gradient: gradientText } : {}) } : null])
+        named(el, [
+          effect || gradientText ? { kind: 'text', ...(effect || {}), ...(gradientText ? { gradient: gradientText } : {}) } : null,
+          caps ? { kind: 'caps' } : null,
+        ])
       );
       s.addText(runs, options);
       count('native', 'text');
+      if (grown) count('text', 'grown to fit');
     } else if (el.type === 'image' || el.type === 'icon' || el.type === 'graphic') {
       const url = content.url || content.src;
       // The element's own picture first. The slide's hero photo only fills an image element
@@ -533,9 +571,15 @@ async function addElementsToPptxSlide(
           : null;
       // A crop stays a real PowerPoint crop (re-croppable): the whole photo is embedded.
       const crop = el.type === 'image' && !inlineSvgPng ? normalizeCrop(content.crop) : null;
-      const image = inlineSvgPng
+      let image = inlineSvgPng
         ? await imageBufferToPptxImage(inlineSvgPng)
         : await fetchImageForPptx(url, key);
+      // Photos at the resolution the slide shows them (an opaque PNG becomes a JPEG): the whole
+      // photo stays embedded, so it can still be re-cropped in PowerPoint.
+      if (image && !inlineSvgPng) {
+        image = await shrinkPhotoForPptx(image, box, { fit: content.fit || 'cover', crop });
+        if (image.shrunk) count('media', 'photos resized for the slide');
+      }
       if (image) {
         const { flipH, flipV } = contentFlipFlags(content);
         const imageOpts = {
@@ -573,9 +617,17 @@ async function addElementsToPptxSlide(
         const glow = elementGlowPatch(content, palette, pt);
         const shadow = glow ? null : effectShadow(content);
         if (shadow) imageOpts.shadow = shadow;
-        Object.assign(imageOpts, tag([glow]));
+        // A mask (oval, arch, hexagon, blob) or rounded corners, as measured on the render page:
+        // the photo stays a real, re-croppable picture with that outline.
+        const frame = measuredShapes[el.id];
+        let outline = null;
+        if (frame?.kind === 'media' && !inlineSvgPng && fit !== 'contain') {
+          if (frame.clipPath) outline = polygonPath(clipPathToPolygon(frame.clipPath, frame.w, frame.h));
+          else if (!isSquareBox(frame.radii)) outline = roundedBoxPath(frame.radii, frame.w, frame.h);
+        }
+        Object.assign(imageOpts, named(el, [glow, outline ? { kind: 'geometry', segments: outline } : null]));
         s.addImage(imageOpts);
-        count('native', el.type);
+        count('native', outline ? `${el.type} with mask or rounded corners` : el.type);
       } else {
         // The picture couldn't be loaded: the editor shows nothing there (a broken image), so
         // neither does the export — a grey "image" box used to cover the slide's content.
@@ -584,8 +636,44 @@ async function addElementsToPptxSlide(
       }
     } else if (el.type === 'shape') {
       // Library shapes cut with a clip-path polygon → native custom geometry.
-      const polygon = content.clipPath ? parsePolygonClipPath(content.clipPath) : null;
-      let shape = polygon ? (pptx?.ShapeType?.custGeom || 'custGeom') : shapeTypeForPptx(content.shape);
+      const measuredShape = measuredShapes[el.id] || null;
+      // The element's clip-path, else the library shape's as the editor drew it (arrow lines…).
+      const clipSource = content.clipPath || (measuredShape?.kind === 'clip' ? measuredShape.clipPath : null);
+      const polygon = clipSource ? parsePolygonClipPath(clipSource) : null;
+      const drawn = polygon ? null : measuredShape;
+      const shapeAlpha = (Number.isFinite(Number(content.opacity)) ? Number(content.opacity) : 1) * elementOpacity;
+      if (drawn?.kind === 'line') {
+        // A line shape (solid, dashed, dotted): a native line where the editor draws it.
+        const widthPx = Number(drawn.borderWidth) || 0;
+        if (widthPx > 0) {
+          const ink = drawn.borderColor
+            ? { color: String(drawn.borderColor).replace(/^#/, '').toUpperCase(), alpha: 1 }
+            : resolveColorAlpha(content.stroke || content.fill, palette, '0A84FF');
+          const x0 = Number(drawn.line?.x0) || 0;
+          const x1 = Number.isFinite(Number(drawn.line?.x1)) ? Number(drawn.line.x1) : 1;
+          const y = Number.isFinite(Number(drawn.line?.y)) ? Number(drawn.line.y) : 0.5;
+          const dash = dashTypeFor(drawn.borderStyle);
+          s.addShape(pptx?.ShapeType?.line || 'line', {
+            x: box.x + box.w * x0,
+            y: box.y + box.h * y,
+            w: Math.max(0.01, box.w * (x1 - x0)),
+            h: 0,
+            rotate,
+            line: withTransparency({ color: ink.color, width: Math.max(0.25, pt(widthPx)), ...(dash ? { dashType: dash } : {}) }, ink.alpha * shapeAlpha),
+            ...named(el),
+          });
+          count('native', 'line');
+        }
+        continue;
+      }
+      // A box with border-radius (semicircle, arch, quarter circle, cloud, speech bubble,
+      // stadium…): its outline as native custom geometry, the border inside the box as in CSS.
+      const borderPx = drawn?.kind === 'box' ? Number(drawn.borderWidth) || 0 : 0;
+      const boxPath =
+        drawn?.kind === 'box' && (!isSquareBox(drawn.radii) || borderPx > 0)
+          ? roundedBoxPath(drawn.radii, drawn.w, drawn.h, { inset: borderPx / 2 })
+          : null;
+      let shape = polygon || boxPath ? (pptx?.ShapeType?.custGeom || 'custGeom') : shapeTypeForPptx(content.shape);
       // The editor rounds any rectangle with a border radius (AI layouts store shape: 'rect' +
       // borderRadius). PowerPoint only rounds a roundRect, so those came out square.
       if (shape === 'rect' && Number(content.borderRadius) > 0) shape = 'roundRect';
@@ -609,8 +697,24 @@ async function addElementsToPptxSlide(
           : { type: 'none' },
         rotate,
         ...(polygon ? { points: custGeomPoints(polygon, box) } : {}),
+        ...(boxPath ? { points: pathToCustGeomPoints(boxPath, box) } : {}),
       };
-      if (!polygon && (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill')) {
+      if (boxPath) {
+        // The border the editor drew (width, style, colour), centred on the inset outline.
+        if (borderPx > 0) {
+          const ink = drawn.borderColor
+            ? { color: String(drawn.borderColor).replace(/^#/, '').toUpperCase(), alpha: 1 }
+            : resolveColorAlpha(strokeColor || content.fill, palette, 'E5E5E5');
+          const dash = dashTypeFor(drawn.borderStyle);
+          shapeOpts.line = withTransparency(
+            { color: ink.color, width: Math.max(0.25, pt(borderPx)), ...(dash ? { dashType: dash } : {}) },
+            ink.alpha * elementOpacity
+          );
+        } else {
+          shapeOpts.line = { type: 'none' };
+        }
+      }
+      if (!polygon && !boxPath && (content.borderRadius != null || content.shape === 'rounded-rect' || content.shape === 'pill')) {
         // pptxgenjs rectRadius is in inches, capped at half the shorter side.
         const maxRadius = Math.min(box.w, box.h) / 2;
         const r = Number(content.borderRadius);
@@ -630,8 +734,9 @@ async function addElementsToPptxSlide(
         const fill = content.fill;
         const fillSource = fill && typeof fill === 'object' ? fill.color || fill.colorRole : fill;
         // Outlined shapes have a transparent fill: no fill at all (pptxgenjs writes <a:noFill/>),
-        // otherwise pptxgenjs swaps the unknown colour for black.
-        if (!isTransparentColor(fillSource)) {
+        // otherwise pptxgenjs swaps the unknown colour for black. The editor's "outlined"
+        // variant draws no fill whatever the fill colour.
+        if (!isTransparentColor(fillSource) && content.variant !== 'outlined') {
           const ink = resolveColorAlpha(fillSource, palette, '0A84FF');
           shapeOpts.fill = withTransparency({ color: ink.color }, ink.alpha * shapeOpacity);
         }
@@ -639,13 +744,13 @@ async function addElementsToPptxSlide(
       const glow = elementGlowPatch(content, palette, pt);
       const shadow = glow ? null : effectShadow(content);
       if (shadow) shapeOpts.shadow = shadow;
-      Object.assign(shapeOpts, tag([gradient ? { kind: 'shapeGradient', gradient } : null, glow]));
+      Object.assign(shapeOpts, named(el, [gradient ? { kind: 'shapeGradient', gradient } : null, glow]));
       try {
         s.addShape(shape, shapeOpts);
       } catch {
         s.addShape('rect', { ...shapeOpts, points: undefined });
       }
-      count('native', polygon ? 'custom shape' : 'shape');
+      count('native', polygon ? 'custom shape' : boxPath ? 'curved shape' : 'shape');
     } else if (el.type === 'chart') {
       // Drawn like the editor's chart (PptChartRenderer): first series, its colours and labels.
       const spec = editorChartSpec(content, palette);
@@ -655,14 +760,15 @@ async function addElementsToPptxSlide(
             { text: spec.kpi.value, options: { fontSize: pt(32), bold: true, color: String(spec.colors[0]).replace(/^#/, ''), breakLine: true } },
             { text: spec.kpi.label, options: { fontSize: pt(12), color: isDarkHex(backgroundHex) ? 'CBD5E1' : '64748B' } },
           ],
-          { x: box.x, y: box.y, w: box.w, h: box.h, align: 'center', valign: 'middle', margin: [0, 0, 0, 0], rotate, ...(themeFonts.body ? { fontFace: themeFonts.body } : {}) }
+          { x: box.x, y: box.y, w: box.w, h: box.h, align: 'center', valign: 'middle', margin: [0, 0, 0, 0], rotate, ...(themeFonts.body ? { fontFace: themeFonts.body } : {}), ...named(el) }
         );
         count('native', 'kpi');
       } else {
         try {
           const args = pptxChartArgs(spec, pptx, box, { pt, dark: isDarkHex(backgroundHex), fontFace: themeFonts.body || null });
-          if (args.combo) s.addChart(args.combo, args.options);
-          else s.addChart(args.type, args.data, args.options);
+          const chartOptions = { ...args.options, ...named(el) };
+          if (args.combo) s.addChart(args.combo, chartOptions);
+          else s.addChart(args.type, args.data, chartOptions);
           count('native', `chart ${spec.kind}`);
         } catch (chartErr) {
           logger.warn?.('pptx_chart_export_failed', { slideId: slide.id, error: chartErr?.message || chartErr });
@@ -688,8 +794,8 @@ async function addElementsToPptxSlide(
         fontFace: themeFonts.body || null,
       });
       if (table) {
-        if (table.card) s.addShape(pptx?.ShapeType?.roundRect || 'roundRect', table.card);
-        s.addTable(table.rows, table.options);
+        if (table.card) s.addShape(pptx?.ShapeType?.roundRect || 'roundRect', { ...table.card, ...named(el) });
+        s.addTable(table.rows, { ...table.options, ...named(el) });
         count('native', 'table');
       } else {
         s.addText('Table', { x: box.x, y: box.y, w: box.w, h: box.h, fontSize: 14, color: '666666', align: 'center', valign: 'middle' });
@@ -719,10 +825,102 @@ async function addElementsToPptxSlide(
     }
   }
 
+  for (const [groupId, members] of groupMembers) {
+    if (members.length < 2) continue;
+    patches.add(slideNumber, { kind: 'group', members, name: `Group ${groupId}` });
+    count('groups', 'native');
+  }
+  for (const groupId of grouping.split) {
+    logger.info?.('pptx_group_split', { slideId: slide.id, groupId });
+    count('groups', 'kept as separate objects (drawing order)');
+  }
+
   const notes = [slide.content?.notes ? String(slide.content.notes) : '', picturedText.length ? `Text shown as a picture on this slide:\n${picturedText.join('\n')}` : '']
     .filter(Boolean)
     .join('\n\n');
   if (notes) s.addNotes(notes);
+}
+
+/**
+ * A slide with no elements, rebuilt from what the render page drew (SlideMockFallback, the
+ * editor's own layout): title, subtitle, description list or paragraph, and the image in its
+ * dashed frame, each at its measured place and style. Native and editable.
+ */
+async function addFallbackToPptxSlide(s, slide, measured, { slideSize, themeFonts = {}, patches = null, slideNumber = 1 } = {}) {
+  const canvas = slide.elements?.canvas || resolveAspectCanvas(slide.aspectRatio);
+  const canvasW = Number(canvas?.width) || CANVAS_WIDTH;
+  const canvasH = Number(canvas?.height) || CANVAS_HEIGHT;
+  const boxIn = (b) => pxToIn(b.x, b.y, b.width, b.height, canvasW, canvasH, slideSize);
+  const pt = (px) => stagePxToPoints(px, slideSize.w);
+  const inPerPx = slideSize.w / FONT_REF_WIDTH;
+  const hex = (c, fallback) => (/^#?[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).replace(/^#/, '').toUpperCase() : fallback);
+  const textOpts = (part) => ({
+    ...boxIn(part.box),
+    fontSize: Math.round(pt(part.fontSize) * 10) / 10,
+    bold: Boolean(part.bold),
+    color: hex(part.color, '111111'),
+    ...(part.opacity < 1 ? { transparency: Math.round((1 - part.opacity) * 100) } : {}),
+    fontFace: primaryFamily(part.fontFamily) || themeFonts.body || undefined,
+    lineSpacing: Math.round(pt(part.lineHeight) * 10) / 10,
+    margin: [0, 0, 0, 0],
+    valign: 'top',
+    fit: 'none',
+  });
+  for (const key of ['title', 'body', 'paragraph']) {
+    const part = measured[key];
+    if (part?.text) s.addText(part.text, textOpts(part));
+  }
+  if (measured.list?.items?.length) {
+    const first = measured.list.items[0];
+    s.addText(
+      measured.list.items.map((item, i) => ({
+        text: item.text,
+        options: {
+          bullet: { indent: Math.round(pt(measured.list.indent || 32) * 10) / 10 },
+          paraSpaceAfter: Math.round(pt(item.marginBottom || 0) * 10) / 10,
+          ...(i < measured.list.items.length - 1 ? { breakLine: true } : {}),
+        },
+      })),
+      { ...textOpts(first), ...boxIn(measured.list.box) }
+    );
+  }
+  if (measured.visual) {
+    const v = measured.visual;
+    const b = boxIn(v.box);
+    s.addShape('roundRect', {
+      ...b,
+      rectRadius: Math.min(Math.min(b.w, b.h) / 2, (v.radius || 0) * inPerPx),
+      line: {
+        color: hex(v.borderColor, '94A3B8'),
+        width: Math.max(0.25, pt(v.borderWidth || 2)),
+        ...(dashTypeFor(v.borderStyle) ? { dashType: dashTypeFor(v.borderStyle) } : {}),
+        ...(v.opacity < 1 ? { transparency: Math.round((1 - v.opacity) * 100) } : {}),
+      },
+    });
+  }
+  if (measured.image) {
+    const fetched = await fetchImageForPptx(slide.imageRef?.url, slide.imageRef?.s3Key);
+    const image = fetched ? await shrinkPhotoForPptx(fetched, boxIn(measured.image.box)) : null;
+    if (image) {
+      const b = boxIn(measured.image.box);
+      const opts = { data: image.data, ...b };
+      if (image.width && image.height) {
+        opts.h = b.w * (image.height / image.width);
+        opts.sizing = { type: 'cover', w: b.w, h: b.h };
+      }
+      if (measured.image.opacity < 1) opts.transparency = Math.round((1 - measured.image.opacity) * 100);
+      if (patches && measured.image.radius > 0) {
+        const name = patches.name();
+        const r = measured.image.radius;
+        const w = measured.image.box.width;
+        const h = measured.image.box.height;
+        patches.add(slideNumber, { kind: 'geometry', name, segments: roundedBoxPath([[r, r], [r, r], [r, r], [r, r]], w, h) });
+        opts.objectName = name;
+      }
+      s.addImage(opts);
+    }
+  }
+  if (slide.content?.notes) s.addNotes(String(slide.content.notes));
 }
 
 async function addLegacyToPptxSlide(s, slide, textColor) {
@@ -839,9 +1037,12 @@ function imageExportOptions({ scale, quality, transparent, format } = {}) {
  */
 async function buildPptxBuffer(
   deck,
-  { slideId, slideIds, onSlideProcessed, assets = null, report = null, embedFonts = false } = {}
+  { slideId, slideIds, onSlideProcessed, assets = null, report = null, embedFonts = false, target = 'powerpoint' } = {}
 ) {
   const textMetrics = assets?.textMetrics || null;
+  const shapeMetrics = assets?.shapeMetrics || {};
+  const fallbackMetrics = assets?.fallbackMetrics || {};
+  const pptxTarget = normalizeTarget(target);
   const tableMetrics = assets?.tableMetrics || {};
   const patches = new PptxPatches();
   let slideNumber = 0;
@@ -928,8 +1129,18 @@ async function buildPptxBuffer(
           patches,
           slideNumber,
           report,
+          measuredShapes: shapeMetrics?.[slide.id] || {},
+          target: pptxTarget,
         }
       );
+    } else if (fallbackMetrics?.[slide.id]) {
+      // No elements: the editor's own layout, as the render page drew it.
+      await addFallbackToPptxSlide(s, slide, fallbackMetrics[slide.id], {
+        slideSize: { w: aspect.pptxWidthIn || PPTX_WIDTH_IN, h: aspect.pptxHeightIn || PPTX_HEIGHT_IN },
+        themeFonts,
+        patches,
+        slideNumber,
+      });
     } else {
       await addLegacyToPptxSlide(s, slide, textColor);
     }
@@ -1344,6 +1555,8 @@ async function processExport({
     const deck = await inlineGraphicSvgsForExport(enrichDeckMediaKeysForExport(deckRaw));
 
     // Beat throughout: a long PDF render sends no per-slide callbacks.
+    // What a PPTX contains (editable objects, pictures and why, fonts), for the export dialog.
+    let pptxSummary = null;
     const { buffer, contentType, ext } = await withHeartbeat(
       heartbeat,
       async () => {
@@ -1356,6 +1569,7 @@ async function processExport({
             onSlideProcessed: heartbeat,
             assets,
             report,
+            target: pptxTarget,
             // Google Slides ignores embedded fonts (it uses Google Fonts by name); PowerPoint needs them.
             embedFonts: normalizeTarget(pptxTarget) === 'powerpoint',
           });
@@ -1367,6 +1581,7 @@ async function processExport({
             measured: Boolean(assets),
             ...report,
           });
+          pptxSummary = pptxReportSummary(report);
           return {
             buffer: pptxBuffer,
             contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -1401,6 +1616,12 @@ async function processExport({
 
     const s3Key = `presentations/${workspaceId}/${deck.id}/exports/${exportId}.${ext}`;
     await s3Service.uploadFileToKey(buffer, s3Key, contentType);
+    if (pptxSummary) {
+      // Kept next to the file (no table column needed); the dialog shows it when the export is ready.
+      await s3Service
+        .uploadFileToKey(Buffer.from(JSON.stringify(pptxSummary)), exportReportKey(s3Key), 'application/json')
+        .catch((err) => logger.warn('pptx_report_upload_failed', { exportId, error: String(err?.message || err) }));
+    }
 
     const chargeResult = await presentationCredit.chargeFlat({
       workspaceId,
@@ -1623,6 +1844,14 @@ async function getExport({ workspaceId, presentationId, exportId }) {
     });
     payload.presignedUrl = presignedUrl;
     payload.filename = filename;
+    if (String(row.format).toUpperCase() === 'PPTX') {
+      // What the file contains (see processExport); missing for exports made before it existed.
+      try {
+        payload.report = JSON.parse((await s3Service.getObjectBuffer(exportReportKey(row.s3Key))).toString('utf8'));
+      } catch {
+        payload.report = null;
+      }
+    }
     payload.url = presignedUrl;
     payload.downloadUrl = presignedUrl;
     payload.expiresIn = PRESIGN_EXPIRES_SEC;
