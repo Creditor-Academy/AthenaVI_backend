@@ -10,7 +10,7 @@ module.exports = (err, req, res, next) => {
     if (statusCode >= 500) {
       logger.error(err.stack || err);
     } else if (statusCode === 401 || statusCode === 403 || statusCode === 503) {
-      // Expected client auth failures / dependency unavailable — avoid flooding combined.log
+      // Expected client auth failures / dependency unavailable — avoid flooding the logs
     } else {
       logger.warn(err.message || err);
     }
