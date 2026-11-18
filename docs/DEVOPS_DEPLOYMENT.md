@@ -522,9 +522,37 @@ node scripts/normalize-user-emails.js
 
 | Setting | Value |
 |---------|-------|
-| Required | **Yes** — app exits on startup failure |
-| URL | `redis://host:6379` or `rediss://...` for TLS |
-| Use cases | Login rate limiting, caching |
+| Required | **Yes** — the app's session client treats Redis as required outside local dev |
+| URL | `REDIS_URL`: `redis://host:6379` or `rediss://...` when in-transit encryption is on |
+| BullMQ URL | `BULLMQ_REDIS_URL`. Same value as `REDIS_URL` when one Redis serves both. Set it explicitly in production |
+| Use cases | Login rate limiting, caching, and BullMQ job queues (HeyGen S3 copy) |
+
+### BullMQ requirements on this ElastiCache
+
+The queue uses the same VPC Redis. It does not work correctly on a cluster-mode configuration endpoint, and it loses jobs if Redis is allowed to evict keys.
+
+1. Use a replication group with **cluster mode disabled**. Copy the **primary endpoint**, not the configuration endpoint.
+2. Create a parameter group for the engine family (for example `redis7`) and set:
+   - `maxmemory-policy` = `noeviction`
+   - `timeout` = `0` (queue connections stay open)
+3. Attach that parameter group to the replication group and apply it.
+4. Security group: allow the API instances to reach port **6379**.
+5. Set the URL. With an AUTH token and TLS:
+
+```text
+BULLMQ_REDIS_URL=rediss://:AUTH_TOKEN@primary-endpoint:6379
+REDIS_URL=rediss://:AUTH_TOKEN@primary-endpoint:6379
+```
+
+Without TLS, use `redis://`.
+
+6. Confirm after deploy. The API log `bullmq_redis_ready` means the policy is `noeviction`. `bullmq_redis_eviction_policy` means it is not, and queued jobs can be deleted when memory is full.
+
+```bash
+redis-cli -u "$BULLMQ_REDIS_URL" INFO memory | grep maxmemory_policy
+```
+
+Expected line: `maxmemory_policy:noeviction`.
 
 ---
 

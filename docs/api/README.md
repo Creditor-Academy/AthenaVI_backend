@@ -47,6 +47,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + packs + Brand Kit** — AI/blank/pack/template, canvas, export, admin |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [CLIENT_RENDERING_RECOMMENDATIONS.md](../CLIENT_RENDERING_RECOMMENDATIONS.md) | **Client-side video export** — hybrid render recommendation, HeyGen webhooks, device tiers |
+| [HEYGEN_WEBHOOK_IMPLEMENTATION_PLAN.md](../HEYGEN_WEBHOOK_IMPLEMENTATION_PLAN.md) | **HeyGen webhook build plan** — Phase 0 FR-W1–W10, route, schema, handler, tests. Plan only |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
 | [IMAGE_GEN_FRONTEND_INTEGRATION.md](../IMAGE_GEN_FRONTEND_INTEGRATION.md) | AI image studio (folder chats, models, regen/tweak, download) |
 | [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |

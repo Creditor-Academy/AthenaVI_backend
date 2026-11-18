@@ -130,6 +130,8 @@ If logs show `Client IP address is not in the allowlist`, you pasted the **Exter
 
 Do **not** copy the External URL from `.env.development` — that works from your laptop, not from another Render service without allowlisting.
 
+Render Key Value uses `allkeys-lru` and does not allow changing it. That is fine for sessions and cache. BullMQ can lose jobs when that Redis runs out of memory. There is no dashboard switch for `noeviction`. For a real queue, set `BULLMQ_REDIS_URL` to the ElastiCache primary endpoint from the production setup (section 12 of `docs/DEVOPS_DEPLOYMENT.md`) and leave `REDIS_URL` on the internal Key Value URL. On boot, `bullmq_redis_eviction_policy` in the logs means the queue Redis is still `allkeys-lru`.
+
 ### 6. Google OAuth redirect
 
 In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your OAuth client:

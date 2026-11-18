@@ -19,6 +19,7 @@ const { startWeeklyDigestJob } = require('./shared/jobs/weeklyDigest.job');
 const { startImageGenContextCleanupJob } = require('./shared/jobs/imageGenContextCleanup.job');
 const { recoverInterruptedRenders } = require('./shared/jobs/renderRecovery.job');
 const { checkExportBrowser } = require('./shared/utils/exportBrowser');
+const { checkBullmqRedis } = require('./shared/queues/bullmqConnection');
 
 const BOOTED_AT = new Date();
 
@@ -49,6 +50,22 @@ const server = app.listen(PORT, () => {
   startWeeklyDigestJob();
   startImageGenContextCleanupJob();
   recoverInterruptedRenders(BOOTED_AT);
+  checkBullmqRedis()
+    .then((result) => {
+      if (result.ok) {
+        logger.info('bullmq_redis_ready', result);
+      } else {
+        logger.error('bullmq_redis_eviction_policy', result);
+        console.error(
+          'BullMQ Redis eviction policy is',
+          result.policy,
+          `(${result.urlSource}). Jobs can be deleted under memory pressure. Use noeviction.`
+        );
+      }
+    })
+    .catch((err) => {
+      logger.error('bullmq_redis_check_failed', { error: err.message });
+    });
   // PDF / image export needs a headless browser: say loudly at boot if it can't start.
   // The result is reported at GET /health/export. PPT_EXPORT_BROWSER_CHECK=0 skips it.
   if (process.env.PPT_EXPORT_BROWSER_CHECK !== '0') {
