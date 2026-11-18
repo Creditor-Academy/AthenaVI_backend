@@ -49,7 +49,7 @@ function requestHashForRepair({ slideId, phase, layoutId }) {
 
 /**
  * Record repair/QA audit without a new Prisma model:
- * - log (default): structured winston → combined.log
+ * - log (default): structured winston → console
  * - job: reuse slide_generation_jobs (jobType CONTENT_REPAIR, payload in usage)
  * - both: log + job
  *

@@ -6,18 +6,12 @@ const logger = winston.createLogger({
     winston.format.timestamp(),
     winston.format.json()
   ),
+  // Console only: no log files are written. Hosts (Render, local terminal) capture stdout.
   transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
     new winston.transports.Console({
       format: winston.format.simple(),
-    })
-  );
-}
+    }),
+  ],
+});
 
 module.exports = logger;
