@@ -72,12 +72,18 @@ app.get('/health', (req, res) => {
 
 // Result of the boot-time export browser check (PDF / PNG / JPEG export). It never launches
 // a browser per request, so it is safe to leave public.
-app.get('/health/export', (req, res) => {
-    const { lastExportBrowserCheck } = require('./shared/utils/exportBrowser');
+app.get('/health/export', async (req, res) => {
+    const { lastExportBrowserCheck, exportBrowserStats } = require('./shared/utils/exportBrowser');
     const { exportQueueStats } = require('./modules/presentation/export.service');
+    const exportQueue = require('./modules/presentation/exportQueue');
+    // The export queue (BullMQ or in-process), its Redis counts, and the shared browser.
+    const queue = { ...exportQueue.stats(), counts: await exportQueue.queueCounts() };
+    const browserPool = exportBrowserStats();
+    // Exports finished on this server in the last hour: outcomes, failure rate, durations, reasons.
+    const metrics = require('./modules/presentation/exportMetrics').snapshot();
     const check = lastExportBrowserCheck();
     if (!check) {
-        return res.status(200).json({ status: 'PENDING', exports: exportQueueStats() });
+        return res.status(200).json({ status: 'PENDING', exports: exportQueueStats(), queue, browserPool, metrics });
     }
     return res.status(check.ok ? 200 : 503).json({
         status: check.ok ? 'UP' : 'DOWN',
@@ -86,6 +92,9 @@ app.get('/health/export', (req, res) => {
         error: check.ok ? null : 'Export browser failed to start',
         checkedAt: check.checkedAt,
         exports: exportQueueStats(),
+        queue,
+        browserPool,
+        metrics,
     });
 });
 

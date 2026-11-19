@@ -426,6 +426,8 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
   }
 
   let user;
+  // The account was created by this sign-in (the frontend reports it as a sign-up to analytics).
+  let createdAccount = false;
   const existingAccount = await authDao.findAccountByProvider('google', providerAccountId);
 
   if (existingAccount) {
@@ -457,6 +459,7 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
       }
 
       if (isNewUser) {
+        createdAccount = true;
         try {
           await inboxService.syncPendingWorkspaceInvitations(user.id, user.email);
         } catch (err) {
@@ -508,6 +511,7 @@ async function handleGoogleOAuthCallback({ code, state, userAgent, ip }) {
     workspace,
     accountRecovered,
     portal,
+    isNewUser: createdAccount,
   };
 
   if (portal === 'superadmin') {
