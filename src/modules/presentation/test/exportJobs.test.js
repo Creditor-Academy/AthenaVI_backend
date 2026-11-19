@@ -915,3 +915,90 @@ test('inbox: finished and failed exports link to the deck with the export, so it
   assert.equal(url.searchParams.get('export'), id);
   assert.equal(notifications[0].metadata.exportId, id);
 });
+
+// ---- PPT_EXPORT_V2 (Phase 7.1) ----
+
+/** Stand in for the export-render page: record which exports used it. */
+function stubEditorRenderer(t) {
+  const exportRenderer = require('../exportRenderer.service');
+  const saved = {
+    isRendererEnabled: exportRenderer.isRendererEnabled,
+    renderDeckPdf: exportRenderer.renderDeckPdf,
+    renderDeckImages: exportRenderer.renderDeckImages,
+    capturePptxAssets: exportRenderer.capturePptxAssets,
+  };
+  const calls = [];
+  exportRenderer.isRendererEnabled = () => true;
+  exportRenderer.renderDeckPdf = async () => {
+    calls.push('pdf');
+    return Buffer.from('%PDF-1.4 drawn by the editor renderer');
+  };
+  exportRenderer.renderDeckImages = async (deck, { slideIds }) => {
+    calls.push('images');
+    const sharp = require('sharp');
+    const data = await sharp({ create: { width: 960, height: 540, channels: 3, background: '#2563EB' } }).png().toBuffer();
+    return slideIds.map((slideId) => ({ slideId, data }));
+  };
+  exportRenderer.capturePptxAssets = async () => {
+    calls.push('pptx-measure');
+    return null;
+  };
+  t.after(() => Object.assign(exportRenderer, saved));
+  return calls;
+}
+
+test('V2 on: PDF, images and PPTX use the editor renderer', async (t) => {
+  if (!browserOk) return t.skip('no export browser on this machine');
+  const calls = stubEditorRenderer(t);
+  decks.set('deck1', deckOf([slide('a', 1, '#2563EB'), slide('b', 2, '#10B981')]));
+  for (const format of ['PDF', 'PNG', 'PPTX']) {
+    const id = queueRow(format);
+    const info = {};
+    await run(id, { exportV2: true, info });
+    assert.equal(rows.get(id).status, 'READY', `${format}: ${rows.get(id).error}`);
+    assert.equal(info.exportV2, true);
+  }
+  assert.deepEqual(calls, ['pdf', 'images', 'pptx-measure']);
+});
+
+test('V2 off: the same exports use the server renderer and never open the render page', async (t) => {
+  if (!browserOk) return t.skip('no export browser on this machine');
+  const calls = stubEditorRenderer(t);
+  decks.set('deck1', deckOf([slide('a', 1, '#2563EB'), slide('b', 2, '#10B981')]));
+  for (const format of ['PDF', 'PNG', 'PPTX']) {
+    const id = queueRow(format);
+    const info = {};
+    await run(id, { exportV2: false, info });
+    const row = rows.get(id);
+    assert.equal(row.status, 'READY', `${format}: ${row.error}`);
+    assert.equal(info.exportV2, false);
+    if (format === 'PDF') {
+      const pdf = uploads.get(row.s3Key);
+      assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length, 2, 'a real 2-page PDF');
+    }
+  }
+  assert.deepEqual(calls, [], 'the render page was not used');
+});
+
+test('a job queued before the flag existed (no exportV2 in its data) runs as V2', async (t) => {
+  if (!browserOk) return t.skip('no export browser on this machine');
+  const calls = stubEditorRenderer(t);
+  decks.set('deck1', deckOf([slide('a', 1, '#2563EB')]));
+  const id = queueRow('PDF');
+  await run(id);
+  assert.equal(rows.get(id).status, 'READY', rows.get(id).error);
+  assert.deepEqual(calls, ['pdf']);
+});
+
+test('the finished log line says which pipeline the export used', () => {
+  const lines = [];
+  const original = logger.info;
+  logger.info = (event, data) => lines.push({ event, data });
+  try {
+    exportService.logExportFinished({ exportId: 'e1', workspaceId: 'w1' }, 'READY', { exportV2: false, format: 'PDF' });
+    exportService.logExportFinished({ exportId: 'e2', workspaceId: 'w1' }, 'READY', { format: 'PDF' });
+  } finally {
+    logger.info = original;
+  }
+  assert.deepEqual(lines.map((l) => l.data.exportV2), [false, true]);
+});

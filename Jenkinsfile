@@ -52,6 +52,28 @@ pipeline {
             }
         }
 
+        // Export fidelity (docs/PPT_EXPORT_PRODUCTION_PLAN.md, Phase 7.3): golden decks -> PDF and
+        // PPTX, scored against the editor's renderer; a drop against
+        // scripts/presentation-eval/baselines/ci-baseline.json fails the build.
+        // Runs when the job sets EXPORT_FIDELITY_RENDER_URL (a deployed frontend's
+        // /export-render.html). The agent needs LibreOffice (soffice) and poppler-utils (pdftoppm).
+        stage('Export Fidelity') {
+            when {
+                expression { return env.EXPORT_FIDELITY_RENDER_URL?.trim() }
+            }
+            steps {
+                sh '''
+                set -e
+                EXPORT_RENDER_URL="$EXPORT_FIDELITY_RENDER_URL" npm run test:export-fidelity
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '.eval/export-fidelity/ci/**', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('SonarQube Scan') {
             steps {
                 script {

@@ -1,0 +1,681 @@
+{
+  "label": "phase7-baseline",
+  "legacyRenderer": false,
+  "date": "2026-11-19T06:30:36.903Z",
+  "backend": "9bd5cc6+local changes",
+  "renderUrl": "http://localhost:5199/export-render.html",
+  "rasterizer": "pypdfium2",
+  "decks": {
+    "ai-dark": {
+      "name": "ai-dark",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-dark-1",
+          "layoutId": "section_divider_centered_v1",
+          "pdf": 0.999,
+          "pptx": 0.949
+        },
+        {
+          "n": 2,
+          "id": "ai-dark-2",
+          "layoutId": "grid_bento_four_v1",
+          "pdf": 0.976,
+          "pptx": 0.927
+        },
+        {
+          "n": 3,
+          "id": "ai-dark-3",
+          "layoutId": "process_linear_business_v1",
+          "pdf": 0.976,
+          "pptx": 0.937
+        },
+        {
+          "n": 4,
+          "id": "ai-dark-4",
+          "layoutId": "table_single_v1",
+          "pdf": 0.988,
+          "pptx": 0.863
+        },
+        {
+          "n": 5,
+          "id": "ai-dark-5",
+          "layoutId": "chart_two_v1",
+          "pdf": 0.999,
+          "pptx": 0.618
+        },
+        {
+          "n": 6,
+          "id": "ai-dark-6",
+          "layoutId": "diagram_swot_v1",
+          "pdf": 0.989,
+          "pptx": 0.935
+        },
+        {
+          "n": 7,
+          "id": "ai-dark-7",
+          "layoutId": "pricing_three_plans_v1",
+          "pdf": 0.982,
+          "pptx": 0.863
+        },
+        {
+          "n": 8,
+          "id": "ai-dark-8",
+          "layoutId": "device_phone_horizontal_v1",
+          "pdf": 0.982,
+          "pptx": 0.885
+        },
+        {
+          "n": 9,
+          "id": "ai-dark-9",
+          "layoutId": "full_bg_image_overlay_v1",
+          "pdf": 0.993,
+          "pptx": 0.924
+        },
+        {
+          "n": 10,
+          "id": "ai-dark-10",
+          "layoutId": "contact_card_cta_v1",
+          "pdf": 0.993,
+          "pptx": 0.973
+        }
+      ],
+      "pdf": {
+        "mean": 0.988,
+        "min": 0.976
+      },
+      "pptx": {
+        "mean": 0.887,
+        "min": 0.618
+      },
+      "errors": [],
+      "seconds": 43
+    },
+    "ai-editorial": {
+      "name": "ai-editorial",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-editorial-1",
+          "layoutId": "title_fullbleed_overlay_v1",
+          "pdf": 0.994,
+          "pptx": 0.958
+        },
+        {
+          "n": 2,
+          "id": "ai-editorial-2",
+          "layoutId": "statement_large_v1",
+          "pdf": 0.991,
+          "pptx": 0.936
+        },
+        {
+          "n": 3,
+          "id": "ai-editorial-3",
+          "layoutId": "para_split_50_50_v1",
+          "pdf": 0.968,
+          "pptx": 0.921
+        },
+        {
+          "n": 4,
+          "id": "ai-editorial-4",
+          "layoutId": "bullet_list_numbered_v1",
+          "pdf": 0.991,
+          "pptx": 0.983
+        },
+        {
+          "n": 5,
+          "id": "ai-editorial-5",
+          "layoutId": "four_images_text_v1",
+          "pdf": 0.995,
+          "pptx": 0.954
+        },
+        {
+          "n": 6,
+          "id": "ai-editorial-6",
+          "layoutId": "logo_wall_v1",
+          "pdf": 0.985,
+          "pptx": 0.975
+        },
+        {
+          "n": 7,
+          "id": "ai-editorial-7",
+          "layoutId": "timeline_vertical_v1",
+          "pdf": 0.982,
+          "pptx": 0.937
+        },
+        {
+          "n": 8,
+          "id": "ai-editorial-8",
+          "layoutId": "diagram_funnel_v1",
+          "pdf": 0.997,
+          "pptx": 0.97
+        },
+        {
+          "n": 9,
+          "id": "ai-editorial-9",
+          "layoutId": "speaker_bio_image_right_v1",
+          "pdf": 0.996,
+          "pptx": 0.982
+        },
+        {
+          "n": 10,
+          "id": "ai-editorial-10",
+          "layoutId": "minimal_text_cta_v1",
+          "pdf": 0.998,
+          "pptx": 0.991
+        }
+      ],
+      "pdf": {
+        "mean": 0.99,
+        "min": 0.968
+      },
+      "pptx": {
+        "mean": 0.961,
+        "min": 0.921
+      },
+      "errors": [],
+      "seconds": 21
+    },
+    "ai-light": {
+      "name": "ai-light",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-light-1",
+          "layoutId": "title_hero_left_blob_v1",
+          "pdf": 0.992,
+          "pptx": 0.935
+        },
+        {
+          "n": 2,
+          "id": "ai-light-2",
+          "layoutId": "agenda_numbered_v1",
+          "pdf": 0.989,
+          "pptx": 0.953
+        },
+        {
+          "n": 3,
+          "id": "ai-light-3",
+          "layoutId": "three_cards_image_text_v1",
+          "pdf": 0.979,
+          "pptx": 0.907
+        },
+        {
+          "n": 4,
+          "id": "ai-light-4",
+          "layoutId": "timeline_horizontal_v1",
+          "pdf": 0.996,
+          "pptx": 0.898
+        },
+        {
+          "n": 5,
+          "id": "ai-light-5",
+          "layoutId": "comparison_pros_cons_v1",
+          "pdf": 0.999,
+          "pptx": 0.95
+        },
+        {
+          "n": 6,
+          "id": "ai-light-6",
+          "layoutId": "chart_single_v1",
+          "pdf": 0.995,
+          "pptx": 0.979
+        },
+        {
+          "n": 7,
+          "id": "ai-light-7",
+          "layoutId": "metric_three_v1",
+          "pdf": 0.987,
+          "pptx": 0.931
+        },
+        {
+          "n": 8,
+          "id": "ai-light-8",
+          "layoutId": "quote_testimonial_card_v1",
+          "pdf": 0.995,
+          "pptx": 0.938
+        },
+        {
+          "n": 9,
+          "id": "ai-light-9",
+          "layoutId": "team_three_horizontal_v1",
+          "pdf": 0.998,
+          "pptx": 0.97
+        },
+        {
+          "n": 10,
+          "id": "ai-light-10",
+          "layoutId": "closing_thank_you_v1",
+          "pdf": 0.996,
+          "pptx": 0.978
+        }
+      ],
+      "pdf": {
+        "mean": 0.993,
+        "min": 0.979
+      },
+      "pptx": {
+        "mean": 0.944,
+        "min": 0.898
+      },
+      "errors": [],
+      "seconds": 20
+    },
+    "forty-slides": {
+      "name": "forty-slides",
+      "slides": [
+        {
+          "n": 1,
+          "id": "forty-1",
+          "layoutId": "title_hero_left_blob_v1",
+          "pdf": 0.975,
+          "pptx": 0.909
+        },
+        {
+          "n": 2,
+          "id": "forty-2",
+          "layoutId": "agenda_numbered_v1",
+          "pdf": 0.985,
+          "pptx": 0.95
+        },
+        {
+          "n": 3,
+          "id": "forty-3",
+          "layoutId": "three_cards_image_text_v1",
+          "pdf": 0.989,
+          "pptx": 0.899
+        },
+        {
+          "n": 4,
+          "id": "forty-4",
+          "layoutId": "timeline_horizontal_v1",
+          "pdf": 0.986,
+          "pptx": 0.905
+        },
+        {
+          "n": 5,
+          "id": "forty-5",
+          "layoutId": "comparison_pros_cons_v1",
+          "pdf": 0.993,
+          "pptx": 0.929
+        },
+        {
+          "n": 6,
+          "id": "forty-6",
+          "layoutId": "chart_single_v1",
+          "pdf": 0.986,
+          "pptx": 0.965
+        },
+        {
+          "n": 7,
+          "id": "forty-7",
+          "layoutId": "metric_three_v1",
+          "pdf": 0.986,
+          "pptx": 0.899
+        },
+        {
+          "n": 8,
+          "id": "forty-8",
+          "layoutId": "quote_testimonial_card_v1",
+          "pdf": 0.988,
+          "pptx": 0.933
+        },
+        {
+          "n": 9,
+          "id": "forty-9",
+          "layoutId": "team_three_horizontal_v1",
+          "pdf": 0.997,
+          "pptx": 0.971
+        },
+        {
+          "n": 10,
+          "id": "forty-10",
+          "layoutId": "closing_thank_you_v1",
+          "pdf": 0.995,
+          "pptx": 0.951
+        },
+        {
+          "n": 11,
+          "id": "forty-11",
+          "layoutId": "section_divider_centered_v1",
+          "pdf": 0.993,
+          "pptx": 0.96
+        },
+        {
+          "n": 12,
+          "id": "forty-12",
+          "layoutId": "grid_bento_four_v1",
+          "pdf": 0.985,
+          "pptx": 0.93
+        },
+        {
+          "n": 13,
+          "id": "forty-13",
+          "layoutId": "process_linear_business_v1",
+          "pdf": 0.995,
+          "pptx": 0.949
+        },
+        {
+          "n": 14,
+          "id": "forty-14",
+          "layoutId": "table_single_v1",
+          "pdf": 0.988,
+          "pptx": 0.875
+        },
+        {
+          "n": 15,
+          "id": "forty-15",
+          "layoutId": "chart_two_v1",
+          "pdf": 0.997,
+          "pptx": 0.617
+        },
+        {
+          "n": 16,
+          "id": "forty-16",
+          "layoutId": "diagram_swot_v1",
+          "pdf": 0.99,
+          "pptx": 0.938
+        },
+        {
+          "n": 17,
+          "id": "forty-17",
+          "layoutId": "pricing_three_plans_v1",
+          "pdf": 0.997,
+          "pptx": 0.884
+        },
+        {
+          "n": 18,
+          "id": "forty-18",
+          "layoutId": "device_phone_horizontal_v1",
+          "pdf": 0.986,
+          "pptx": 0.879
+        },
+        {
+          "n": 19,
+          "id": "forty-19",
+          "layoutId": "full_bg_image_overlay_v1",
+          "pdf": 0.987,
+          "pptx": 0.912
+        },
+        {
+          "n": 20,
+          "id": "forty-20",
+          "layoutId": "contact_card_cta_v1",
+          "pdf": 0.992,
+          "pptx": 0.977
+        },
+        {
+          "n": 21,
+          "id": "forty-21",
+          "layoutId": "title_fullbleed_overlay_v1",
+          "pdf": 0.993,
+          "pptx": 0.916
+        },
+        {
+          "n": 22,
+          "id": "forty-22",
+          "layoutId": "statement_large_v1",
+          "pdf": 0.988,
+          "pptx": 0.908
+        },
+        {
+          "n": 23,
+          "id": "forty-23",
+          "layoutId": "para_split_50_50_v1",
+          "pdf": 0.969,
+          "pptx": 0.873
+        },
+        {
+          "n": 24,
+          "id": "forty-24",
+          "layoutId": "bullet_list_numbered_v1",
+          "pdf": 0.984,
+          "pptx": 0.977
+        },
+        {
+          "n": 25,
+          "id": "forty-25",
+          "layoutId": "four_images_text_v1",
+          "pdf": 0.993,
+          "pptx": 0.948
+        },
+        {
+          "n": 26,
+          "id": "forty-26",
+          "layoutId": "logo_wall_v1",
+          "pdf": 0.983,
+          "pptx": 0.948
+        },
+        {
+          "n": 27,
+          "id": "forty-27",
+          "layoutId": "timeline_vertical_v1",
+          "pdf": 0.979,
+          "pptx": 0.915
+        },
+        {
+          "n": 28,
+          "id": "forty-28",
+          "layoutId": "diagram_funnel_v1",
+          "pdf": 0.991,
+          "pptx": 0.942
+        },
+        {
+          "n": 29,
+          "id": "forty-29",
+          "layoutId": "speaker_bio_image_right_v1",
+          "pdf": 0.994,
+          "pptx": 0.994
+        },
+        {
+          "n": 30,
+          "id": "forty-30",
+          "layoutId": "minimal_text_cta_v1",
+          "pdf": 0.999,
+          "pptx": 0.984
+        },
+        {
+          "n": 31,
+          "id": "forty-31",
+          "layoutId": "title_hero_left_blob_v1",
+          "pdf": 0.969,
+          "pptx": 0.905
+        },
+        {
+          "n": 32,
+          "id": "forty-32",
+          "layoutId": "agenda_numbered_v1",
+          "pdf": 0.986,
+          "pptx": 0.95
+        },
+        {
+          "n": 33,
+          "id": "forty-33",
+          "layoutId": "three_cards_image_text_v1",
+          "pdf": 0.996,
+          "pptx": 0.913
+        },
+        {
+          "n": 34,
+          "id": "forty-34",
+          "layoutId": "timeline_horizontal_v1",
+          "pdf": 0.984,
+          "pptx": 0.906
+        },
+        {
+          "n": 35,
+          "id": "forty-35",
+          "layoutId": "comparison_pros_cons_v1",
+          "pdf": 0.971,
+          "pptx": 0.913
+        },
+        {
+          "n": 36,
+          "id": "forty-36",
+          "layoutId": "chart_single_v1",
+          "pdf": 0.983,
+          "pptx": 0.97
+        },
+        {
+          "n": 37,
+          "id": "forty-37",
+          "layoutId": "metric_three_v1",
+          "pdf": 0.998,
+          "pptx": 0.912
+        },
+        {
+          "n": 38,
+          "id": "forty-38",
+          "layoutId": "quote_testimonial_card_v1",
+          "pdf": 0.996,
+          "pptx": 0.938
+        },
+        {
+          "n": 39,
+          "id": "forty-39",
+          "layoutId": "team_three_horizontal_v1",
+          "pdf": 0.983,
+          "pptx": 0.949
+        },
+        {
+          "n": 40,
+          "id": "forty-40",
+          "layoutId": "closing_thank_you_v1",
+          "pdf": 0.992,
+          "pptx": 0.948
+        }
+      ],
+      "pdf": {
+        "mean": 0.988,
+        "min": 0.969
+      },
+      "pptx": {
+        "mean": 0.924,
+        "min": 0.617
+      },
+      "errors": [],
+      "seconds": 78
+    },
+    "four-three": {
+      "name": "four-three",
+      "slides": [
+        {
+          "n": 1,
+          "id": "four-three-1",
+          "layoutId": "title_centered_v1",
+          "pdf": 0.999,
+          "pptx": 0.958
+        },
+        {
+          "n": 2,
+          "id": "four-three-2",
+          "layoutId": "two_cards_image_text_v1",
+          "pdf": 0.996,
+          "pptx": 0.972
+        },
+        {
+          "n": 3,
+          "id": "four-three-3",
+          "layoutId": "chart_with_description_v1",
+          "pdf": 0.998,
+          "pptx": 0.871
+        },
+        {
+          "n": 4,
+          "id": "four-three-4",
+          "layoutId": "timeline_milestones_v1",
+          "pdf": 0.993,
+          "pptx": 0.972
+        },
+        {
+          "n": 5,
+          "id": "four-three-5",
+          "layoutId": "closing_contact_cta_v1",
+          "pdf": 1,
+          "pptx": 0.958
+        }
+      ],
+      "pdf": {
+        "mean": 0.997,
+        "min": 0.993
+      },
+      "pptx": {
+        "mean": 0.946,
+        "min": 0.871
+      },
+      "errors": [],
+      "seconds": 12
+    },
+    "kitchen-sink": {
+      "name": "kitchen-sink",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ks-text",
+          "layoutId": null,
+          "pdf": 0.996,
+          "pptx": 0.832
+        },
+        {
+          "n": 2,
+          "id": "ks-shapes-1",
+          "layoutId": null,
+          "pdf": 0.986,
+          "pptx": 0.986
+        },
+        {
+          "n": 3,
+          "id": "ks-shapes-2",
+          "layoutId": null,
+          "pdf": 0.963,
+          "pptx": 0.954
+        },
+        {
+          "n": 4,
+          "id": "ks-images",
+          "layoutId": null,
+          "pdf": 0.979,
+          "pptx": 0.988
+        },
+        {
+          "n": 5,
+          "id": "ks-charts",
+          "layoutId": null,
+          "pdf": 0.998,
+          "pptx": 0.699
+        },
+        {
+          "n": 6,
+          "id": "ks-effects",
+          "layoutId": null,
+          "pdf": 0.988,
+          "pptx": 0.876
+        },
+        {
+          "n": 7,
+          "id": "ks-background",
+          "layoutId": null,
+          "pdf": 0.992,
+          "pptx": 0.972
+        },
+        {
+          "n": 8,
+          "id": "ks-gradient",
+          "layoutId": null,
+          "pdf": 0.973,
+          "pptx": 0.939
+        }
+      ],
+      "pdf": {
+        "mean": 0.984,
+        "min": 0.963
+      },
+      "pptx": {
+        "mean": 0.906,
+        "min": 0.699
+      },
+      "errors": [],
+      "seconds": 15
+    }
+  }
+}
