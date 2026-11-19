@@ -355,6 +355,8 @@ module.exports = {
   PRESENTATION_EXPORT_QUEUED: 'Export queued',
   PRESENTATION_EXPORT_FETCHED: 'Export status fetched',
   PRESENTATION_EXPORT_NOT_FOUND: 'Export not found',
+  PRESENTATION_EXPORT_CANCELLED: 'Export cancelled',
+  PRESENTATION_EXPORT_FINISHING: 'This export has already finished or is being saved, so it can no longer be cancelled.',
   PRESENTATION_ALREADY_GENERATING: 'Deck generation is already in progress',
   PRESENTATION_OUTLINE_REQUIRED: 'Outline is required before generation',
   PRESENTATION_DOCUMENT_UNPARSEABLE: 'Could not extract text from the uploaded document',

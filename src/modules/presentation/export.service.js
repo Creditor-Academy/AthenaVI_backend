@@ -51,11 +51,29 @@ const { isGradientFill, normalizeTarget } = require('./pptxCapability');
 const exportRenderer = require('./exportRenderer.service');
 const { enrichDeckMediaKeysForExport, inlineGraphicSvgsForExport, s3UrlKey } = require('./presignSlideMedia');
 const { parseCssColor, compositeRgbaOnHex } = require('./theme.service');
-const { withExportPage, setContentAndSettle } = require('../../shared/utils/exportBrowser');
 const {
+  withExportPage,
+  setContentAndSettle,
+  runWithExportSignal,
+  throwIfExportCancelled,
+  ExportCancelledError,
+} = require('../../shared/utils/exportBrowser');
+const exportQueue = require('./exportQueue');
+const exportMetrics = require('./exportMetrics');
+const { exportS3Key, isExportExpired } = require('./exportStorage');
+const {
+  ACTIVE_EXPORT_STATUSES,
+  SAVING_EXPORT_STATUS,
+  isRetryableExportError,
+  exportProgress,
   isBrowserExportFormat,
   createSemaphore,
   withHeartbeat,
+  exportJobTimeoutMs,
+  ExportTimeoutError,
+  QUEUE_WAITING_STATES,
+  queueVerdict,
+  EXPORT_ERROR_MESSAGES,
   pdfRenderTimeoutMs,
   safeExportFilename,
   exportFileExt,
@@ -70,10 +88,6 @@ const EXPORT_MAX_QUEUED_MS =
   Number(process.env.PPT_EXPORT_MAX_QUEUED_MS) > 0
     ? Number(process.env.PPT_EXPORT_MAX_QUEUED_MS)
     : 5 * 60 * 1000;
-const EXPORT_MAX_RENDERING_MS =
-  Number(process.env.PPT_EXPORT_MAX_RENDERING_MS) > 0
-    ? Number(process.env.PPT_EXPORT_MAX_RENDERING_MS)
-    : 45 * 60 * 1000;
 /** No heartbeat refresh while RENDERING → treat job as stuck (worker died). */
 const EXPORT_RENDERING_HEARTBEAT_STALE_MS =
   Number(process.env.PPT_EXPORT_HEARTBEAT_STALE_MS) > 0
@@ -103,8 +117,15 @@ function exportQueueStats() {
   };
 }
 
+/**
+ * For a job the queue can't see (no Redis, or it ran in-process on some server): no heartbeat
+ * for a while means its server died. Jobs in BullMQ are judged by their queue state instead
+ * (queueVerdict). A job that runs too long stops itself (exportJobTimeoutMs).
+ */
 function exportJobIsStale(row) {
-  if (!row || (row.status !== 'QUEUED' && row.status !== 'RENDERING')) return false;
+  if (!row || (row.status !== 'QUEUED' && row.status !== 'RENDERING' && row.status !== SAVING_EXPORT_STATUS)) {
+    return false;
+  }
   const now = Date.now();
   const createdAt = row.createdAt ? new Date(row.createdAt).getTime() : now;
   const updatedAt = row.updatedAt ? new Date(row.updatedAt).getTime() : createdAt;
@@ -113,19 +134,28 @@ function exportJobIsStale(row) {
     // A job waiting for a free browser slot keeps beating, so judge it by its last beat.
     return now - updatedAt > EXPORT_MAX_QUEUED_MS;
   }
-  if (now - createdAt > EXPORT_MAX_RENDERING_MS) {
-    return true;
-  }
   return now - updatedAt > EXPORT_RENDERING_HEARTBEAT_STALE_MS;
 }
 
+/**
+ * Mark the job alive. Returns false when the row is no longer in progress (the user cancelled
+ * it, or it was given up as stale), so the job can stop.
+ */
 async function touchExportHeartbeat(exportId) {
-  if (!exportId) return;
+  if (!exportId) return true;
   try {
-    await presentationDao.updateExport(exportId, { error: null });
+    return (await presentationDao.updateExportIfStatus(exportId, ACTIVE_EXPORT_STATUSES, {})) > 0;
   } catch {
-    // non-fatal
+    return true; // a DB hiccup is not a cancel
   }
+}
+
+/** Editor link for an export notification: `/dashboard/editor?…&export=<exportId>`. */
+function exportActionUrl({ workspaceId, projectId, projectName, exportId }) {
+  const params = new URLSearchParams({ workspaceId: String(workspaceId || ''), presentationId: String(projectId || '') });
+  if (projectName) params.set('title', String(projectName));
+  if (exportId) params.set('export', String(exportId));
+  return `${String(process.env.FRONTEND_URL || '').replace(/\/+$/, '')}/dashboard/editor?${params}`;
 }
 
 async function notifyExportFinished({
@@ -157,7 +187,8 @@ async function notifyExportFinished({
         exportId,
         format,
         status,
-        actionUrl: `${process.env.FRONTEND_URL || ''}/workspaces/${workspaceId}/presentations/${projectId}`,
+        // Opens the deck with this export's dialog: the download (with a fresh link) or the error.
+        actionUrl: exportActionUrl({ workspaceId, projectId, projectName, exportId }),
       },
     });
   } catch (notifyErr) {
@@ -1193,7 +1224,7 @@ async function buildPdfBuffer(deck, opts = {}) {
   return withEditorRenderer(
     deck,
     'pdf',
-    () => exportRenderer.renderDeckPdf(deck, { slideIds: exportSlideIds(opts) }),
+    () => exportRenderer.renderDeckPdf(deck, { slideIds: exportSlideIds(opts), onDrawn: opts.onDrawn }),
     () => buildPdfBufferLegacy(deck, opts)
   );
 }
@@ -1430,14 +1461,15 @@ async function renderSlideScreenshots(
   const deviceScaleFactor = Number(scale) > 0 ? Number(scale) : 1;
 
   return withExportPage(async (firstPage) => {
-    const browser = firstPage.browser();
+    // The job's own (incognito) context on the shared browser.
+    const context = firstPage.browserContext();
     const images = [];
     for (let i = 0; i < list.length; i += 1) {
       const slide = list[i];
       const canvasW = Math.max(320, Math.round(slide.elements?.canvas?.width || CANVAS_WIDTH));
       const canvasH = Math.max(180, Math.round(slide.elements?.canvas?.height || CANVAS_HEIGHT));
       // A fresh page per slide (a second setContent on the same page could hang).
-      const page = i === 0 ? firstPage : await browser.newPage();
+      const page = i === 0 ? firstPage : await context.newPage();
       // Don't let a single broken remote image hang forever.
       page.setDefaultNavigationTimeout(contentTimeout);
       page.setDefaultTimeout(contentTimeout);
@@ -1499,14 +1531,17 @@ async function renderSlideScreenshots(
  * elements PowerPoint can't draw, background pictures. Never fails the export: without it
  * PPTX falls back to stored sizes and native shapes.
  */
-async function capturePptxAssets(deck, { slideId, slideIds, target } = {}) {
+async function capturePptxAssets(deck, { slideId, slideIds, target, onSlide } = {}) {
   if (!exportRenderer.isRendererEnabled()) return null;
   try {
     return await exportRenderer.capturePptxAssets(deck, {
       slideIds: exportSlideIds({ slideId, slideIds }),
       target: normalizeTarget(target),
+      onSlide,
     });
   } catch (err) {
+    // Cancelled while measuring: stop, don't build a PPTX without measurements.
+    if (err instanceof ExportCancelledError) throw err;
     logger.warn('pptx_renderer_capture_failed', {
       deckId: deck.id,
       error: String(err?.message || err).slice(0, 500),
@@ -1515,6 +1550,18 @@ async function capturePptxAssets(deck, { slideId, slideIds, target } = {}) {
   }
 }
 
+/**
+ * Build one export and store it. Returns what happened: 'READY' | 'FAILED' | 'CANCELLED' |
+ * 'RETRY' (a browser crash with `canRetry`: the caller runs it again) | 'SKIPPED' (the row is
+ * gone or no longer in progress, e.g. cancelled before the job started).
+ *
+ * `signal` aborts the job (Cancel); `onProgress` gets `{ stage, percent, done, total }`.
+ * `info` (optional) collects what the job's log line reports: slides, renderer version, size…
+ *
+ * The job has a time limit that grows with the slide count (exportJobTimeoutMs); past it the
+ * export fails with a plain message and is not retried. An export whose server stopped after
+ * the file was saved (status SAVING) is finished on the next run: charged once, then READY.
+ */
 async function processExport({
   exportId,
   workspaceId,
@@ -1525,180 +1572,486 @@ async function processExport({
   slideIds = null,
   pptxTarget = 'powerpoint',
   image = {},
+  signal = null,
+  onProgress = null,
+  canRetry = false,
+  attempt = 1,
+  info = {},
 }) {
   const row = await presentationDao.findExport(exportId);
-  if (!row) return;
+  const resumeSaved = Boolean(row && row.status === SAVING_EXPORT_STATUS && row.s3Key);
+  if (!row || (!ACTIVE_EXPORT_STATUSES.includes(row.status) && !resumeSaved)) return 'SKIPPED';
 
   const format = String(row.format || '').toUpperCase();
-  const heartbeat = () => touchExportHeartbeat(exportId);
-  let releaseSlot = null;
+  info.format = format;
+  info.deckId = row.deckId;
+  // Aborted by Cancel in this process (`signal`) or by a heartbeat that finds the row cancelled.
+  const controller = new AbortController();
+  const stop = () => controller.abort();
+  if (signal?.aborted) stop();
+  else signal?.addEventListener('abort', stop, { once: true });
+  const jobSignal = controller.signal;
 
-  try {
-    // PDF / images each start a browser: cap how many run at once so a burst of exports
-    // can't exhaust memory. Waiting jobs stay QUEUED and keep beating.
-    // PPTX also opens the browser when it measures text with the editor renderer.
-    if (isBrowserExportFormat(format) || (format === 'PPTX' && exportRenderer.isRendererEnabled())) {
-      releaseSlot = await withHeartbeat(
+  const report = (stage, done = 0, total = 0) => {
+    try {
+      onProgress?.(exportProgress(format, stage, done, total));
+    } catch {
+      // progress is best effort
+    }
+  };
+  const heartbeat = async () => {
+    if (!(await touchExportHeartbeat(exportId))) stop();
+  };
+  /** Per slide: progress, a heartbeat, and stop there if the export was cancelled. */
+  const slideTicker = (stage, total) => {
+    let done = 0;
+    return async () => {
+      done += 1;
+      report(stage, done, total);
+      await heartbeat();
+      throwIfExportCancelled(jobSignal);
+    };
+  };
+  let releaseSlot = null;
+  let deadline = null;
+  const uploadedKeys = [];
+
+  return runWithExportSignal(jobSignal, async () => {
+    try {
+      if (resumeSaved) {
+        // The file was saved by a server that then stopped: finish the job (the charge is
+        // idempotent, so a charge that already went through isn't taken twice).
+        info.resumed = true;
+        report('saving');
+        await finishSavedExport({
+          exportId,
+          deckId: row.deckId,
+          s3Key: row.s3Key,
+          format,
+          workspaceId,
+          userId,
+          projectId,
+          projectName,
+          slideId,
+          slideCount: null,
+        });
+        report('done');
+        return 'READY';
+      }
+      report('queued');
+      // PDF / images each use the browser: cap how many run at once so a burst of exports
+      // can't exhaust memory. Waiting jobs stay QUEUED, keep beating, and can be cancelled.
+      // PPTX also opens the browser when it measures text with the editor renderer.
+      if (isBrowserExportFormat(format) || (format === 'PPTX' && exportRenderer.isRendererEnabled())) {
+        releaseSlot = await withHeartbeat(
+          heartbeat,
+          () =>
+            browserExportSlots.acquire({ signal: jobSignal }).catch((err) => {
+              if (jobSignal.aborted) throw new ExportCancelledError();
+              throw err;
+            }),
+          EXPORT_HEARTBEAT_INTERVAL_MS
+        );
+      }
+      throwIfExportCancelled(jobSignal);
+
+      // Claim the job: a row cancelled meanwhile is not started.
+      const claimed = await presentationDao.updateExportIfStatus(exportId, ACTIVE_EXPORT_STATUSES, {
+        status: 'RENDERING',
+        error: null,
+      });
+      if (!claimed) throw new ExportCancelledError();
+      info.claimedAt = Date.now();
+      report('preparing');
+
+      const deckRaw = await presentationDao.findDeckById(row.deckId);
+      if (!deckRaw) {
+        throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
+      }
+      // Stable S3 keys for media (stored links expire), and library SVG graphics inlined so
+      // every renderer can draw and tint them without fetching.
+      const deck = await inlineGraphicSvgsForExport(enrichDeckMediaKeysForExport(deckRaw));
+      const slideCount = selectExportSlides(deck, { slideId, slideIds }).length;
+      info.slideCount = slideCount;
+      // The time limit: past it the pages are closed and the export fails (not retried).
+      const timeoutMs = exportJobTimeoutMs(format, slideCount, { scale: image?.scale });
+      info.timeoutMs = timeoutMs;
+      deadline = setTimeout(() => controller.abort(new ExportTimeoutError(timeoutMs)), timeoutMs);
+      deadline.unref?.();
+      throwIfExportCancelled(jobSignal);
+      report('drawing', 0, slideCount);
+
+      // Beat throughout: a long PDF render sends no per-slide callbacks.
+      // What a PPTX contains (editable objects, pictures and why, fonts), for the export dialog.
+      let pptxSummary = null;
+      const { buffer, contentType, ext } = await withHeartbeat(
         heartbeat,
-        () => browserExportSlots.acquire(),
+        async () => {
+          if (format === 'PPTX') {
+            const assets = await capturePptxAssets(deck, {
+              slideId,
+              slideIds,
+              target: pptxTarget,
+              onSlide: (done, total) => report('drawing', done, total),
+            });
+            throwIfExportCancelled(jobSignal);
+            report('building', 0, slideCount);
+            const contents = {};
+            const pptxBuffer = await buildPptxBuffer(deck, {
+              slideId,
+              slideIds,
+              onSlideProcessed: slideTicker('building', slideCount),
+              assets,
+              report: contents,
+              target: pptxTarget,
+              // Google Slides ignores embedded fonts (it uses Google Fonts by name); PowerPoint needs them.
+              embedFonts: normalizeTarget(pptxTarget) === 'powerpoint',
+            });
+            // What became a picture (PowerPoint can't draw it) and what stayed editable.
+            logger.info('pptx_export_report', {
+              exportId,
+              deckId: deck.id,
+              target: normalizeTarget(pptxTarget),
+              measured: Boolean(assets),
+              ...contents,
+            });
+            pptxSummary = pptxReportSummary(contents);
+            return {
+              buffer: pptxBuffer,
+              contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+              ext: 'pptx',
+            };
+          }
+          if (format === 'PDF') {
+            return {
+              buffer: await buildPdfBuffer(deck, {
+                slideId,
+                slideIds,
+                onDrawn: () => report('building', 0, slideCount),
+              }),
+              contentType: 'application/pdf',
+              ext: 'pdf',
+            };
+          }
+          if (format === 'PNG' || format === 'JPEG') {
+            const result = await buildRasterExport(deck, {
+              format,
+              slideId,
+              slideIds,
+              deckName: projectName,
+              onSlideProcessed: slideTicker('drawing', slideCount),
+              ...image,
+            });
+            report('building', 1, 1);
+            return result;
+          }
+          throw new AppError(`Unsupported export format: ${format}`, 400);
+        },
         EXPORT_HEARTBEAT_INTERVAL_MS
       );
-    }
+      if (releaseSlot) {
+        releaseSlot();
+        releaseSlot = null;
+      }
+      throwIfExportCancelled(jobSignal);
+      // The file is made: the time limit no longer applies.
+      clearTimeout(deadline);
+      deadline = null;
+      report('saving');
+      info.bytes = buffer.length;
 
-    await presentationDao.updateExport(exportId, { status: 'RENDERING' });
-    const deckRaw = await presentationDao.findDeckById(row.deckId);
-    if (!deckRaw) {
-      throw new AppError(messages.PRESENTATION_NOT_FOUND, 404);
-    }
-    // Stable S3 keys for media (stored links expire), and library SVG graphics inlined so
-    // every renderer can draw and tint them without fetching.
-    const deck = await inlineGraphicSvgsForExport(enrichDeckMediaKeysForExport(deckRaw));
+      // Under the export prefix that an S3 lifecycle rule empties after 7 days (exportStorage).
+      const s3Key = exportS3Key({ workspaceId, deckId: deck.id, exportId, ext });
+      await s3Service.uploadFileToKey(buffer, s3Key, contentType);
+      uploadedKeys.push(s3Key);
+      if (pptxSummary) {
+        // Kept next to the file (no table column needed); the dialog shows it when the export is ready.
+        await s3Service
+          .uploadFileToKey(Buffer.from(JSON.stringify(pptxSummary)), exportReportKey(s3Key), 'application/json')
+          .then(() => uploadedKeys.push(exportReportKey(s3Key)))
+          .catch((err) => logger.warn('pptx_report_upload_failed', { exportId, error: String(err?.message || err) }));
+      }
 
-    // Beat throughout: a long PDF render sends no per-slide callbacks.
-    // What a PPTX contains (editable objects, pictures and why, fonts), for the export dialog.
-    let pptxSummary = null;
-    const { buffer, contentType, ext } = await withHeartbeat(
-      heartbeat,
-      async () => {
-        if (format === 'PPTX') {
-          const assets = await capturePptxAssets(deck, { slideId, slideIds, target: pptxTarget });
-          const report = {};
-          const pptxBuffer = await buildPptxBuffer(deck, {
-            slideId,
-            slideIds,
-            onSlideProcessed: heartbeat,
-            assets,
-            report,
-            target: pptxTarget,
-            // Google Slides ignores embedded fonts (it uses Google Fonts by name); PowerPoint needs them.
-            embedFonts: normalizeTarget(pptxTarget) === 'powerpoint',
-          });
-          // What became a picture (PowerPoint can't draw it) and what stayed editable.
-          logger.info('pptx_export_report', {
-            exportId,
-            deckId: deck.id,
-            target: normalizeTarget(pptxTarget),
-            measured: Boolean(assets),
-            ...report,
-          });
-          pptxSummary = pptxReportSummary(report);
-          return {
-            buffer: pptxBuffer,
-            contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            ext: 'pptx',
-          };
-        }
-        if (format === 'PDF') {
-          return {
-            buffer: await buildPdfBuffer(deck, { slideId, slideIds }),
-            contentType: 'application/pdf',
-            ext: 'pdf',
-          };
-        }
-        if (format === 'PNG' || format === 'JPEG') {
-          return buildRasterExport(deck, {
-            format,
-            slideId,
-            slideIds,
-            deckName: projectName,
-            onSlideProcessed: heartbeat,
-            ...image,
-          });
-        }
-        throw new AppError(`Unsupported export format: ${format}`, 400);
-      },
-      EXPORT_HEARTBEAT_INTERVAL_MS
-    );
-    if (releaseSlot) {
-      releaseSlot();
-      releaseSlot = null;
-    }
+      // From here the export can't be cancelled. A cancel that arrived during the upload wins:
+      // nothing is charged and the file is removed. The key is kept with SAVING so that, if this
+      // server stops now, the next run finishes the export instead of making it again.
+      if (
+        !(await presentationDao.updateExportIfStatus(exportId, ['RENDERING'], {
+          status: SAVING_EXPORT_STATUS,
+          s3Key,
+        }))
+      ) {
+        throw new ExportCancelledError();
+      }
 
-    const s3Key = `presentations/${workspaceId}/${deck.id}/exports/${exportId}.${ext}`;
-    await s3Service.uploadFileToKey(buffer, s3Key, contentType);
-    if (pptxSummary) {
-      // Kept next to the file (no table column needed); the dialog shows it when the export is ready.
-      await s3Service
-        .uploadFileToKey(Buffer.from(JSON.stringify(pptxSummary)), exportReportKey(s3Key), 'application/json')
-        .catch((err) => logger.warn('pptx_report_upload_failed', { exportId, error: String(err?.message || err) }));
-    }
-
-    const chargeResult = await presentationCredit.chargeFlat({
-      workspaceId,
-      userId,
-      feature: PPT_FEATURE.EXPORT,
-      idempotencyKey: `ppt:export:${exportId}`,
-      metadata: {
-        deckId: deck.id,
+      await finishSavedExport({
         exportId,
+        deckId: deck.id,
+        s3Key,
         format,
+        workspaceId,
+        userId,
+        projectId: projectId || deck.projectId,
+        projectName,
+        slideId,
+        slideCount,
+      });
+      report('done');
+      return 'READY';
+    } catch (caught) {
+      // Past the time limit the pages were closed, so `caught` is only the symptom.
+      const timedOut = jobSignal.reason instanceof ExportTimeoutError;
+      const err = timedOut ? jobSignal.reason : caught;
+      info.timedOut = timedOut;
+      if (!timedOut && (err instanceof ExportCancelledError || jobSignal.aborted)) {
+        logger.info('presentation_export_cancelled', { exportId, deckId: row.deckId, format, attempt });
+        for (const key of uploadedKeys) {
+          Promise.resolve()
+            .then(() => s3Service.deleteFile(key))
+            .catch(() => {});
+        }
+        return 'CANCELLED';
+      }
+      if (canRetry && isRetryableExportError(err)) {
+        // The browser crashed: one more go with a fresh one (the crashed browser leaves the pool).
+        logger.warn('presentation_export_retrying', {
+          exportId,
+          deckId: row.deckId,
+          format,
+          attempt,
+          error: String(err?.message || err).slice(0, 500),
+        });
+        return 'RETRY';
+      }
+      const userMessage = normalizeExportError(err);
+      info.reason = userMessage;
+      info.error = String(err?.message || err).slice(0, 300);
+      // The technical cause goes to the log; the user sees a plain message.
+      logger.error('presentation_export_failed', {
+        exportId,
+        deckId: row.deckId,
+        format,
+        attempt,
         slideId: slideId || null,
-        slideCount: selectExportSlides(deck, { slideId, slideIds }).length,
-      },
-    });
-
-    const creditsCharged = chargeResult.skipped
-      ? 0
-      : chargeResult.charged || chargeResult.pricing?.athenaCredits || 0;
-
-    if (!chargeResult.skipped && creditsCharged > 0) {
-      await presentationDao.incrementDeckCreditsCharged(deck.id, creditsCharged);
+        slideIds: slideIds || null,
+        userMessage,
+        error: String(err?.message || err),
+        stack: err?.stack,
+      });
+      let marked = 0;
+      try {
+        // Never overwrite a cancel with a failure.
+        marked = await presentationDao.updateExportIfStatus(
+          exportId,
+          [...ACTIVE_EXPORT_STATUSES, SAVING_EXPORT_STATUS],
+          { status: 'FAILED', error: userMessage }
+        );
+      } catch (updateErr) {
+        logger.error('presentation_export_status_update_failed', {
+          exportId,
+          error: String(updateErr?.message || updateErr),
+        });
+      }
+      if (marked) {
+        await notifyExportFinished({
+          userId,
+          workspaceId,
+          projectId,
+          deckId: row.deckId,
+          exportId,
+          format: row.format,
+          status: 'FAILED',
+          projectName,
+          error: userMessage,
+        });
+      }
+      return 'FAILED';
+    } finally {
+      clearTimeout(deadline);
+      signal?.removeEventListener('abort', stop);
+      if (releaseSlot) releaseSlot();
     }
+  }, info);
+}
 
-    await presentationDao.updateExport(exportId, {
-      status: 'READY',
-      s3Key,
-      creditCharged: !chargeResult.skipped,
-      creditsCharged,
-      error: null,
-    });
-
-    await notifyExportFinished({
-      userId,
-      workspaceId,
-      projectId: projectId || deck.projectId,
-      deckId: deck.id,
+/**
+ * The file is saved (row SAVING with its key): charge the export fee (idempotent per export),
+ * mark it READY and tell the user in their inbox.
+ */
+async function finishSavedExport({
+  exportId,
+  deckId,
+  s3Key,
+  format,
+  workspaceId,
+  userId,
+  projectId,
+  projectName,
+  slideId,
+  slideCount,
+}) {
+  const chargeResult = await presentationCredit.chargeFlat({
+    workspaceId,
+    userId,
+    feature: PPT_FEATURE.EXPORT,
+    idempotencyKey: `ppt:export:${exportId}`,
+    metadata: {
+      deckId,
       exportId,
-      format,
-      status: 'READY',
-      projectName,
-    });
-  } catch (err) {
-    const userMessage = normalizeExportError(err);
-    // The technical cause goes to the log; the user sees a plain message.
-    logger.error('presentation_export_failed', {
-      exportId,
-      deckId: row.deckId,
       format,
       slideId: slideId || null,
-      slideIds: slideIds || null,
-      userMessage,
-      error: String(err?.message || err),
-      stack: err?.stack,
-    });
-    try {
-      await presentationDao.updateExport(exportId, { status: 'FAILED', error: userMessage });
-    } catch (updateErr) {
-      logger.error('presentation_export_status_update_failed', {
-        exportId,
-        error: String(updateErr?.message || updateErr),
-      });
-    }
-    await notifyExportFinished({
-      userId,
-      workspaceId,
-      projectId,
-      deckId: row.deckId,
-      exportId,
-      format: row.format,
-      status: 'FAILED',
-      projectName,
-      error: userMessage,
-    });
-  } finally {
-    if (releaseSlot) releaseSlot();
+      slideCount,
+    },
+  });
+
+  const creditsCharged = chargeResult.skipped
+    ? 0
+    : chargeResult.charged || chargeResult.pricing?.athenaCredits || 0;
+
+  if (!chargeResult.skipped && creditsCharged > 0) {
+    await presentationDao.incrementDeckCreditsCharged(deckId, creditsCharged);
   }
+
+  await presentationDao.updateExport(exportId, {
+    status: 'READY',
+    s3Key,
+    creditCharged: !chargeResult.skipped,
+    creditsCharged,
+    error: null,
+  });
+
+  await notifyExportFinished({
+    userId,
+    workspaceId,
+    projectId,
+    deckId,
+    exportId,
+    format,
+    status: 'READY',
+    projectName,
+  });
 }
+
+/** A browser crash gets one more try; anything else is final. */
+const EXPORT_MAX_ATTEMPTS = 2;
+
+/**
+ * One line per finished export (`presentation_export_finished`) with what it was and how it
+ * went, and the same into this server's metrics (exportMetrics: failure rate alert).
+ */
+function logExportFinished(data, outcome, info, now = Date.now()) {
+  const startedAt = info.startedAt || now;
+  const queuedAt = Number(data.queuedAt) || null;
+  const line = {
+    exportId: data.exportId,
+    deckId: info.deckId || null,
+    workspaceId: data.workspaceId,
+    format: info.format || null,
+    outcome,
+    slideCount: info.slideCount ?? null,
+    // Whole job (waiting for a browser slot included); renderMs is from the job's start.
+    durationMs: now - startedAt,
+    renderMs: info.claimedAt ? now - info.claimedAt : null,
+    queueMs: queuedAt ? Math.max(0, startedAt - queuedAt) : null,
+    totalMs: queuedAt ? now - queuedAt : null,
+    attempts: info.attempts || 1,
+    // The render page version, or 'legacy' when it wasn't used (server HTML / no measuring).
+    rendererVersion: info.rendererVersion ?? 'legacy',
+    pptxTarget: info.format === 'PPTX' ? data.pptxTarget || null : undefined,
+    imageScale: info.format === 'PNG' || info.format === 'JPEG' ? data.image?.scale ?? 1 : undefined,
+    bytes: info.bytes ?? null,
+    timeoutMs: info.timeoutMs ?? null,
+    timedOut: Boolean(info.timedOut),
+    resumed: Boolean(info.resumed),
+    reason: outcome === 'FAILED' ? info.reason || null : null,
+    error: outcome === 'FAILED' ? info.error || null : null,
+  };
+  if (outcome === 'FAILED') logger.warn('presentation_export_finished', line);
+  else logger.info('presentation_export_finished', line);
+  exportMetrics.recordExport({
+    outcome,
+    format: line.format,
+    durationMs: line.renderMs ?? line.durationMs,
+    reason: line.reason,
+  });
+  return line;
+}
+
+/** Run an export job (the queue's processor), retrying once after a browser crash. */
+async function runExportJob(data, { signal = null, onProgress = null } = {}) {
+  const info = { startedAt: Date.now(), attempts: 0 };
+  let outcome;
+  for (let attempt = 1; ; attempt += 1) {
+    info.attempts = attempt;
+    outcome = await processExport({
+      ...data,
+      signal,
+      onProgress,
+      attempt,
+      canRetry: attempt < EXPORT_MAX_ATTEMPTS,
+      info,
+    });
+    if (outcome !== 'RETRY') break;
+  }
+  if (outcome !== 'SKIPPED') {
+    try {
+      logExportFinished(data, outcome, info);
+    } catch {
+      // logging never fails an export
+    }
+  }
+  return outcome;
+}
+
+/**
+ * A queued job that ended without finishing its row: its server died twice (BullMQ gives up on
+ * a job that stalls more than once), or the job itself threw. Fail the row so it isn't stuck,
+ * and tell the user (they may have closed the dialog long ago).
+ */
+async function failLostExport(data = {}, cause = null) {
+  const exportId = data.exportId;
+  if (!exportId) return false;
+  const error = EXPORT_ERROR_MESSAGES.crashed;
+  let marked = 0;
+  try {
+    marked = await presentationDao.updateExportIfStatus(
+      exportId,
+      [...ACTIVE_EXPORT_STATUSES, SAVING_EXPORT_STATUS],
+      { status: 'FAILED', error }
+    );
+  } catch (err) {
+    logger.error('presentation_export_status_update_failed', { exportId, error: String(err?.message || err) });
+    return false;
+  }
+  if (!marked) return false;
+  const row = await presentationDao.findExport(exportId).catch(() => null);
+  logger.error('presentation_export_lost', { exportId, cause: String(cause?.message || cause || '').slice(0, 300) });
+  await notifyExportFinished({
+    userId: data.userId,
+    workspaceId: data.workspaceId,
+    projectId: data.projectId,
+    deckId: row?.deckId || null,
+    exportId,
+    format: row?.format || '',
+    status: 'FAILED',
+    projectName: data.projectName,
+    error,
+  });
+  try {
+    logExportFinished(data, 'FAILED', {
+      format: row?.format,
+      deckId: row?.deckId,
+      reason: error,
+      error: String(cause?.message || cause || ''),
+    });
+  } catch {
+    // logging never fails anything
+  }
+  return true;
+}
+
+exportQueue.setProcessor(runExportJob);
+exportQueue.setOnJobLost(failLostExport);
 
 /** The requested slide ids, checked against the deck (404 for one that isn't in it). */
 function checkedSlideIds(deck, { slideId = null, slideIds = null } = {}) {
@@ -1743,19 +2096,18 @@ async function queueExport({
     creditCharged: false,
   });
 
-  setImmediate(() => {
-    processExport({
-      exportId: exportRow.id,
-      workspaceId,
-      userId,
-      projectId: project.id,
-      projectName: project.name,
-      // One slide keeps the single-slide id too (logs, credit metadata).
-      slideId: selectedIds && selectedIds.length === 1 ? selectedIds[0] : null,
-      slideIds: selectedIds,
-      pptxTarget: normalizeTarget(pptxTarget),
-      image,
-    });
+  await exportQueue.enqueue({
+    exportId: exportRow.id,
+    workspaceId,
+    userId,
+    projectId: project.id,
+    projectName: project.name,
+    // One slide keeps the single-slide id too (logs, credit metadata).
+    slideId: selectedIds && selectedIds.length === 1 ? selectedIds[0] : null,
+    slideIds: selectedIds,
+    pptxTarget: normalizeTarget(pptxTarget),
+    image,
+    queuedAt: Date.now(),
   });
 
   return {
@@ -1814,16 +2166,37 @@ async function getExport({ workspaceId, presentationId, exportId }) {
     throw new AppError(messages.PRESENTATION_EXPORT_NOT_FOUND, 404);
   }
 
-  if (exportJobIsStale(row)) {
-    const staleError =
-      row.status === 'QUEUED'
-        ? 'Export did not start in time. Please try again.'
-        : 'Export timed out on the server. For large decks use PowerPoint (PPTX) or try again.';
-    await presentationDao.updateExport(exportId, {
-      status: 'FAILED',
-      error: staleError,
-    });
-    row = { ...row, status: 'FAILED', error: staleError };
+  // Where the job is in the queue. When the queue tracks it, its state decides; the heartbeat
+  // is only consulted for a job the queue can't see (no Redis, or run in-process elsewhere).
+  const inProgress = ACTIVE_EXPORT_STATUSES.includes(row.status) || row.status === SAVING_EXPORT_STATUS;
+  const queued = inProgress ? await exportQueue.jobStatus(row.id) : { state: null, progress: null };
+  if (inProgress) {
+    const verdict = queueVerdict(row, queued.state);
+    let giveUp = verdict.ok === false ? verdict.error : null;
+    if (verdict.ok === null && exportJobIsStale(row)) {
+      giveUp = row.status === 'QUEUED' ? EXPORT_ERROR_MESSAGES.queueWait : EXPORT_ERROR_MESSAGES.crashed;
+    }
+    if (giveUp) {
+      // Only if it is still in progress: it may have finished a moment ago.
+      const marked = await presentationDao.updateExportIfStatus(
+        exportId,
+        [...ACTIVE_EXPORT_STATUSES, SAVING_EXPORT_STATUS],
+        { status: 'FAILED', error: giveUp }
+      );
+      if (marked) {
+        logger.warn('presentation_export_given_up', {
+          exportId,
+          status: row.status,
+          queueState: queued.state,
+          error: giveUp,
+        });
+        // Waited too long in the queue: take it off, so it doesn't start later.
+        if (QUEUE_WAITING_STATES.includes(queued.state)) await exportQueue.cancel(exportId).catch(() => {});
+        row = { ...row, status: 'FAILED', error: giveUp };
+      } else {
+        row = (await presentationDao.findExport(exportId)) || row;
+      }
+    }
   }
 
   const payload = {
@@ -1835,8 +2208,22 @@ async function getExport({ workspaceId, presentationId, exportId }) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+  if (ACTIVE_EXPORT_STATUSES.includes(row.status) || row.status === SAVING_EXPORT_STATUS) {
+    // `{ stage, percent, done, total }`; null when this server can't see the job's progress.
+    payload.progress =
+      queued.progress ||
+      (row.status === SAVING_EXPORT_STATUS ? exportProgress(row.format, 'saving') : null);
+  }
+
+  if (row.status === 'READY' && isExportExpired(row)) {
+    // Export files are deleted after 7 days (exportStorage): no link to a file that's gone.
+    payload.status = 'EXPIRED';
+    payload.error = EXPORT_ERROR_MESSAGES.expired;
+    return payload;
+  }
 
   if (row.status === 'READY' && row.s3Key) {
+    // A new link every time it is asked for (each lasts PRESIGN_EXPIRES_SEC).
     // A multi-slide PNG / JPEG export is a .zip: name it from the stored file, not the format.
     const filename = safeExportFilename(project?.name, exportFileExt(row));
     const presignedUrl = await s3Service.getPresignedGetUrl(row.s3Key, PRESIGN_EXPIRES_SEC, {
@@ -1861,8 +2248,50 @@ async function getExport({ workspaceId, presentationId, exportId }) {
   return payload;
 }
 
+/**
+ * Cancel an export that hasn't finished: a queued job is taken off the queue, a running one is
+ * stopped. Nothing is charged (credits are charged only once the file is saved). Cancelling an
+ * export that already failed or was cancelled is a no-op; one that is ready, or being saved
+ * (file uploaded, credits being charged), can't be cancelled (409).
+ */
+async function cancelExport({ workspaceId, presentationId, exportId, userId = null }) {
+  const { deck } = await loadPresentationDeck(presentationId, { requireWorkspaceId: workspaceId });
+  const row = await presentationDao.findExport(exportId);
+  if (!row || row.deckId !== deck.id) {
+    throw new AppError(messages.PRESENTATION_EXPORT_NOT_FOUND, 404);
+  }
+
+  const result = (status) => ({ exportId: row.id, format: row.format, status, creditsCharged: 0 });
+  if (row.status === 'CANCELLED' || row.status === 'FAILED') return result(row.status);
+
+  const cancelled = await presentationDao.updateExportIfStatus(exportId, ACTIVE_EXPORT_STATUSES, {
+    status: 'CANCELLED',
+    error: null,
+  });
+  if (!cancelled) {
+    // It finished (or started saving) just now.
+    const latest = await presentationDao.findExport(exportId);
+    if (latest?.status === 'CANCELLED' || latest?.status === 'FAILED') return result(latest.status);
+    throw new AppError(messages.PRESENTATION_EXPORT_FINISHING, 409);
+  }
+
+  const { aborted, removed } = await exportQueue.cancel(exportId);
+  logger.info('presentation_export_cancel_requested', {
+    exportId,
+    deckId: deck.id,
+    format: row.format,
+    previousStatus: row.status,
+    userId,
+    stoppedHere: aborted,
+    removedFromQueue: removed,
+  });
+  return result('CANCELLED');
+}
+
 module.exports = {
   queueExport,
+  cancelExport,
+  runExportJob,
   chargeBrowserExport,
   processExport,
   getExport,
@@ -1874,6 +2303,9 @@ module.exports = {
   imageExportOptions,
   exportJobIsStale,
   exportQueueStats,
+  failLostExport,
+  logExportFinished,
+  exportActionUrl,
   svgRasterSize,
   resolveColor,
   resolveExportFontFace,

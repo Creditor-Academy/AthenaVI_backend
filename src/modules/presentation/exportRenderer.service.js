@@ -13,7 +13,7 @@
 
 const sharp = require('sharp');
 const logger = require('../../shared/utils/logger');
-const { withExportPage } = require('../../shared/utils/exportBrowser');
+const { withExportPage, noteExportRenderer } = require('../../shared/utils/exportBrowser');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const { attachPresignedMediaToSlides } = require('./presignSlideMedia');
 const { resolveAspectCanvas } = require('./presentation.constants');
@@ -131,6 +131,7 @@ async function openRenderedDeck(page, deck, { slideIds = null, deviceScaleFactor
     throw new RendererUnavailableError(`Export renderer page did not load (${url}): ${err.message}`, err);
   }
   const version = await page.evaluate(() => window.__athenaExport.version);
+  noteExportRenderer(version);
   if (!(Number(version) >= MIN_RENDERER_VERSION)) {
     throw new RendererUnavailableError(
       `Export renderer version ${version} is older than the required ${MIN_RENDERER_VERSION}`
@@ -158,11 +159,13 @@ async function openRenderedDeck(page, deck, { slideIds = null, deviceScaleFactor
 }
 
 /** PDF of the deck: vector text, links kept, one page per slide. */
-async function renderDeckPdf(deck, { slideIds = null } = {}) {
+async function renderDeckPdf(deck, { slideIds = null, onDrawn } = {}) {
   const aspect = resolveAspectCanvas(deck.aspectRatio);
   return withExportPage(async (page) => {
     const { slides } = await openRenderedDeck(page, deck, { slideIds });
     if (!slides.length) throw new Error('No slides to export');
+    // The deck is drawn; printing it is the rest of the work.
+    if (typeof onDrawn === 'function') onDrawn(slides.length);
     const stageWidth = slides[0].stageWidth || STAGE_WIDTH;
     const pdf = await page.pdf({
       width: `${aspect.pptxWidthIn}in`,
@@ -272,7 +275,7 @@ const PICTURE_SCALE = 1.5;
  *   native PowerPoint geometry instead of pictures;
  * - fallbackMetrics: slides with no elements, as drawn (title, text and image boxes).
  */
-async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' } = {}) {
+async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint', onSlide } = {}) {
   const { pptxRasterPlan } = require('./pptxCapability');
   const canvasWidth = resolveAspectCanvas(deck.aspectRatio).width;
   const deviceScaleFactor = (canvasWidth / STAGE_WIDTH) * PICTURE_SCALE;
@@ -319,7 +322,8 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
     };
 
     try {
-      for (const slide of plan) {
+      for (let i = 0; i < plan.length; i += 1) {
+        const slide = plan[i];
         if (slide.background) {
           const shot = await capture({ slideId: slide.slideId }, 'jpeg');
           if (shot) backgrounds[slide.slideId] = `image/jpeg;base64,${shot.data.toString('base64')}`;
@@ -338,6 +342,8 @@ async function capturePptxAssets(deck, { slideIds = null, target = 'powerpoint' 
             ...(el.fallbackOnly ? { fallbackOnly: true } : {}),
           };
         }
+        // Progress: this slide's pictures are cut.
+        if (typeof onSlide === 'function') onSlide(i + 1, plan.length);
       }
     } finally {
       await page.evaluate(() => window.__athenaExport.release()).catch(() => {});
