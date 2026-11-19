@@ -689,6 +689,8 @@ Cannot delete the last remaining slide (**400**). While `deck.status === GENERAT
 
 ## Export
 
+Exports run as jobs: queue one, then poll it until it finishes. The file is kept for **7 days**; each status request returns a fresh download link that lasts **1 hour**. PNG / JPEG of selected slides can also be drawn in the browser (no job): see [Browser image download](#browser-image-download).
+
 ### Queue export
 
 | | |
@@ -700,17 +702,30 @@ Cannot delete the last remaining slide (**400**). While `deck.status === GENERAT
 **Body:**
 
 ```json
-{ "format": "PPTX", "slideId": optional }
+{
+  "format": "PNG",
+  "slideIds": ["slide-uuid-2", "slide-uuid-5"],
+  "scale": 2,
+  "quality": 90,
+  "transparent": false,
+  "pptxTarget": "powerpoint"
+}
 ```
 
-- **`format`**: `PPTX` \| `PDF` \| `PNG` \| `JPEG`
-- Prefer freeform `elements` placement when present; legacy title/bullets/`imageRef` fallback otherwise
-- **PNG/JPEG**: single slide → one image; full deck → **ZIP** of slide images
-- Optional **`slideId`** to export one slide only
+| Field | Type | Formats | Notes |
+|---|---|---|---|
+| `format` | `PPTX` \| `PDF` \| `PNG` \| `JPEG` | all | Required. |
+| `slideIds` | string[] | all | The slides to export: 1–40 unique ids of this deck, any order (the file keeps deck order). Missing = the whole deck. An unknown id → **404**. |
+| `slideId` | string \| null | all | Older clients: one slide. `null` / `""` = the whole deck. `slideIds` is preferred. |
+| `scale` | `1` \| `2` \| `3` | PNG, JPEG | Image size: 1× is the canvas size (1920×1080 for 16:9). Default `1`. |
+| `quality` | integer 60–100 | JPEG | Default `90`. |
+| `transparent` | boolean | PNG | Leave the slide background out. Ignored for JPEG. Default `false`. |
+| `pptxTarget` | `powerpoint` \| `google-slides` | PPTX | Who will open the file. `google-slides` turns gradients, glow and hollow text into pictures (Google Slides can't draw them) and doesn't embed fonts (it uses Google Fonts by name). Default `powerpoint`. |
 
-**Response `data`:** `{ exportId, format, status: "QUEUED", estimatedCredits, slideId }`
+- **PNG / JPEG:** one slide → one image (`<deck>.png`); several → a **ZIP** with one file per slide, named by page number (`1.png`, `3.png`, …).
+- The workspace must be able to afford the export fee up front (**402** otherwise). `ppt_export` is charged once, only when the file is saved; cancelled and failed exports cost nothing.
 
-Charges **`ppt_export`** on successful export.
+**Response `data`:** `{ exportId, format, status: "QUEUED", estimatedCredits, slideId, slideIds }`
 
 ### Get export
 
@@ -720,9 +735,88 @@ Charges **`ppt_export`** on successful export.
 | **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` |
 | **Status** | **200** |
 
-Poll until `READY` / `FAILED`. Ready responses include download metadata (presigned URL / S3 key as implemented).
+Poll every few seconds until the status is final (`READY`, `FAILED`, `CANCELLED`, `EXPIRED`).
 
-Export statuses: `QUEUED`, `PROCESSING` / `RENDERING`, `READY`, `FAILED`.
+| Status | Meaning |
+|---|---|
+| `QUEUED` | Waiting for a free spot. |
+| `RENDERING` | Being drawn and built. |
+| `SAVING` | The file is made and is being uploaded; it can no longer be cancelled. |
+| `READY` | Done: download fields below. |
+| `FAILED` | `error` says why, in words fit for the user. |
+| `CANCELLED` | Cancelled; nothing charged. |
+| `EXPIRED` | Finished more than 7 days ago; the file has been deleted. Export again. |
+
+**Response `data`:**
+
+```json
+{
+  "exportId": "…",
+  "format": "PPTX",
+  "status": "RENDERING",
+  "error": null,
+  "creditsCharged": null,
+  "createdAt": "…",
+  "updatedAt": "…",
+  "progress": { "stage": "drawing", "percent": 42, "done": 3, "total": 8 }
+}
+```
+
+- **`progress`** (while `QUEUED`, `RENDERING` or `SAVING`): `stage` is `queued` · `preparing` · `drawing` (per slide) · `building` · `saving` · `done`; `percent` is 0–100. It is `null` when this server can't see the job's progress (rare: an in-process job on another server).
+- **When `READY`:** `presignedUrl` (also as `url` and `downloadUrl`), `filename` (from the deck name, e.g. `Q3 Plan.pptx`; a multi-slide image export is `.zip`), `expiresIn` (seconds the link lasts: 3600) and `s3Key`. Ask again for a new link once it has expired.
+- **PPTX `report`** (when `READY`): what the file contains, for the export dialog. `null` for exports made before reports existed.
+
+```json
+{
+  "editable": 54,
+  "pictures": [{ "label": "photo filters", "count": 2 }, { "label": "curved text", "count": 1 }],
+  "missing": 0,
+  "fonts": ["Inter", "Playfair Display"],
+  "fontsMissing": [],
+  "groups": 3,
+  "grownText": 0
+}
+```
+
+  `editable` = native PowerPoint objects; `pictures` = elements PowerPoint (or Google Slides) can't draw, exported as pictures, by reason; `missing` = media that couldn't be fetched; `fonts` = fonts embedded; `fontsMissing` = fonts that couldn't be embedded (PowerPoint substitutes them); `grownText` = text boxes made taller so their text fits.
+
+Time limits: a job may wait in the queue up to 15 minutes and then runs within a limit that grows with the slide count (2 minutes plus 8–20 s per slide, at most 30 minutes). Past either, it fails with a plain message, and the user is told in the inbox.
+
+### Cancel export
+
+| | |
+|---|---|
+| **Method** | `DELETE` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/export/:exportId` |
+| **Status** | **200** |
+
+Cancels a `QUEUED` or `RENDERING` export. Nothing is charged and no inbox message is sent. Cancelling an export that is already `CANCELLED` or `FAILED` returns its status again (safe to repeat).
+
+**Response `data`:** `{ exportId, format, status: "CANCELLED", creditsCharged: 0 }`
+
+**409** when the export is `READY` or `SAVING`: it has finished (or is being saved) and will be ready in a moment.
+
+### Browser image download
+
+| | |
+|---|---|
+| **Method** | `POST` |
+| **Path** | `/api/workspaces/:workspaceId/presentations/:presentationId/export/browser` |
+| **Status** | **200** |
+
+The editor can draw PNG / JPEG slides itself (instant, no job). This call charges the same export fee for such a download, once per `downloadId`, so a retried request isn't charged twice.
+
+**Body:** `{ "format": "PNG" | "JPEG", "slideIds": ["…"], "downloadId": "<uuid v4 chosen by the browser>" }`
+
+**Response `data`:** `{ format, slideCount, creditsCharged }`
+
+### Export notifications
+
+When an export finishes after its dialog was closed, the user gets an inbox message (ready, failed or timed out; not cancelled). Its link opens the editor at `/dashboard/editor?workspaceId=…&presentationId=…&export=<exportId>`, which reopens the export dialog on that export.
+
+### Export pipeline (server settings)
+
+`PPT_EXPORT_V2` chooses who gets the current export pipeline: the editor's own renderer for PDF and images, PPTX built from what that renderer drew (with fonts embedded), and the job queue. `on` (default) = everyone; `internal` = only the workspaces in `PPT_EXPORT_V2_WORKSPACES` or people whose email domain is in `PPT_EXPORT_V2_EMAIL_DOMAINS`; `off` = nobody (the older server renderer, in-process jobs). The choice is made when the export is queued. `GET /health/export` reports the mode, plus queue, browser and last-hour metrics. All export settings: [`ENVIRONMENT.md`](ENVIRONMENT.md).
 
 ---
 
