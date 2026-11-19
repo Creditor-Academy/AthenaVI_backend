@@ -268,6 +268,10 @@ function mergeContentForRender(element) {
     if (style.borderRadius != null && content.borderRadius == null) {
       content.borderRadius = style.borderRadius;
     }
+    // Image crop from the video editor: the visible region as fractions of the photo.
+    if (element.type === 'image' && style.crop && typeof style.crop === 'object' && content.crop == null) {
+      content.crop = style.crop;
+    }
   }
 
   if (element.type === 'shape') {
