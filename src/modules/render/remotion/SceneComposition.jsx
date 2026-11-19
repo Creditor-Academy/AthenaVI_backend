@@ -330,6 +330,31 @@ function resolveMediaObjectFit(element, content = {}) {
   return 'contain';
 }
 
+/**
+ * Style that makes `crop` ({ x, y, width, height } as fractions of the photo) fill its
+ * container, as in the editor; null when there is no usable crop.
+ */
+function croppedImageStyle(crop) {
+  if (!crop || typeof crop !== 'object') return null;
+  const clamp01 = (n) => Math.min(1, Math.max(0, n));
+  const x = clamp01(Number(crop.x) || 0);
+  const y = clamp01(Number(crop.y) || 0);
+  const width = Math.min(Number(crop.width), 1 - x);
+  const height = Math.min(Number(crop.height), 1 - y);
+  if (!(width > 0.001 && height > 0.001)) return null;
+  if (x < 0.001 && y < 0.001 && width > 0.999 && height > 0.999) return null;
+  return {
+    position: 'absolute',
+    left: `${(-x / width) * 100}%`,
+    top: `${(-y / height) * 100}%`,
+    width: `${100 / width}%`,
+    height: `${100 / height}%`,
+    maxWidth: 'none',
+    maxHeight: 'none',
+    objectFit: 'fill',
+  };
+}
+
 function AudioElement({ element }) {
   const frame = useCurrentFrame();
   const { volume, playbackRate, loop, muted, trimBefore, trimAfter } = resolveAudioPlaybackProps({
@@ -379,16 +404,18 @@ function MediaElement({ element, frame, fps }) {
           />
         </div>
       );
-    case 'image':
+    case 'image': {
+      const cropStyle = croppedImageStyle(content.crop);
       return (
         <div style={containerStyle}>
           <Img
             src={element.content?.src}
             delayRenderTimeoutInMilliseconds={DELAY_RENDER_TIMEOUT_MS}
-            style={mediaStyle}
+            style={cropStyle ? { ...cropStyle, filter: mediaStyle.filter } : mediaStyle}
           />
         </div>
       );
+    }
     case 'audio':
       return <AudioElement element={element} />;
     default:
