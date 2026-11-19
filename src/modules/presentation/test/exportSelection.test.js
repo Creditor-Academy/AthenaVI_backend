@@ -4,13 +4,17 @@
 // every export format, plus the credit charge for slide images made in the browser.
 // The DB, S3, credits and inbox are stubbed; renders use a real headless browser when present.
 process.env.PPT_EXPORT_HEARTBEAT_INTERVAL_MS = '40';
+process.env.PPT_EXPORT_QUEUE = 'local';
 
 const assert = require('assert');
-const { test, before } = require('node:test');
+const { test, before, after } = require('node:test');
 const JSZip = require('jszip');
 const sharp = require('sharp');
 
-const { checkExportBrowser } = require('../../../shared/utils/exportBrowser');
+const { checkExportBrowser, closeSharedBrowser } = require('../../../shared/utils/exportBrowser');
+
+// The shared export browser would otherwise keep the test process alive until it idles out.
+after(() => closeSharedBrowser());
 const deckGeneration = require('../deckGeneration.service');
 const presentationDao = require('../presentation.dao');
 const s3Service = require('../../s3/s3.service');
@@ -28,6 +32,12 @@ presentationDao.updateExport = async (id, data) => {
   const row = { ...rows.get(id), ...data, updatedAt: new Date() };
   rows.set(id, row);
   return row;
+};
+presentationDao.updateExportIfStatus = async (id, statuses, data) => {
+  const current = rows.get(id);
+  if (!current || !statuses.includes(current.status)) return 0;
+  rows.set(id, { ...current, ...data, updatedAt: new Date() });
+  return 1;
 };
 presentationDao.createExport = async (data) => {
   const id = `q${rows.size + 1}`;

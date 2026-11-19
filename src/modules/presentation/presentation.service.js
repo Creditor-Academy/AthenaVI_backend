@@ -854,6 +854,7 @@ module.exports = {
   queueExport: exportService.queueExport,
   chargeBrowserExport: exportService.chargeBrowserExport,
   getExport: exportService.getExport,
+  cancelExport: exportService.cancelExport,
   listThemes: themeService.listThemes,
   ...slideEditor,
   addSlide,

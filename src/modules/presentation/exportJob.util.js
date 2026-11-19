@@ -10,9 +10,15 @@ function isBrowserExportFormat(format) {
   return BROWSER_EXPORT_FORMATS.has(String(format || '').toUpperCase());
 }
 
+/** Statuses of an export that is still in progress (it can be cancelled or picked up). */
+const ACTIVE_EXPORT_STATUSES = ['QUEUED', 'RENDERING'];
+/** The file is uploaded and the credits are being charged: too late to cancel. */
+const SAVING_EXPORT_STATUS = 'SAVING';
+
 /**
  * A counting semaphore. `acquire()` resolves to a `release` function (safe to call twice)
- * once a slot is free; waiters are served first come, first served.
+ * once a slot is free; waiters are served first come, first served. `acquire({ signal })`
+ * stops waiting (and rejects) when the signal aborts.
  */
 function createSemaphore(limit) {
   const max = Math.max(1, Math.floor(Number(limit)) || 1);
@@ -25,18 +31,33 @@ function createSemaphore(limit) {
       if (released) return;
       released = true;
       const next = waiters.shift();
-      if (next) next(makeRelease());
+      if (next) next.grant(makeRelease());
       else active -= 1;
     };
   };
 
   return {
-    acquire() {
+    acquire({ signal = null } = {}) {
+      if (signal?.aborted) return Promise.reject(signal.reason || new Error('aborted'));
       if (active < max) {
         active += 1;
         return Promise.resolve(makeRelease());
       }
-      return new Promise((resolve) => waiters.push(resolve));
+      return new Promise((resolve, reject) => {
+        const waiter = {
+          grant(release) {
+            signal?.removeEventListener('abort', onAbort);
+            resolve(release);
+          },
+        };
+        const onAbort = () => {
+          const at = waiters.indexOf(waiter);
+          if (at >= 0) waiters.splice(at, 1);
+          reject(signal.reason || new Error('aborted'));
+        };
+        signal?.addEventListener('abort', onAbort, { once: true });
+        waiters.push(waiter);
+      });
     },
     get active() {
       return active;
@@ -66,6 +87,61 @@ async function withHeartbeat(beat, fn, intervalMs = 20_000) {
   } finally {
     clearInterval(timer);
   }
+}
+
+const envNumber = (name, fallback) => (Number(process.env[name]) > 0 ? Number(process.env[name]) : fallback);
+
+/** Time per slide an export may take, by format (images also scale with the pixel size). */
+const JOB_MS_PER_SLIDE = { PPTX: 20_000, PDF: 10_000, PNG: 8_000, JPEG: 8_000 };
+
+/**
+ * How long one export may run once it has started (time waiting in the queue doesn't count):
+ * a base allowance plus time per slide, capped. PNG / JPEG at 2× or 3× get more per slide.
+ * PPT_EXPORT_JOB_TIMEOUT_BASE_MS (default 2 min) and PPT_EXPORT_JOB_TIMEOUT_MAX_MS (default
+ * 30 min) override the limits.
+ */
+function exportJobTimeoutMs(format, slideCount, { scale = 1 } = {}) {
+  const base = envNumber('PPT_EXPORT_JOB_TIMEOUT_BASE_MS', 2 * 60 * 1000);
+  const cap = envNumber('PPT_EXPORT_JOB_TIMEOUT_MAX_MS', 30 * 60 * 1000);
+  const key = String(format || '').toUpperCase();
+  const imageScale = key === 'PNG' || key === 'JPEG' ? Math.max(1, Math.min(3, Number(scale) || 1)) : 1;
+  const perSlide = (JOB_MS_PER_SLIDE[key] || 15_000) * imageScale;
+  const slides = Math.max(1, Math.floor(Number(slideCount) || 0));
+  return Math.min(cap, base + slides * perSlide);
+}
+
+/** An export that ran past its time limit (exportJobTimeoutMs). Never retried. */
+class ExportTimeoutError extends Error {
+  constructor(timeoutMs) {
+    super(`Export took longer than its ${Math.round(Number(timeoutMs) / 1000)}s limit`);
+    this.name = 'ExportTimeoutError';
+    this.code = 'EXPORT_TIMEOUT';
+    this.timeoutMs = Number(timeoutMs) || 0;
+  }
+}
+
+/** BullMQ states of a job that is still waiting for a worker. */
+const QUEUE_WAITING_STATES = ['waiting', 'delayed', 'prioritized', 'waiting-children'];
+
+/**
+ * What to do with an in-progress export row, given where its job is in the queue:
+ *  - `{ ok: true }`: it is waiting or running, leave it;
+ *  - `{ ok: false, error }`: give it up with that message;
+ *  - `{ ok: null }`: the queue doesn't know this job (no Redis, or the job ran in-process on
+ *    some server): only the heartbeat can tell (exportJobIsStale).
+ * `queueState` is the BullMQ state ('waiting', 'active', 'failed', …) or null.
+ */
+function queueVerdict(row, queueState, { now = Date.now(), maxQueueWaitMs = envNumber('PPT_EXPORT_MAX_QUEUE_WAIT_MS', 15 * 60 * 1000) } = {}) {
+  if (!queueState) return { ok: null };
+  if (QUEUE_WAITING_STATES.includes(queueState)) {
+    const createdAt = row?.createdAt ? new Date(row.createdAt).getTime() : now;
+    return now - createdAt > maxQueueWaitMs ? { ok: false, error: MESSAGES.queueWait } : { ok: true };
+  }
+  // A running job holds a lock the worker renews; when its server dies BullMQ moves it back to
+  // waiting (once) or to failed. So 'active' is trustworthy.
+  if (queueState === 'active') return { ok: true };
+  // 'completed' / 'failed' while the row is still in progress: the job ended without finishing it.
+  return { ok: false, error: MESSAGES.crashed };
 }
 
 /** Puppeteer's page timeout for a whole-deck PDF: the base limit, more for big decks. */
@@ -112,6 +188,10 @@ const MESSAGES = {
   browser:
     'PDF and image export is temporarily unavailable. Please try again later, or export as PowerPoint (PPTX).',
   crashed: 'The export stopped unexpectedly. Please try again.',
+  tooLong:
+    'This export took too long and was stopped. Try again, or export fewer pages at a time.',
+  queueWait: 'The export did not start in time because our servers are busy. Please try again.',
+  expired: 'This download has expired (files are kept for 7 days). Export the presentation again to get a new file.',
   memory: 'This presentation was too large to export in one go. Please try again, or export as PowerPoint (PPTX).',
   storage: "We couldn't save the exported file. Please try again.",
   generic: 'Export failed. Please try again.',
@@ -126,6 +206,7 @@ function normalizeExportError(err) {
   const statusCode = Number(err?.statusCode || err?.status);
 
   if (err?.code === 'EXPORT_BROWSER_UNAVAILABLE') return MESSAGES.browser;
+  if (err?.code === 'EXPORT_TIMEOUT') return MESSAGES.tooLong;
   if (
     /could not find (chrome|expected browser)|browser was not found|failed to launch the browser process|spawn \S+ ENOENT|executable doesn't exist|no headless browser/i.test(
       msg
@@ -150,6 +231,51 @@ function normalizeExportError(err) {
     return msg.slice(0, 500);
   }
   return MESSAGES.generic;
+}
+
+/**
+ * Worth one more try: the browser crashed or disconnected mid-render (a fresh browser usually
+ * works). Never a bad request, a missing deck, a timeout or a storage error.
+ */
+function isRetryableExportError(err) {
+  if (!err || ['EXPORT_CANCELLED', 'EXPORT_BROWSER_UNAVAILABLE', 'EXPORT_TIMEOUT'].includes(err.code)) return false;
+  const statusCode = Number(err.statusCode || err.status);
+  if (err.isOperational === true && statusCode >= 400 && statusCode < 500) return false;
+  return normalizeExportError(err) === MESSAGES.crashed;
+}
+
+/**
+ * Where each step of an export sits on the dialog's 0–100 bar, per format. `drawing` and
+ * `building` move with the slides done; the other steps are fixed points.
+ *  - PNG / JPEG: drawing = one screenshot per slide.
+ *  - PDF: drawing = the render page drawing the deck (no per-slide signal), building = printing.
+ *  - PPTX: drawing = cutting pictures per slide, building = writing each slide.
+ */
+const PROGRESS_RANGES = {
+  PNG: { drawing: [10, 90], building: [90, 93] },
+  JPEG: { drawing: [10, 90], building: [90, 93] },
+  PDF: { drawing: [10, 70], building: [70, 92] },
+  PPTX: { drawing: [10, 50], building: [50, 92] },
+};
+const PROGRESS_POINTS = { queued: 0, preparing: 4, saving: 95, done: 100 };
+
+/** `{ stage, percent, done, total }` for the export dialog. */
+function exportProgress(format, stage, done = 0, total = 0) {
+  const ranges = PROGRESS_RANGES[String(format || '').toUpperCase()] || PROGRESS_RANGES.PDF;
+  let percent;
+  if (ranges[stage]) {
+    const [lo, hi] = ranges[stage];
+    const share = total > 0 ? Math.min(1, Math.max(0, done / total)) : 0;
+    percent = lo + (hi - lo) * share;
+  } else {
+    percent = PROGRESS_POINTS[stage] ?? 0;
+  }
+  return {
+    stage,
+    percent: Math.round(percent),
+    done: Math.max(0, Math.round(Number(done) || 0)),
+    total: Math.max(0, Math.round(Number(total) || 0)),
+  };
 }
 
 /** Plain words for why something became a picture in a PPTX (pptxCapability reasons). */
@@ -209,10 +335,18 @@ function exportReportKey(s3Key) {
 }
 
 module.exports = {
+  ACTIVE_EXPORT_STATUSES,
+  SAVING_EXPORT_STATUS,
+  isRetryableExportError,
+  exportProgress,
   BROWSER_EXPORT_FORMATS,
   isBrowserExportFormat,
   createSemaphore,
   withHeartbeat,
+  exportJobTimeoutMs,
+  ExportTimeoutError,
+  QUEUE_WAITING_STATES,
+  queueVerdict,
   pdfRenderTimeoutMs,
   safeFileBase,
   safeExportFilename,

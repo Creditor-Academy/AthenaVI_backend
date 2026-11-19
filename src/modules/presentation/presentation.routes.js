@@ -326,4 +326,11 @@ router.get(
   presentationController.getExport
 );
 
+// Cancel an export that hasn't finished (queued or running). Nothing is charged.
+router.delete(
+  '/:presentationId/export/:exportId',
+  validate(presentationValidations.exportByIdSchema),
+  presentationController.cancelExport
+);
+
 module.exports = router;

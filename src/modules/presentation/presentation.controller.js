@@ -463,6 +463,17 @@ const getExport = asyncHandler(async (req, res) => {
   return successResponse(req, res, data, 200, messages.PRESENTATION_EXPORT_FETCHED);
 });
 
+const cancelExport = asyncHandler(async (req, res) => {
+  const { workspaceId, presentationId, exportId } = req.params;
+  const data = await presentationService.cancelExport({
+    workspaceId,
+    presentationId,
+    exportId,
+    userId: req.user.id,
+  });
+  return successResponse(req, res, data, 200, messages.PRESENTATION_EXPORT_CANCELLED);
+});
+
 const creditEstimate = asyncHandler(async (req, res) => {
   const { workspaceId, presentationId } = req.params;
   const { slideCount } = req.query || {};
@@ -596,6 +607,7 @@ module.exports = {
   queueExport,
   chargeBrowserExport,
   getExport,
+  cancelExport,
   creditEstimate,
   listPresentationTemplates,
   getPresentationTemplate,

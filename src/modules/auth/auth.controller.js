@@ -177,7 +177,7 @@ const googleCallback = asyncHandler(async (req, res) => {
   );
 }
 
-  const { accessToken, rawRefreshToken, user, workspace, portal, isPlatformSuperadmin } = result;
+  const { accessToken, rawRefreshToken, user, workspace, portal, isPlatformSuperadmin, isNewUser } = result;
   setRefreshCookie(res, rawRefreshToken);
 
   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
@@ -188,6 +188,10 @@ const googleCallback = asyncHandler(async (req, res) => {
   const hashParams = new URLSearchParams({ access_token: accessToken });
   if (workspace?.id) {
     hashParams.set('workspace_id', workspace.id);
+  }
+  // A Google sign-in that created the account: the frontend reports it as a sign-up.
+  if (isNewUser) {
+    hashParams.set('new_user', '1');
   }
   const redirectUrl = frontendUrl
     ? `${frontendUrl}${successPath}#${hashParams.toString()}`

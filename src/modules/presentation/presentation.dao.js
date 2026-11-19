@@ -434,6 +434,18 @@ async function updateExport(exportId, data) {
   });
 }
 
+/**
+ * Update an export only while its status is one of `statuses` (e.g. cancel only a job that
+ * hasn't finished, finish only a job that wasn't cancelled). Returns how many rows changed (0 or 1).
+ */
+async function updateExportIfStatus(exportId, statuses, data) {
+  const { count } = await prisma.deckExport.updateMany({
+    where: { id: exportId, status: { in: statuses } },
+    data: { ...data, updatedAt: new Date() },
+  });
+  return count;
+}
+
 async function findActiveTemplatesByContentType(contentType) {
   const where = {
     type: 'DECK_LAYOUT',
@@ -697,6 +709,7 @@ module.exports = {
   findExport,
   createExport,
   updateExport,
+  updateExportIfStatus,
   findActiveTemplatesByContentType,
   findActiveDeckPacks,
   findLayoutsByLayoutIds,
