@@ -699,7 +699,7 @@ POST /api/workspaces/:workspaceId/projects/:projectId/heygen/videos
 }
 ```
 
-For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`** instead. HeyGen applies matting automatically; `backgroundColor` and `removeBackground` are ignored. The avatar must support matting (see HeyGen docs). Legacy expressive studio looks (`usesLegacyV2Video: true`) cannot use WebM.
+For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`** instead. HeyGen applies matting automatically; `backgroundColor` and `removeBackground` are ignored. The avatar must support matting (see HeyGen docs). All scene videos use v3; WebM follows HeyGen look capabilities ( `usesLegacyV2Video` in look list metadata is always `false`).
 
 ```json
 {
@@ -711,7 +711,7 @@ For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`
 | Field | Notes |
 |-------|--------|
 | `avatarId` | **Look id** from step 6.1, not group id |
-| `avatarEngine` | `avatar_iv` (default) or `avatar_v`; must be in look’s `supported_api_engines` |
+| `avatarEngine` | `avatar_iv` (default), `avatar_v`, or `avatar_iii`; prefer look’s `supportedApiEngines` / `defaultAvatarEngine` from the looks API |
 | `avatarType` | `studio_avatar` \| `digital_twin` \| `photo_avatar` from look row |
 | `expressiveness` | **Avatar IV + `photo_avatar` only**; omit for `avatar_v` and studio/video avatars |
 | `sceneId` | Must match saved scene `sceneId` |

@@ -59,12 +59,12 @@ Use this for the **scene-based editor** and **in-browser preview**. **Batch / of
 | `backgroundColor` | yes | Solid background, e.g. `#008000` (hex) |
 | `voiceId` | yes | HeyGen voice id |
 | `script` | yes | Spoken script (TTS + lip sync) |
-| `avatarEngine` | no | `avatar_iv` (default) or `avatar_v` — must appear in the look’s **`supported_api_engines`** from **`GET /api/heygen/avatars/looks`**; sent to HeyGen as `engine.type` |
+| `avatarEngine` | no | `avatar_iv` (default when omitted), `avatar_v`, or `avatar_iii` — should match the look’s **`supportedApiEngines`** / **`defaultAvatarEngine`** from **`GET /api/heygen/avatars/looks`** (or raw `supported_api_engines` on the look). The server may coerce or override from look metadata (e.g. III-only, expressive public → `avatar_iii`). Sent to HeyGen as `engine.type`. |
 | `avatarType` | no | `studio_avatar`, `digital_twin`, or `photo_avatar` from the look row — used to decide HeyGen payload shape |
 | `expressiveness` | no | `low`, `medium`, or `high` — **Avatar IV + `photo_avatar` only**; omit for `avatar_v`, studio, or digital-twin looks |
 | `voiceSettings` | no | Optional: `speed`, `pitch`, `volume`, `locale`, `engine_settings` |
 | `removeBackground` | no | Boolean — **MP4 only**. Cuts out the avatar and composites onto `backgroundColor` (not transparent). Ignored when `outputFormat` is `webm`. |
-| `outputFormat` | no | `mp4` (default) or `webm`. **`webm`** returns an alpha-channel clip (transparent background); requires an avatar trained with matting. HeyGen applies background removal automatically for `webm` — do not rely on `removeBackground`. Legacy v2 studio looks return **400** for `webm`. |
+| `outputFormat` | no | `mp4` (default) or `webm`. **`webm`** returns an alpha-channel clip (transparent background); requires an avatar trained with matting. HeyGen applies background removal automatically for `webm` — do not rely on `removeBackground`. All scene jobs use **`POST /v3/videos`**; WebM availability depends on HeyGen’s support for that look (not blocked server-side for former v2-only looks). |
 
 **Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice + **`avatarEngine`** returns the **existing** row (idempotent).
 

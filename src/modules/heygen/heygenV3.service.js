@@ -2,10 +2,11 @@ const { getJson, getJsonSafe, postJson, deleteJson, deleteJsonSafe } = require('
 const { ensureHeygenAssetRef } = require('./heygenAssets.service');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
+const logger = require('../../shared/utils/logger');
 const heygenDao = require('./heygen.dao');
 const heygenShareDao = require('./heygenShare.dao');
 const heygenAccess = require('./heygenAccess.service');
-const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
+const { getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
 const {
   enrichVoiceWithSpeechHints,
   enrichVoicesListBodyWithSpeechHints,
@@ -275,26 +276,13 @@ async function addResolvedLookToList(looks, seen, lookId, groupId) {
   }
 }
 
-async function collectV2AvatarLookCandidates(groupName, groupId, looks, seen) {
-  const slug = slugifyAvatarGroupName(groupName);
-  if (!slug) return;
-  const safe = await getJsonSafe('/v2/avatars');
-  if (!safe.ok) return;
-  const avatars = safe.body?.data?.avatars;
-  if (!Array.isArray(avatars)) return;
-  const prefix = `${slug}_`;
-  const candidates = avatars.filter((a) => {
-    const id = String(a.avatar_id || '');
-    return id === slug || id === `${slug}_public` || id.startsWith(prefix) || a.avatar_name === groupName;
-  });
-  for (const a of candidates) {
-    await addResolvedLookToList(looks, seen, a.avatar_id, groupId);
-  }
+function warnLooksListDegraded(context) {
+  logger.warn('HeyGen avatar looks list degraded', context);
 }
 
 /**
  * HeyGen sometimes returns 400 for GET /v3/avatars/looks?group_id=… (bad created_at on a row).
- * Recover individual looks via GET /v3/avatars/looks/{id} and the legacy v2 avatar catalog.
+ * Recover individual looks via GET /v3/avatars/{groupId} slug heuristics and GET /v3/avatars/looks/{id}.
  */
 async function fetchLooksListFallbackForGroup(groupId, query) {
   const safeGroup = await getJsonSafe(`/v3/avatars/${encodeURIComponent(groupId)}`);
@@ -308,10 +296,6 @@ async function fetchLooksListFallbackForGroup(groupId, query) {
   if (slug) {
     await addResolvedLookToList(looks, seen, `${slug}_public`, groupId);
     await addResolvedLookToList(looks, seen, slug, groupId);
-  }
-
-  if (looks.length === 0 && groupName) {
-    await collectV2AvatarLookCandidates(groupName, groupId, looks, seen);
   }
 
   let filtered = looks;
@@ -366,11 +350,25 @@ async function recoverLooksListForGroup(groupOrLookId, heygenQuery) {
         return { data: looks };
       }
     } catch {
-      // continue to slug/v2 fallback
+      // continue to v3 group slug / per-look recovery
     }
   }
 
   return fetchLooksListFallbackForGroup(groupOrLookId, heygenQuery);
+}
+
+function logDegradedLooksResponse(body, groupOrLookId) {
+  const data = body?.data;
+  if (!data || typeof data !== 'object') return;
+  if (!data.listDegraded && !data.heygenListUnavailable) return;
+  warnLooksListDegraded({
+    groupId: groupOrLookId,
+    lookCount: data.lookCount ?? (Array.isArray(data.looks) ? data.looks.length : null),
+    expectedLookCount: data.expectedLookCount ?? null,
+    listDegraded: Boolean(data.listDegraded),
+    heygenListUnavailable: Boolean(data.heygenListUnavailable),
+    source: 'listAvatarLooks',
+  });
 }
 
 async function finalizeLooksListResponse(userId, query, body) {
@@ -691,6 +689,7 @@ function appendLookEngineBuckets(body) {
   const enrichedLooks = looks.map(enrichLookWithEngineHints);
 
   const engineBuckets = {
+    avatar_iii: [],
     avatar_iv: [],
     avatar_v: [],
     legacy_v2: [],
@@ -698,7 +697,7 @@ function appendLookEngineBuckets(body) {
   };
 
   for (const look of enrichedLooks) {
-    if (look.usesLegacyV2Video || look.videoApi === 'v2' || usesHeygenLegacyV2VideoLook(look)) {
+    if (look.usesLegacyV2Video) {
       engineBuckets.legacy_v2.push(look);
       continue;
     }
@@ -706,12 +705,14 @@ function appendLookEngineBuckets(body) {
     const engines = Array.isArray(look.supportedApiEngines)
       ? look.supportedApiEngines
       : getLookSupportedVideoEngines(look);
+    const hasIii = engines.includes('avatar_iii');
     const hasIv = engines.includes('avatar_iv');
     const hasV = engines.includes('avatar_v');
 
+    if (hasIii) engineBuckets.avatar_iii.push(look);
     if (hasIv) engineBuckets.avatar_iv.push(look);
     if (hasV) engineBuckets.avatar_v.push(look);
-    if (!hasIv && !hasV) engineBuckets.unknown.push(look);
+    if (!hasIii && !hasIv && !hasV) engineBuckets.unknown.push(look);
   }
 
   const nextTarget = {
@@ -719,6 +720,7 @@ function appendLookEngineBuckets(body) {
     looks: enrichedLooks,
     engineBuckets,
     engineCounts: {
+      avatar_iii: engineBuckets.avatar_iii.length,
       avatar_iv: engineBuckets.avatar_iv.length,
       avatar_v: engineBuckets.avatar_v.length,
       legacy_v2: engineBuckets.legacy_v2.length,
@@ -780,7 +782,10 @@ async function listAvatarLooks(userId, query) {
   } catch (err) {
     if (groupOrLookId && err.statusCode === 400) {
       const recovered = await recoverLooksListForGroup(groupOrLookId, heygenQuery);
-      if (recovered) return finalizeLooksListResponse(userId, query, recovered);
+      if (recovered) {
+        logDegradedLooksResponse(recovered, groupOrLookId);
+        return finalizeLooksListResponse(userId, query, recovered);
+      }
     }
     throw err;
   }
@@ -788,7 +793,10 @@ async function listAvatarLooks(userId, query) {
   const looks = coerceLooksArray(enrichLooksListMetadata(raw)?.data?.looks);
   if (looks.length === 0 && groupOrLookId) {
     const recovered = await recoverLooksListForGroup(groupOrLookId, heygenQuery);
-    if (recovered) return finalizeLooksListResponse(userId, query, recovered);
+    if (recovered) {
+      logDegradedLooksResponse(recovered, groupOrLookId);
+      return finalizeLooksListResponse(userId, query, recovered);
+    }
   }
 
   return finalizeLooksListResponse(userId, query, raw);
@@ -1237,11 +1245,6 @@ async function createVideo(jsonBody) {
   return { ...normalizeCreateVideoResponse(raw), raw, apiVersion: 'v3' };
 }
 
-async function createVideoV2(jsonBody) {
-  const raw = await postJson('/v2/video/generate', jsonBody);
-  return { ...normalizeCreateVideoResponse(raw), raw, apiVersion: 'v2' };
-}
-
 async function getVideoStatus(videoId) {
   const raw = await getJson(`/v3/videos/${encodeURIComponent(videoId)}`);
   return normalizeVideoStatusResponse(raw);
@@ -1266,6 +1269,5 @@ module.exports = {
   generateSpeechPreview,
   getAccountBillingInfo,
   createVideo,
-  createVideoV2,
   getVideoStatus,
 };

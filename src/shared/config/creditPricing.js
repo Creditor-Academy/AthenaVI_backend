@@ -89,9 +89,21 @@ function paygAvatarUsdPerSec(avatarType) {
  * Enterprise HeyGen credits/sec for Avatar IV & V (all avatar types same rate).
  * Avatar III legacy: 0.0033 credits/sec.
  */
-function enterpriseHeygenCreditsPerSec(engine) {
+/** Map billing labels (legacy_v2, aliases) to a rate key for HeyGen video. */
+function normalizeHeygenVideoBillingEngine(engine) {
   const normalized = String(engine || HEYGEN_AVATAR_ENGINES.IV).trim().toLowerCase();
+  if (normalized === 'legacy_v2' || normalized === 'legacy-v2') {
+    return HEYGEN_AVATAR_ENGINE_III;
+  }
   if (normalized === HEYGEN_AVATAR_ENGINE_III || normalized === 'avatar_3' || normalized === 'iii') {
+    return HEYGEN_AVATAR_ENGINE_III;
+  }
+  return normalized;
+}
+
+function enterpriseHeygenCreditsPerSec(engine) {
+  const normalized = normalizeHeygenVideoBillingEngine(engine);
+  if (normalized === HEYGEN_AVATAR_ENGINE_III) {
     return 0.0033;
   }
   return 0.1;
@@ -262,4 +274,5 @@ module.exports = {
   estimateDurationFromText,
   estimateDurationFromFrames,
   usdCostToAthenaCredits,
+  normalizeHeygenVideoBillingEngine,
 };
