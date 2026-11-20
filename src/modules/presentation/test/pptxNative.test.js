@@ -100,6 +100,33 @@ test('table: without a measurement, the editor CSS defaults (header row shaded a
   assert.equal(t.rows[1][0].options.bold, false);
 });
 
+test('table: without a measurement, the editor column widths and row heights are kept', () => {
+  const t = buildPptxTable({
+    content: { cells: [['A', 'B'], ['1', '2']], colWidths: [0.75, 0.25], rowHeights: [20, 60] },
+    box: { x: 0, y: 0, w: 4, h: 2 },
+    measured: null,
+    inch,
+    pt,
+    stageW: 416,
+    stageH: 96,
+  });
+  // 416 − 2 × 8 px card padding = 400 px of table; 96 − 16 = 80 px of rows.
+  const r3 = (list) => list.map((v) => +v.toFixed(3));
+  assert.deepEqual(r3(t.options.colW), r3([inch(300), inch(100)]));
+  assert.deepEqual(r3(t.options.rowH), r3([inch(20), inch(60)]));
+  // Missing or mismatched sizes: equal columns and rows, as before.
+  const equal = buildPptxTable({
+    content: { cells: [['A', 'B']], colWidths: [1] },
+    box: { x: 0, y: 0, w: 4, h: 1 },
+    measured: null,
+    inch,
+    pt,
+    stageW: 416,
+    stageH: 96,
+  });
+  assert.equal(equal.options.colW[0], equal.options.colW[1]);
+});
+
 // ── Shapes ────────────────────────────────────────────────────────────────────
 
 test('shapes: % polygons become custom geometry; other clip-paths do not', () => {

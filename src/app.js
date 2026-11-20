@@ -110,6 +110,7 @@ const fontsRoutes = require('./modules/fonts/fonts.routes');
 const imageGenRoutes = require('./modules/imageGen/imageGen.routes');
 const presentationSharePublicRoutes = require('./modules/presentationShare/presentationShare.public.routes');
 const graphicsRoutes = require('./modules/graphics/graphics.routes');
+const mediaRoutes = require('./modules/media/media.routes');
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
@@ -124,6 +125,8 @@ app.use('/api/superadmin', superadminRoutes);
 /** Public view-only presentation links: the capability token in the path is the permission. */
 app.use('/api/p', presentationSharePublicRoutes);
 app.use('/api/graphics', graphicsRoutes);
+/** Same-origin copies of our images for in-browser exports (mediaProxy.service.js). */
+app.use('/api/media', mediaRoutes);
 app.use(errorHandler);
 
 module.exports = app;

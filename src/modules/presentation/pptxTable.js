@@ -28,6 +28,18 @@ function cellRowsFromContent(content = {}) {
   return [];
 }
 
+/**
+ * The editor's column widths (`colWidths`, shares of the width) or row heights (`rowHeights`,
+ * px minimums) as shares that add up to 1; equal shares when missing or not matching `count`.
+ */
+function shares(values, count) {
+  const n = Math.max(1, count);
+  const nums = Array.isArray(values) && values.length === n ? values.map(Number) : null;
+  if (!nums || nums.some((v) => !Number.isFinite(v) || v <= 0)) return Array.from({ length: n }, () => 1 / n);
+  const total = nums.reduce((a, b) => a + b, 0);
+  return nums.map((v) => v / total);
+}
+
 /** A measurement in the editor's CSS defaults (no render page). */
 function defaultMeasurement(content, box, stageW, stageH) {
   const rows = cellRowsFromContent(content);
@@ -39,8 +51,8 @@ function defaultMeasurement(content, box, stageW, stageH) {
   return {
     card: EDITOR_TABLE_DEFAULTS.card,
     table: { x: pad, y: pad, w, h },
-    cols: Array.from({ length: cols }, () => w / cols),
-    rows: rows.map(() => h / Math.max(1, rows.length)),
+    cols: shares(content.colWidths, cols).map((f) => w * f),
+    rows: rows.length ? shares(content.rowHeights, rows.length).map((f) => h * f) : [],
     cells: rows.map((row, ri) =>
       Array.from({ length: cols }, (_, ci) => ({
         text: String(row[ci] ?? ''),
