@@ -116,7 +116,7 @@ Implementation constraints in this repo:
 4. **Already `completed` with `s3Key`:** return 200 and do nothing.
 5. **Unknown `video_id`:** log it and return 200 so HeyGen does not retry a video this API does not own. Our row is inserted minutes before HeyGen finishes, so a real race is unlikely. The sweeper below covers a missed event.
 6. **Keep a single status GET**, not the 24-iteration loop, for three cases: the editor opens a row still `processing`; a render needs the file in S3 and the copy never finished (`assertHeygenVideoReadyInS3`); a sweeper for rows stuck in `processing` longer than a normal HeyGen generation. Localhost is not reachable by HeyGen, so local development needs that GET or a tunnel.
-7. **Confirm one legacy v2 job.** Some looks still go through `createVideoV2` (`POST /v2/video/generate`). v3 `POST /v3/videos` is covered by `avatar_video.success`. Run one v2 job and confirm the same event before deleting the loop for that path.
+7. **v2 video removed.** Scene jobs use `POST /v3/videos` only; webhook design should assume v3 job ids (`avatar_video.success`).
 
 The editor can keep asking this API whether the row is done. That read is the database. Pushing completion to the browser (SSE or inbox) is optional and separate.
 
