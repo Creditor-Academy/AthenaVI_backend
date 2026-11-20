@@ -14,15 +14,20 @@
  *   --skip-pptx          PDF only (no LibreOffice needed)
  *   --no-fonts           don't embed the deck's fonts in the PPTX (they are by default, as in a
  *                        PowerPoint export)
- *   --legacy             measure the fallback renderer (PPT_EXPORT_RENDERER=legacy) instead of
- *                        the render page; the reference is still the render page
+ *   --legacy             measure the backup renderer (the server's own HTML renderer, used when
+ *                        the render page can't be reached) instead of the render page; the
+ *                        reference is still the render page
+ *   --qa-pack            also build each deck "Made for: Google Slides", and copy the PowerPoint
+ *                        and Google Slides files and the PDF to <label>/qa-pack/ for the manual
+ *                        checks in apps (docs/PPT_EXPORT_QA_CHECKLIST.md in the frontend)
  *   --legacy-pdf-timeout ms  page timeout for an old checkout's PDF (default 60000)
  *
  * For every slide of every deck:
  *   reference = the editor's own rendering (export-render page, the same component as the editor)
  *   PDF       = export → rasterized
  *   PPTX      = export → LibreOffice → PDF → rasterized (LibreOffice stands in for PowerPoint)
- * and SSIM (0–1, 1 = identical) of each against the reference. Writes report.html and
+ * and SSIM (0–1, 1 = identical) of each against the reference. An export that fell back to the
+ * backup renderer (the render page didn't answer) is an error, so the CI gate catches it. Writes report.html and
  * scores.json. Thresholds (Phase 3 / 4 targets): PDF ≥ 0.98, PPTX ≥ 0.95. Images are compared at
  * 480px wide, grayscale, blurred σ 1 (anti-aliasing isn't a difference).
  *
@@ -61,7 +66,8 @@ process.env.AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 process.env.PPT_EXPORT_BROWSER_CHECK = '0';
 const RENDER_URL = arg('render-url') || process.env.EXPORT_RENDER_URL || 'http://localhost:5173/export-render.html';
 process.env.EXPORT_RENDER_URL = RENDER_URL;
-delete process.env.PPT_EXPORT_RENDERER;
+// The backup renderer is measured by pointing the export at a render page that isn't there.
+const UNREACHABLE_RENDER_URL = 'http://127.0.0.1:9/export-render.html';
 
 const sharp = require('sharp');
 
@@ -255,7 +261,8 @@ async function runDeck({ name, current, measured, assetBase, outDir, soffice, ra
 
   // PDF, by the export code being measured.
   const deck = measured.enrich(deckRaw);
-  if (legacy) process.env.PPT_EXPORT_RENDERER = 'legacy';
+  if (legacy) process.env.EXPORT_RENDER_URL = UNREACHABLE_RENDER_URL;
+  const fallbacksBefore = fallbackCount;
   let pdfPages = [];
   try {
     const pdf = await measured.buildPdf(deck, {});
@@ -269,7 +276,7 @@ async function runDeck({ name, current, measured, assetBase, outDir, soffice, ra
   let pptxPages = [];
   if (!skipPptx) {
     try {
-      const assets = measured.renderer?.capturePptxAssets ? await measured.renderer.capturePptxAssets(deck) : null;
+      const assets = await capturePptx(measured, deck);
       // Fonts embedded like a PowerPoint export (LibreOffice reads them), unless --no-fonts.
       const pptx = await measured.exportService.buildPptxBuffer(deck, { ...(assets ? { assets } : {}), embedFonts: !flag('no-fonts') });
       const pptxPath = path.join(dir, 'export.pptx');
@@ -280,7 +287,23 @@ async function runDeck({ name, current, measured, assetBase, outDir, soffice, ra
     }
   }
 
-  delete process.env.PPT_EXPORT_RENDERER;
+  // The file to open in Google Slides (gradients and glow text as pictures, fonts by name).
+  if (flag('qa-pack') && !skipPptx) {
+    try {
+      const target = 'google-slides';
+      const assets = await capturePptx(measured, deck, { target });
+      const pptx = await measured.exportService.buildPptxBuffer(deck, { ...(assets ? { assets } : {}), target });
+      fs.writeFileSync(path.join(dir, 'export-google-slides.pptx'), pptx);
+    } catch (err) {
+      errors.push(`PPTX (Google Slides): ${String(err.message || err).slice(0, 200)}`);
+    }
+  }
+
+  process.env.EXPORT_RENDER_URL = RENDER_URL;
+  // Measuring the render page: an export that quietly used the backup renderer isn't a pass.
+  if (!legacy && fallbackCount > fallbacksBefore) {
+    errors.push(`fell back to the backup renderer ${fallbackCount - fallbacksBefore}× (the render page didn't answer)`);
+  }
 
   const slides = [];
   for (const [i, ref] of refFiles.entries()) {
@@ -405,7 +428,37 @@ function legacyPdfBuilder(presentation) {
     });
 }
 
+/**
+ * PPTX measurements the way an export takes them: through the export service when it has the
+ * wrapper (a page that doesn't answer gives no measurements, the PPTX is still built), else
+ * from the renderer directly (older checkouts).
+ */
+async function capturePptx(measured, deck, opts = {}) {
+  if (measured.exportService.capturePptxAssets) return measured.exportService.capturePptxAssets(deck, opts);
+  return measured.renderer?.capturePptxAssets ? measured.renderer.capturePptxAssets(deck, opts) : null;
+}
+
+// Counts the warnings of an export that used the backup renderer (PDF / images) or built a PPTX
+// without the render page's measurements.
+let fallbackCount = 0;
+const watchedLoggers = new Set();
+function watchFallbacks(tree) {
+  try {
+    const logger = require(path.join(tree, 'src/shared/utils/logger'));
+    if (watchedLoggers.has(logger)) return;
+    watchedLoggers.add(logger);
+    const warn = logger.warn.bind(logger);
+    logger.warn = (message, ...rest) => {
+      if (message === 'export_renderer_unavailable' || message === 'pptx_renderer_capture_failed') fallbackCount += 1;
+      return warn(message, ...rest);
+    };
+  } catch {
+    // an old checkout without this logger: nothing to watch
+  }
+}
+
 function loadTree(tree) {
+  watchFallbacks(tree);
   const presentation = path.join(tree, 'src/modules/presentation');
   const rendererPath = path.join(presentation, 'exportRenderer.service.js');
   const exportService = require(path.join(presentation, 'export.service.js'));
@@ -489,7 +542,37 @@ async function main() {
   fs.writeFileSync(path.join(outDir, 'scores.json'), `${JSON.stringify(result, null, 2)}\n`);
   writeReport(outDir, result, compare);
   console.log(`\nReport: ${path.join(outDir, 'report.html')}`);
+  if (flag('qa-pack')) console.log(`QA pack: ${writeQaPack(outDir, names)}`);
   process.exit(0);
+}
+
+/** The files for the manual checks in PowerPoint and Google Slides, in one folder. */
+function writeQaPack(outDir, names) {
+  const pack = path.join(outDir, 'qa-pack');
+  fs.rmSync(pack, { recursive: true, force: true });
+  fs.mkdirSync(pack, { recursive: true });
+  const copy = (from, to) => fs.existsSync(from) && fs.copyFileSync(from, path.join(pack, to));
+  for (const name of names) {
+    const dir = path.join(outDir, name);
+    copy(path.join(dir, 'export.pptx'), `${name}-powerpoint.pptx`);
+    copy(path.join(dir, 'export-google-slides.pptx'), `${name}-google-slides.pptx`);
+    copy(path.join(dir, 'export.pdf'), `${name}.pdf`);
+  }
+  fs.writeFileSync(
+    path.join(pack, 'README.txt'),
+    [
+      'Presentation export: files for the manual checks (Phase 7.2).',
+      '',
+      '<deck>-powerpoint.pptx     open in PowerPoint for Windows, Mac and web',
+      '<deck>-google-slides.pptx  upload to Google Drive, open with Google Slides',
+      '<deck>.pdf                 how every slide should look',
+      '',
+      'What to check and where to write the results: docs/PPT_EXPORT_QA_CHECKLIST.md (frontend repo).',
+      "The editor's own rendering of each slide is in ../report.html.",
+      '',
+    ].join('\n')
+  );
+  return pack;
 }
 
 main().catch((err) => {

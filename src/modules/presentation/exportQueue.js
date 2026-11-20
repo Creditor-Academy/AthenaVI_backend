@@ -194,9 +194,8 @@ async function startQueue({ bullmq = null, IORedis = null } = {}) {
 }
 
 /** Add an export job. Runs it in this process when the queue isn't available. */
-/** Add an export job. `local: true` runs it in this process even when the queue is up (PPT_EXPORT_V2 off). */
-async function enqueue(data, { local = false } = {}) {
-  if (!local && mode === 'bullmq' && bull) {
+async function enqueue(data) {
+  if (mode === 'bullmq' && bull) {
     try {
       await bull.queue.add('export', data, { jobId: data.exportId });
       return 'bullmq';
