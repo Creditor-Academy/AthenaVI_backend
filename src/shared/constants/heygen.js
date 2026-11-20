@@ -1,5 +1,8 @@
+const { isHeygenPreferV3VideoEnabled } = require('../config/heygenVideoMigration');
+
 /** HeyGen POST /v3/videos engine discriminators (see supported_api_engines on looks). */
 const HEYGEN_AVATAR_ENGINES = Object.freeze({
+  III: 'avatar_iii',
   IV: 'avatar_iv',
   V: 'avatar_v',
 });
@@ -7,19 +10,28 @@ const HEYGEN_AVATAR_ENGINES = Object.freeze({
 const DEFAULT_HEYGEN_AVATAR_ENGINE = HEYGEN_AVATAR_ENGINES.IV;
 
 const HEYGEN_AVATAR_ENGINE_VALUES = Object.freeze([
+  HEYGEN_AVATAR_ENGINES.III,
   HEYGEN_AVATAR_ENGINES.IV,
   HEYGEN_AVATAR_ENGINES.V,
 ]);
 
 /**
  * @param {string|undefined|null} value
- * @returns {'avatar_iv'|'avatar_v'}
+ * @returns {'avatar_iii'|'avatar_iv'|'avatar_v'|string}
  */
 function normalizeHeygenAvatarEngine(value) {
   if (value == null || String(value).trim() === '') {
     return DEFAULT_HEYGEN_AVATAR_ENGINE;
   }
   const normalized = String(value).trim().toLowerCase();
+  if (
+    normalized === HEYGEN_AVATAR_ENGINES.III ||
+    normalized === 'iii' ||
+    normalized === 'avatar_3' ||
+    normalized === '3'
+  ) {
+    return HEYGEN_AVATAR_ENGINES.III;
+  }
   if (normalized === HEYGEN_AVATAR_ENGINES.IV || normalized === 'iv') {
     return HEYGEN_AVATAR_ENGINES.IV;
   }
@@ -86,8 +98,36 @@ function usesHeygenLegacyV2VideoLook(lookBody) {
 const isNonGeneratableLook = usesHeygenLegacyV2VideoLook;
 
 /**
- * @param {'avatar_iv'|'avatar_v'} avatarEngine
- * @returns {{ type: 'avatar_iv'|'avatar_v' }}
+ * Look supports only Avatar III (no IV/V) — candidate for v3 migration when HEYGEN_PREFER_V3_VIDEO is set.
+ * Excludes expressive public ids (commit 2 handles those).
+ * @param {unknown} lookBody
+ */
+function isAvatarIiiOnlyLegacyLook(lookBody) {
+  const lookId = extractLookIdFromLookBody(lookBody);
+  if (isExpressivePublicLookId(lookId)) return false;
+
+  const raw = extractRawSupportedApiEnginesFromLook(lookBody);
+  if (!raw || raw.length === 0) return false;
+
+  const hasIii = raw.some((e) => {
+    const n = String(e).trim().toLowerCase();
+    return n === 'avatar_iii' || n === 'iii' || n === 'avatar_3';
+  });
+  if (!hasIii) return false;
+
+  const ivV = extractSupportedApiEnginesFromLook(lookBody);
+  if (ivV && ivV.length > 0) return false;
+
+  const nonIii = raw.filter((e) => {
+    const n = String(e).trim().toLowerCase();
+    return n !== 'avatar_iii' && n !== 'iii' && n !== 'avatar_3';
+  });
+  return nonIii.length === 0;
+}
+
+/**
+ * @param {'avatar_iii'|'avatar_iv'|'avatar_v'|string} avatarEngine
+ * @returns {{ type: string }}
  */
 function buildHeygenVideoEnginePayload(avatarEngine) {
   const type = normalizeHeygenAvatarEngine(avatarEngine);
@@ -201,13 +241,9 @@ function extractSupportedApiEnginesFromLook(lookBody) {
  * @returns {string[]}
  */
 function getEffectiveSupportedApiEnginesFromLook(lookBody) {
-  if (usesHeygenLegacyV2VideoLook(lookBody)) {
-    return ['legacy_v2'];
-  }
-
-  const supported = extractSupportedApiEnginesFromLook(lookBody);
-  if (supported && supported.length > 0) {
-    return supported;
+  const plan = resolveVideoPlanForLook(lookBody, null);
+  if (plan.supportedApiEngines && plan.supportedApiEngines.length > 0) {
+    return plan.supportedApiEngines;
   }
   return [DEFAULT_HEYGEN_AVATAR_ENGINE];
 }
@@ -221,14 +257,27 @@ function getLookSupportedVideoEngines(lookBody) {
  * Single source of truth for how to render a look.
  * @returns {{
  *   videoApi: 'v2'|'v3',
- *   engine: 'avatar_iv'|'avatar_v'|null,
+ *   engine: 'avatar_iii'|'avatar_iv'|'avatar_v'|null,
  *   supportedApiEngines: string[],
  *   defaultAvatarEngine: string,
  *   engineCoerced: boolean,
  * }}
+ * @param {{ preferV3Video?: boolean }} [options] test override; defaults to HEYGEN_PREFER_V3_VIDEO
  */
-function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
+function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null, options = {}) {
+  const preferV3 =
+    options.preferV3Video !== undefined ? options.preferV3Video : isHeygenPreferV3VideoEnabled();
+
   if (usesHeygenLegacyV2VideoLook(lookBody)) {
+    if (preferV3 && isAvatarIiiOnlyLegacyLook(lookBody)) {
+      return {
+        videoApi: 'v3',
+        engine: HEYGEN_AVATAR_ENGINES.III,
+        supportedApiEngines: [HEYGEN_AVATAR_ENGINES.III],
+        defaultAvatarEngine: HEYGEN_AVATAR_ENGINES.III,
+        engineCoerced: false,
+      };
+    }
     return {
       videoApi: 'v2',
       engine: null,
@@ -265,8 +314,15 @@ function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
     }
   }
 
-  const coercedEngine = coerceEngineForAvatarType(engine, avatarType);
-  const typeCoerced = coercedEngine !== engine;
+  let coercedEngine = engine;
+  let typeCoerced = false;
+  if (
+    coercedEngine === HEYGEN_AVATAR_ENGINES.IV ||
+    coercedEngine === HEYGEN_AVATAR_ENGINES.V
+  ) {
+    coercedEngine = coerceEngineForAvatarType(coercedEngine, avatarType);
+    typeCoerced = coercedEngine !== engine;
+  }
 
   const defaultAvatarEngine = isStudioOrDigitalTwinAvatarType(avatarType)
     ? HEYGEN_AVATAR_ENGINES.V
@@ -322,6 +378,7 @@ module.exports = {
   normalizeHeygenAvatarEngine,
   usesHeygenLegacyV2VideoApi,
   usesHeygenLegacyV2VideoLook,
+  isAvatarIiiOnlyLegacyLook,
   isNonGeneratableExpressiveLookId,
   isNonGeneratableLook,
   extractLookIdFromLookBody,
