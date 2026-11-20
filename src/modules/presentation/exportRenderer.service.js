@@ -8,7 +8,8 @@
  * drew (fitted font sizes and colours, for PPTX).
  *
  * Where the page lives: EXPORT_RENDER_URL, else `${FRONTEND_URL}/export-render.html`.
- * PPT_EXPORT_RENDERER=legacy switches back to the old server-side HTML renderer.
+ * When it can't be reached, exports use the server-side HTML renderer as a backup
+ * (export.service.js, `export_renderer_unavailable` in the log).
  */
 
 const sharp = require('sharp');
@@ -40,7 +41,6 @@ class RendererUnavailableError extends Error {
 }
 
 function exportRenderUrl() {
-  if (String(process.env.PPT_EXPORT_RENDERER || '').toLowerCase() === 'legacy') return null;
   const explicit = String(process.env.EXPORT_RENDER_URL || '').trim();
   if (explicit) return explicit;
   const frontend = String(process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '');

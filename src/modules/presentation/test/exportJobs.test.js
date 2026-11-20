@@ -916,7 +916,7 @@ test('inbox: finished and failed exports link to the deck with the export, so it
   assert.equal(notifications[0].metadata.exportId, id);
 });
 
-// ---- PPT_EXPORT_V2 (Phase 7.1) ----
+// ---- One pipeline (Phase 7.6): the render page for every export, the server renderer as backup ----
 
 /** Stand in for the export-render page: record which exports used it. */
 function stubEditorRenderer(t) {
@@ -947,58 +947,72 @@ function stubEditorRenderer(t) {
   return calls;
 }
 
-test('V2 on: PDF, images and PPTX use the editor renderer', async (t) => {
+test('every export uses the editor renderer: PDF, images and PPTX', async (t) => {
   if (!browserOk) return t.skip('no export browser on this machine');
   const calls = stubEditorRenderer(t);
   decks.set('deck1', deckOf([slide('a', 1, '#2563EB'), slide('b', 2, '#10B981')]));
   for (const format of ['PDF', 'PNG', 'PPTX']) {
     const id = queueRow(format);
-    const info = {};
-    await run(id, { exportV2: true, info });
+    await run(id);
     assert.equal(rows.get(id).status, 'READY', `${format}: ${rows.get(id).error}`);
-    assert.equal(info.exportV2, true);
   }
   assert.deepEqual(calls, ['pdf', 'images', 'pptx-measure']);
 });
 
-test('V2 off: the same exports use the server renderer and never open the render page', async (t) => {
-  if (!browserOk) return t.skip('no export browser on this machine');
-  const calls = stubEditorRenderer(t);
-  decks.set('deck1', deckOf([slide('a', 1, '#2563EB'), slide('b', 2, '#10B981')]));
-  for (const format of ['PDF', 'PNG', 'PPTX']) {
-    const id = queueRow(format);
-    const info = {};
-    await run(id, { exportV2: false, info });
-    const row = rows.get(id);
-    assert.equal(row.status, 'READY', `${format}: ${row.error}`);
-    assert.equal(info.exportV2, false);
-    if (format === 'PDF') {
-      const pdf = uploads.get(row.s3Key);
-      assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length, 2, 'a real 2-page PDF');
-    }
-  }
-  assert.deepEqual(calls, [], 'the render page was not used');
-});
-
-test('a job queued before the flag existed (no exportV2 in its data) runs as V2', async (t) => {
+test('a job queued by an older release with exportV2: false still uses the editor renderer', async (t) => {
   if (!browserOk) return t.skip('no export browser on this machine');
   const calls = stubEditorRenderer(t);
   decks.set('deck1', deckOf([slide('a', 1, '#2563EB')]));
   const id = queueRow('PDF');
-  await run(id);
+  await run(id, { exportV2: false });
   assert.equal(rows.get(id).status, 'READY', rows.get(id).error);
   assert.deepEqual(calls, ['pdf']);
 });
 
-test('the finished log line says which pipeline the export used', () => {
-  const lines = [];
-  const original = logger.info;
-  logger.info = (event, data) => lines.push({ event, data });
-  try {
-    exportService.logExportFinished({ exportId: 'e1', workspaceId: 'w1' }, 'READY', { exportV2: false, format: 'PDF' });
-    exportService.logExportFinished({ exportId: 'e2', workspaceId: 'w1' }, 'READY', { format: 'PDF' });
-  } finally {
-    logger.info = original;
-  }
-  assert.deepEqual(lines.map((l) => l.data.exportV2), [false, true]);
+/** Collects `export_renderer_unavailable` warnings while a test runs. */
+function watchRendererWarnings(t) {
+  const warnings = [];
+  const original = logger.warn;
+  logger.warn = (event, data) => {
+    if (event === 'export_renderer_unavailable') warnings.push(data);
+    return original.call(logger, event, data);
+  };
+  t.after(() => {
+    logger.warn = original;
+  });
+  return warnings;
+}
+
+test('render page down: the export uses the backup renderer, says so in the log, and still works', async (t) => {
+  if (!browserOk) return t.skip('no export browser on this machine');
+  stubEditorRenderer(t);
+  const exportRenderer = require('../exportRenderer.service');
+  exportRenderer.renderDeckPdf = async () => {
+    throw new exportRenderer.RendererUnavailableError('render page did not load');
+  };
+  const warnings = watchRendererWarnings(t);
+  decks.set('deck1', deckOf([slide('a', 1, '#2563EB'), slide('b', 2, '#10B981')]));
+  const id = queueRow('PDF');
+  await run(id);
+  const row = rows.get(id);
+  assert.equal(row.status, 'READY', row.error);
+  const pdf = uploads.get(row.s3Key);
+  assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length, 2, 'a real 2-page PDF');
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].export, 'pdf');
+});
+
+test('no render page configured: the backup renderer, with a warning (never silently)', async (t) => {
+  if (!browserOk) return t.skip('no export browser on this machine');
+  const calls = stubEditorRenderer(t);
+  const exportRenderer = require('../exportRenderer.service');
+  exportRenderer.isRendererEnabled = () => false;
+  const warnings = watchRendererWarnings(t);
+  decks.set('deck1', deckOf([slide('a', 1, '#2563EB')]));
+  const id = queueRow('PDF');
+  await run(id);
+  assert.equal(rows.get(id).status, 'READY', rows.get(id).error);
+  assert.deepEqual(calls, [], 'the render page was not used');
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0].error, /No render page configured/);
 });
