@@ -18,11 +18,15 @@ const {
   normalizeHeygenAvatarEngine,
   usesHeygenLegacyV2VideoApi,
   usesHeygenLegacyV2VideoLook,
+  isAvatarIiiOnlyLegacyLook,
   buildHeygenVideoEnginePayload,
-  extractSupportedApiEnginesFromLook,
   resolveVideoPlanForLook,
   isStudioOrDigitalTwinAvatarType,
 } = require('../../../shared/constants/heygen');
+const {
+  isHeygenAllowV2VideoFallbackEnabled,
+  isHeygenPreferV3VideoEnabled,
+} = require('../../../shared/config/heygenVideoMigration');
 const creditLedger = require('../../credit/creditLedger.service');
 const heygenAccess = require('../../heygen/heygenAccess.service');
 const {
@@ -93,14 +97,20 @@ function buildHeyGenVideoPayload(body) {
     outputFormat,
   } = body;
 
+  const engine_settings =
+    voiceSettings?.engine_settings && typeof voiceSettings.engine_settings === 'object'
+      ? voiceSettings.engine_settings
+      : {
+          engine_type: 'heygen_voice',
+          model: 'heygen-voice-1',
+        };
+
   const voice_settings = {
     speed: voiceSettings?.speed ?? 1,
     pitch: voiceSettings?.pitch ?? 0,
     ...(voiceSettings?.volume != null && { volume: voiceSettings.volume }),
     ...(voiceSettings?.locale && { locale: voiceSettings.locale }),
-    ...(voiceSettings?.engine_settings && {
-      engine_settings: voiceSettings.engine_settings,
-    }),
+    engine_settings,
   };
 
   const engine = normalizeHeygenAvatarEngine(avatarEngine);
@@ -183,6 +193,40 @@ function buildHeyGenV2VideoPayload(body) {
     dimension: buildHeyGenV2Dimension(resolution, aspectRatio),
     ...(title ? { title } : {}),
     caption: false,
+  };
+}
+
+function billingAvatarEngineForVideo({ useLegacyV2, engine }) {
+  if (useLegacyV2) return 'legacy_v2';
+  return engine;
+}
+
+function buildHeygenVideoBillingContext({
+  engine,
+  useLegacyV2,
+  created,
+  avatarType,
+  resolution,
+  script,
+  title,
+  projectName,
+  sceneName,
+  estimatedCredits,
+  outputFormat,
+}) {
+  const avatarEngine = billingAvatarEngineForVideo({ useLegacyV2, engine });
+  return {
+    avatarEngine,
+    heygenApiVersion: created.apiVersion || (useLegacyV2 ? 'v2' : 'v3'),
+    avatarType: avatarType || null,
+    resolution: resolution || null,
+    script,
+    title: title || null,
+    projectName,
+    sceneName,
+    estimatedCredits,
+    outputFormat,
+    preferV3Video: isHeygenPreferV3VideoEnabled(),
   };
 }
 
@@ -328,7 +372,7 @@ const generateAvatarVideo = async (input) => {
     avatarEngine,
     avatarType
   );
-  const hashEngine = useLegacyV2 ? 'legacy_v2' : engine;
+  const hashEngine = billingAvatarEngineForVideo({ useLegacyV2, engine });
 
   if (normalizedOutputFormat === 'webm' && useLegacyV2) {
     throw new AppError(messages.HEYGEN_WEBM_NOT_SUPPORTED_FOR_LOOK, 400);
@@ -354,7 +398,7 @@ const generateAvatarVideo = async (input) => {
   const estimate = calculateUsageCredits({
     feature: FEATURE.HEYGEN_VIDEO,
     durationSeconds: estimatedDuration,
-    avatarEngine: engine,
+    avatarEngine: hashEngine,
     avatarType,
     resolution,
   });
@@ -397,19 +441,20 @@ const generateAvatarVideo = async (input) => {
       requestHash,
       status: created.status,
       rawResponse: created.raw,
-    triggeredByUserId: userId,
-    billingContext: {
-      avatarEngine: useLegacyV2 ? 'legacy_v2' : engine,
-      heygenApiVersion: created.apiVersion || (useLegacyV2 ? 'v2' : 'v3'),
-      avatarType: avatarType || null,
-      resolution: resolution || null,
-      script,
-      title: title || null,
-      projectName: project.name,
-      sceneName,
-      estimatedCredits: estimate.athenaCredits,
-      outputFormat: normalizedOutputFormat,
-    },
+      triggeredByUserId: userId,
+      billingContext: buildHeygenVideoBillingContext({
+        engine,
+        useLegacyV2,
+        created,
+        avatarType,
+        resolution,
+        script,
+        title,
+        projectName: project.name,
+        sceneName,
+        estimatedCredits: estimate.athenaCredits,
+        outputFormat: normalizedOutputFormat,
+      }),
     });
   } catch (err) {
     const msg = String(err?.message || '');
@@ -447,7 +492,71 @@ const generateAvatarVideo = async (input) => {
     if (shouldTryLegacyV2 && (!fallbackEngine || fallbackEngine === engine)) {
       try {
         const lookBody = await heygenV3Service.getAvatarLook(avatarId);
-        if (usesHeygenLegacyV2VideoLook(lookBody) || isStudioOrDigitalTwinAvatarType(avatarType)) {
+        const canTryIii =
+          isAvatarIiiOnlyLegacyLook(lookBody) &&
+          engine !== HEYGEN_AVATAR_ENGINES.III &&
+          (isHeygenPreferV3VideoEnabled() ||
+            plan?.supportedApiEngines?.includes(HEYGEN_AVATAR_ENGINES.III));
+
+        if (canTryIii) {
+          const iiiHash = generateHeygenRequestHash({
+            workspaceId,
+            projectId,
+            sceneId,
+            avatarId,
+            voiceId,
+            script,
+            avatarEngine: HEYGEN_AVATAR_ENGINES.III,
+            outputFormat: normalizedOutputFormat,
+          });
+          const existingIii = await heygenDao.findHeygenResponseByRequestHash(iiiHash);
+          if (existingIii) return existingIii;
+
+          const iiiEstimate = calculateUsageCredits({
+            feature: FEATURE.HEYGEN_VIDEO,
+            durationSeconds: estimatedDuration,
+            avatarEngine: HEYGEN_AVATAR_ENGINES.III,
+            avatarType,
+            resolution,
+          });
+
+          const createdIii = await createHeygenVideoJob(
+            { ...payloadBody, avatarEngine: HEYGEN_AVATAR_ENGINES.III },
+            { useLegacyV2: false }
+          );
+          return heygenDao.saveHeygenResponse({
+            workspaceId,
+            folderId: project.folderId,
+            projectId,
+            sceneId,
+            videoId: createdIii.videoId,
+            videoUrl: '',
+            s3Key: null,
+            requestHash: iiiHash,
+            status: createdIii.status,
+            rawResponse: createdIii.raw,
+            triggeredByUserId: userId,
+            billingContext: buildHeygenVideoBillingContext({
+              engine: HEYGEN_AVATAR_ENGINES.III,
+              useLegacyV2: false,
+              created: createdIii,
+              avatarType,
+              resolution,
+              script,
+              title,
+              projectName: project.name,
+              sceneName,
+              estimatedCredits: iiiEstimate.athenaCredits,
+              outputFormat: normalizedOutputFormat,
+            }),
+          });
+        }
+
+        const allowV2Fallback = isHeygenAllowV2VideoFallbackEnabled();
+        if (
+          allowV2Fallback &&
+          (usesHeygenLegacyV2VideoLook(lookBody) || isStudioOrDigitalTwinAvatarType(avatarType))
+        ) {
           const legacyHash = generateHeygenRequestHash({
             workspaceId,
             projectId,
@@ -460,6 +569,14 @@ const generateAvatarVideo = async (input) => {
           });
           const existingLegacy = await heygenDao.findHeygenResponseByRequestHash(legacyHash);
           if (existingLegacy) return existingLegacy;
+
+          const legacyEstimate = calculateUsageCredits({
+            feature: FEATURE.HEYGEN_VIDEO,
+            durationSeconds: estimatedDuration,
+            avatarEngine: 'legacy_v2',
+            avatarType,
+            resolution,
+          });
 
           const createdLegacy = await createHeygenVideoJob(payloadBody, { useLegacyV2: true });
           return heygenDao.saveHeygenResponse({
@@ -474,18 +591,19 @@ const generateAvatarVideo = async (input) => {
             status: createdLegacy.status,
             rawResponse: createdLegacy.raw,
             triggeredByUserId: userId,
-            billingContext: {
-              avatarEngine: 'legacy_v2',
-              heygenApiVersion: createdLegacy.apiVersion || 'v2',
-              avatarType: avatarType || null,
-              resolution: resolution || null,
+            billingContext: buildHeygenVideoBillingContext({
+              engine,
+              useLegacyV2: true,
+              created: createdLegacy,
+              avatarType,
+              resolution,
               script,
-              title: title || null,
+              title,
               projectName: project.name,
               sceneName,
-              estimatedCredits: estimate.athenaCredits,
+              estimatedCredits: legacyEstimate.athenaCredits,
               outputFormat: normalizedOutputFormat,
-            },
+            }),
           });
         }
       } catch {
@@ -536,17 +654,19 @@ const generateAvatarVideo = async (input) => {
       status: createdFallback.status,
       rawResponse: createdFallback.raw,
       triggeredByUserId: userId,
-      billingContext: {
-        avatarEngine: fallbackEngine,
-        heygenApiVersion: createdFallback.apiVersion || 'v3',
-        avatarType: avatarType || null,
-        resolution: resolution || null,
+      billingContext: buildHeygenVideoBillingContext({
+        engine: fallbackEngine,
+        useLegacyV2: false,
+        created: createdFallback,
+        avatarType,
+        resolution,
         script,
-        title: title || null,
+        title,
         projectName: project.name,
         sceneName,
         estimatedCredits: fallbackEstimate.athenaCredits,
-      },
+        outputFormat: normalizedOutputFormat,
+      }),
     });
   }
 };

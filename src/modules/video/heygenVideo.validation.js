@@ -27,7 +27,7 @@ const createHeygenVideoSchema = Joi.object({
     voiceId: Joi.string().trim().required(),
     script: Joi.string().trim().min(1).required(),
     /**
-     * HeyGen rendering engine: avatar_iv (default) or avatar_v.
+     * HeyGen rendering engine: avatar_iv (default), avatar_v, or avatar_iii when the look supports it.
      * Omit or send "" when the look has supported_api_engines: [].
      */
     avatarEngine: avatarEngineField(),

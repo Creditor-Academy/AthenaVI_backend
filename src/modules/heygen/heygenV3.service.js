@@ -5,7 +5,7 @@ const messages = require('../../shared/utils/messages');
 const heygenDao = require('./heygen.dao');
 const heygenShareDao = require('./heygenShare.dao');
 const heygenAccess = require('./heygenAccess.service');
-const { getEffectiveSupportedApiEnginesFromLook, usesHeygenLegacyV2VideoLook, getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
+const { getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
 const {
   enrichVoiceWithSpeechHints,
   enrichVoicesListBodyWithSpeechHints,
@@ -691,6 +691,7 @@ function appendLookEngineBuckets(body) {
   const enrichedLooks = looks.map(enrichLookWithEngineHints);
 
   const engineBuckets = {
+    avatar_iii: [],
     avatar_iv: [],
     avatar_v: [],
     legacy_v2: [],
@@ -698,7 +699,7 @@ function appendLookEngineBuckets(body) {
   };
 
   for (const look of enrichedLooks) {
-    if (look.usesLegacyV2Video || look.videoApi === 'v2' || usesHeygenLegacyV2VideoLook(look)) {
+    if (look.videoApi === 'v2' || look.usesLegacyV2Video) {
       engineBuckets.legacy_v2.push(look);
       continue;
     }
@@ -706,12 +707,14 @@ function appendLookEngineBuckets(body) {
     const engines = Array.isArray(look.supportedApiEngines)
       ? look.supportedApiEngines
       : getLookSupportedVideoEngines(look);
+    const hasIii = engines.includes('avatar_iii');
     const hasIv = engines.includes('avatar_iv');
     const hasV = engines.includes('avatar_v');
 
+    if (hasIii) engineBuckets.avatar_iii.push(look);
     if (hasIv) engineBuckets.avatar_iv.push(look);
     if (hasV) engineBuckets.avatar_v.push(look);
-    if (!hasIv && !hasV) engineBuckets.unknown.push(look);
+    if (!hasIii && !hasIv && !hasV) engineBuckets.unknown.push(look);
   }
 
   const nextTarget = {
@@ -719,6 +722,7 @@ function appendLookEngineBuckets(body) {
     looks: enrichedLooks,
     engineBuckets,
     engineCounts: {
+      avatar_iii: engineBuckets.avatar_iii.length,
       avatar_iv: engineBuckets.avatar_iv.length,
       avatar_v: engineBuckets.avatar_v.length,
       legacy_v2: engineBuckets.legacy_v2.length,
