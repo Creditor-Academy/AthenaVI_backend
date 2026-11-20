@@ -442,6 +442,9 @@ const addSlideSchema = Joi.object({
     layoutId: Joi.string().trim().max(128).optional(),
     title: Joi.string().trim().max(500).allow('', null).optional(),
     content: slideContentSchema.optional(),
+    // The slide's canvas as the editor built it (e.g. from a layout), stored in the same request
+    // so the new slide is never blank on the server while a later save is still on its way.
+    elements: canvasDocSchema.optional(),
     generate: Joi.boolean().default(false),
     prompt: slideAiPromptField.optional(),
     target: Joi.string().valid('content', 'image', 'all', 'full').default('all'),

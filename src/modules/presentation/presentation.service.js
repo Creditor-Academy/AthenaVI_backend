@@ -648,6 +648,7 @@ async function addSlide({
   templateId,
   layoutId,
   content,
+  elements = null,
   title = null,
   generate = false,
   prompt = null,
@@ -666,6 +667,7 @@ async function addSlide({
     templateId,
     layoutId,
     content: slideContent,
+    elements,
   });
 
   if (!generate) {

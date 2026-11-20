@@ -76,6 +76,8 @@ async function addSlide({
   templateId,
   layoutId,
   content,
+  // Optional canvas doc from the editor (the layout it compiled): stored as the slide's content.
+  elements = null,
 }) {
   const { deck } = await loadDeckContext(workspaceId, presentationId);
   assertNotGenerating(deck);
@@ -114,7 +116,10 @@ async function addSlide({
   const canvasSize = canvasSizeForDeck(deck);
   let elementsDoc;
   let savedContent = slideContent;
-  if (layoutSchema) {
+  if (elements && typeof elements === 'object' && Array.isArray(elements.elements)) {
+    // What the editor shows: the layout as it compiled it (and any edits already made).
+    elementsDoc = normalizeCanvasPayload(elements);
+  } else if (layoutSchema) {
     const compiled = await compileSlide({
       layoutSchema,
       content: slideContent,
