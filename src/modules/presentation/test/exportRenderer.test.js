@@ -137,7 +137,7 @@ let browserOk = false;
 const savedEnv = {};
 
 before(async () => {
-  for (const key of ['EXPORT_RENDER_URL', 'FRONTEND_URL', 'PPT_EXPORT_RENDERER']) savedEnv[key] = process.env[key];
+  for (const key of ['EXPORT_RENDER_URL', 'FRONTEND_URL']) savedEnv[key] = process.env[key];
   server = http.createServer((req, res) => {
     if (req.url.startsWith('/export-render.html')) {
       res.writeHead(200, { 'content-type': 'text/html' });
@@ -162,21 +162,22 @@ after(() => {
 
 function useRenderer(url = `${baseUrl}/export-render.html`) {
   process.env.EXPORT_RENDER_URL = url;
-  delete process.env.PPT_EXPORT_RENDERER;
 }
 
-test('where the renderer is: EXPORT_RENDER_URL, else FRONTEND_URL; legacy switches it off', () => {
+test('where the renderer is: EXPORT_RENDER_URL, else FRONTEND_URL; neither means not configured', () => {
   delete process.env.EXPORT_RENDER_URL;
-  delete process.env.PPT_EXPORT_RENDERER;
   process.env.FRONTEND_URL = 'https://app.example.com/';
   assert.equal(exportRenderer.exportRenderUrl(), 'https://app.example.com/export-render.html');
   process.env.EXPORT_RENDER_URL = 'https://cdn.example.com/x/export-render.html';
   assert.equal(exportRenderer.exportRenderUrl(), 'https://cdn.example.com/x/export-render.html');
+  // The old manual switch to the server renderer is gone: it no longer turns the page off.
   process.env.PPT_EXPORT_RENDERER = 'legacy';
+  assert.equal(exportRenderer.isRendererEnabled(), true);
+  delete process.env.PPT_EXPORT_RENDERER;
+  delete process.env.EXPORT_RENDER_URL;
+  delete process.env.FRONTEND_URL;
   assert.equal(exportRenderer.exportRenderUrl(), null);
   assert.equal(exportRenderer.isRendererEnabled(), false);
-  delete process.env.PPT_EXPORT_RENDERER;
-  delete process.env.FRONTEND_URL;
 });
 
 test('the render page may load its bundle, fonts and pictures, nothing else', () => {

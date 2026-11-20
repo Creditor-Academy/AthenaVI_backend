@@ -81,11 +81,9 @@ app.get('/health/export', async (req, res) => {
     const browserPool = exportBrowserStats();
     // Exports finished on this server in the last hour: outcomes, failure rate, durations, reasons.
     const metrics = require('./modules/presentation/exportMetrics').snapshot();
-    // PPT_EXPORT_V2: who gets the new export pipeline (counts only, no ids).
-    const exportV2 = require('./modules/presentation/exportFlag').exportV2Status();
     const check = lastExportBrowserCheck();
     if (!check) {
-        return res.status(200).json({ status: 'PENDING', exports: exportQueueStats(), queue, browserPool, metrics, exportV2 });
+        return res.status(200).json({ status: 'PENDING', exports: exportQueueStats(), queue, browserPool, metrics });
     }
     return res.status(check.ok ? 200 : 503).json({
         status: check.ok ? 'UP' : 'DOWN',
@@ -97,7 +95,6 @@ app.get('/health/export', async (req, res) => {
         queue,
         browserPool,
         metrics,
-        exportV2,
     });
 });
 

@@ -59,8 +59,6 @@ const {
   ExportCancelledError,
 } = require('../../shared/utils/exportBrowser');
 const exportQueue = require('./exportQueue');
-const { useExportV2 } = require('./exportFlag');
-const userDao = require('../user/user.dao');
 const exportMetrics = require('./exportMetrics');
 const { exportS3Key, isExportExpired } = require('./exportStorage');
 const {
@@ -1205,11 +1203,19 @@ async function buildPptxBuffer(
 
 /**
  * Run `fn` with the editor renderer (export-render page). If the page can't be reached
- * (not deployed, not configured, too old) log it and use `fallback`, so export keeps working.
+ * (not deployed, not configured, too old) log it and use `fallback`, the server's own HTML
+ * renderer, so export keeps working. Every export uses the render page; the backup is only for
+ * when it is down.
  */
-async function withEditorRenderer(deck, label, fn, fallback, { enabled = true } = {}) {
-  // `enabled` false: this export isn't on V2 (PPT_EXPORT_V2, exportFlag.js).
-  if (!enabled || !exportRenderer.isRendererEnabled()) return fallback();
+async function withEditorRenderer(deck, label, fn, fallback) {
+  if (!exportRenderer.isRendererEnabled()) {
+    logger.warn('export_renderer_unavailable', {
+      deckId: deck.id,
+      export: label,
+      error: 'No render page configured: set EXPORT_RENDER_URL or FRONTEND_URL',
+    });
+    return fallback();
+  }
   try {
     return await fn();
   } catch (err) {
@@ -1228,8 +1234,7 @@ async function buildPdfBuffer(deck, opts = {}) {
     deck,
     'pdf',
     () => exportRenderer.renderDeckPdf(deck, { slideIds: exportSlideIds(opts), onDrawn: opts.onDrawn }),
-    () => buildPdfBufferLegacy(deck, opts),
-    { enabled: opts.editorRenderer !== false }
+    () => buildPdfBufferLegacy(deck, opts)
   );
 }
 
@@ -1368,7 +1373,7 @@ function buildZipBuffer(files) {
 
 async function buildRasterExport(
   deck,
-  { format, slideId, slideIds, deckName, onSlideProcessed, scale, quality, transparent, editorRenderer = true } = {}
+  { format, slideId, slideIds, deckName, onSlideProcessed, scale, quality, transparent } = {}
 ) {
   const type = String(format || 'PNG').toUpperCase() === 'JPEG' ? 'jpeg' : 'png';
   const ext = type === 'jpeg' ? 'jpg' : 'png';
@@ -1412,8 +1417,7 @@ async function buildRasterExport(
       });
       if (firstFailure) throw firstFailure;
       return shots;
-    },
-    { enabled: editorRenderer }
+    }
   );
 
   // A missing slide must fail the export, not ship a partial (or empty) zip.
@@ -1536,8 +1540,8 @@ async function renderSlideScreenshots(
  * elements PowerPoint can't draw, background pictures. Never fails the export: without it
  * PPTX falls back to stored sizes and native shapes.
  */
-async function capturePptxAssets(deck, { slideId, slideIds, target, onSlide, editorRenderer = true } = {}) {
-  if (!editorRenderer || !exportRenderer.isRendererEnabled()) return null;
+async function capturePptxAssets(deck, { slideId, slideIds, target, onSlide } = {}) {
+  if (!exportRenderer.isRendererEnabled()) return null;
   try {
     return await exportRenderer.capturePptxAssets(deck, {
       slideIds: exportSlideIds({ slideId, slideIds }),
@@ -1582,12 +1586,7 @@ async function processExport({
   canRetry = false,
   attempt = 1,
   info = {},
-  // PPT_EXPORT_V2, decided when the export was requested. Jobs queued before the flag existed
-  // have no value: they were V2.
-  exportV2 = true,
 }) {
-  const v2 = exportV2 !== false;
-  info.exportV2 = v2;
   const row = await presentationDao.findExport(exportId);
   const resumeSaved = Boolean(row && row.status === SAVING_EXPORT_STATUS && row.s3Key);
   if (!row || (!ACTIVE_EXPORT_STATUSES.includes(row.status) && !resumeSaved)) return 'SKIPPED';
@@ -1652,7 +1651,7 @@ async function processExport({
       // PDF / images each use the browser: cap how many run at once so a burst of exports
       // can't exhaust memory. Waiting jobs stay QUEUED, keep beating, and can be cancelled.
       // PPTX also opens the browser when it measures text with the editor renderer.
-      if (isBrowserExportFormat(format) || (format === 'PPTX' && v2 && exportRenderer.isRendererEnabled())) {
+      if (isBrowserExportFormat(format) || (format === 'PPTX' && exportRenderer.isRendererEnabled())) {
         releaseSlot = await withHeartbeat(
           heartbeat,
           () =>
@@ -1703,7 +1702,6 @@ async function processExport({
               slideIds,
               target: pptxTarget,
               onSlide: (done, total) => report('drawing', done, total),
-              editorRenderer: v2,
             });
             throwIfExportCancelled(jobSignal);
             report('building', 0, slideCount);
@@ -1716,8 +1714,7 @@ async function processExport({
               report: contents,
               target: pptxTarget,
               // Google Slides ignores embedded fonts (it uses Google Fonts by name); PowerPoint needs them.
-              // Without V2 fonts are named only, as before Phase 5.
-              embedFonts: v2 && normalizeTarget(pptxTarget) === 'powerpoint',
+              embedFonts: normalizeTarget(pptxTarget) === 'powerpoint',
             });
             // What became a picture (PowerPoint can't draw it) and what stayed editable.
             logger.info('pptx_export_report', {
@@ -1740,7 +1737,6 @@ async function processExport({
                 slideId,
                 slideIds,
                 onDrawn: () => report('building', 0, slideCount),
-                editorRenderer: v2,
               }),
               contentType: 'application/pdf',
               ext: 'pdf',
@@ -1754,7 +1750,6 @@ async function processExport({
               deckName: projectName,
               onSlideProcessed: slideTicker('drawing', slideCount),
               ...image,
-              editorRenderer: v2,
             });
             report('building', 1, 1);
             return result;
@@ -1969,10 +1964,8 @@ function logExportFinished(data, outcome, info, now = Date.now()) {
     queueMs: queuedAt ? Math.max(0, startedAt - queuedAt) : null,
     totalMs: queuedAt ? now - queuedAt : null,
     attempts: info.attempts || 1,
-    // The render page version, or 'legacy' when it wasn't used (server HTML / no measuring).
+    // The render page version, or 'legacy' when the backup renderer was used (page down).
     rendererVersion: info.rendererVersion ?? 'legacy',
-    // PPT_EXPORT_V2 for this export: compare the two pipelines during the rollout.
-    exportV2: info.exportV2 !== false,
     pptxTarget: info.format === 'PPTX' ? data.pptxTarget || null : undefined,
     imageScale: info.format === 'PNG' || info.format === 'JPEG' ? data.image?.scale ?? 1 : undefined,
     bytes: info.bytes ?? null,
@@ -2105,12 +2098,6 @@ async function queueExport({
   const exportAc = presentationCredit.getFlatAc(PPT_FEATURE.EXPORT);
   await presentationCredit.assertAfford(workspaceId, userId, exportAc);
 
-  const exportV2 = await useExportV2({
-    workspaceId,
-    userId,
-    findUserEmail: async (id) => (await userDao.getUserById(id))?.email || null,
-  });
-
   const exportRow = await presentationDao.createExport({
     deckId: deck.id,
     format: normalizedFormat,
@@ -2130,9 +2117,7 @@ async function queueExport({
     pptxTarget: normalizeTarget(pptxTarget),
     image,
     queuedAt: Date.now(),
-    exportV2,
-    // Without V2 the job runs in this process, as before the queue (Phase 6).
-  }, { local: !exportV2 });
+  });
 
   return {
     exportId: exportRow.id,
@@ -2322,6 +2307,7 @@ module.exports = {
   renderSlideScreenshots,
   buildPptxBuffer,
   buildPdfBuffer,
+  capturePptxAssets,
   buildRasterExport,
   selectExportSlides,
   imageExportOptions,

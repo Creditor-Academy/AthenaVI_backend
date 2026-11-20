@@ -816,7 +816,7 @@ When an export finishes after its dialog was closed, the user gets an inbox mess
 
 ### Export pipeline (server settings)
 
-`PPT_EXPORT_V2` chooses who gets the current export pipeline: the editor's own renderer for PDF and images, PPTX built from what that renderer drew (with fonts embedded), and the job queue. `on` (default) = everyone; `internal` = only the workspaces in `PPT_EXPORT_V2_WORKSPACES` or people whose email domain is in `PPT_EXPORT_V2_EMAIL_DOMAINS`; `off` = nobody (the older server renderer, in-process jobs). The choice is made when the export is queued. `GET /health/export` reports the mode, plus queue, browser and last-hour metrics. All export settings: [`ENVIRONMENT.md`](ENVIRONMENT.md).
+Every export uses one pipeline: the editor's own renderer (the frontend's `export-render.html`) draws PDF and images and measures the slides for PPTX, PowerPoint files embed the deck's fonts, and jobs run on the queue. If the render page can't be reached, the export still completes with the server's own renderer (a plainer drawing) and logs `export_renderer_unavailable` or, for PPTX, `pptx_renderer_capture_failed`; the finished log line then has `rendererVersion: "legacy"`. `GET /health/export` reports the queue, browser and last-hour metrics. All export settings: [`ENVIRONMENT.md`](ENVIRONMENT.md).
 
 ---
 
