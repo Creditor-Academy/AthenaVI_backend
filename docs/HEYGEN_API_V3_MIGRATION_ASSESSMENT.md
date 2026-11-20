@@ -1,6 +1,6 @@
 # HeyGen API v3 migration assessment (Athena VI backend)
 
-**Status:** Planning only — **no implementation in this document.** Use this as the checklist before changing code.
+**Status:** Phases 1–4 implemented on branch `heygenReveamp` — scene video and avatar list recovery are **v3-only** in `src/`. Use this doc for history, test matrix, and remaining product gaps (webhooks, voice catalog).
 
 **Audience:** Backend, frontend/editor, DevOps.
 
@@ -25,14 +25,9 @@
 
 HeyGen **ended support for v1/v2 on 31 October 2026** and is **removing those routes**; calls may **fail intermittently** until removal is complete. Production integrations must use **v3 only** (`https://api.heygen.com`, header `X-Api-Key`).
 
-Athena VI is **mostly on v3 already** (avatars, voices, assets, account, video create/status for the primary path). **Two HeyGen legacy surfaces remain in code** and are on the **critical path** for some avatars:
+Athena VI **scene avatar video** and **avatar look list recovery** use **`/v3/*` only** (`POST /v3/videos` with `avatar_iv` / `avatar_v` / `avatar_iii`; no `POST /v2/video/generate` or `GET /v2/avatars` in application code). Expressive and III-only looks route via **`avatar_iii`** on v3.
 
-1. **`POST /v2/video/generate`** — scene avatar video jobs for expressive public looks and some Avatar III–only studio looks.
-2. **`GET /v2/avatars`** — **non–user-facing** fallback when `GET /v3/avatars/looks?group_id=…` fails; used to recover look ids for the avatar picker.
-
-Everything else in this repo that hits HeyGen uses **`/v3/*`** (see §3).
-
-**Highest-risk gap:** users who pick looks that still route to **v2 video generate** will see **failed or flaky generation** as HeyGen turns v2 off. Mitigation is **not** “stay on v2” — it is **move those looks to v3** (`POST /v3/videos`, including `engine: { "type": "avatar_iii" }` where applicable) and validate with HeyGen.
+**Staging validation:** confirm expressive public and III-only looks complete end-to-end; monitor `POST .../heygen/videos` errors after deploy.
 
 **Secondary gaps (platform alignment, not v2 sunset):**
 

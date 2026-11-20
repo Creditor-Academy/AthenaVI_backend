@@ -45,15 +45,15 @@ describe('usesHeygenLegacyV2VideoApi', () => {
 });
 
 describe('usesHeygenLegacyV2VideoLook', () => {
-  it('treats avatar_iii-only metadata as legacy v2 look', () => {
+  it('treats avatar_iii-only metadata as legacy metadata look', () => {
     assert.equal(usesHeygenLegacyV2VideoLook(III_ONLY_LOOK), true);
   });
 
-  it('treats explicitly empty supported_api_engines as legacy v2', () => {
+  it('treats explicitly empty supported_api_engines as legacy metadata look', () => {
     assert.equal(usesHeygenLegacyV2VideoLook(EMPTY_ENGINES_LOOK), true);
   });
 
-  it('does not treat IV/V look as legacy v2', () => {
+  it('does not treat IV/V look as legacy metadata look', () => {
     assert.equal(usesHeygenLegacyV2VideoLook(IV_V_LOOK), false);
   });
 });
@@ -108,80 +108,47 @@ describe('coerceEngineForAvatarType', () => {
 });
 
 describe('resolveVideoPlanForLook', () => {
-  it('defaults III-only look to v2 when prefer v3 is off', () => {
-    const plan = resolveVideoPlanForLook(III_ONLY_LOOK, null, 'studio_avatar', {
-      preferV3Video: false,
-    });
-    assert.equal(plan.videoApi, 'v2');
-    assert.equal(plan.defaultAvatarEngine, 'legacy_v2');
-  });
-
-  it('routes III-only look to v3 avatar_iii when prefer v3 is on', () => {
-    const plan = resolveVideoPlanForLook(III_ONLY_LOOK, null, 'studio_avatar', {
-      preferV3Video: true,
-    });
+  it('routes III-only look to v3 avatar_iii', () => {
+    const plan = resolveVideoPlanForLook(III_ONLY_LOOK, null, 'studio_avatar');
     assert.equal(plan.videoApi, 'v3');
     assert.equal(plan.engine, HEYGEN_AVATAR_ENGINES.III);
     assert.deepEqual(plan.supportedApiEngines, [HEYGEN_AVATAR_ENGINES.III]);
   });
 
-  it('keeps expressive look on v2 when prefer v3 is on (no III-only migration)', () => {
-    const plan = resolveVideoPlanForLook(EXPRESSIVE_V2_LOOK, null, 'studio_avatar', {
-      preferV3Video: true,
-    });
-    assert.equal(plan.videoApi, 'v2');
+  it('routes expressive public studio look to v3 avatar_iii', () => {
+    const plan = resolveVideoPlanForLook(EXPRESSIVE_V2_LOOK, null, 'studio_avatar');
+    assert.equal(plan.videoApi, 'v3');
+    assert.equal(plan.engine, HEYGEN_AVATAR_ENGINES.III);
   });
 
   it('uses v3 IV for standard photo look', () => {
-    const plan = resolveVideoPlanForLook(IV_V_LOOK, HEYGEN_AVATAR_ENGINES.IV, 'photo_avatar', {
-      preferV3Video: false,
-    });
+    const plan = resolveVideoPlanForLook(IV_V_LOOK, HEYGEN_AVATAR_ENGINES.IV, 'photo_avatar');
     assert.equal(plan.videoApi, 'v3');
     assert.equal(plan.engine, HEYGEN_AVATAR_ENGINES.IV);
   });
 
   it('coerces IV to V for studio avatar when requested IV', () => {
-    const plan = resolveVideoPlanForLook(IV_V_LOOK, HEYGEN_AVATAR_ENGINES.IV, 'studio_avatar', {
-      preferV3Video: false,
-    });
+    const plan = resolveVideoPlanForLook(IV_V_LOOK, HEYGEN_AVATAR_ENGINES.IV, 'studio_avatar');
     assert.equal(plan.engine, HEYGEN_AVATAR_ENGINES.V);
     assert.equal(plan.engineCoerced, true);
   });
 });
 
 describe('getEffectiveSupportedApiEnginesFromLook', () => {
-  it('returns legacy_v2 for III-only look when prefer v3 is off', () => {
-    assert.deepEqual(getEffectiveSupportedApiEnginesFromLook(III_ONLY_LOOK), ['legacy_v2']);
-  });
-
-  it('returns avatar_iii when prefer v3 is on', () => {
-    const prev = process.env.HEYGEN_PREFER_V3_VIDEO;
-    process.env.HEYGEN_PREFER_V3_VIDEO = 'true';
-    try {
-      assert.deepEqual(getEffectiveSupportedApiEnginesFromLook(III_ONLY_LOOK), [
-        HEYGEN_AVATAR_ENGINES.III,
-      ]);
-    } finally {
-      if (prev == null) delete process.env.HEYGEN_PREFER_V3_VIDEO;
-      else process.env.HEYGEN_PREFER_V3_VIDEO = prev;
-    }
+  it('returns avatar_iii for III-only look', () => {
+    assert.deepEqual(getEffectiveSupportedApiEnginesFromLook(III_ONLY_LOOK), [
+      HEYGEN_AVATAR_ENGINES.III,
+    ]);
   });
 });
 
 describe('enrichLookWithEngineHints', () => {
   const { enrichLookWithEngineHints } = require('./heygen');
 
-  it('marks III-only look as v3 when prefer v3 is on', () => {
-    const prev = process.env.HEYGEN_PREFER_V3_VIDEO;
-    process.env.HEYGEN_PREFER_V3_VIDEO = 'true';
-    try {
-      const look = enrichLookWithEngineHints({ ...III_ONLY_LOOK });
-      assert.equal(look.videoApi, 'v3');
-      assert.equal(look.usesLegacyV2Video, false);
-      assert.ok(look.supportedApiEngines.includes(HEYGEN_AVATAR_ENGINES.III));
-    } finally {
-      if (prev == null) delete process.env.HEYGEN_PREFER_V3_VIDEO;
-      else process.env.HEYGEN_PREFER_V3_VIDEO = prev;
-    }
+  it('marks III-only look as v3 without legacy v2 flag', () => {
+    const look = enrichLookWithEngineHints({ ...III_ONLY_LOOK });
+    assert.equal(look.videoApi, 'v3');
+    assert.equal(look.usesLegacyV2Video, false);
+    assert.ok(look.supportedApiEngines.includes(HEYGEN_AVATAR_ENGINES.III));
   });
 });

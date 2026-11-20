@@ -1,5 +1,3 @@
-const { isHeygenPreferV3VideoEnabled } = require('../config/heygenVideoMigration');
-
 /** HeyGen POST /v3/videos engine discriminators (see supported_api_engines on looks). */
 const HEYGEN_AVATAR_ENGINES = Object.freeze({
   III: 'avatar_iii',
@@ -46,10 +44,7 @@ function isExpressivePublicLookId(avatarId) {
   return /_expressive\d*_public$/i.test(String(avatarId).trim());
 }
 
-/**
- * HeyGen public "expressive" studio looks use the legacy v2 video API on HeyGen's
- * side (same as the web app). POST /v3/videos rejects them for avatar_iv and avatar_v.
- */
+/** Expressive public look ids (`*_expressive*_public`) — route via v3 (typically avatar_iii). */
 function usesHeygenLegacyV2VideoApi(avatarId) {
   return isExpressivePublicLookId(avatarId);
 }
@@ -72,8 +67,8 @@ function extractLookIdFromLookBody(lookBody) {
 }
 
 /**
- * Looks that must be rendered via HeyGen legacy POST /v2/video/generate.
- * Includes expressive public looks and Avatar III-only studio looks (e.g. Diora_public_3).
+ * Looks without avatar_iv / avatar_v in metadata (III-only, expressive public, or empty engines).
+ * Routed on POST /v3/videos (avatar_iii or coerced IV/V), not v2.
  * @param {unknown} lookBody
  * @returns {boolean}
  */
@@ -85,7 +80,7 @@ function usesHeygenLegacyV2VideoLook(lookBody) {
 
   const v3Engines = extractSupportedApiEnginesFromLook(lookBody);
   if (Array.isArray(rawEngines) && rawEngines.length > 0 && (!v3Engines || v3Engines.length === 0)) {
-    // e.g. supported_api_engines: ['avatar_iii'] — no IV/V → must use v2.
+    // e.g. supported_api_engines: ['avatar_iii'] — no IV/V → v3 avatar_iii.
     return true;
   }
 
@@ -256,35 +251,46 @@ function getLookSupportedVideoEngines(lookBody) {
 /**
  * Single source of truth for how to render a look.
  * @returns {{
- *   videoApi: 'v2'|'v3',
+ *   videoApi: 'v3',
  *   engine: 'avatar_iii'|'avatar_iv'|'avatar_v'|null,
  *   supportedApiEngines: string[],
  *   defaultAvatarEngine: string,
  *   engineCoerced: boolean,
  * }}
- * @param {{ preferV3Video?: boolean }} [options] test override; defaults to HEYGEN_PREFER_V3_VIDEO
  */
-function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null, options = {}) {
-  const preferV3 =
-    options.preferV3Video !== undefined ? options.preferV3Video : isHeygenPreferV3VideoEnabled();
-
-  if (usesHeygenLegacyV2VideoLook(lookBody)) {
-    if (preferV3 && isAvatarIiiOnlyLegacyLook(lookBody)) {
-      return {
-        videoApi: 'v3',
-        engine: HEYGEN_AVATAR_ENGINES.III,
-        supportedApiEngines: [HEYGEN_AVATAR_ENGINES.III],
-        defaultAvatarEngine: HEYGEN_AVATAR_ENGINES.III,
-        engineCoerced: false,
-      };
-    }
+function resolveLegacyMetadataLookPlan(lookBody, avatarType) {
+  if (isAvatarIiiOnlyLegacyLook(lookBody)) {
     return {
-      videoApi: 'v2',
-      engine: null,
-      supportedApiEngines: ['legacy_v2'],
-      defaultAvatarEngine: 'legacy_v2',
+      videoApi: 'v3',
+      engine: HEYGEN_AVATAR_ENGINES.III,
+      supportedApiEngines: [HEYGEN_AVATAR_ENGINES.III],
+      defaultAvatarEngine: HEYGEN_AVATAR_ENGINES.III,
       engineCoerced: false,
     };
+  }
+
+  const lookId = extractLookIdFromLookBody(lookBody);
+  let engine = DEFAULT_HEYGEN_AVATAR_ENGINE;
+  if (isExpressivePublicLookId(lookId) || isStudioOrDigitalTwinAvatarType(avatarType)) {
+    engine = HEYGEN_AVATAR_ENGINES.III;
+  }
+  const finalEngine =
+    engine === HEYGEN_AVATAR_ENGINES.III
+      ? HEYGEN_AVATAR_ENGINES.III
+      : coerceEngineForAvatarType(engine, avatarType);
+
+  return {
+    videoApi: 'v3',
+    engine: finalEngine,
+    supportedApiEngines: [finalEngine],
+    defaultAvatarEngine: finalEngine,
+    engineCoerced: finalEngine !== engine,
+  };
+}
+
+function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
+  if (usesHeygenLegacyV2VideoLook(lookBody)) {
+    return resolveLegacyMetadataLookPlan(lookBody, avatarType);
   }
 
   const raw = extractSupportedApiEnginesFromLook(lookBody);
@@ -345,14 +351,10 @@ function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null, o
  */
 function resolveAvatarEngineForLook(lookBody, requestedEngine) {
   const plan = resolveVideoPlanForLook(lookBody, requestedEngine);
-  if (plan.videoApi === 'v2') {
-    return { useLegacyV2: true, engine: DEFAULT_HEYGEN_AVATAR_ENGINE };
-  }
   if (plan.engine == null) {
-    return { useLegacyV2: false, engine: null, supported: plan.supportedApiEngines };
+    return { engine: null, supported: plan.supportedApiEngines };
   }
   return {
-    useLegacyV2: false,
     engine: plan.engine,
     ...(plan.engineCoerced ? { engineCoerced: true } : {}),
   };
@@ -367,7 +369,7 @@ function enrichLookWithEngineHints(look) {
     supportedApiEngines: plan.supportedApiEngines,
     defaultAvatarEngine: plan.defaultAvatarEngine,
     videoApi: plan.videoApi,
-    usesLegacyV2Video: plan.videoApi === 'v2',
+    usesLegacyV2Video: false,
   };
 }
 
