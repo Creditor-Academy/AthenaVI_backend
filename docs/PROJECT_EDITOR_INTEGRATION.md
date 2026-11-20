@@ -711,7 +711,7 @@ For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`
 | Field | Notes |
 |-------|--------|
 | `avatarId` | **Look id** from step 6.1, not group id |
-| `avatarEngine` | `avatar_iv` (default) or `avatar_v`; must be in look’s `supported_api_engines` |
+| `avatarEngine` | `avatar_iv` (default), `avatar_v`, or `avatar_iii`; prefer look’s `supportedApiEngines` / `defaultAvatarEngine` from the looks API |
 | `avatarType` | `studio_avatar` \| `digital_twin` \| `photo_avatar` from look row |
 | `expressiveness` | **Avatar IV + `photo_avatar` only**; omit for `avatar_v` and studio/video avatars |
 | `sceneId` | Must match saved scene `sceneId` |
