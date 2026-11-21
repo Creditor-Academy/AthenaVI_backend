@@ -21,7 +21,7 @@ function clampNarrativeSlideCount(count) {
 /** Manual add / duplicate deck total hard max */
 const DECK_SLIDE_MAX = 40;
 /** Max freeform elements on one slide */
-const MAX_ELEMENTS_PER_SLIDE = 60;
+const MAX_ELEMENTS_PER_SLIDE = 500;
 /** Default canvas for 16:9 freeform editor */
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
