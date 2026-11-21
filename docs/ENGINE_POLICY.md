@@ -245,7 +245,7 @@ Canonical table lives in [`AI_PPT_GENERATION_COMPLETE.md`](AI_PPT_GENERATION_COM
 |-------|-------|----------------|
 | AI outline / generate | 5–20 slides | `AI_SLIDE_MAX` |
 | Manual add / duplicate | 40 slides | after AI, user may grow the deck |
-| Elements per slide | 60 | `MAX_ELEMENTS_PER_SLIDE` |
+| Elements per slide | 500 | `MAX_ELEMENTS_PER_SLIDE` |
 | 16:9 / 4:3 | 1920×1080 / 1600×1200 | native PPT canvases |
 | 9:16 | **rejected 400** | PPT only — use Canvas Editor for custom sizes |
 
