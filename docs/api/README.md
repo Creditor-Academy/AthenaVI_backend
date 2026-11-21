@@ -47,6 +47,7 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + packs + Brand Kit** — AI/blank/pack/template, canvas, export, admin |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
 | [CLIENT_RENDERING_RECOMMENDATIONS.md](../CLIENT_RENDERING_RECOMMENDATIONS.md) | **Client-side video export** — hybrid render recommendation, HeyGen webhooks, device tiers |
+| [HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md](../HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md) | **Hybrid + HeyGen webhook readiness** — editor/HeyGen/render audit, gaps, Phase 0 roadmap |
 | [HEYGEN_API_V3_MIGRATION_ASSESSMENT.md](../HEYGEN_API_V3_MIGRATION_ASSESSMENT.md) | **HeyGen v1/v2 sunset → v3** — inventory, **v3-only status**, test matrix, remaining gaps (webhooks, audio catalog) |
 | [HEYGEN_V2_MIGRATION_IMPLEMENTATION_PLAN.md](../HEYGEN_V2_MIGRATION_IMPLEMENTATION_PLAN.md) | **HeyGen v2 removal** — phased plan, gates, and commit history (implemented; polling only; no webhooks) |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
