@@ -20,6 +20,10 @@ const { createAvatarBodySchema } = require('./heygen.validation');
 const userCreditBilling = require('../credit/userCreditBilling');
 const { truncateText } = require('../credit/creditHistory.enrich');
 const { FEATURE } = require('../../shared/config/creditPricing');
+const {
+  assertHeygenAvatarCreateTypeAllowed,
+  assertHeygenAvatarTrainingUploadAllowed,
+} = require('../../shared/config/heygenPolicy');
 
 function assertCreateAvatarPayload(body) {
   if (body.type === 'prompt') {
@@ -74,6 +78,7 @@ async function payloadFromMultipart(req, userId) {
   if (type !== 'photo' && type !== 'digital_twin') {
     throw new AppError('Uploaded file is only supported for type photo or digital_twin', 400);
   }
+  assertHeygenAvatarCreateTypeAllowed(type);
 
   const mime = req.file.mimetype;
   if (type === 'photo' && !HEYGEN_AVATAR_PHOTO_MIMES.has(mime)) {
@@ -228,6 +233,7 @@ const listAvatarLooks = asyncHandler(async (req, res) => {
 const uploadAvatarFile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const file = req.file;
+  assertHeygenAvatarTrainingUploadAllowed(file?.mimetype);
   let uploadedKey = null;
 
   try {
@@ -296,6 +302,7 @@ const createAvatar = asyncHandler(async (req, res) => {
     );
   }
   assertCreateAvatarPayload(value);
+  assertHeygenAvatarCreateTypeAllowed(value.type);
   await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.AVATAR_CREATE);
   const data = await heygenV3Service.createAvatar(userId, value);
   const groupId = heygenV3Service.extractAvatarGroupIdFromCreateResponse(data);

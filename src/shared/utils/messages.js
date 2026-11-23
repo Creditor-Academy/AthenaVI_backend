@@ -268,6 +268,8 @@ module.exports = {
     'Transparent WebM output is not supported for this avatar look; use a v3 avatar (not legacy expressive studio looks)',
   HEYGEN_AVATAR_GROUPS_OK: 'Avatar groups fetched',
   HEYGEN_AVATAR_LOOKS_OK: 'Avatar looks fetched',
+  HEYGEN_DIGITAL_TWIN_CREATE_DISABLED:
+    'Digital twin avatars are not available on this environment. Use photo avatars or public catalog looks.',
   HEYGEN_AVATAR_CREATED: 'Avatar creation submitted',
   HEYGEN_AVATAR_FILE_UPLOADED: 'Avatar training file uploaded',
   HEYGEN_VOICE_FILE_UPLOADED: 'Voice clone audio uploaded',

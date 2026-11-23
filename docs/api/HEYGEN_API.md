@@ -106,6 +106,8 @@ Starts HeyGen avatar creation (`digital_twin`, `photo`, or `prompt`).
 | **Path** | `/api/heygen/avatars` |
 | **Auth** | Bearer |
 
+**Digital twin policy** – `type: digital_twin` returns **403** unless the server has **`HEYGEN_DIGITAL_TWIN_CREATE_ENABLED=true`** (see [`ENVIRONMENT.md`](ENVIRONMENT.md)). `POST /api/heygen/avatars/upload` rejects **training videos** (`video/mp4`, `video/webm`) under the same policy. Existing twins remain listable/usable; **photo** and **prompt** creation are unchanged.
+
 **Option A — JSON** (`Content-Type: application/json`)
 
 - `type`: **`digital_twin`** | **`photo`** | **`prompt`** (required).
