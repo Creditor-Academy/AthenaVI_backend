@@ -4,9 +4,11 @@ const listAvatarGroupsQuery = Joi.object({
   body: Joi.object({}).unknown(false),
   params: Joi.object({}).unknown(false),
   query: Joi.object({
-    ownership: Joi.string().valid('public', 'private'),
+    /** `workspace` is listed as private + workspace_id filter; HeyGen only knows public/private. */
+    ownership: Joi.string().valid('public', 'private', 'workspace'),
     workspace_id: Joi.string().uuid().optional(),
-    limit: Joi.number().integer().min(1).max(50),
+    /** HeyGen caps pages at 50; larger values are clamped in heygenV3.service. */
+    limit: Joi.number().integer().min(1).max(100),
     token: Joi.string().allow('', null),
   }).unknown(true),
 });
@@ -17,9 +19,9 @@ const listAvatarLooksQuery = Joi.object({
   query: Joi.object({
     group_id: Joi.string().allow('', null),
     avatar_type: Joi.string().valid('studio_avatar', 'digital_twin', 'photo_avatar'),
-    ownership: Joi.string().valid('public', 'private'),
+    ownership: Joi.string().valid('public', 'private', 'workspace'),
     workspace_id: Joi.string().uuid().optional(),
-    limit: Joi.number().integer().min(1).max(50),
+    limit: Joi.number().integer().min(1).max(100),
     token: Joi.string().allow('', null),
   }).unknown(true),
 });

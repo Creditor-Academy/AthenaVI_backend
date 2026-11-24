@@ -15,7 +15,9 @@ async function assertUserCanAffordFeature(userId, feature, options = {}) {
   const pricing = calculateUsageCredits({
     feature,
     durationSeconds,
+    characters: options.characters ?? (options.text != null ? String(options.text).length : undefined),
     avatarEngine: options.avatarEngine,
+    avatarType: options.avatarType,
   });
   await creditLedger.assertCanAfford({
     scope: SCOPE.USER,
@@ -30,10 +32,12 @@ async function chargeUserFeature({
   feature,
   idempotencyKey,
   durationSeconds = 0,
+  characters,
+  avatarType,
   reference,
   extraMetadata = {},
 }) {
-  const pricing = calculateUsageCredits({ feature, durationSeconds });
+  const pricing = calculateUsageCredits({ feature, durationSeconds, characters, avatarType });
   return creditLedger.chargeUsage({
     scope: SCOPE.USER,
     workspaceId: null,
