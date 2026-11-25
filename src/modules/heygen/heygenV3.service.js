@@ -1240,8 +1240,12 @@ async function getAccountBillingInfo() {
   };
 }
 
-async function createVideo(jsonBody) {
-  const raw = await postJson('/v3/videos', jsonBody);
+async function createVideo(jsonBody, options = {}) {
+  const { idempotencyKey } = options || {};
+  const reqOptions = idempotencyKey
+    ? { headers: { 'Idempotency-Key': String(idempotencyKey) } }
+    : undefined;
+  const raw = await postJson('/v3/videos', jsonBody, reqOptions);
   return { ...normalizeCreateVideoResponse(raw), raw, apiVersion: 'v3' };
 }
 

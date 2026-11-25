@@ -2,9 +2,14 @@ const crypto = require('crypto');
 
 const {
   DEFAULT_HEYGEN_AVATAR_ENGINE,
+  isAvatar6Engine,
   normalizeHeygenAvatarEngine,
 } = require('../constants/heygen');
 
+/**
+ * `motionExpressiveness` only affects Avatar 6 and only when it is not the default, so it joins the
+ * hash in that case alone. Every other request keeps exactly the hash it had before.
+ */
 function generateHeygenRequestHash({
   workspaceId,
   projectId,
@@ -14,6 +19,7 @@ function generateHeygenRequestHash({
   script,
   avatarEngine,
   outputFormat = 'mp4',
+  motionExpressiveness,
 }) {
   if (!workspaceId || !projectId || !sceneId || !avatarId || !voiceId || !script) {
     throw new Error('Missing required fields for HeyGen request hash');
@@ -23,7 +29,7 @@ function generateHeygenRequestHash({
   const engine = normalizeHeygenAvatarEngine(avatarEngine ?? DEFAULT_HEYGEN_AVATAR_ENGINE);
   const format = String(outputFormat || 'mp4').trim().toLowerCase() === 'webm' ? 'webm' : 'mp4';
 
-  const payload = JSON.stringify({
+  const hashInput = {
     workspaceId,
     projectId,
     sceneId: String(sceneId).trim(),
@@ -32,7 +38,15 @@ function generateHeygenRequestHash({
     script: normalizedScript,
     avatarEngine: engine,
     outputFormat: format,
-  });
+  };
+  if (
+    isAvatar6Engine(engine) &&
+    String(motionExpressiveness || '').trim().toLowerCase() === 'less'
+  ) {
+    hashInput.motionExpressiveness = 'less';
+  }
+
+  const payload = JSON.stringify(hashInput);
 
   return crypto.createHash('sha256').update(payload).digest('hex');
 }

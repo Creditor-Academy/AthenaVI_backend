@@ -24,11 +24,20 @@ function buildQueryString(query) {
   return s ? `?${s}` : '';
 }
 
+function buildHeyGenAppError(msg, statusCode, errorCode) {
+  const err = new AppError(msg, statusCode);
+  if (errorCode) {
+    err.heygenErrorCode = String(errorCode);
+  }
+  return err;
+}
+
 function mapHeyGenStatus(res, body) {
+  const errorCode = body?.error?.code || null;
   if (res.ok && body && body.error && !body.data) {
     const msg = body.error?.message || messages.HEYGEN_REQUEST_FAILED;
-    const code = body.error?.code === 'authentication_failed' ? 401 : 400;
-    throw new AppError(msg, code);
+    const code = errorCode === 'authentication_failed' ? 401 : 400;
+    throw buildHeyGenAppError(msg, code, errorCode);
   }
   if (!res.ok) {
     const msg =
@@ -38,9 +47,9 @@ function mapHeyGenStatus(res, body) {
       messages.HEYGEN_REQUEST_FAILED;
     let status = res.status;
     if (status < 400 || status > 599) status = 502;
-    if (status === 401) throw new AppError(msg, 401);
-    if (status === 429) throw new AppError(msg, 429);
-    throw new AppError(msg, status >= 400 && status < 600 ? status : 502);
+    if (status === 401) throw buildHeyGenAppError(msg, 401, errorCode);
+    if (status === 429) throw buildHeyGenAppError(msg, 429, errorCode);
+    throw buildHeyGenAppError(msg, status >= 400 && status < 600 ? status : 502, errorCode);
   }
 }
 
@@ -100,8 +109,8 @@ async function getJson(path, searchParams) {
   return heygenFetch(path, { method: 'GET', searchParams });
 }
 
-async function postJson(path, jsonBody) {
-  return heygenFetch(path, { method: 'POST', jsonBody });
+async function postJson(path, jsonBody, options = {}) {
+  return heygenFetch(path, { ...options, method: 'POST', jsonBody });
 }
 
 async function deleteJson(path) {
