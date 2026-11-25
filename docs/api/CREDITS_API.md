@@ -1,5 +1,7 @@
 # Credits API
 
+> **Pricing & conversion logic:** [`docs/CREDIT_SYSTEM.md`](../CREDIT_SYSTEM.md) — HeyGen rate tables, USD→AC formula, duration estimation, worked examples.
+>
 > **Frontend integration guide:** [`docs/CREDITS_FRONTEND_INTEGRATION.md`](../CREDITS_FRONTEND_INTEGRATION.md) — pools, pricing logic, charge timing, idempotency, editor flows, and UI checklist.
 
 Base path: **`/api/credits`**
@@ -14,7 +16,8 @@ All routes require **`Authorization: Bearer <access_token>`**.
 **Billing**
 
 - Insufficient balance → **402** with `INSUFFICIENT_CREDITS`.
-- HeyGen videos / Remotion: charge on **success** only.
+- Narration / Remotion: charge on **success** only, as the last step once the output is stored — later bookkeeping (storage recalculation, project status) cannot flip a charged row to `failed`.
+- HeyGen avatar videos: charged once HeyGen reports the video **completed**, **before** the MP4 is stored in S3 (HeyGen has already billed us for it). Billing gates the stored copy: if the workspace cannot cover the charge, the row stays `completed` with no `s3Key` (it still plays from the HeyGen URL via status, `/download` and `/stream`), the calls that need the stored file (`sync=full`, `/s3-location`, project render) answer **402**, and every later status check retries until it succeeds. The charge is idempotent per video, so a failed upload after charging is stored on retry without a second charge. Videos already stored (`s3Key` set) are never re-billed.
 - Voice/avatar HeyGen routes: charge **`User.credits`** (`scope: user`); workspace routes use workspace pool (`scope: workspace`).
 
 ---
@@ -129,7 +132,13 @@ Query: `feature` = `heygen_video` \| `speech_generation` \| `remotion_export`.
 
 For **`heygen_video`**: optional `avatarEngine`, `avatarType` (`photo_avatar` \| `studio_avatar` \| `digital_twin`), `resolution` (`720p` \| `1080p`), `script`.
 
-For **`speech_generation`**: optional `script`.
+PAYG rates follow the [HeyGen API pricing page](https://platform.heygen.com/pricing), per engine and avatar type (Avatar III/IV/V). Avatar 6 engines have their own rate independent of avatar type: **`heygen-avatar-6`** $0.10/s (1080p) and $0.145/s (2K); **`heygen-avatar-6-turbo`** $0.05/s (1080p) and $0.0875/s (2K). Env overrides: `HEYGEN_AVATAR_6_USD_PER_SEC`, `HEYGEN_AVATAR_6_2K_USD_PER_SEC`, `HEYGEN_AVATAR_6_TURBO_USD_PER_SEC`, `HEYGEN_AVATAR_6_TURBO_2K_USD_PER_SEC`. Enterprise: 0.2 / 0.1 HeyGen credits/s (env `HEYGEN_ENTERPRISE_AVATAR_6_CREDITS_PER_SEC`, `HEYGEN_ENTERPRISE_AVATAR_6_TURBO_CREDITS_PER_SEC`); enterprise rates are set by contract and are not published.
+
+For **`heygen_video`** on PAYG: the billed length is HeyGen's reported duration **in whole seconds rounded down, minimum 1 second** (for example 5.9 s bills as 5 s), which mirrors how the HeyGen wallet moves. `breakdown.billedSeconds` shows it next to the real `durationSeconds`. Enterprise billing keeps exact seconds because contract billing is unverified. Measured on Avatar 6 Turbo.
+
+For **`speech_generation`**: optional `script`. PAYG is priced per second of generated audio at `HEYGEN_SPEECH_USD_PER_SEC` (default `0.0024`) with a `HEYGEN_SPEECH_USD_PER_CALL_MIN` floor (default `$0.01` per call). Both were measured on HeyGen's `POST /v3/voices/speech` wallet deltas. The charge uses HeyGen's reported duration after generation; the pre-charge estimate uses the script length.
+
+For **`avatar_create`**: PAYG is a per-call price: photo avatar $1.32, custom (`digital_twin`) and `prompt` $2.13.
 
 For **`remotion_export`**: optional `durationInFrames`, `fps`.
 

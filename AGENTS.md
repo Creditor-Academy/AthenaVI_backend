@@ -236,6 +236,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Fonts catalog | [`docs/api/FONTS_API.md`](docs/api/FONTS_API.md) |
 | Assets | [`docs/api/ASSETS_API.md`](docs/api/ASSETS_API.md) |
 | Credits | [`docs/api/CREDITS_API.md`](docs/api/CREDITS_API.md) |
+| **Credits (pricing & conversion)** | [`docs/CREDIT_SYSTEM.md`](docs/CREDIT_SYSTEM.md) |
 | **Credits (frontend)** | [`docs/CREDITS_FRONTEND_INTEGRATION.md`](docs/CREDITS_FRONTEND_INTEGRATION.md) |
 | **Notifications (frontend)** | [`docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md`](docs/NOTIFICATIONS_FRONTEND_INTEGRATION.md) |
 | Platform superadmin | [`docs/api/SUPERADMIN_API.md`](docs/api/SUPERADMIN_API.md) |

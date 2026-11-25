@@ -6,7 +6,12 @@ const logger = require('../../shared/utils/logger');
 const heygenDao = require('./heygen.dao');
 const heygenShareDao = require('./heygenShare.dao');
 const heygenAccess = require('./heygenAccess.service');
-const { getLookSupportedVideoEngines, enrichLookWithEngineHints } = require('../../shared/constants/heygen');
+const {
+  HEYGEN_AVATAR_ENGINES,
+  isAvatar6Engine,
+  getLookSupportedVideoEngines,
+  enrichLookWithEngineHints,
+} = require('../../shared/constants/heygen');
 const {
   enrichVoiceWithSpeechHints,
   enrichVoicesListBodyWithSpeechHints,
@@ -692,6 +697,7 @@ function appendLookEngineBuckets(body) {
     avatar_iii: [],
     avatar_iv: [],
     avatar_v: [],
+    avatar_6: [],
     legacy_v2: [],
     unknown: [],
   };
@@ -705,14 +711,16 @@ function appendLookEngineBuckets(body) {
     const engines = Array.isArray(look.supportedApiEngines)
       ? look.supportedApiEngines
       : getLookSupportedVideoEngines(look);
-    const hasIii = engines.includes('avatar_iii');
-    const hasIv = engines.includes('avatar_iv');
-    const hasV = engines.includes('avatar_v');
+    const hasIii = engines.includes(HEYGEN_AVATAR_ENGINES.III);
+    const hasIv = engines.includes(HEYGEN_AVATAR_ENGINES.IV);
+    const hasV = engines.includes(HEYGEN_AVATAR_ENGINES.V);
+    const has6 = engines.some(isAvatar6Engine);
 
     if (hasIii) engineBuckets.avatar_iii.push(look);
     if (hasIv) engineBuckets.avatar_iv.push(look);
     if (hasV) engineBuckets.avatar_v.push(look);
-    if (!hasIii && !hasIv && !hasV) engineBuckets.unknown.push(look);
+    if (has6) engineBuckets.avatar_6.push(look);
+    if (!hasIii && !hasIv && !hasV && !has6) engineBuckets.unknown.push(look);
   }
 
   const nextTarget = {
@@ -723,6 +731,7 @@ function appendLookEngineBuckets(body) {
       avatar_iii: engineBuckets.avatar_iii.length,
       avatar_iv: engineBuckets.avatar_iv.length,
       avatar_v: engineBuckets.avatar_v.length,
+      avatar_6: engineBuckets.avatar_6.length,
       legacy_v2: engineBuckets.legacy_v2.length,
       unknown: engineBuckets.unknown.length,
       totalLooks: enrichedLooks.length,
@@ -733,8 +742,37 @@ function appendLookEngineBuckets(body) {
   return nextTarget;
 }
 
-async function listAvatarGroups(userId, query) {
-  const raw = await getJson('/v3/avatars', query);
+/** HeyGen GET /v3/avatars and /v3/avatars/looks cap `limit` at 50 and reject unknown query keys. */
+const HEYGEN_AVATAR_LIST_MAX_LIMIT = 50;
+const AVATAR_GROUP_QUERY_KEYS = ['ownership', 'limit', 'token'];
+const AVATAR_LOOK_QUERY_KEYS = ['group_id', 'avatar_type', 'ownership', 'limit', 'token'];
+
+/**
+ * `ownership=workspace` (team tab) has no HeyGen equivalent: list private groups and let the
+ * `workspace_id` filter (own + shared to that workspace) decide what is visible.
+ */
+function normalizeAvatarListQuery(query) {
+  const next = { ...(query || {}) };
+  if (next.ownership === 'workspace') next.ownership = 'private';
+  const limit = Number(next.limit);
+  if (Number.isFinite(limit) && limit > HEYGEN_AVATAR_LIST_MAX_LIMIT) {
+    next.limit = HEYGEN_AVATAR_LIST_MAX_LIMIT;
+  }
+  return next;
+}
+
+function pickHeygenQuery(query, keys) {
+  const out = {};
+  for (const key of keys) {
+    const value = query?.[key];
+    if (value !== undefined && value !== null && value !== '') out[key] = value;
+  }
+  return out;
+}
+
+async function listAvatarGroups(userId, rawQuery) {
+  const query = normalizeAvatarListQuery(rawQuery);
+  const raw = await getJson('/v3/avatars', pickHeygenQuery(query, AVATAR_GROUP_QUERY_KEYS));
   let body = raw;
   if (query?.ownership === 'private') {
     const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
@@ -757,7 +795,8 @@ async function getAvatarLook(lookId) {
   return getJson(`/v3/avatars/looks/${encodeURIComponent(lookId)}`);
 }
 
-async function listAvatarLooks(userId, query) {
+async function listAvatarLooks(userId, rawQuery) {
+  const query = normalizeAvatarListQuery(rawQuery);
   await assertCanAccessLooksQuery(userId, query);
 
   const groupOrLookId =
@@ -765,14 +804,14 @@ async function listAvatarLooks(userId, query) {
       ? String(query.group_id).trim()
       : null;
 
-  let heygenQuery = query;
+  let heygenQuery = pickHeygenQuery(query, AVATAR_LOOK_QUERY_KEYS);
   if (query?.ownership === 'private' && groupOrLookId) {
     const workspaceId = heygenAccess.normalizeWorkspaceId(query.workspace_id);
     const accessibleGroupId = workspaceId
       ? await heygenAccess.resolveAccessibleAvatarGroupId(userId, workspaceId, groupOrLookId)
       : await resolveOwnedAvatarGroupId(userId, groupOrLookId);
     if (accessibleGroupId && accessibleGroupId !== groupOrLookId) {
-      heygenQuery = { ...query, group_id: accessibleGroupId };
+      heygenQuery = { ...heygenQuery, group_id: accessibleGroupId };
     }
   }
 
@@ -1159,6 +1198,34 @@ function normalizeVideoStatusResponse(body) {
   };
 }
 
+/** Voice capabilities change rarely; one shared fetch per hour keeps video creation off this path. */
+const VOICE_CAPABILITIES_TTL_MS = 60 * 60 * 1000;
+let voiceCapabilitiesCache = null;
+
+/**
+ * GET /v3/videos/voice-capabilities: engines and models per language and accent for Create Video.
+ * Concurrent callers share one in-flight request; failures are not cached.
+ */
+function getVideoVoiceCapabilities() {
+  const now = Date.now();
+  if (voiceCapabilitiesCache && now - voiceCapabilitiesCache.at < VOICE_CAPABILITIES_TTL_MS) {
+    return voiceCapabilitiesCache.promise;
+  }
+  const promise = getJson('/v3/videos/voice-capabilities').then((body) => {
+    const data = unwrapHeygenData(body);
+    const capabilities = Array.isArray(data?.capabilities) ? data.capabilities : null;
+    if (!capabilities || capabilities.length === 0) {
+      throw new AppError(messages.HEYGEN_REQUEST_FAILED, 502);
+    }
+    return capabilities;
+  });
+  voiceCapabilitiesCache = { at: now, promise };
+  promise.catch(() => {
+    if (voiceCapabilitiesCache?.promise === promise) voiceCapabilitiesCache = null;
+  });
+  return promise;
+}
+
 function unwrapHeygenData(body) {
   if (body && typeof body === 'object' && 'data' in body && body.data != null) {
     return body.data;
@@ -1256,6 +1323,7 @@ async function getVideoStatus(videoId) {
 
 module.exports = {
   extractAvatarGroupIdFromCreateResponse,
+  getVideoVoiceCapabilities,
   listAvatarGroups,
   listAvatarLooks,
   getAvatarLook,
