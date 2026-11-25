@@ -7,8 +7,8 @@
  * the database replaced by one in-memory slide. Each test asserts what SHOULD happen:
  *   - a FAILING test confirms the data-loss path exists today;
  *   - a PASSING test rules that path out.
- * Not in `npm test` on purpose (the first two are expected to fail until D-1 ships).
- * Run: node --test src/modules/presentation/test/slideSaveDataLoss.smoke.test.js
+ * Not in `npm test` on purpose: the file name does not end in .test.js (the first two tests fail until D-1 ships).
+ * Run: node --test src/modules/presentation/test/slideSaveDataLoss.smoke.js
  */
 
 const assert = require('assert');
