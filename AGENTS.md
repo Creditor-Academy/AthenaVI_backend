@@ -245,6 +245,7 @@ Typical categories: database URL, Redis, JWT secrets, S3, SMTP, Google OAuth, He
 | Environment | [`docs/api/ENVIRONMENT.md`](docs/api/ENVIRONMENT.md) |
 | **Editor / project integration (frontend)** | [`docs/PROJECT_EDITOR_INTEGRATION.md`](docs/PROJECT_EDITOR_INTEGRATION.md) |
 | **Client-side video rendering (recommendation)** | [`docs/CLIENT_RENDERING_RECOMMENDATIONS.md`](docs/CLIENT_RENDERING_RECOMMENDATIONS.md) |
+| **Hybrid video editor + HeyGen webhook readiness (audit)** | [`docs/HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md`](docs/HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md) |
 | **Superadmin portal (frontend)** | [`docs/SUPERADMIN_FRONTEND_INTEGRATION.md`](docs/SUPERADMIN_FRONTEND_INTEGRATION.md) |
 | **Production deployment (AWS)** | [`docs/DEVOPS_DEPLOYMENT.md`](docs/DEVOPS_DEPLOYMENT.md) |
 
@@ -335,6 +336,7 @@ If you want this, create **`.cursor/hooks.json`** locally (not committed) and po
 | `README.md` | Project intro + links to `docs/api/` |
 | `docs/PROJECT_EDITOR_INTEGRATION.md` | Frontend editor integration (project save/load, HeyGen, payload V2, playback) |
 | `docs/CLIENT_RENDERING_RECOMMENDATIONS.md` | Hybrid client render recommendation (WebCodecs, HeyGen webhooks, server fallback) |
+| `docs/HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md` | Pre-implementation audit: editor, HeyGen polling→webhooks, render queue, Phase 0 roadmap |
 | `docs/PRESENTATION_FRONTEND_INTEGRATION.md` | Frontend PPT/canvas + templates integration (UI flows) |
 | `docs/IMAGE_GEN_FRONTEND_INTEGRATION.md` | Frontend AI image studio (models, regen/tweak, download) |
 | `docs/CREDITS_FRONTEND_INTEGRATION.md` | Frontend credits guide (pools, pricing, editor, voice/avatar, TEAM allocation) |
