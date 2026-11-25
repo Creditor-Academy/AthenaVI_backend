@@ -297,6 +297,8 @@ module.exports = {
   SPEECH_GENERATION_NOT_READY: 'Speech audio is not ready for playback yet',
   HEYGEN_PROXY_FETCH_FAILED: 'Could not fetch audio from HeyGen',
   HEYGEN_VIDEO_NOT_READY: 'Video is not ready for download yet',
+  HEYGEN_VIDEO_CREATE_IN_PROGRESS:
+    'A video generation request for this scene is already in progress. Please retry shortly.',
   HEYGEN_VIDEOS_FETCHED: 'HeyGen videos fetched',
   HEYGEN_VIDEO_FETCHED: 'HeyGen video fetched',
   HEYGEN_VIDEO_S3_LOCATION: 'S3 object location for IAM access',
