@@ -24,6 +24,7 @@ const {
   graphicTintColor,
   contentFlipFlags,
   slideHasElements,
+  isUserEmptiedSlide,
   buildDeckHtml,
 } = require('./slideHtml');
 const { FONT_REF_WIDTH } = require('./textFit.util');
@@ -1164,6 +1165,9 @@ async function buildPptxBuffer(
           target: pptxTarget,
         }
       );
+    } else if (isUserEmptiedSlide(slide)) {
+      // The user deleted everything on it: blank, with its background (set above). The legacy
+      // fallback below drew the title and an image the user had deleted (B-3).
     } else if (fallbackMetrics?.[slide.id]) {
       // No elements: the editor's own layout, as the render page drew it.
       await addFallbackToPptxSlide(s, slide, fallbackMetrics[slide.id], {

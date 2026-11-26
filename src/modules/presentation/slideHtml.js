@@ -158,6 +158,21 @@ function slideHasElements(slide) {
   );
 }
 
+/**
+ * A slide the user edited and then emptied (CANVAS_FIX_PLAN B-3). It exports blank (background
+ * only): the legacy title / text / imageRef fallback is for slides that never had a canvas, and
+ * drew a ghost title and picture the user had deleted.
+ */
+function isUserEmptiedSlide(slide) {
+  return Boolean(
+    slide?.manuallyEdited &&
+      slide?.elements &&
+      typeof slide.elements === 'object' &&
+      Array.isArray(slide.elements.elements) &&
+      slide.elements.elements.length === 0
+  );
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -375,6 +390,12 @@ async function buildSlideHtmlPage(slide, palette, opts = {}) {
     return `<section class="slide" style="width:${canvasW}px;height:${canvasH}px;position:relative;background:${escapeHtml(bg)};overflow:hidden">${parts.join('\n')}</section>`;
   }
 
+  if (isUserEmptiedSlide(slide)) {
+    const canvasW = slide.elements.canvas?.width || CANVAS_WIDTH;
+    const canvasH = slide.elements.canvas?.height || CANVAS_HEIGHT;
+    return `<section class="slide" style="width:${canvasW}px;height:${canvasH}px;position:relative;background:${escapeHtml(bg)};overflow:hidden"></section>`;
+  }
+
   const content = slide.content || {};
   const bullets = bulletsFromContent(content)
     .map((b) => `<li>${escapeHtml(b)}</li>`)
@@ -472,6 +493,7 @@ module.exports = {
   contentFlipFlags,
   placementTransformCss,
   slideHasElements,
+  isUserEmptiedSlide,
   escapeHtml,
   htmlTextInner,
   htmlChartInner,
