@@ -1,4 +1,5 @@
 const prisma = require('../../shared/config/prismaClient');
+const { withSlideWriteLog } = require('./slideWriteLog');
 
 const slidesOrderedInclude = {
   slides: {
@@ -262,10 +263,17 @@ async function createOneSlide(slide) {
 }
 
 async function updateSlide(slideId, data) {
-  return prisma.slide.update({
-    where: { id: slideId },
+  // Writes that change `elements` are logged (L-1); the log never blocks or fails the save.
+  return withSlideWriteLog(
+    slideId,
     data,
-  });
+    () => prisma.slide.findUnique({ where: { id: slideId }, select: { elements: true, deckId: true } }),
+    () =>
+      prisma.slide.update({
+        where: { id: slideId },
+        data,
+      })
+  );
 }
 
 async function findSlideById(slideId) {

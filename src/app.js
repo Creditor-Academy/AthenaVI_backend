@@ -6,6 +6,7 @@ const errorHandler = require('./middlewares/errorHandler');
 const { connectRedis } = require("./shared/config/redis");
 const { createCorsMiddleware, logCorsConfig } = require('./shared/config/cors');
 const cookieParser = require('cookie-parser')
+const { slideWriteContextMiddleware } = require('./modules/presentation/slideWriteLog');
 
 const app = express();
 
@@ -58,6 +59,8 @@ app.use(express.json({ limit: jsonBodyLimit }));
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+// Lets slide-write logs name the route and user (presentation/slideWriteLog.js, L-1).
+app.use(slideWriteContextMiddleware);
 
 app.get('/', (req, res) => {
     res.send('Backend API is running');

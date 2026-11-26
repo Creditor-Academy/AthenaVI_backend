@@ -21,9 +21,15 @@ function assertNotGenerating(deck) {
   }
 }
 
+/**
+ * The slide's elements doc, ready to change. Keeps every other key of the stored doc (background
+ * colour, gradient, background image…): building it from version/canvas/elements only made every
+ * Media-panel insert wipe the slide background (CANVAS_FIX_PLAN B-2).
+ */
 function getElementsDoc(slide) {
   if (slide.elements && typeof slide.elements === 'object' && Array.isArray(slide.elements.elements)) {
     return {
+      ...slide.elements,
       version: slide.elements.version || 1,
       canvas: slide.elements.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
       elements: [...slide.elements.elements],
@@ -48,7 +54,9 @@ function findScreenImage(frame, elements) {
 }
 
 function applyImageToElements(elementsDoc, { url, s3Key, elementId, assetId, provider }) {
+  // Keep the slide's other doc keys (background colour / gradient / image): B-2.
   const doc = {
+    ...elementsDoc,
     version: elementsDoc.version || 1,
     canvas: elementsDoc.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
     elements: Array.isArray(elementsDoc.elements) ? [...elementsDoc.elements] : [],
@@ -289,6 +297,7 @@ async function insertStock({
 }
 
 module.exports = {
+  getElementsDoc,
   applyImageToElements,
   uploadSlideMedia,
   attachAsset,
