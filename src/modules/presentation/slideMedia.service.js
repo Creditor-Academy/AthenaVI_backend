@@ -12,6 +12,7 @@ const { blankCanvas, newElementId } = require('./layoutToElements');
 const { CANVAS_WIDTH, CANVAS_HEIGHT } = require('./presentation.constants');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
 const { attachPresignedMedia } = require('./presignSlideMedia');
+const { readSlideRevision, retryOnSlideRevisionConflict } = require('./slideRevision');
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
@@ -134,8 +135,17 @@ async function persistSlideImage({
   elementId,
   extraImageRef = {},
 }) {
+  // Read-modify-write: when another save lands in between, re-read and apply the image again
+  // instead of writing over that save (D-1). The upload itself happened before this.
+  return retryOnSlideRevisionConflict(() =>
+    writeSlideImage({ workspaceId, presentationId, slideId, url, s3Key, source, elementId, extraImageRef })
+  );
+}
+
+async function writeSlideImage({ workspaceId, presentationId, slideId, url, s3Key, source, elementId, extraImageRef }) {
   const { deck, slide } = await loadSlideContext(workspaceId, presentationId, slideId);
-  const elements = applyImageToElements(getElementsDoc(slide), {
+  const doc = getElementsDoc(slide);
+  const elements = applyImageToElements(doc, {
     url,
     s3Key,
     elementId,
@@ -150,12 +160,11 @@ async function persistSlideImage({
     error: null,
     ...extraImageRef,
   };
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements,
-    imageRef,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await presentationDao.updateSlide(
+    slideId,
+    { elements, imageRef, manuallyEdited: true, status: 'READY' },
+    { baseRevision: readSlideRevision(doc) }
+  );
   return {
     project: { id: deck.projectId },
     deck: { id: deck.id },

@@ -191,6 +191,8 @@ module.exports = {
   CANVAS_NOT_FOUND: 'Canvas not found',
   CANVAS_REVISION_CONFLICT:
     'This design was changed somewhere else since you opened it. Load the latest version or keep yours.',
+  PRESENTATION_SLIDE_REVISION_CONFLICT:
+    'This slide was changed somewhere else since you loaded it. Reload the slide and try again.',
   VIDEO_SCENE_ASSIGNEE_UPDATED: 'Scene assignee updated successfully',
   VIDEO_SCENE_ASSIGN_TEAM_ONLY: 'Scene assignment is only available in team workspaces',
   VIDEO_SCENE_ASSIGNEE_NOT_MEMBER: 'Assignee must be a member of this workspace',

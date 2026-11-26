@@ -104,9 +104,18 @@ async function withSlideWriteLog(slideId, data, readBefore, write) {
   }
 
   const updated = await write();
+  logSlideWrite({ slideId, before, after: data.elements, updated });
+  return updated;
+}
 
+/**
+ * Log one finished elements write. `before` is the stored slide read before the write
+ * ({ elements, deckId }) or null. Never throws.
+ */
+function logSlideWrite({ slideId, before, after, updated }) {
+  if (!isEnabled()) return;
   try {
-    const change = describeSlideWrite(before?.elements ?? null, data.elements);
+    const change = describeSlideWrite(before?.elements ?? null, after);
     const entry = {
       event: 'slide_write',
       slideId,
@@ -119,12 +128,12 @@ async function withSlideWriteLog(slideId, data, readBefore, write) {
   } catch {
     // Logging must never affect the save.
   }
-  return updated;
 }
 
 module.exports = {
   slideWriteContextMiddleware,
   withSlideWriteLog,
+  logSlideWrite,
   describeSlideWrite,
   shouldWarn,
 };

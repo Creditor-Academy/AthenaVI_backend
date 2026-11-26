@@ -13,6 +13,7 @@ const {
   buildContentVersion,
 } = require('../presentationShare/presentationShare.presign');
 const { enrichSlidesForClient } = require('./elementContent.normalize');
+const { signingWindow } = require('./presignSlideMedia');
 const { fontCssUrlFromThemeTokens } = require('../../shared/fonts/googleFontsCss');
 const { redisClient } = require('../../shared/config/redis');
 const presentationDao = require('./presentation.dao');
@@ -176,7 +177,8 @@ const renderCacheKey = ({ presentationId, contentVersionMs, offset, limit }) =>
   `ppt:render:v1:${presentationId}:${contentVersionMs}:${offset}:${limit}`;
 
 function renderEtag({ contentVersionMs, slideCount, offset, limit }) {
-  return `W/"ppt-render-${contentVersionMs}-${slideCount}-${offset}-${limit}"`;
+  // Includes the image signing window (R-1): a 304 must not keep links from an earlier window.
+  return `W/"ppt-render-${contentVersionMs}-${slideCount}-${offset}-${limit}-w${signingWindow().index}"`;
 }
 
 function etagMatches(ifNoneMatch, etag) {

@@ -1,3 +1,4 @@
+const { readSlideRevision, retryOnSlideRevisionConflict } = require('./slideRevision');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
 const presentationDao = require('./presentation.dao');
@@ -251,35 +252,110 @@ async function applyLayout({ workspaceId, presentationId, slideId, templateId })
     context: { slideId, deckId: deck.id },
   });
 
-  const updated = await presentationDao.updateSlide(slideId, {
-    layoutId: template.schema?.layout_id || template.id,
-    contentType: template.contentType || template.schema?.content_type || slide.contentType,
-    content: compiled.content,
-    elements: compiled.elementsDoc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await presentationDao.updateSlide(
+    slideId,
+    {
+      layoutId: template.schema?.layout_id || template.id,
+      contentType: template.contentType || template.schema?.content_type || slide.contentType,
+      content: compiled.content,
+      // The new layout only has its own slots: keep what the user added (D-8 / layout switch).
+      elements: carryOverUserContent(compiled.elementsDoc, slide.elements),
+      manuallyEdited: true,
+      status: 'READY',
+    },
+    { baseRevision: readSlideRevision(slide.elements) }
+  );
   return { slide: enrichSlideForClient(updated) };
 }
 
-async function putCanvas({ workspaceId, presentationId, slideId, canvas }) {
-  const { deck } = await loadDeckContext(workspaceId, presentationId);
-  assertNotGenerating(deck);
+// Content a user adds. Layouts put pictures, charts and tables in slots (slotId); a slot-less one
+// was added by the user, whatever its id. Editor-made (`el-…`) and Media-panel (`img_…`) ids too.
+const USER_CONTENT_TYPES = new Set(['image', 'video', 'chart', 'table']);
+function isUserAddedElement(el) {
+  if (!el || typeof el !== 'object' || el.slotId) return false;
+  if (USER_CONTENT_TYPES.has(el.type)) return true;
+  return /^(el-|img_)/.test(String(el.id || ''));
+}
 
-  const slide = (deck.slides || []).find((s) => s.id === slideId);
-  if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
-  // A late autosave must not overwrite (and mark READY) a slide that is regenerating.
-  if (slide.status === 'PENDING' || slide.status === 'GENERATING') {
-    throw new AppError('Slide is regenerating; try again when it finishes', 409);
+/**
+ * Rebuilding a slide from a layout keeps the user's own content: user-added elements (on top, in
+ * their order) and a background image. Same rule as the editor's carryOverUserContent.
+ */
+function carryOverUserContent(compiledDoc, previousDoc) {
+  if (!compiledDoc || typeof compiledDoc !== 'object') return compiledDoc;
+  const compiled = Array.isArray(compiledDoc.elements) ? compiledDoc.elements : [];
+  const previous = Array.isArray(previousDoc?.elements) ? previousDoc.elements : [];
+  const compiledIds = new Set(compiled.map((el) => el?.id));
+  const carried = previous
+    .filter((el) => isUserAddedElement(el) && !compiledIds.has(el.id))
+    .sort((a, b) => (Number(a.layer) || 0) - (Number(b.layer) || 0));
+  const next = { ...compiledDoc };
+  if (carried.length) {
+    let top = compiled.reduce((max, el) => Math.max(max, Number(el?.layer) || 0), 0);
+    next.elements = [...compiled, ...carried.map((el) => ({ ...el, layer: (top += 1) }))];
   }
+  if (previousDoc?.backgroundImage) {
+    next.backgroundImage = previousDoc.backgroundImage;
+    if (previousDoc.backgroundImageFit != null) next.backgroundImageFit = previousDoc.backgroundImageFit;
+    const bgId = previousDoc.backgroundImageElementId;
+    if (bgId && (next.elements || []).some((el) => el?.id === bgId)) next.backgroundImageElementId = bgId;
+  }
+  return next;
+}
 
-  const doc = normalizeCanvasPayload(canvas);
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
-  return { slide: enrichSlideForClient(updated) };
+/**
+ * A save sent while the client page closes can't be refused and retried, so when the slide
+ * moved past the client's revision the server merges instead (D-1): the client's copy wins, and
+ * elements added elsewhere since (on the server, not in the client's copy, not known to the
+ * client at its revision) are kept. Elements the client knew and removed stay removed.
+ */
+function mergeAddedElsewhere(clientDoc, storedDoc, knownElementIds = []) {
+  const clientIds = new Set((clientDoc.elements || []).map((el) => el?.id));
+  const known = new Set(Array.isArray(knownElementIds) ? knownElementIds : []);
+  const addedElsewhere = (Array.isArray(storedDoc?.elements) ? storedDoc.elements : []).filter(
+    (el) => el && el.id != null && !clientIds.has(el.id) && !known.has(el.id)
+  );
+  if (!addedElsewhere.length) return clientDoc;
+  return { ...clientDoc, elements: [...(clientDoc.elements || []), ...addedElsewhere] };
+}
+
+async function putCanvas({ workspaceId, presentationId, slideId, canvas, baseRevision }) {
+  // `clientMerge` (page-close saves): merge on a revision mismatch instead of answering 409.
+  const { clientMerge, ...canvasBody } = canvas && typeof canvas === 'object' ? canvas : {};
+  const mergeOnConflict = Boolean(clientMerge) && baseRevision != null && baseRevision !== '';
+
+  const write = async () => {
+    const { deck } = await loadDeckContext(workspaceId, presentationId);
+    assertNotGenerating(deck);
+
+    const slide = (deck.slides || []).find((s) => s.id === slideId);
+    if (!slide) throw new AppError(messages.PRESENTATION_SLIDE_NOT_FOUND, 404);
+    // A late autosave must not overwrite (and mark READY) a slide that is regenerating.
+    if (slide.status === 'PENDING' || slide.status === 'GENERATING') {
+      throw new AppError('Slide is regenerating; try again when it finishes', 409);
+    }
+
+    let doc = normalizeCanvasPayload(canvasBody);
+    let expected = baseRevision;
+    if (mergeOnConflict) {
+      const storedRevision = readSlideRevision(slide.elements);
+      if (storedRevision !== Number(baseRevision)) {
+        doc = mergeAddedElsewhere(doc, slide.elements, clientMerge.knownElementIds);
+        // Written against what was just read: a write landing in between re-runs the merge.
+        expected = storedRevision;
+      }
+    }
+    // With `baseRevision` (D-1) a save from an older copy of the slide gets 409 instead of
+    // overwriting changes made since; without it, last write wins as before.
+    const updated = await presentationDao.updateSlide(
+      slideId,
+      { elements: doc, manuallyEdited: true, status: 'READY' },
+      { baseRevision: expected }
+    );
+    return { slide: enrichSlideForClient(updated) };
+  };
+
+  return mergeOnConflict ? retryOnSlideRevisionConflict(write) : write();
 }
 
 /**
@@ -344,20 +420,21 @@ async function addElement(args) {
   });
 
   doc.elements.push(next);
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await persistElementsDoc(slideId, doc);
   return { slide: enrichSlideForClient(updated), element: next };
 }
 
+/**
+ * Write an element edit made on `doc`. `doc` still carries the revision it was read at, so a
+ * write that landed in between makes this throw a revision conflict, and the exported
+ * function re-runs on the latest slide (retryOnRevisionConflict) instead of dropping it (D-1).
+ */
 function persistElementsDoc(slideId, doc) {
-  return presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  return presentationDao.updateSlide(
+    slideId,
+    { elements: doc, manuallyEdited: true, status: 'READY' },
+    { baseRevision: readSlideRevision(doc) }
+  );
 }
 
 /**
@@ -511,11 +588,7 @@ async function deleteElement({ workspaceId, presentationId, slideId, elementId }
   if (next.length === doc.elements.length) throw new AppError('Element not found', 404);
   doc.elements = next;
 
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await persistElementsDoc(slideId, doc);
   return { slide: enrichSlideForClient(updated) };
 }
 
@@ -539,11 +612,7 @@ async function reorderElements({ workspaceId, presentationId, slideId, elementId
   }
   doc.elements = ordered;
 
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements: doc,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await persistElementsDoc(slideId, doc);
   return { slide: enrichSlideForClient(updated) };
 }
 
@@ -617,6 +686,9 @@ async function getDeckLayoutTemplate({ templateId }) {
   };
 }
 
+/** Element edits are read-modify-write: re-run them when another write landed in between. */
+const retryOnRevisionConflict = (fn) => (args) => retryOnSlideRevisionConflict(() => fn(args));
+
 module.exports = {
   mergeElementContent,
   addSlide,
@@ -624,18 +696,20 @@ module.exports = {
   deleteSlide,
   duplicateSlide,
   reorderSlides,
-  applyLayout,
+  applyLayout: retryOnRevisionConflict(applyLayout),
   putCanvas,
-  addElement,
-  patchElement,
-  patchElementsBatch,
-  groupElements,
-  ungroupElements,
-  alignElements,
-  deleteElement,
-  reorderElements,
+  addElement: retryOnRevisionConflict(addElement),
+  patchElement: retryOnRevisionConflict(patchElement),
+  patchElementsBatch: retryOnRevisionConflict(patchElementsBatch),
+  groupElements: retryOnRevisionConflict(groupElements),
+  ungroupElements: retryOnRevisionConflict(ungroupElements),
+  alignElements: retryOnRevisionConflict(alignElements),
+  deleteElement: retryOnRevisionConflict(deleteElement),
+  reorderElements: retryOnRevisionConflict(reorderElements),
   listElementCatalog,
   listDeckLayouts,
   normalizeCanvasPayload,
   getElementsDoc,
+  mergeAddedElsewhere,
+  carryOverUserContent,
 };
