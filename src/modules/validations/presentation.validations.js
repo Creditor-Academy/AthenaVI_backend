@@ -500,6 +500,10 @@ const putCanvasSchema = Joi.object({
     presentationId: presentationIdParam,
     slideId: slideIdParam,
   }),
+  // The slide revision the client edited (D-1): an older one gets 409 instead of overwriting.
+  query: Joi.object({
+    baseRevision: Joi.number().integer().min(0).optional(),
+  }),
   body: canvasDocSchema.required(),
 });
 

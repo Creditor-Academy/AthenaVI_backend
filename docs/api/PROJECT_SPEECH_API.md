@@ -25,7 +25,7 @@ Generates **audio-only narration** per **workspace → folder → project → sc
 - **`GET .../speech/:speechId/stream`** — Stable path; requires Bearer (use `fetch` + blob URL for `<audio>`).
 - **`GET .../speech/:speechId/download`** — Returns `presignedUrl` for direct `audio.src` (expires; refetch on load).
 
-**5. Credits** — Billed as workspace-scoped **`speech_generation`** (same TTS Starfish rate as `voice_preview`). Estimate: `GET /api/credits/workspaces/:id/estimate?feature=speech_generation&script=...`
+**5. Credits** — Billed as workspace-scoped **`speech_generation`**, priced per second of generated audio on PAYG (same rate as `voice_preview`; default `0.0024` USD/s with a `$0.01` minimum per call; override `HEYGEN_SPEECH_USD_PER_SEC` / `HEYGEN_SPEECH_USD_PER_CALL_MIN`). Estimate: `GET /api/credits/:workspaceId/estimate?feature=speech_generation&script=...`
 
 ---
 
@@ -49,7 +49,7 @@ Generates **audio-only narration** per **workspace → folder → project → sc
 | `language` | no | Base language code (e.g. `en`) |
 | `locale` | no | BCP-47 locale (e.g. `en-US`) |
 
-**Response (201)** – `data.speechGeneration`: saved row with `id`, `sceneId`, `voiceId`, `script`, `durationSec`, `s3Key`, `wordTimestamps`, `playbackReady`, `s3Ready`, `status` (`completed` or `failed`). Same script + scene + voice + speed + inputType + locale returns the **existing** row (idempotent).
+**Response (201)** – `data.speechGeneration`: saved row with `id`, `sceneId`, `voiceId`, `script`, `durationSec`, `s3Key`, `wordTimestamps`, `playbackReady`, `s3Ready`, `status` (`completed` or `failed`). Same script + scene + voice + speed + inputType + locale returns the **existing** row (idempotent). The exception is a row with `status: "failed"` that was never billed: repeating the request retries it on the **same row** (same `id`). If the audio was uploaded but the charge was refused, the uploaded file is deleted and the failed row has no `s3Key`.
 
 **409** – Speech not ready for playback (failed generation or missing S3) on download/stream.
 

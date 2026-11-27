@@ -670,9 +670,10 @@ Do **not** use only `ownership=public` in TEAM editor — users need **private +
 
 **Before offering a look in the UI**, read **`supported_api_engines`** on each look row:
 
-- Include the look if it supports the user’s chosen engine (`avatar_iv` and/or `avatar_v`).
-- Default generation uses **`avatar_iv`** when the client omits **`avatarEngine`**.
+- Engines: `avatar_iii`, `avatar_iv`, `avatar_v`, `heygen-avatar-6`, `heygen-avatar-6-turbo`. Do **not** hide looks that only list Avatar 6 engines; the backend renders them with Avatar 6 Turbo.
+- Send the selected look’s **`defaultAvatarEngine`** (or one of its `supportedApiEngines`) as **`avatarEngine`**. When omitted, the backend defaults to `avatar_iv` and coerces to an engine the look supports.
 - Pass **`avatarEngine`: `"avatar_v"`** on **`POST .../heygen/videos`** only when the look lists `avatar_v`.
+- Full list of required frontend changes and the bugs they close: [`HEYGEN_VIDEO_EDITOR_FRONTEND_FIXES.md`](HEYGEN_VIDEO_EDITOR_FRONTEND_FIXES.md).
 - Persist **`presenter.avatarEngine`** in project data so re-generate uses the same engine.
 
 ### 6.2 Create scene clip
@@ -711,7 +712,7 @@ For a **transparent** avatar clip (alpha channel), use **`outputFormat": "webm"`
 | Field | Notes |
 |-------|--------|
 | `avatarId` | **Look id** from step 6.1, not group id |
-| `avatarEngine` | `avatar_iv` (default), `avatar_v`, or `avatar_iii`; prefer look’s `supportedApiEngines` / `defaultAvatarEngine` from the looks API |
+| `avatarEngine` | `avatar_iv` (default), `avatar_v`, `avatar_iii`, `heygen-avatar-6`, or `heygen-avatar-6-turbo`; prefer look’s `supportedApiEngines` / `defaultAvatarEngine` from the looks API |
 | `avatarType` | `studio_avatar` \| `digital_twin` \| `photo_avatar` from look row |
 | `expressiveness` | **Avatar IV + `photo_avatar` only**; omit for `avatar_v` and studio/video avatars |
 | `sceneId` | Must match saved scene `sceneId` |
@@ -951,7 +952,7 @@ Rehydration **does not** restore playback URLs — frontend must still call `/do
 - [ ] Login → Bearer token
 - [ ] `POST .../projects` → save `projectId`, `folderId`
 - [ ] Load HeyGen catalog (groups → looks → voices)
-- [ ] Filter looks by chosen `avatarEngine` (`avatar_iv` / `avatar_v` in `supported_api_engines`)
+- [ ] Send the look’s `defaultAvatarEngine` as `avatarEngine` (do not hide Avatar-6-only looks)
 
 ### Generate avatar for a scene
 

@@ -1,4 +1,11 @@
 const prisma = require('../../shared/config/prismaClient');
+const { logSlideWrite } = require('./slideWriteLog');
+const {
+  readSlideRevision,
+  isSlideRevisionConflict,
+  withSlideRevision,
+  slideRevisionConflict,
+} = require('./slideRevision');
 
 const slidesOrderedInclude = {
   slides: {
@@ -261,11 +268,52 @@ async function createOneSlide(slide) {
   });
 }
 
-async function updateSlide(slideId, data) {
-  return prisma.slide.update({
-    where: { id: slideId },
-    data,
-  });
+const SLIDE_WRITE_ATTEMPTS = 3;
+
+/**
+ * Update a slide. A write that changes `elements` (D-1):
+ * - bumps `elements.revision`;
+ * - with `baseRevision`, is refused with 409 when the stored slide moved past that revision;
+ * - only lands if the row is unchanged since it was read (guards two writes arriving together);
+ * - is logged (L-1, never blocks the save).
+ * Without `baseRevision` the content is still last-write-wins, as before.
+ */
+async function updateSlide(slideId, data, { baseRevision } = {}) {
+  if (!data || data.elements === undefined) {
+    return prisma.slide.update({ where: { id: slideId }, data });
+  }
+
+  let before = null;
+  for (let attempt = 1; attempt <= SLIDE_WRITE_ATTEMPTS; attempt += 1) {
+    const stored = await prisma.slide.findUnique({
+      where: { id: slideId },
+      select: { elements: true, deckId: true, updatedAt: true },
+    });
+    // Unknown slide: let Prisma raise its usual not-found error.
+    if (!stored) return prisma.slide.update({ where: { id: slideId }, data });
+    if (!before) before = stored;
+
+    const storedRevision = readSlideRevision(stored.elements);
+    if (isSlideRevisionConflict(baseRevision, storedRevision)) throw slideRevisionConflict();
+
+    const next = { ...data, elements: withSlideRevision(data.elements, storedRevision + 1) };
+    let written = null;
+    if (attempt < SLIDE_WRITE_ATTEMPTS || baseRevision != null) {
+      const { count } = await prisma.slide.updateMany({
+        where: { id: slideId, updatedAt: stored.updatedAt },
+        data: next,
+      });
+      if (count === 1) written = await prisma.slide.findUnique({ where: { id: slideId } });
+    } else {
+      // Last try for a caller without a revision: keep today's behaviour rather than fail.
+      written = await prisma.slide.update({ where: { id: slideId }, data: next });
+    }
+    if (written) {
+      logSlideWrite({ slideId, before, after: next.elements, updated: written });
+      return written;
+    }
+  }
+  throw slideRevisionConflict();
 }
 
 async function findSlideById(slideId) {

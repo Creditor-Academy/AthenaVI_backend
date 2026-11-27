@@ -6,8 +6,9 @@ const workspaceProjectParams = Joi.object({
   projectId: Joi.string().uuid().required(),
 });
 
+/** Same ranges as narration (speech.validation); heygen.service clamps to HeyGen's 0.5–1.5 / ≤1. */
 const voiceSettingsSchema = Joi.object({
-  speed: Joi.number().min(0.5).max(1.5).optional(),
+  speed: Joi.number().min(0.5).max(2).optional(),
   pitch: Joi.number().min(-50).max(50).optional(),
   volume: Joi.number().min(0).max(2).optional(),
   locale: Joi.string().trim().max(32).optional(),
@@ -27,7 +28,8 @@ const createHeygenVideoSchema = Joi.object({
     voiceId: Joi.string().trim().required(),
     script: Joi.string().trim().min(1).required(),
     /**
-     * HeyGen rendering engine: avatar_iv (default), avatar_v, or avatar_iii when the look supports it.
+     * HeyGen rendering engine: avatar_iv (default), avatar_v, heygen-avatar-6, heygen-avatar-6-turbo,
+     * or avatar_iii when the look supports it. Coerced server-side to an engine the look lists.
      * Omit or send "" when the look has supported_api_engines: [].
      */
     avatarEngine: avatarEngineField(),
@@ -38,6 +40,8 @@ const createHeygenVideoSchema = Joi.object({
       .optional(),
     /** Avatar IV + photo_avatar only; ignored for avatar_v. */
     expressiveness: Joi.string().trim().valid('low', 'medium', 'high').optional(),
+    /** Avatar 6 only: `less` for fewer, smaller gestures and calmer expressions; ignored otherwise. */
+    motionExpressiveness: Joi.string().trim().valid('default', 'less').optional(),
     voiceSettings: voiceSettingsSchema,
     removeBackground: Joi.boolean().optional(),
     outputFormat: Joi.string().trim().valid('mp4', 'webm').optional(),

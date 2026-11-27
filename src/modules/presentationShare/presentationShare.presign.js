@@ -1,4 +1,4 @@
-const { attachPresignedMedia } = require('../presentation/presignSlideMedia');
+const { attachPresignedMedia, signingWindow } = require('../presentation/presignSlideMedia');
 
 /**
  * Public preview uses the same per-element signing as the editor so icons,
@@ -34,7 +34,9 @@ function buildContentVersion({ deck, slides, share }) {
   return {
     contentVersionMs,
     contentUpdatedAt: contentVersionMs ? new Date(contentVersionMs).toISOString() : null,
-    etag: `W/"${contentVersionMs}-${(slides || []).length}-${shareMs}"`,
+    // The signing window is part of the tag (R-1): a 304 must never keep image links from an
+    // earlier window, which expire.
+    etag: `W/"${contentVersionMs}-${(slides || []).length}-${shareMs}-w${signingWindow().index}"`,
   };
 }
 

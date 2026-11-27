@@ -46,12 +46,14 @@ Canonical HTTP contracts for the backend. Start with [Overview](OVERVIEW.md) (ba
 | [INFOGRAPHIC_EVAL_SET.md](../INFOGRAPHIC_EVAL_SET.md) | Infographic eval briefs + pass thresholds |
 | [PRESENTATION_FRONTEND_INTEGRATION.md](../PRESENTATION_FRONTEND_INTEGRATION.md) | **PPT / canvas + packs + Brand Kit** — AI/blank/pack/template, canvas, export, admin |
 | [PROJECT_EDITOR_INTEGRATION.md](../PROJECT_EDITOR_INTEGRATION.md) | Editor save/load, playback, HeyGen in projects |
+| [HEYGEN_VIDEO_EDITOR_FRONTEND_FIXES.md](../HEYGEN_VIDEO_EDITOR_FRONTEND_FIXES.md) | **Frontend handoff** — Avatar 6 engines, error toasts, white-page guard, retry/credit behaviour, QA checklist |
 | [CLIENT_RENDERING_RECOMMENDATIONS.md](../CLIENT_RENDERING_RECOMMENDATIONS.md) | **Client-side video export** — hybrid render recommendation, HeyGen webhooks, device tiers |
 | [HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md](../HYBRID_VIDEO_EDITOR_HEYGEN_READINESS_AUDIT.md) | **Hybrid + HeyGen webhook readiness** — editor/HeyGen/render audit, gaps, Phase 0 roadmap |
 | [HEYGEN_API_V3_MIGRATION_ASSESSMENT.md](../HEYGEN_API_V3_MIGRATION_ASSESSMENT.md) | **HeyGen v1/v2 sunset → v3** — inventory, **v3-only status**, test matrix, remaining gaps (webhooks, audio catalog) |
 | [HEYGEN_V2_MIGRATION_IMPLEMENTATION_PLAN.md](../HEYGEN_V2_MIGRATION_IMPLEMENTATION_PLAN.md) | **HeyGen v2 removal** — phased plan, gates, and commit history (implemented; polling only; no webhooks) |
 | [STOCK_FRONTEND_INTEGRATION.md](../STOCK_FRONTEND_INTEGRATION.md) | Stock library search, import-on-use, attribution |
 | [IMAGE_GEN_FRONTEND_INTEGRATION.md](../IMAGE_GEN_FRONTEND_INTEGRATION.md) | AI image studio (folder chats, models, regen/tweak, download) |
+| [CREDIT_SYSTEM.md](../CREDIT_SYSTEM.md) | Credits: HeyGen pricing, USD→AC conversion, worked examples |
 | [CREDITS_FRONTEND_INTEGRATION.md](../CREDITS_FRONTEND_INTEGRATION.md) | Credits: balances, estimates, billing logic, editor & voice/avatar UX |
 | [PRESENTATION_CREDITS_FRONTEND.md](../PRESENTATION_CREDITS_FRONTEND.md) | AI PPT credits: `ppt_*` features, outline reconcile, charge-on-success, estimate |
 | [PRESENTATION_PROMPTS.md](../PRESENTATION_PROMPTS.md) | Prompt bundle version, prompt files, when to bump |

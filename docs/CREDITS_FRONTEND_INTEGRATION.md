@@ -152,23 +152,31 @@ athenaCredits = ceil(heygenUsdCost × (1 + marginPercent / 100) × acPerUsd)
 
 ### PAYG reference rates (HeyGen self-serve, 720p/1080p)
 
-Rates follow [HeyGen self-serve pricing](https://developers.heygen.com/docs/pricing). Scene video cost depends on **`avatarType`**, not engine (IV vs V same table).
+Rates follow the [HeyGen API pricing page](https://platform.heygen.com/pricing) (pay-as-you-go, USD, list price). Scene video cost depends on **engine and `avatarType`**.
 
-| `avatarType` | USD/sec |
-|--------------|---------|
-| `photo_avatar` | $0.05 |
-| `studio_avatar`, `digital_twin` | $0.0667 |
-| (omitted — conservative default) | $0.0667 |
+| Engine | `avatarType` | USD/sec (720p/1080p) |
+|--------|--------------|----------------------|
+| `avatar_iii` (legacy) | `photo_avatar` / `studio_avatar` | $0.0165 |
+| `avatar_iii` (legacy) | `digital_twin` | $0.01 |
+| `avatar_iv` (default) | `photo_avatar` | $0.0385 |
+| `avatar_iv` (default) | `studio_avatar`, `digital_twin` | $0.0805 |
+| `avatar_v` | any | $0.12 |
+| `heygen-avatar-6-turbo` | any | $0.05 (1080p), $0.0875 (2K) |
+| `heygen-avatar-6` (Pro) | any | $0.10 (1080p), $0.145 (2K) |
+
+Unknown `avatarType` uses the Studio/Custom rate (the higher one).
 
 | Feature | Basis |
 |---------|--------|
-| `heygen_video` | `avatarType` × output seconds (720p/1080p) |
-| `remotion_export` | `REMOTION_USD_PER_OUTPUT_SEC` per second |
-| `avatar_create` | Flat $1 |
-| `voice_clone` | Flat $2 (Athena estimate; not in HeyGen public table) |
-| `voice_design` | Flat $1 (Athena estimate) |
-| `voice_preview` | $0.000667/sec (TTS Starfish) |
-| `speech_generation` | Same TTS Starfish rate as `voice_preview`; workspace-scoped |
+| `heygen_video` | Engine + `avatarType` (+ resolution for Avatar 6) × output seconds |
+| `remotion_export` | `REMOTION_USD_PER_OUTPUT_SEC` per second (Athena's own render cost, not HeyGen) |
+| `avatar_create` | Per call: photo avatar $1.32, custom (`digital_twin`) and `prompt` $2.13 |
+| `voice_clone` | Flat $2 (Athena estimate; not on the HeyGen pricing page) |
+| `voice_design` | Flat $1 (Athena estimate; not on the HeyGen pricing page) |
+| `voice_preview` | Per second of audio, **about $0.0024/s** on PAYG, minimum $0.01 per call (`HEYGEN_SPEECH_USD_PER_SEC`, `HEYGEN_SPEECH_USD_PER_CALL_MIN`) |
+| `speech_generation` | Per second of audio, same rate as `voice_preview`; workspace-scoped |
+
+Narration is billed on the audio length HeyGen returns, not on character count. The rate was measured on the dev wallet (a 43 s narration cost about $0.10) and is configurable with `HEYGEN_SPEECH_USD_PER_SEC`.
 
 ### Enterprise mode (`HEYGEN_BILLING_MODE=enterprise`)
 

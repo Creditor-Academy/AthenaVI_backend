@@ -3,6 +3,8 @@ const HEYGEN_AVATAR_ENGINES = Object.freeze({
   III: 'avatar_iii',
   IV: 'avatar_iv',
   V: 'avatar_v',
+  AVATAR_6: 'heygen-avatar-6',
+  AVATAR_6_TURBO: 'heygen-avatar-6-turbo',
 });
 
 const DEFAULT_HEYGEN_AVATAR_ENGINE = HEYGEN_AVATAR_ENGINES.IV;
@@ -11,11 +13,30 @@ const HEYGEN_AVATAR_ENGINE_VALUES = Object.freeze([
   HEYGEN_AVATAR_ENGINES.III,
   HEYGEN_AVATAR_ENGINES.IV,
   HEYGEN_AVATAR_ENGINES.V,
+  HEYGEN_AVATAR_ENGINES.AVATAR_6,
+  HEYGEN_AVATAR_ENGINES.AVATAR_6_TURBO,
 ]);
 
 /**
+ * Non-III engines, in the order we fall back to when the requested engine is not on the look.
+ * Avatar 6 Turbo comes before Avatar 6 (Pro): same inputs, half the HeyGen price.
+ */
+const MODERN_ENGINE_PREFERENCE = Object.freeze([
+  HEYGEN_AVATAR_ENGINES.IV,
+  HEYGEN_AVATAR_ENGINES.V,
+  HEYGEN_AVATAR_ENGINES.AVATAR_6_TURBO,
+  HEYGEN_AVATAR_ENGINES.AVATAR_6,
+]);
+
+function isAvatar6Engine(engine) {
+  return (
+    engine === HEYGEN_AVATAR_ENGINES.AVATAR_6 || engine === HEYGEN_AVATAR_ENGINES.AVATAR_6_TURBO
+  );
+}
+
+/**
  * @param {string|undefined|null} value
- * @returns {'avatar_iii'|'avatar_iv'|'avatar_v'|string}
+ * @returns {'avatar_iii'|'avatar_iv'|'avatar_v'|'heygen-avatar-6'|'heygen-avatar-6-turbo'|string}
  */
 function normalizeHeygenAvatarEngine(value) {
   if (value == null || String(value).trim() === '') {
@@ -35,6 +56,22 @@ function normalizeHeygenAvatarEngine(value) {
   }
   if (normalized === HEYGEN_AVATAR_ENGINES.V || normalized === 'v') {
     return HEYGEN_AVATAR_ENGINES.V;
+  }
+  if (
+    normalized === HEYGEN_AVATAR_ENGINES.AVATAR_6_TURBO ||
+    normalized === 'avatar_6_turbo' ||
+    normalized === 'avatar_vi_turbo'
+  ) {
+    return HEYGEN_AVATAR_ENGINES.AVATAR_6_TURBO;
+  }
+  if (
+    normalized === HEYGEN_AVATAR_ENGINES.AVATAR_6 ||
+    normalized === 'heygen-avatar-6-pro' ||
+    normalized === 'avatar_6' ||
+    normalized === 'avatar_6_pro' ||
+    normalized === 'avatar_vi'
+  ) {
+    return HEYGEN_AVATAR_ENGINES.AVATAR_6;
   }
   return normalized;
 }
@@ -67,7 +104,7 @@ function extractLookIdFromLookBody(lookBody) {
 }
 
 /**
- * Looks without avatar_iv / avatar_v in metadata (III-only, expressive public, or empty engines).
+ * Looks without IV / V / Avatar 6 in metadata (III-only, expressive public, or empty engines).
  * Routed on POST /v3/videos (avatar_iii or coerced IV/V), not v2.
  * @param {unknown} lookBody
  * @returns {boolean}
@@ -80,7 +117,7 @@ function usesHeygenLegacyV2VideoLook(lookBody) {
 
   const v3Engines = extractSupportedApiEnginesFromLook(lookBody);
   if (Array.isArray(rawEngines) && rawEngines.length > 0 && (!v3Engines || v3Engines.length === 0)) {
-    // e.g. supported_api_engines: ['avatar_iii'] — no IV/V → v3 avatar_iii.
+    // e.g. supported_api_engines: ['avatar_iii'] — no IV/V/Avatar 6 → v3 avatar_iii.
     return true;
   }
 
@@ -122,21 +159,27 @@ function isAvatarIiiOnlyLegacyLook(lookBody) {
 
 /**
  * @param {'avatar_iii'|'avatar_iv'|'avatar_v'|string} avatarEngine
- * @returns {{ type: string }}
+ * @param {{ motionExpressiveness?: 'default'|'less' }} [opts]
+ *   Avatar 6 only: `less` asks for fewer, smaller gestures. Ignored for other engines.
+ * @returns {{ type: string, motion_expressiveness?: string }}
  */
-function buildHeygenVideoEnginePayload(avatarEngine) {
+function buildHeygenVideoEnginePayload(avatarEngine, opts = {}) {
   const type = normalizeHeygenAvatarEngine(avatarEngine);
+  if (isAvatar6Engine(type) && opts?.motionExpressiveness) {
+    return { type, motion_expressiveness: opts.motionExpressiveness };
+  }
   return { type };
 }
 
-/** HeyGen v3 rejects Avatar IV for studio / digital-twin video avatars. */
+/** Studio and digital-twin video avatars (vs photo avatars). */
 function isStudioOrDigitalTwinAvatarType(avatarType) {
   const type = avatarType != null ? String(avatarType).trim() : '';
   return type === 'studio_avatar' || type === 'digital_twin';
 }
 
 /**
- * Map Avatar IV → V for studio/video avatars (HeyGen v3 rejects IV for those types).
+ * Legacy metadata path only: map Avatar IV → V for studio/video avatars.
+ * The v3 path does not use this; it honours the look's supported_api_engines.
  * @param {'avatar_iv'|'avatar_v'} engine
  * @param {string|undefined|null} avatarType
  * @returns {'avatar_iv'|'avatar_v'}
@@ -210,9 +253,9 @@ function extractSupportedApiEnginesFromLook(lookBody) {
    * - `{ data: ... }` / `{ data: { data: ... } }`
    * - `supported_api_engines` may be nested under `avatar_item`, `look`, or deeper.
    *
-   * Returns only v3 engines: `['avatar_iv', 'avatar_v']` (subset), or `null` if none.
-   * Explicit empty `[]` is returned as `[]`. Avatar III-only looks return `[]`-equivalent
-   * via usesHeygenLegacyV2VideoLook (raw engines without IV/V).
+   * Returns only non-III engines (subset of MODERN_ENGINE_PREFERENCE), or `null` if the field
+   * is missing. Explicit empty `[]` is returned as `[]`. Avatar III-only looks return
+   * `[]`-equivalent via usesHeygenLegacyV2VideoLook (raw engines without IV/V/Avatar 6).
    */
   const raw = extractRawSupportedApiEnginesFromLook(lookBody);
   if (raw == null) return null;
@@ -221,11 +264,15 @@ function extractSupportedApiEnginesFromLook(lookBody) {
   const found = new Set();
   for (const e of raw) {
     const normalized = normalizeHeygenAvatarEngine(e);
-    if (normalized === HEYGEN_AVATAR_ENGINES.IV || normalized === HEYGEN_AVATAR_ENGINES.V) {
+    if (MODERN_ENGINE_PREFERENCE.includes(normalized)) {
       found.add(normalized);
     }
   }
   return [...found];
+}
+
+function firstSupportedEngine(engines, preference = MODERN_ENGINE_PREFERENCE) {
+  return preference.find((engine) => engines.includes(engine)) || null;
 }
 
 /**
@@ -252,7 +299,7 @@ function getLookSupportedVideoEngines(lookBody) {
  * Single source of truth for how to render a look.
  * @returns {{
  *   videoApi: 'v3',
- *   engine: 'avatar_iii'|'avatar_iv'|'avatar_v'|null,
+ *   engine: 'avatar_iii'|'avatar_iv'|'avatar_v'|'heygen-avatar-6'|'heygen-avatar-6-turbo'|null,
  *   supportedApiEngines: string[],
  *   defaultAvatarEngine: string,
  *   engineCoerced: boolean,
@@ -294,22 +341,15 @@ function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
   }
 
   const raw = extractSupportedApiEnginesFromLook(lookBody);
-  const v3Engines = (raw && raw.length > 0 ? raw : [DEFAULT_HEYGEN_AVATAR_ENGINE]).filter(
-    (engine) => engine === HEYGEN_AVATAR_ENGINES.IV || engine === HEYGEN_AVATAR_ENGINES.V
-  );
+  const v3Engines = raw && raw.length > 0 ? raw : [DEFAULT_HEYGEN_AVATAR_ENGINE];
 
   const requested = normalizeHeygenAvatarEngine(requestedEngine);
   let engine = requested;
   let engineCoerced = false;
 
   if (!v3Engines.includes(requested)) {
-    if (v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)) {
-      engine = HEYGEN_AVATAR_ENGINES.IV;
-      engineCoerced = true;
-    } else if (v3Engines.includes(HEYGEN_AVATAR_ENGINES.V)) {
-      engine = HEYGEN_AVATAR_ENGINES.V;
-      engineCoerced = true;
-    } else {
+    const fallback = firstSupportedEngine(v3Engines);
+    if (!fallback) {
       return {
         videoApi: 'v3',
         engine: null,
@@ -318,30 +358,19 @@ function resolveVideoPlanForLook(lookBody, requestedEngine, avatarType = null) {
         engineCoerced: false,
       };
     }
+    engine = fallback;
+    engineCoerced = true;
   }
 
-  let coercedEngine = engine;
-  let typeCoerced = false;
-  if (
-    coercedEngine === HEYGEN_AVATAR_ENGINES.IV ||
-    coercedEngine === HEYGEN_AVATAR_ENGINES.V
-  ) {
-    coercedEngine = coerceEngineForAvatarType(coercedEngine, avatarType);
-    typeCoerced = coercedEngine !== engine;
-  }
-
-  const defaultAvatarEngine = isStudioOrDigitalTwinAvatarType(avatarType)
-    ? HEYGEN_AVATAR_ENGINES.V
-    : v3Engines.includes(HEYGEN_AVATAR_ENGINES.IV)
-      ? HEYGEN_AVATAR_ENGINES.IV
-      : v3Engines[0] || DEFAULT_HEYGEN_AVATAR_ENGINE;
-
+  // The look's supported_api_engines is the authority: current HeyGen docs list Avatar IV for
+  // studio and digital-twin looks, so IV is kept whenever the look lists it. If HeyGen still
+  // rejects IV for a look, heygen.service retries once with V.
   return {
     videoApi: 'v3',
-    engine: coercedEngine,
+    engine,
     supportedApiEngines: v3Engines,
-    defaultAvatarEngine,
-    engineCoerced: engineCoerced || typeCoerced,
+    defaultAvatarEngine: firstSupportedEngine(v3Engines) || DEFAULT_HEYGEN_AVATAR_ENGINE,
+    engineCoerced,
   };
 }
 
@@ -377,6 +406,8 @@ module.exports = {
   HEYGEN_AVATAR_ENGINES,
   DEFAULT_HEYGEN_AVATAR_ENGINE,
   HEYGEN_AVATAR_ENGINE_VALUES,
+  MODERN_ENGINE_PREFERENCE,
+  isAvatar6Engine,
   normalizeHeygenAvatarEngine,
   usesHeygenLegacyV2VideoApi,
   usesHeygenLegacyV2VideoLook,
