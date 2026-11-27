@@ -12,7 +12,7 @@ const projectDao = require('../project/project.dao');
 const renderDao = require('./render.dao');
 const heygenService = require('../video/services/heygen.service');
 const speechService = require('../speech/speech.service');
-const { getPresignedGetUrl, uploadFileToKey } = require('../s3/s3.service');
+const { getPresignedGetUrl, uploadFileToKey, deleteFile } = require('../s3/s3.service');
 const { createSceneHash } = require('./cache/sceneHash');
 const {
   buildProjectRenderFinalKey,
@@ -539,6 +539,23 @@ async function dispatchVideoExportNotification({
   }
 }
 
+/**
+ * After a failed render, remove the uploaded final video unless the render was already billed.
+ * Returns the output columns to clear on the render row (empty when nothing was removed).
+ */
+async function discardUnbilledRenderOutput(renderId, uploadedKey) {
+  if (!uploadedKey) return {};
+  try {
+    const current = await renderDao.findProjectRenderByIdOnly(renderId);
+    if (current?.billingStatus === 'charged') return {};
+    await deleteFile(uploadedKey);
+    return { s3Key: null, outputUrl: null, fileSizeBytes: null, completedAt: null };
+  } catch (cleanupError) {
+    console.error('Failed to clean up unbilled render output:', cleanupError);
+    return {};
+  }
+}
+
 async function processProjectRender({
   renderId,
   workspaceId,
@@ -548,6 +565,7 @@ async function processProjectRender({
   inputSnapshot,
 }) {
   const tempDirectory = await ensureTempDirectory(renderId);
+  let uploadedFinalKey = null;
 
   try {
     const currentProject = await getProjectOrThrow(workspaceId, projectId);
@@ -607,16 +625,9 @@ async function processProjectRender({
       renderId,
     });
     const uploaded = await uploadFileToKey(finalBuffer, s3Key, 'video/mp4');
+    uploadedFinalKey = uploaded.key;
     const totalDuration = buildSceneTimings(cachedScenes).durationInFrames;
     const fps = manifest.videoSettings?.fps || 30;
-
-    await chargeRenderIfNeeded({
-      renderId,
-      workspaceId,
-      userId,
-      durationInFrames: totalDuration,
-      fps,
-    });
 
     await renderDao.updateProjectRender(renderId, {
       status: 'completed',
@@ -627,12 +638,26 @@ async function processProjectRender({
       completedAt: new Date(),
       error: null,
     });
-    await projectDao.updateProject(projectId, {
-      status: 'completed',
-      duration: totalDuration,
+
+    // Charge last: nothing after this may flip a billed render to failed.
+    await chargeRenderIfNeeded({
+      renderId,
+      workspaceId,
+      userId,
+      durationInFrames: totalDuration,
+      fps,
     });
-    await projectStorageService.recalculateProjectStorage(projectId);
-    await storageAccounting.recalculateUserStorageUsed(owner.id);
+
+    try {
+      await projectDao.updateProject(projectId, {
+        status: 'completed',
+        duration: totalDuration,
+      });
+      await projectStorageService.recalculateProjectStorage(projectId);
+      await storageAccounting.recalculateUserStorageUsed(owner.id);
+    } catch (postChargeError) {
+      console.error('Post-render bookkeeping failed:', postChargeError);
+    }
 
     await dispatchVideoExportNotification({
       renderId,
@@ -642,12 +667,17 @@ async function processProjectRender({
       status: 'completed',
     });
   } catch (error) {
+    // If the final video was uploaded but never billed (e.g. the charge was refused), do not leave an
+    // unreachable object behind or a failed render still pointing at it.
+    const clearedOutput = await discardUnbilledRenderOutput(renderId, uploadedFinalKey);
+
     await renderDao.updateProjectRender(renderId, {
       status: 'failed',
       billingStatus: 'failed',
       progress: 100,
       failedAt: new Date(),
       error: error.message,
+      ...clearedOutput,
     });
 
     try {
@@ -875,4 +905,5 @@ module.exports = {
   resolveProjectManifest,
   listWorkspaceVideos,
   listOwnerVideos,
+  discardUnbilledRenderOutput,
 };

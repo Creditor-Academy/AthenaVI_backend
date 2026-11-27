@@ -69,7 +69,11 @@ function buildWorkspaceEstimate(query) {
   }
   if (feature === FEATURE.SPEECH_GENERATION) {
     const durationSeconds = estimateDurationFromScript(query.script);
-    return calculateUsageCredits({ feature, durationSeconds });
+    return calculateUsageCredits({
+      feature,
+      durationSeconds,
+      characters: String(query.script || '').length,
+    });
   }
   if (feature === FEATURE.REMOTION_EXPORT) {
     const durationSeconds = query.durationInFrames
@@ -84,7 +88,11 @@ function buildPersonalEstimate(query) {
   const feature = query.feature;
   if (feature === FEATURE.VOICE_PREVIEW) {
     const durationSeconds = estimateDurationFromText(query.text);
-    return calculateUsageCredits({ feature, durationSeconds });
+    return calculateUsageCredits({
+      feature,
+      durationSeconds,
+      characters: String(query.text || '').length,
+    });
   }
   return calculateUsageCredits({ feature, durationSeconds: 0 });
 }

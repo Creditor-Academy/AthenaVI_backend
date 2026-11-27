@@ -2,7 +2,7 @@ const prisma = require('../../shared/config/prismaClient');
 const speechDao = require('./speech.dao');
 const heygenV3Service = require('../heygen/heygenV3.service');
 const { generateSpeechRequestHash } = require('../../shared/utils/requestHash');
-const { uploadFileToKey, getPresignedGetUrl } = require('../s3/s3.service');
+const { uploadFileToKey, getPresignedGetUrl, deleteFile } = require('../s3/s3.service');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
 const AppError = require('../../shared/utils/AppError');
 const messages = require('../../shared/utils/messages');
@@ -10,6 +10,7 @@ const { toJsonNumber } = require('../../shared/utils/byteSize');
 const { buildSpeechSceneAudioKey } = require('../../shared/utils/videoStorageKeys');
 const projectStorageService = require('../project/projectStorage.service');
 const creditLedger = require('../credit/creditLedger.service');
+const logger = require('../../shared/utils/logger');
 const {
   truncateText,
   resolveSceneNameFromProjectData,
@@ -56,6 +57,14 @@ function isSpeechPlayable(record) {
   return record?.status === 'completed' && Boolean(record.s3Key);
 }
 
+/**
+ * A failed narration that was never billed can be generated again. Without this the request hash
+ * keeps returning the same failed row, so a scene could not be retried after e.g. topping up credits.
+ */
+function isRetryableFailedSpeech(row) {
+  return Boolean(row && row.status === 'failed' && row.billingStatus !== 'charged');
+}
+
 function enrichSpeechGenerationForClient(record) {
   return {
     ...record,
@@ -87,6 +96,7 @@ async function chargeSpeechIfNeeded(record) {
   const pricing = calculateUsageCredits({
     feature: FEATURE.SPEECH_GENERATION,
     durationSeconds,
+    characters: String(record.script || billingContext.script || '').length,
   });
 
   let projectName = billingContext.projectName || null;
@@ -165,7 +175,7 @@ async function generateProjectSpeech(input) {
   });
 
   const existing = await speechDao.findSpeechGenerationByRequestHash(requestHash);
-  if (existing) {
+  if (existing && !isRetryableFailedSpeech(existing)) {
     return existing;
   }
 
@@ -173,6 +183,7 @@ async function generateProjectSpeech(input) {
   const estimate = calculateUsageCredits({
     feature: FEATURE.SPEECH_GENERATION,
     durationSeconds: estimatedDuration,
+    characters: String(script || '').length,
   });
   await creditLedger.assertCanAfford({
     scope: SCOPE.WORKSPACE,
@@ -196,23 +207,45 @@ async function generateProjectSpeech(input) {
     estimatedCredits: estimate.athenaCredits,
   };
 
-  const pending = await speechDao.saveSpeechGeneration({
-    workspaceId,
-    folderId: project.folderId,
-    projectId,
-    sceneId,
-    voiceId,
-    script,
-    inputType: normalizedInputType,
-    speed: normalizedSpeed,
-    locale: normalizedLocale,
-    language: normalizedLanguage,
-    requestHash,
-    status: 'processing',
-    triggeredByUserId: userId,
-    billingContext,
-  });
+  let pending;
+  if (existing) {
+    // Retry of a failed, unbilled narration: re-arm the same row (the S3 key is built from its id).
+    pending = await speechDao.claimFailedSpeechGeneration(existing.id, {
+      folderId: project.folderId,
+      voiceId,
+      script,
+      inputType: normalizedInputType,
+      speed: normalizedSpeed,
+      locale: normalizedLocale,
+      language: normalizedLanguage,
+      triggeredByUserId: userId,
+      billingContext,
+    });
+    if (!pending) {
+      // Another request claimed it first; hand back whatever the row is now.
+      return speechDao.findSpeechGenerationByRequestHash(requestHash);
+    }
+  } else {
+    pending = await speechDao.saveSpeechGeneration({
+      workspaceId,
+      folderId: project.folderId,
+      projectId,
+      sceneId,
+      voiceId,
+      script,
+      inputType: normalizedInputType,
+      speed: normalizedSpeed,
+      locale: normalizedLocale,
+      language: normalizedLanguage,
+      requestHash,
+      status: 'processing',
+      triggeredByUserId: userId,
+      billingContext,
+    });
+  }
 
+  let updated;
+  let uploadedKey = null;
   try {
     const heygenPayload = {
       text: script,
@@ -235,9 +268,10 @@ async function generateProjectSpeech(input) {
       speechId: pending.id,
     });
     const { url } = await uploadFileToKey(buffer, s3Key, 'audio/mpeg');
+    uploadedKey = s3Key;
     const durationSec = speech.durationSec ?? estimatedDuration;
 
-    let updated = await speechDao.updateSpeechGeneration(pending.id, {
+    updated = await speechDao.updateSpeechGeneration(pending.id, {
       heygenAudioUrl: speech.audioUrl,
       audioUrl: url,
       s3Key,
@@ -248,13 +282,34 @@ async function generateProjectSpeech(input) {
       rawResponse: speech.raw,
     });
 
+    // Charge last: nothing after this may flip a billed row to failed.
     updated = await chargeSpeechIfNeeded(updated);
-    await projectStorageService.recalculateProjectStorage(projectId);
-    return updated;
   } catch (err) {
+    // If the audio was uploaded but the row was never billed (e.g. the charge was refused), do not
+    // leave an unreachable object behind or a failed row pointing at it.
+    let clearedStorage = {};
+    if (uploadedKey) {
+      try {
+        const current = await speechDao.findSpeechGenerationByIdForProject(
+          pending.id,
+          workspaceId,
+          projectId
+        );
+        if (current?.billingStatus !== 'charged') {
+          await deleteFile(uploadedKey);
+          clearedStorage = { audioUrl: '', s3Key: null, fileSizeBytes: null };
+        }
+      } catch (cleanupError) {
+        logger.warn('speech_failed_upload_cleanup_failed', {
+          speechGenerationId: pending.id,
+          error: String(cleanupError?.message || cleanupError).slice(0, 300),
+        });
+      }
+    }
     await speechDao.updateSpeechGeneration(pending.id, {
       status: 'failed',
       billingStatus: 'failed',
+      ...clearedStorage,
       rawResponse:
         err instanceof AppError
           ? { message: err.message, statusCode: err.statusCode }
@@ -262,6 +317,16 @@ async function generateProjectSpeech(input) {
     });
     throw err;
   }
+
+  try {
+    await projectStorageService.recalculateProjectStorage(projectId);
+  } catch (err) {
+    logger.warn('speech_storage_recalc_failed', {
+      speechGenerationId: pending.id,
+      error: String(err?.message || err).slice(0, 300),
+    });
+  }
+  return updated;
 }
 
 const listProjectSpeechGenerations = async (workspaceId, projectId) => {

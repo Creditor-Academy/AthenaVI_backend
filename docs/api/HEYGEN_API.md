@@ -60,11 +60,11 @@ See also [WORKSPACE_API.md](WORKSPACE_API.md) (HeyGen share routes) and [PROJECT
 | **Path** | `/api/heygen/avatars/groups` |
 | **Auth** | Bearer |
 
-**Query (optional)** – forwarded to HeyGen; common keys include:
+**Query (optional)** – only `ownership`, `limit`, and `token` are forwarded to HeyGen (HeyGen 400s on unknown keys); other keys are used for local filtering:
 
-- `ownership` – `public` or `private` (**private**: filtered to the current user’s recorded avatar groups — see **User-scoped private avatars and voices** above)
+- `ownership` – `public`, `private`, or `workspace` (**private**: filtered to the current user’s recorded avatar groups — see **User-scoped private avatars and voices** above; **workspace** is treated as `private` — pair it with `workspace_id` to get your own + shared groups)
 - `workspace_id` – optional UUID; with `ownership=private`, merges **shared workspace** avatar groups (requires membership)
-- `limit` – integer **1–50**
+- `limit` – integer **1–100**; values above **50** (HeyGen’s page cap) are clamped to 50
 - `token` – pagination cursor (string)
 
 **Response (200)** – `data`: HeyGen payload (avatar groups).
@@ -85,12 +85,14 @@ See also [WORKSPACE_API.md](WORKSPACE_API.md) (HeyGen share routes) and [PROJECT
 
 - `group_id`
 - `avatar_type` – `studio_avatar`, `digital_twin`, or `photo_avatar`
-- `ownership` – `public` or `private` (**private**: filtered to groups owned by the current user; **`group_id` + private** requires ownership or **403**)
+- `ownership` – `public`, `private`, or `workspace` (**private**: filtered to groups owned by the current user; **`group_id` + private** requires ownership or **403**; **workspace** is treated as `private`)
 - `workspace_id` – optional UUID; with `ownership=private`, allows `group_id` owned by you **or** shared to the workspace
-- `limit` – **1–50**
+- `limit` – **1–100**; clamped to **50** before calling HeyGen
 - `token` – pagination cursor
 
-**Response (200)** – `data`: HeyGen payload.
+Only `group_id`, `avatar_type`, `ownership`, `limit`, and `token` are forwarded to HeyGen.
+
+**Response (200)** – `data`: HeyGen payload. Each look carries `supportedApiEngines` / `defaultAvatarEngine`; `data.engineBuckets` groups looks by engine (`avatar_iii`, `avatar_iv`, `avatar_v`, **`avatar_6`** — looks that support `heygen-avatar-6` and/or `heygen-avatar-6-turbo` —, `legacy_v2`, `unknown`) with matching `data.engineCounts`. Plan-gated looks that only list Avatar 6 engines appear in `avatar_6`, not `avatar_iv`.
 
 **403** – **`HEYGEN_FORBIDDEN`** — private listing with a **`group_id`** that belongs to another user.
 

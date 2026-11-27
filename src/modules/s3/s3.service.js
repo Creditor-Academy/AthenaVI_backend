@@ -161,7 +161,12 @@ async function getPresignedGetUrl(key, expiresInSeconds = 300, options = {}) {
     input.ResponseContentDisposition = options.responseContentDisposition;
   }
   const command = new GetObjectCommand(input);
-  return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+  // `signingDate`: sign as of a fixed time, so the same key gives the same link until it changes
+  // (stable links can be cached by the browser instead of re-downloaded; R-1).
+  return getSignedUrl(s3, command, {
+    expiresIn: expiresInSeconds,
+    ...(options.signingDate ? { signingDate: options.signingDate } : {}),
+  });
 }
 
 async function getObjectBuffer(key) {

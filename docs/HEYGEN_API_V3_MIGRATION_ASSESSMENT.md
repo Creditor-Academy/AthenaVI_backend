@@ -185,7 +185,7 @@ These are **v3-only** and **not required** to leave v2, unless product expands s
 
 ### Phase B — Voice pipeline hardening (P2)
 
-- [ ] Optional: integrate `GET /v3/videos/voice-capabilities`.
+- [x] Integrate `GET /v3/videos/voice-capabilities`: locale, engine and model checked before video creation (cached 1 h).
 - [ ] Evaluate migration of preview/speech from `/v3/voices/speech` to `/v3/models/audio/tts`.
 
 ### Phase C — Docs and Postman

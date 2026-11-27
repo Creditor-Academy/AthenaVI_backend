@@ -298,6 +298,8 @@ const putCanvas = asyncHandler(async (req, res) => {
     presentationId,
     slideId,
     canvas: req.body,
+    // The slide revision this canvas was edited from (D-1); absent from older clients.
+    baseRevision: req.query?.baseRevision,
   });
   return successResponse(req, res, data, 200, messages.PRESENTATION_CANVAS_UPDATED);
 });

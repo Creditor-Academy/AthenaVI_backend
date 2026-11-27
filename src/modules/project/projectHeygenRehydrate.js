@@ -17,6 +17,15 @@ function pickBestHeygenRow(rows) {
   })[0];
 }
 
+/**
+ * A failed job with no stored file has nothing to play. It stays a valid id (a scene that already
+ * references it is left alone, and a retry reuses the same row), but it must never be attached to a
+ * scene or restored as an avatar element on project load: the editor would try to play a missing video.
+ */
+function isDeadHeygenRow(row) {
+  return row?.status === 'failed' && !row?.s3Key;
+}
+
 function indexHeygenRows(heygenRows) {
   const byHash = new Map();
   const bySceneId = new Map();
@@ -24,6 +33,7 @@ function indexHeygenRows(heygenRows) {
 
   for (const row of heygenRows || []) {
     validIds.add(row.id);
+    if (isDeadHeygenRow(row)) continue;
     if (row.requestHash) {
       byHash.set(row.requestHash, row);
     }

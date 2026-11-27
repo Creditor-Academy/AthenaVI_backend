@@ -139,6 +139,8 @@ const SLIDE_EDITOR_PASSTHROUGH = new Set([
   'getDeckLayoutTemplate',
   'normalizeCanvasPayload',
   'getElementsDoc',
+  'mergeAddedElsewhere',
+  'carryOverUserContent',
 ]);
 
 const slideEditor = Object.fromEntries(

@@ -54,21 +54,26 @@ Use this for the **scene-based editor** and **in-browser preview**. **Batch / of
 | `sceneId` | yes | Client scene key from the editor (1–256 chars); one stored video per idempotent hash per scene |
 | `avatarId` | yes | HeyGen avatar id |
 | `title` | yes | Video title for HeyGen |
-| `resolution` | yes | `1080p` or `720p` |
+| `resolution` | yes | `1080p` or `720p` (Avatar 6 engines render at 1080p minimum, so `720p` is sent as `1080p`) |
 | `aspectRatio` | yes | `16:9` or `9:16` |
 | `backgroundColor` | yes | Solid background, e.g. `#008000` (hex) |
 | `voiceId` | yes | HeyGen voice id |
 | `script` | yes | Spoken script (TTS + lip sync) |
-| `avatarEngine` | no | `avatar_iv` (default when omitted), `avatar_v`, or `avatar_iii` — should match the look’s **`supportedApiEngines`** / **`defaultAvatarEngine`** from **`GET /api/heygen/avatars/looks`** (or raw `supported_api_engines` on the look). The server may coerce or override from look metadata (e.g. III-only, expressive public → `avatar_iii`). Sent to HeyGen as `engine.type`. |
+| `avatarEngine` | no | `avatar_iv` (default when omitted), `avatar_v`, `heygen-avatar-6`, `heygen-avatar-6-turbo`, or `avatar_iii` — should match the look’s **`supportedApiEngines`** / **`defaultAvatarEngine`** from **`GET /api/heygen/avatars/looks`** (or raw `supported_api_engines` on the look). The server uses the look’s list: `avatar_iv` is kept for studio and digital-twin looks that list it (current HeyGen docs support IV there); if the look doesn’t list the requested engine, it coerces to one it does, in the order IV → V → Avatar 6 Turbo → Avatar 6 (e.g. III-only / expressive public → `avatar_iii`; Avatar-6-only looks requested as `avatar_iv` → `heygen-avatar-6-turbo`). If HeyGen rejects IV for a look, the request is retried once with `avatar_v`; if it answers “available only with Avatar 6 Pro or Turbo” (400, 402 or 403), it is retried once with `heygen-avatar-6-turbo`. Sent to HeyGen as `engine.type`. Avatar 6 bills at its own rate (see [`CREDITS_API.md`](CREDITS_API.md)). |
 | `avatarType` | no | `studio_avatar`, `digital_twin`, or `photo_avatar` from the look row — used to decide HeyGen payload shape |
 | `expressiveness` | no | `low`, `medium`, or `high` — **Avatar IV + `photo_avatar` only**; omit for `avatar_v`, studio, or digital-twin looks |
-| `voiceSettings` | no | Optional: `speed`, `pitch`, `volume`, `locale`, `engine_settings` |
+| `voiceSettings` | no | Optional: `speed` (0.5–2, same as narration), `pitch`, `volume` (0–2), `locale`, `engine_settings`. Sent to HeyGen clamped to its limits: `speed` 0.5–1.5, `volume` ≤ 1. When `engine_settings` is omitted the server sends `{ "engine_type": "heygen_voice" }` with no `model` (HeyGen defaults it to `heygen-voice-1`, and professional voice clones reject any model). Send `engine_settings` yourself to choose another engine. **If you send `locale` or `engine_settings`, the server checks them against `GET /v3/videos/voice-capabilities`** (cached for one hour) before creating the job: the locale must be listed, the engine must be offered for that locale, `engine_settings.engine_type` is required, and a `model` must be in that engine’s list (or absent when the list is empty). The language comes from the script and is not checked here; HeyGen still decides voice ownership. If the capabilities call fails, the check is skipped and HeyGen decides. |
+| `motionExpressiveness` | no | Avatar 6 only: `default` or `less` (fewer, smaller gestures, calmer expressions). Sent as `engine.motion_expressiveness`. Ignored for other engines. Use this instead of `expressiveness`, which Avatar 6 rejects. |
 | `removeBackground` | no | Boolean — **MP4 only**. Cuts out the avatar and composites onto `backgroundColor` (not transparent). Ignored when `outputFormat` is `webm`. |
 | `outputFormat` | no | `mp4` (default) or `webm`. **`webm`** returns an alpha-channel clip (transparent background); requires an avatar trained with matting. HeyGen applies background removal automatically for `webm` — do not rely on `removeBackground`. All scene jobs use **`POST /v3/videos`**; WebM availability depends on HeyGen’s support for that look (not blocked server-side for former v2-only looks). |
 
-**Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice + **`avatarEngine`** returns the **existing** row (idempotent).
+**Response (201)** – `data.heygenVideo`: saved **`HeygenResponse`** row (`id`, `videoId`, `sceneId`, `status`, …). Same script + scene + avatar + voice + **`avatarEngine`** returns the **existing** row (idempotent). `motionExpressiveness: "less"` (Avatar 6 only) counts as a different request. The exception is a row with `status: "failed"` that was never billed and has no stored file: repeating the request starts a new HeyGen job on the **same row** (same `id`, `billingStatus` reset to `pending`). Concurrent duplicate creates or retries for the same hash are coalesced (in-process + Redis lock + per-attempt HeyGen `Idempotency-Key`) so only one HeyGen render is started and both callers receive the same row.
 
 **400** – **`HEYGEN_AVATAR_ENGINE_UNSUPPORTED`** (or message listing supported engines) when the look does not support the requested `avatarEngine`.
+
+**400** – a voice message (no job is created or charged) when `voiceSettings.locale`, `engine_settings.engine_type` or `engine_settings.model` is not offered by HeyGen: e.g. `Engine "elevenlabs" is not offered for locale "en-US". Offered engines: mockingbird, heygen_voice.`
+
+**409** – **`HEYGEN_VIDEO_CREATE_IN_PROGRESS`** when a duplicate create for the same scene hash is still awaiting HeyGen past the lock wait window.
 
 ---
 
@@ -92,7 +97,7 @@ Use this for the **scene-based editor** and **in-browser preview**. **Batch / of
 | **Path** | `/api/workspaces/:workspaceId/projects/:projectId/heygen/videos/:heygenVideoId` |
 | **Auth** | Bearer + member |
 
-Polls HeyGen (bounded) and, when **completed**, downloads to S3 if not already stored. **Response (200)** – `data.heygenVideo` with updated `status`, `s3Key`, `videoUrl`, etc.
+Polls HeyGen (bounded) and, when **completed**, bills the video and downloads it to S3 if not already stored. **Response (200)** – `data.heygenVideo` with updated `status`, `s3Key`, `videoUrl`, etc. **402** (insufficient credits) with `sync=full`: the video is not billed or stored yet, `status` stays `completed` and `videoUrl` still plays; calling again after credits are added bills and stores it. The default status sync never fails for this reason — it keeps retrying in the background.
 
 ---
 
@@ -108,7 +113,7 @@ Polls HeyGen (bounded) and, when **completed**, downloads to S3 if not already s
 
 - `expiresIn` – presigned URL lifetime in seconds (**60–3600**; default **300**).
 
-Runs sync first. **Response (200)** – includes `data.presignedUrl`, `data.expiresInSeconds`, and `data.heygenVideo`. **409** if the video is not ready or not yet in S3.
+Runs sync first. **Response (200)** – includes `data.presignedUrl`, `data.expiresInSeconds`, and `data.heygenVideo`. **409** if the video is not ready or not yet in S3. When the video is completed but unbilled, `presignedUrl` is the HeyGen URL (`playbackSource: "heygen"`) and the S3 copy is created once the charge succeeds.
 
 ---
 

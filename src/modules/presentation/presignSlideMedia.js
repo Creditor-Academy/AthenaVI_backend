@@ -5,6 +5,24 @@ const PRESIGN_TTL_SECONDS =
     ? Number(process.env.PPT_IMAGE_PRESIGN_TTL_SEC)
     : 3600;
 
+/**
+ * Stable links (R-1). Every fetch used to sign each image afresh, so the link changed on every
+ * deck update: a review page re-downloaded every image and showed blanks meanwhile. Links are
+ * now signed as of the start of a fixed window, so one key keeps one link for the whole window,
+ * and stay valid for the full TTL from any moment inside it.
+ */
+const SIGNING_WINDOW_SECONDS = Math.max(60, Math.floor(PRESIGN_TTL_SECONDS / 2));
+
+/** The current signing window: `{ index, signingDate, expiresIn }`. */
+function signingWindow(nowMs = Date.now()) {
+  const index = Math.floor(nowMs / 1000 / SIGNING_WINDOW_SECONDS);
+  return {
+    index,
+    signingDate: new Date(index * SIGNING_WINDOW_SECONDS * 1000),
+    expiresIn: PRESIGN_TTL_SECONDS + SIGNING_WINDOW_SECONDS,
+  };
+}
+
 const SIGNABLE_URL_FIELDS = ['url', 'src', 'screenUrl', 'thumbnailUrl', 'previewUrl'];
 const MEDIA_TYPES = new Set(['image', 'icon', 'graphic']);
 
@@ -102,8 +120,9 @@ function applySignedMedia(content, signed, elementKey) {
 async function signKey(key, cache) {
   if (!key) return null;
   if (cache?.has(key)) return cache.get(key);
+  const window = signingWindow();
   const pending = s3Service
-    .getPresignedGetUrl(key, PRESIGN_TTL_SECONDS)
+    .getPresignedGetUrl(key, window.expiresIn, { signingDate: window.signingDate })
     .catch(() => null);
   cache?.set(key, pending);
   return pending;
@@ -317,4 +336,5 @@ module.exports = {
   isPresignableElement,
   enrichDeckMediaKeysForExport,
   PRESIGN_TTL_SECONDS,
+  signingWindow,
 };

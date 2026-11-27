@@ -12,6 +12,7 @@ const { blankCanvas, newElementId } = require('./layoutToElements');
 const { CANVAS_WIDTH, CANVAS_HEIGHT } = require('./presentation.constants');
 const { downloadRemote } = require('../../shared/utils/downloadRemote');
 const { attachPresignedMedia } = require('./presignSlideMedia');
+const { readSlideRevision, retryOnSlideRevisionConflict } = require('./slideRevision');
 
 const IMAGE_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
@@ -21,9 +22,15 @@ function assertNotGenerating(deck) {
   }
 }
 
+/**
+ * The slide's elements doc, ready to change. Keeps every other key of the stored doc (background
+ * colour, gradient, background image…): building it from version/canvas/elements only made every
+ * Media-panel insert wipe the slide background (CANVAS_FIX_PLAN B-2).
+ */
 function getElementsDoc(slide) {
   if (slide.elements && typeof slide.elements === 'object' && Array.isArray(slide.elements.elements)) {
     return {
+      ...slide.elements,
       version: slide.elements.version || 1,
       canvas: slide.elements.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
       elements: [...slide.elements.elements],
@@ -48,7 +55,9 @@ function findScreenImage(frame, elements) {
 }
 
 function applyImageToElements(elementsDoc, { url, s3Key, elementId, assetId, provider }) {
+  // Keep the slide's other doc keys (background colour / gradient / image): B-2.
   const doc = {
+    ...elementsDoc,
     version: elementsDoc.version || 1,
     canvas: elementsDoc.canvas || { width: CANVAS_WIDTH, height: CANVAS_HEIGHT },
     elements: Array.isArray(elementsDoc.elements) ? [...elementsDoc.elements] : [],
@@ -126,8 +135,17 @@ async function persistSlideImage({
   elementId,
   extraImageRef = {},
 }) {
+  // Read-modify-write: when another save lands in between, re-read and apply the image again
+  // instead of writing over that save (D-1). The upload itself happened before this.
+  return retryOnSlideRevisionConflict(() =>
+    writeSlideImage({ workspaceId, presentationId, slideId, url, s3Key, source, elementId, extraImageRef })
+  );
+}
+
+async function writeSlideImage({ workspaceId, presentationId, slideId, url, s3Key, source, elementId, extraImageRef }) {
   const { deck, slide } = await loadSlideContext(workspaceId, presentationId, slideId);
-  const elements = applyImageToElements(getElementsDoc(slide), {
+  const doc = getElementsDoc(slide);
+  const elements = applyImageToElements(doc, {
     url,
     s3Key,
     elementId,
@@ -142,12 +160,11 @@ async function persistSlideImage({
     error: null,
     ...extraImageRef,
   };
-  const updated = await presentationDao.updateSlide(slideId, {
-    elements,
-    imageRef,
-    manuallyEdited: true,
-    status: 'READY',
-  });
+  const updated = await presentationDao.updateSlide(
+    slideId,
+    { elements, imageRef, manuallyEdited: true, status: 'READY' },
+    { baseRevision: readSlideRevision(doc) }
+  );
   return {
     project: { id: deck.projectId },
     deck: { id: deck.id },
@@ -289,6 +306,7 @@ async function insertStock({
 }
 
 module.exports = {
+  getElementsDoc,
   applyImageToElements,
   uploadSlideMedia,
   attachAsset,

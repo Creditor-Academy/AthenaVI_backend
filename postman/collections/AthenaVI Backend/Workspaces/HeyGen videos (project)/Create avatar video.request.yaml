@@ -1,5 +1,5 @@
 $kind: http-request
-description: "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). **`avatarId`** = look id (`avatarLookId`). **`avatarEngine`**: `avatar_iv` (default) or `avatar_v` — must match look `supported_api_engines`. Set **`avatarType`** from the look row. **`expressiveness`**: Avatar IV + `photo_avatar` only. Call **Get HeyGen video** to sync S3. Match `sceneId` / `script` with **Save project data**."
+description: "201 — Starts HeyGen render; saves DB row (`status` often `processing`, `s3Key` null). **`avatarId`** = look id (`avatarLookId`). **`avatarEngine`**: `avatar_iv` (default), `avatar_v`, `heygen-avatar-6`, `heygen-avatar-6-turbo` or `avatar_iii` — coerced to an engine the look lists. Set **`avatarType`** from the look row. **`expressiveness`**: Avatar IV + `photo_avatar` only. **`motionExpressiveness`** (optional): `default` or `less`, Avatar 6 only (`less` is treated as a different request, not a duplicate). Repeating a request whose earlier attempt **failed** (and was never billed) starts a new job on the same row; an in-progress or completed row is returned as-is. Call **Get HeyGen video** to sync S3. Match `sceneId` / `script` with **Save project data**."
 url: "{{baseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/heygen/videos"
 method: POST
 headers:

@@ -42,6 +42,15 @@ function pickBestSpeechRow(rows) {
   })[0];
 }
 
+/**
+ * A failed narration with no stored audio has nothing to play. It stays a valid id (a scene that
+ * already references it is left alone, and a retry reuses the same row), but it must never be
+ * attached to a scene on project load: the editor would try to stream audio that does not exist.
+ */
+function isDeadSpeechRow(row) {
+  return row?.status === 'failed' && !row?.s3Key;
+}
+
 function indexSpeechRows(speechRows) {
   const byHash = new Map();
   const bySceneId = new Map();
@@ -49,6 +58,7 @@ function indexSpeechRows(speechRows) {
 
   for (const row of speechRows || []) {
     validIds.add(row.id);
+    if (isDeadSpeechRow(row)) continue;
     if (row.requestHash) {
       byHash.set(row.requestHash, row);
     }

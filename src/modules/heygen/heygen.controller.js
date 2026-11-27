@@ -303,12 +303,15 @@ const createAvatar = asyncHandler(async (req, res) => {
   }
   assertCreateAvatarPayload(value);
   assertHeygenAvatarCreateTypeAllowed(value.type);
-  await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.AVATAR_CREATE);
+  await userCreditBilling.assertUserCanAffordFeature(userId, FEATURE.AVATAR_CREATE, {
+    avatarType: value.type,
+  });
   const data = await heygenV3Service.createAvatar(userId, value);
   const groupId = heygenV3Service.extractAvatarGroupIdFromCreateResponse(data);
   await userCreditBilling.chargeUserFeature({
     userId,
     feature: FEATURE.AVATAR_CREATE,
+    avatarType: value.type,
     idempotencyKey: groupId ? `heygen-avatar:${groupId}` : `heygen-avatar:${userId}:${Date.now()}`,
     reference: groupId,
     extraMetadata: {
@@ -431,6 +434,7 @@ const previewSpeech = asyncHandler(async (req, res) => {
     feature: FEATURE.VOICE_PREVIEW,
     idempotencyKey: `heygen-voice-preview:${userId}:${payload.voice_id}:${Date.now()}`,
     durationSeconds,
+    characters: String(payload.text || '').length,
     reference: payload.voice_id,
     extraMetadata: {
       voiceId: payload.voice_id,
