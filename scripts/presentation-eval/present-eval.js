@@ -28,7 +28,7 @@
  *   blank frames   animation frames with no slide drawn during the change (target 0)
  *   pop-in frames  frames where the new slide is up but its pictures are still loading
  *   embeds created video / web embeds created by the change (a slide revisited should not reload)
- * and, for every slide, SSIM of the presented slide against the editor's own rendering (the export
+ * and, for every slide, SSIM (controls marked data-present-chrome are hidden for that picture) of the presented slide against the editor's own rendering (the export
  * render page), the same score export-fidelity.js uses.
  *
  * Screen pass: one 16:9 and one 4:3 deck on a laptop (1366 × 768), 1920 × 1080, 2560 × 1440,
@@ -205,6 +205,15 @@ const waitSettled = (page) =>
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function shootSlide(page, file) {
+  // The slide only: controls drawn over it (toolbar, notes, "Following" pill, marked
+  // data-present-chrome) are hidden for the picture, as they are once the mouse is still.
+  await page.evaluate(() => {
+    if (document.getElementById('present-eval-hide-chrome')) return;
+    const style = document.createElement('style');
+    style.id = 'present-eval-hide-chrome';
+    style.textContent = '[data-present-chrome]{visibility:hidden !important}';
+    document.head.appendChild(style);
+  });
   const rect = await page.evaluate(() => window.__athenaPresent.probe.snapshot().slideRect);
   if (!rect) return false;
   await page.screenshot({
