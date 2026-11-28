@@ -36,7 +36,8 @@
     "test:presentation-scripts": "node scripts/test-layout-catalog-policy.js && node scripts/test-chart-density-cap.js && node scripts/test-deck-layout-metadata.js && node scripts/test-layout-scoring.js && node scripts/test-layout-ai-selection.js && node scripts/test-palette-gallery-fixes.js && node scripts/test-gallery-grid-policy.js",
     "eval:presentation-export-smoke": "node scripts/presentation-eval/export-smoke.js",
     "eval:golden-decks": "node scripts/presentation-eval/build-golden-decks.js",
-    "eval:export-failures": "node scripts/presentation-eval/export-failures.js"
+    "eval:export-failures": "node scripts/presentation-eval/export-failures.js",
+    "eval:present": "node scripts/presentation-eval/present-eval.js"
   },
   "keywords": [],
   "author": "",

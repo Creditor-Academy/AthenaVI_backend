@@ -50,7 +50,6 @@ const FIXTURES = path.join(ROOT, 'src/modules/presentation/test/fixtures/export'
 const ASSETS = path.join(FIXTURES, 'assets');
 const PDF_TARGET = 0.98;
 const PPTX_TARGET = 0.95;
-const COMPARE_WIDTH = 480;
 const THUMB_WIDTH = 480;
 const LEGACY_PDF_TIMEOUT_MS = Number(arg('legacy-pdf-timeout')) || 60_000;
 
@@ -70,6 +69,7 @@ process.env.EXPORT_RENDER_URL = RENDER_URL;
 const UNREACHABLE_RENDER_URL = 'http://127.0.0.1:9/export-render.html';
 
 const sharp = require('sharp');
+const { COMPARE_WIDTH, score } = require('./imageScore');
 
 // ── Media: S3 → local fixture files ────────────────────────────────────────────
 
@@ -164,72 +164,7 @@ function pptxToPdf(soffice, pptxPath, outDir) {
   return out;
 }
 
-// ── Similarity ─────────────────────────────────────────────────────────────────
-
-/**
- * Grayscale at the comparison size, lightly blurred (σ 1) so anti-aliasing differences between
- * renderers (Chrome vs a PDF rasterizer) don't read as layout differences.
- */
-async function grayscale(file, width, height) {
-  const { data } = await sharp(file)
-    .flatten({ background: '#ffffff' })
-    .resize(width, height, { fit: 'fill' })
-    .blur(1)
-    .grayscale()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return data;
-}
-
-/** Mean SSIM over 8×8 windows (stride 4) of two same-size grayscale images. */
-function ssim(a, b, width, height) {
-  const win = 8;
-  const step = 4;
-  const C1 = (0.01 * 255) ** 2;
-  const C2 = (0.03 * 255) ** 2;
-  const n = win * win;
-  let total = 0;
-  let count = 0;
-  for (let y = 0; y + win <= height; y += step) {
-    for (let x = 0; x + win <= width; x += step) {
-      let sa = 0;
-      let sb = 0;
-      let saa = 0;
-      let sbb = 0;
-      let sab = 0;
-      for (let j = 0; j < win; j += 1) {
-        let i = (y + j) * width + x;
-        for (let k = 0; k < win; k += 1, i += 1) {
-          const va = a[i];
-          const vb = b[i];
-          sa += va;
-          sb += vb;
-          saa += va * va;
-          sbb += vb * vb;
-          sab += va * vb;
-        }
-      }
-      const ma = sa / n;
-      const mb = sb / n;
-      const varA = saa / n - ma * ma;
-      const varB = sbb / n - mb * mb;
-      const cov = sab / n - ma * mb;
-      total += ((2 * ma * mb + C1) * (2 * cov + C2)) / ((ma * ma + mb * mb + C1) * (varA + varB + C2));
-      count += 1;
-    }
-  }
-  return count ? total / count : 0;
-}
-
-async function score(referenceFile, candidateFile, aspect) {
-  if (!candidateFile || !fs.existsSync(candidateFile)) return null;
-  const height = Math.round(COMPARE_WIDTH / aspect);
-  const [a, b] = await Promise.all([
-    grayscale(referenceFile, COMPARE_WIDTH, height),
-    grayscale(candidateFile, COMPARE_WIDTH, height),
-  ]);
-  return Math.round(ssim(a, b, COMPARE_WIDTH, height) * 1000) / 1000;
-}
+// ── Thumbnails (similarity scoring is in imageScore.js) ─────────────────────────────────────────────────────────────────
 
 async function thumb(file, out) {
   await sharp(file).flatten({ background: '#ffffff' }).resize({ width: THUMB_WIDTH }).jpeg({ quality: 72 }).toFile(out);

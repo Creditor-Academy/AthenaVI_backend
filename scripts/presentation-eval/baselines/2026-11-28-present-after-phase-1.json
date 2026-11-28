@@ -1,0 +1,2584 @@
+{
+  "label": "after-phase-1",
+  "date": "2026-11-28T10:05:42.194Z",
+  "presentUrl": "http://127.0.0.1:5198/present-eval.html",
+  "frontend": null,
+  "backend": "418f4d8+local changes",
+  "assetLatencyMs": 150,
+  "decks": {
+    "ai-dark": {
+      "name": "ai-dark",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-dark-1",
+          "ssim": 0.999,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "ai-dark-2",
+          "ssim": 0.983,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "ai-dark-3",
+          "ssim": 0.979,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "ai-dark-4",
+          "ssim": 0.989,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "ai-dark-5",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "ai-dark-6",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 7,
+          "id": "ai-dark-7",
+          "ssim": 0.978,
+          "hasEmbed": false
+        },
+        {
+          "n": 8,
+          "id": "ai-dark-8",
+          "ssim": 0.986,
+          "hasEmbed": false
+        },
+        {
+          "n": 9,
+          "id": "ai-dark-9",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 10,
+          "id": "ai-dark-10",
+          "ssim": 0.994,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.989,
+        "min": 0.978,
+        "meanWithoutEmbeds": 0.989,
+        "minWithoutEmbeds": 0.978
+      },
+      "openMs": 820,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 18,
+        "settleMs": {
+          "median": 39,
+          "p95": 207,
+          "max": 214
+        },
+        "blankFrames": 27,
+        "changesWithBlank": 18,
+        "popInFrames": 10,
+        "changesWithPopIn": 1,
+        "embedsCreated": 0,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 207,
+            "frames": 13,
+            "blankFrames": 2,
+            "popInFrames": 10,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 102,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 214,
+            "frames": 5,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 52,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 41,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 5,
+            "toIndex": 6,
+            "settleMs": 95,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 6,
+            "toIndex": 7,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 7,
+            "toIndex": 8,
+            "settleMs": 47,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 8,
+            "toIndex": 9,
+            "settleMs": 101,
+            "frames": 4,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 9,
+            "toIndex": 8,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 8,
+            "toIndex": 7,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 7,
+            "toIndex": 6,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 6,
+            "toIndex": 5,
+            "settleMs": 27,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 39,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 36,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 27,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 14,
+      "errors": []
+    },
+    "ai-editorial": {
+      "name": "ai-editorial",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-editorial-1",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "ai-editorial-2",
+          "ssim": 0.994,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "ai-editorial-3",
+          "ssim": 0.974,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "ai-editorial-4",
+          "ssim": 0.99,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "ai-editorial-5",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "ai-editorial-6",
+          "ssim": 0.99,
+          "hasEmbed": false
+        },
+        {
+          "n": 7,
+          "id": "ai-editorial-7",
+          "ssim": 0.984,
+          "hasEmbed": false
+        },
+        {
+          "n": 8,
+          "id": "ai-editorial-8",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 9,
+          "id": "ai-editorial-9",
+          "ssim": 0.999,
+          "hasEmbed": false
+        },
+        {
+          "n": 10,
+          "id": "ai-editorial-10",
+          "ssim": 0.998,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.992,
+        "min": 0.974,
+        "meanWithoutEmbeds": 0.992,
+        "minWithoutEmbeds": 0.974
+      },
+      "openMs": 815,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 18,
+        "settleMs": {
+          "median": 37,
+          "p95": 189,
+          "max": 224
+        },
+        "blankFrames": 25,
+        "changesWithBlank": 18,
+        "popInFrames": 21,
+        "changesWithPopIn": 3,
+        "embedsCreated": 0,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 224,
+            "frames": 14,
+            "blankFrames": 2,
+            "popInFrames": 11,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 56,
+            "frames": 4,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 67,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 17,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 5,
+            "toIndex": 6,
+            "settleMs": 61,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 6,
+            "toIndex": 7,
+            "settleMs": 53,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 7,
+            "toIndex": 8,
+            "settleMs": 189,
+            "frames": 12,
+            "blankFrames": 2,
+            "popInFrames": 9,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 8,
+            "toIndex": 9,
+            "settleMs": 39,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 9,
+            "toIndex": 8,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 8,
+            "toIndex": 7,
+            "settleMs": 36,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 7,
+            "toIndex": 6,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 6,
+            "toIndex": 5,
+            "settleMs": 28,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 24,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 46,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 14,
+      "errors": []
+    },
+    "ai-light": {
+      "name": "ai-light",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ai-light-1",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "ai-light-2",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "ai-light-3",
+          "ssim": 0.979,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "ai-light-4",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "ai-light-5",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "ai-light-6",
+          "ssim": 0.995,
+          "hasEmbed": false
+        },
+        {
+          "n": 7,
+          "id": "ai-light-7",
+          "ssim": 0.986,
+          "hasEmbed": false
+        },
+        {
+          "n": 8,
+          "id": "ai-light-8",
+          "ssim": 0.992,
+          "hasEmbed": false
+        },
+        {
+          "n": 9,
+          "id": "ai-light-9",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 10,
+          "id": "ai-light-10",
+          "ssim": 0.995,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.992,
+        "min": 0.979,
+        "meanWithoutEmbeds": 0.992,
+        "minWithoutEmbeds": 0.979
+      },
+      "openMs": 789,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 18,
+        "settleMs": {
+          "median": 41,
+          "p95": 157,
+          "max": 212
+        },
+        "blankFrames": 21,
+        "changesWithBlank": 18,
+        "popInFrames": 9,
+        "changesWithPopIn": 3,
+        "embedsCreated": 0,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 46,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 89,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 157,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 36,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 5,
+            "toIndex": 6,
+            "settleMs": 32,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 6,
+            "toIndex": 7,
+            "settleMs": 56,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 7,
+            "toIndex": 8,
+            "settleMs": 212,
+            "frames": 9,
+            "blankFrames": 1,
+            "popInFrames": 7,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 8,
+            "toIndex": 9,
+            "settleMs": 41,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 9,
+            "toIndex": 8,
+            "settleMs": 27,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 8,
+            "toIndex": 7,
+            "settleMs": 35,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 7,
+            "toIndex": 6,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 6,
+            "toIndex": 5,
+            "settleMs": 20,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 113,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 44,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 23,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 19,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 28,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 11,
+      "errors": []
+    },
+    "forty-slides": {
+      "name": "forty-slides",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "forty-1",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "forty-2",
+          "ssim": 0.985,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "forty-3",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "forty-4",
+          "ssim": 0.986,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "forty-5",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "forty-6",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 7,
+          "id": "forty-7",
+          "ssim": 0.986,
+          "hasEmbed": false
+        },
+        {
+          "n": 8,
+          "id": "forty-8",
+          "ssim": 0.989,
+          "hasEmbed": false
+        },
+        {
+          "n": 9,
+          "id": "forty-9",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 10,
+          "id": "forty-10",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 11,
+          "id": "forty-11",
+          "ssim": 0.994,
+          "hasEmbed": false
+        },
+        {
+          "n": 12,
+          "id": "forty-12",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 13,
+          "id": "forty-13",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 14,
+          "id": "forty-14",
+          "ssim": 0.987,
+          "hasEmbed": false
+        },
+        {
+          "n": 15,
+          "id": "forty-15",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 16,
+          "id": "forty-16",
+          "ssim": 0.99,
+          "hasEmbed": false
+        },
+        {
+          "n": 17,
+          "id": "forty-17",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 18,
+          "id": "forty-18",
+          "ssim": 0.983,
+          "hasEmbed": false
+        },
+        {
+          "n": 19,
+          "id": "forty-19",
+          "ssim": 0.987,
+          "hasEmbed": false
+        },
+        {
+          "n": 20,
+          "id": "forty-20",
+          "ssim": 0.993,
+          "hasEmbed": false
+        },
+        {
+          "n": 21,
+          "id": "forty-21",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 22,
+          "id": "forty-22",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 23,
+          "id": "forty-23",
+          "ssim": 0.973,
+          "hasEmbed": false
+        },
+        {
+          "n": 24,
+          "id": "forty-24",
+          "ssim": 0.984,
+          "hasEmbed": false
+        },
+        {
+          "n": 25,
+          "id": "forty-25",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 26,
+          "id": "forty-26",
+          "ssim": 0.99,
+          "hasEmbed": false
+        },
+        {
+          "n": 27,
+          "id": "forty-27",
+          "ssim": 0.978,
+          "hasEmbed": false
+        },
+        {
+          "n": 28,
+          "id": "forty-28",
+          "ssim": 0.992,
+          "hasEmbed": false
+        },
+        {
+          "n": 29,
+          "id": "forty-29",
+          "ssim": 0.999,
+          "hasEmbed": false
+        },
+        {
+          "n": 30,
+          "id": "forty-30",
+          "ssim": 0.999,
+          "hasEmbed": false
+        },
+        {
+          "n": 31,
+          "id": "forty-31",
+          "ssim": 0.992,
+          "hasEmbed": false
+        },
+        {
+          "n": 32,
+          "id": "forty-32",
+          "ssim": 0.986,
+          "hasEmbed": false
+        },
+        {
+          "n": 33,
+          "id": "forty-33",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 34,
+          "id": "forty-34",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 35,
+          "id": "forty-35",
+          "ssim": 0.975,
+          "hasEmbed": false
+        },
+        {
+          "n": 36,
+          "id": "forty-36",
+          "ssim": 0.987,
+          "hasEmbed": false
+        },
+        {
+          "n": 37,
+          "id": "forty-37",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 38,
+          "id": "forty-38",
+          "ssim": 0.997,
+          "hasEmbed": false
+        },
+        {
+          "n": 39,
+          "id": "forty-39",
+          "ssim": 0.983,
+          "hasEmbed": false
+        },
+        {
+          "n": 40,
+          "id": "forty-40",
+          "ssim": 0.994,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.99,
+        "min": 0.973,
+        "meanWithoutEmbeds": 0.99,
+        "minWithoutEmbeds": 0.973
+      },
+      "openMs": 582,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 78,
+        "settleMs": {
+          "median": 36,
+          "p95": 81,
+          "max": 134
+        },
+        "blankFrames": 105,
+        "changesWithBlank": 78,
+        "popInFrames": 4,
+        "changesWithPopIn": 4,
+        "embedsCreated": 0,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 109,
+            "frames": 5,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 54,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 84,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 134,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 59,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 5,
+            "toIndex": 6,
+            "settleMs": 26,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 6,
+            "toIndex": 7,
+            "settleMs": 71,
+            "frames": 5,
+            "blankFrames": 2,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 7,
+            "toIndex": 8,
+            "settleMs": 70,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 8,
+            "toIndex": 9,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 9,
+            "toIndex": 10,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 10,
+            "toIndex": 11,
+            "settleMs": 32,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 11,
+            "toIndex": 12,
+            "settleMs": 34,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 12,
+            "toIndex": 13,
+            "settleMs": 73,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 13,
+            "toIndex": 14,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 14,
+            "toIndex": 15,
+            "settleMs": 36,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 15,
+            "toIndex": 17,
+            "settleMs": null,
+            "frames": 22,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 16,
+            "toIndex": 17,
+            "settleMs": 33,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 17,
+            "toIndex": 18,
+            "settleMs": 35,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 18,
+            "toIndex": 19,
+            "settleMs": 49,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 19,
+            "toIndex": 20,
+            "settleMs": 44,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 20,
+            "toIndex": 21,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 21,
+            "toIndex": 22,
+            "settleMs": 47,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 22,
+            "toIndex": 23,
+            "settleMs": 24,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 23,
+            "toIndex": 24,
+            "settleMs": 21,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 24,
+            "toIndex": 25,
+            "settleMs": 20,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 25,
+            "toIndex": 26,
+            "settleMs": 42,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 26,
+            "toIndex": 27,
+            "settleMs": 44,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 27,
+            "toIndex": 28,
+            "settleMs": 36,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 28,
+            "toIndex": 29,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 29,
+            "toIndex": 30,
+            "settleMs": 43,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 30,
+            "toIndex": 31,
+            "settleMs": 20,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 31,
+            "toIndex": 32,
+            "settleMs": 30,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 32,
+            "toIndex": 33,
+            "settleMs": 22,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 33,
+            "toIndex": 34,
+            "settleMs": 126,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 34,
+            "toIndex": 35,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 35,
+            "toIndex": 36,
+            "settleMs": 19,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 36,
+            "toIndex": 37,
+            "settleMs": 42,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 37,
+            "toIndex": 38,
+            "settleMs": 40,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 38,
+            "toIndex": 39,
+            "settleMs": 40,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 39,
+            "toIndex": 38,
+            "settleMs": 32,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 38,
+            "toIndex": 37,
+            "settleMs": 36,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 37,
+            "toIndex": 36,
+            "settleMs": 47,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 36,
+            "toIndex": 35,
+            "settleMs": 28,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 35,
+            "toIndex": 34,
+            "settleMs": 71,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 34,
+            "toIndex": 33,
+            "settleMs": 32,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 33,
+            "toIndex": 32,
+            "settleMs": 25,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 32,
+            "toIndex": 31,
+            "settleMs": 18,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 31,
+            "toIndex": 30,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 30,
+            "toIndex": 29,
+            "settleMs": 20,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 29,
+            "toIndex": 28,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 28,
+            "toIndex": 27,
+            "settleMs": 43,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 27,
+            "toIndex": 26,
+            "settleMs": 40,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 26,
+            "toIndex": 25,
+            "settleMs": 40,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 25,
+            "toIndex": 24,
+            "settleMs": 36,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 24,
+            "toIndex": 23,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 23,
+            "toIndex": 22,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 22,
+            "toIndex": 21,
+            "settleMs": 32,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 21,
+            "toIndex": 20,
+            "settleMs": 42,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 20,
+            "toIndex": 19,
+            "settleMs": 19,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 19,
+            "toIndex": 18,
+            "settleMs": 30,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 18,
+            "toIndex": 17,
+            "settleMs": 38,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 17,
+            "toIndex": 16,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 16,
+            "toIndex": 15,
+            "settleMs": 46,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 15,
+            "toIndex": 14,
+            "settleMs": 39,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 14,
+            "toIndex": 13,
+            "settleMs": 48,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 13,
+            "toIndex": 12,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 12,
+            "toIndex": 11,
+            "settleMs": 40,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 11,
+            "toIndex": 10,
+            "settleMs": 34,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 10,
+            "toIndex": 9,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 9,
+            "toIndex": 8,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 8,
+            "toIndex": 7,
+            "settleMs": 30,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 7,
+            "toIndex": 6,
+            "settleMs": 25,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 6,
+            "toIndex": 5,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 81,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 23,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 20,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 35,
+      "errors": []
+    },
+    "four-three": {
+      "name": "four-three",
+      "aspectRatio": "4:3",
+      "slides": [
+        {
+          "n": 1,
+          "id": "four-three-1",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "four-three-2",
+          "ssim": 0.995,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "four-three-3",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "four-three-4",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "four-three-5",
+          "ssim": 0.999,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.997,
+        "min": 0.995,
+        "meanWithoutEmbeds": 0.997,
+        "minWithoutEmbeds": 0.995
+      },
+      "openMs": 323,
+      "screen": {
+        "fill": 65.6,
+        "area": 49.2,
+        "heightShare": 81,
+        "slideWidth": 1166,
+        "slideHeight": 874
+      },
+      "changes": {
+        "count": 8,
+        "settleMs": {
+          "median": 52,
+          "p95": 95,
+          "max": 152
+        },
+        "blankFrames": 9,
+        "changesWithBlank": 8,
+        "popInFrames": 1,
+        "changesWithPopIn": 1,
+        "embedsCreated": 0,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 67,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 1,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 152,
+            "frames": 4,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 95,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 37,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 52,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 60,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 26,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 7,
+      "errors": []
+    },
+    "kitchen-sink": {
+      "name": "kitchen-sink",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "ks-text",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "ks-shapes-1",
+          "ssim": 0.988,
+          "hasEmbed": false
+        },
+        {
+          "n": 3,
+          "id": "ks-shapes-2",
+          "ssim": 0.964,
+          "hasEmbed": false
+        },
+        {
+          "n": 4,
+          "id": "ks-images",
+          "ssim": 0.993,
+          "hasEmbed": false
+        },
+        {
+          "n": 5,
+          "id": "ks-charts",
+          "ssim": 0.998,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "ks-effects",
+          "ssim": 0.989,
+          "hasEmbed": false
+        },
+        {
+          "n": 7,
+          "id": "ks-background",
+          "ssim": 0.87,
+          "hasEmbed": true
+        },
+        {
+          "n": 8,
+          "id": "ks-gradient",
+          "ssim": 0.986,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.973,
+        "min": 0.87,
+        "meanWithoutEmbeds": 0.988,
+        "minWithoutEmbeds": 0.964
+      },
+      "openMs": 422,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 14,
+        "settleMs": {
+          "median": 35,
+          "p95": 75,
+          "max": 211
+        },
+        "blankFrames": 17,
+        "changesWithBlank": 14,
+        "popInFrames": 7,
+        "changesWithPopIn": 1,
+        "embedsCreated": 2,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 54,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 23,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 211,
+            "frames": 10,
+            "blankFrames": 2,
+            "popInFrames": 7,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 75,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 28,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 5,
+            "toIndex": 6,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 6,
+            "toIndex": 7,
+            "settleMs": 27,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 7,
+            "toIndex": 6,
+            "settleMs": 29,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 6,
+            "toIndex": 5,
+            "settleMs": 62,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 45,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 38,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 35,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 33,
+            "frames": 3,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 46,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 10,
+      "errors": []
+    },
+    "embeds-links": {
+      "name": "embeds-links",
+      "aspectRatio": "16:9",
+      "slides": [
+        {
+          "n": 1,
+          "id": "pe-title",
+          "ssim": 0.999,
+          "hasEmbed": false
+        },
+        {
+          "n": 2,
+          "id": "pe-embed-1",
+          "ssim": 0.61,
+          "hasEmbed": true
+        },
+        {
+          "n": 3,
+          "id": "pe-embed-2",
+          "ssim": 0.788,
+          "hasEmbed": true
+        },
+        {
+          "n": 4,
+          "id": "pe-embed-3",
+          "ssim": 0.713,
+          "hasEmbed": true
+        },
+        {
+          "n": 5,
+          "id": "pe-links-1",
+          "ssim": 0.996,
+          "hasEmbed": false
+        },
+        {
+          "n": 6,
+          "id": "pe-links-2",
+          "ssim": 0.978,
+          "hasEmbed": false
+        }
+      ],
+      "ssim": {
+        "mean": 0.847,
+        "min": 0.61,
+        "meanWithoutEmbeds": 0.991,
+        "minWithoutEmbeds": 0.978
+      },
+      "openMs": 312,
+      "screen": {
+        "fill": 39.1,
+        "area": 39.1,
+        "heightShare": 62.5,
+        "slideWidth": 1200,
+        "slideHeight": 675
+      },
+      "changes": {
+        "count": 10,
+        "settleMs": {
+          "median": 27,
+          "p95": 39,
+          "max": 56
+        },
+        "blankFrames": 13,
+        "changesWithBlank": 10,
+        "popInFrames": 0,
+        "changesWithPopIn": 0,
+        "embedsCreated": 6,
+        "timeouts": 0,
+        "detail": [
+          {
+            "key": "ArrowRight",
+            "fromIndex": 0,
+            "toIndex": 1,
+            "settleMs": 39,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 1,
+            "toIndex": 2,
+            "settleMs": 21,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 2,
+            "toIndex": 3,
+            "settleMs": 21,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 3,
+            "toIndex": 4,
+            "settleMs": 27,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowRight",
+            "fromIndex": 4,
+            "toIndex": 5,
+            "settleMs": 39,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 5,
+            "toIndex": 4,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 4,
+            "toIndex": 3,
+            "settleMs": 23,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 3,
+            "toIndex": 2,
+            "settleMs": 31,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 2,
+            "toIndex": 1,
+            "settleMs": 26,
+            "frames": 2,
+            "blankFrames": 1,
+            "popInFrames": 0,
+            "iframesCreated": 1
+          },
+          {
+            "key": "ArrowLeft",
+            "fromIndex": 1,
+            "toIndex": 0,
+            "settleMs": 56,
+            "frames": 3,
+            "blankFrames": 2,
+            "popInFrames": 0,
+            "iframesCreated": 0
+          }
+        ]
+      },
+      "seconds": 7,
+      "errors": []
+    }
+  },
+  "screens": [
+    {
+      "deck": "ai-light",
+      "screen": "laptop",
+      "label": "Laptop 1366 × 768",
+      "aspectRatio": "16:9",
+      "fill": 53.6,
+      "area": 53.6,
+      "heightShare": 73.2,
+      "slideWidth": 1000,
+      "slideHeight": 562
+    },
+    {
+      "deck": "ai-light",
+      "screen": "fhd",
+      "label": "1920 × 1080",
+      "aspectRatio": "16:9",
+      "fill": 39.1,
+      "area": 39.1,
+      "heightShare": 62.5,
+      "slideWidth": 1200,
+      "slideHeight": 675
+    },
+    {
+      "deck": "ai-light",
+      "screen": "qhd",
+      "label": "2560 × 1440",
+      "aspectRatio": "16:9",
+      "fill": 22,
+      "area": 22,
+      "heightShare": 46.9,
+      "slideWidth": 1200,
+      "slideHeight": 675
+    },
+    {
+      "deck": "ai-light",
+      "screen": "xga",
+      "label": "1024 × 768",
+      "aspectRatio": "16:9",
+      "fill": 90.8,
+      "area": 68.1,
+      "heightShare": 71.5,
+      "slideWidth": 976,
+      "slideHeight": 549
+    },
+    {
+      "deck": "ai-light",
+      "screen": "phone",
+      "label": "Phone 390 × 844",
+      "aspectRatio": "16:9",
+      "fill": 92,
+      "area": 23.9,
+      "heightShare": 24.9,
+      "slideWidth": 374,
+      "slideHeight": 210
+    },
+    {
+      "deck": "ai-light",
+      "screen": "phone-land",
+      "label": "Phone 844 × 390",
+      "aspectRatio": "16:9",
+      "fill": 56.1,
+      "area": 46,
+      "heightShare": 74.9,
+      "slideWidth": 519,
+      "slideHeight": 292
+    },
+    {
+      "deck": "four-three",
+      "screen": "laptop",
+      "label": "Laptop 1366 × 768",
+      "aspectRatio": "4:3",
+      "fill": 53.6,
+      "area": 40.2,
+      "heightShare": 73.2,
+      "slideWidth": 750,
+      "slideHeight": 562
+    },
+    {
+      "deck": "four-three",
+      "screen": "fhd",
+      "label": "1920 × 1080",
+      "aspectRatio": "4:3",
+      "fill": 65.6,
+      "area": 49.2,
+      "heightShare": 81,
+      "slideWidth": 1166,
+      "slideHeight": 874
+    },
+    {
+      "deck": "four-three",
+      "screen": "qhd",
+      "label": "2560 × 1440",
+      "aspectRatio": "4:3",
+      "fill": 39.1,
+      "area": 29.3,
+      "heightShare": 62.5,
+      "slideWidth": 1200,
+      "slideHeight": 900
+    },
+    {
+      "deck": "four-three",
+      "screen": "xga",
+      "label": "1024 × 768",
+      "aspectRatio": "4:3",
+      "fill": 53.6,
+      "area": 53.6,
+      "heightShare": 73.2,
+      "slideWidth": 750,
+      "slideHeight": 562
+    },
+    {
+      "deck": "four-three",
+      "screen": "phone",
+      "label": "Phone 390 × 844",
+      "aspectRatio": "4:3",
+      "fill": 92,
+      "area": 31.9,
+      "heightShare": 33.2,
+      "slideWidth": 374,
+      "slideHeight": 281
+    },
+    {
+      "deck": "four-three",
+      "screen": "phone-land",
+      "label": "Phone 844 × 390",
+      "aspectRatio": "4:3",
+      "fill": 56.1,
+      "area": 34.5,
+      "heightShare": 74.9,
+      "slideWidth": 389,
+      "slideHeight": 292
+    }
+  ]
+}
