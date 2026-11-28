@@ -1,0 +1,106 @@
+{
+  "id": "golden-present-embeds-links",
+  "aspectRatio": "16:9",
+  "themeTokens": {
+    "appearance": "light",
+    "palette": {
+      "bg": "#FFFFFF",
+      "surface": "#F8FAFC",
+      "text": "#0F172A",
+      "muted": "#64748B",
+      "primary": "#2563EB",
+      "secondary": "#F97316",
+      "accent": "#14B8A6",
+      "cardBg": "#F1F5F9",
+      "divider": "#E2E8F0"
+    },
+    "fonts": { "heading": "Playfair Display", "body": "Inter" }
+  },
+  "slides": [
+    {
+      "id": "pe-title",
+      "order": 1,
+      "content": { "title": "Embeds and links" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#FFFFFF",
+        "elements": [
+          { "id": "pe-title-text", "type": "text", "layer": 2, "placement": { "x": 160, "y": 380, "width": 1600, "height": 180, "rotation": 0, "opacity": 1 }, "content": { "text": "Embeds and links", "fontSize": 96, "bold": true, "color": "#0F172A", "userColor": true } },
+          { "id": "pe-title-sub", "type": "text", "layer": 2, "placement": { "x": 160, "y": 580, "width": 1600, "height": 80, "rotation": 0, "opacity": 1 }, "content": { "text": "Present harness deck: three video embeds and two slides full of links", "fontSize": 36, "color": "#64748B", "userColor": true } },
+          { "id": "pe-title-photo", "type": "image", "layer": 1, "placement": { "x": 1340, "y": 80, "width": 480, "height": 270, "rotation": 0, "opacity": 1 }, "content": { "url": "https://athena-golden.s3.us-east-1.amazonaws.com/golden/photo-1.jpg", "s3Key": "golden/photo-1.jpg", "fit": "cover" } }
+        ]
+      }
+    },
+    {
+      "id": "pe-embed-1",
+      "order": 2,
+      "content": { "title": "Video one" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#FFFFFF",
+        "elements": [
+          { "id": "pe-e1-title", "type": "text", "layer": 2, "placement": { "x": 120, "y": 80, "width": 1680, "height": 110, "rotation": 0, "opacity": 1 }, "content": { "text": "A video in the middle of the slide", "fontSize": 60, "bold": true, "color": "#0F172A", "userColor": true } },
+          { "id": "pe-e1-video", "type": "embed", "layer": 3, "placement": { "x": 360, "y": 240, "width": 1200, "height": 675, "rotation": 0, "opacity": 1 }, "content": { "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "provider": "youtube", "title": "Video one" } }
+        ]
+      }
+    },
+    {
+      "id": "pe-embed-2",
+      "order": 3,
+      "content": { "title": "Video two" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#F8FAFC",
+        "elements": [
+          { "id": "pe-e2-title", "type": "text", "layer": 2, "placement": { "x": 120, "y": 120, "width": 760, "height": 220, "rotation": 0, "opacity": 1 }, "content": { "text": "A video beside text", "fontSize": 64, "bold": true, "color": "#0F172A", "userColor": true } },
+          { "id": "pe-e2-body", "type": "text", "layer": 2, "placement": { "x": 120, "y": 380, "width": 760, "height": 400, "rotation": 0, "opacity": 1 }, "content": { "text": "Watch the clip, then discuss:\nWhat changed?\nWhat stayed the same?\nWhat would you try next?", "fontSize": 32, "color": "#334155", "userColor": true, "listType": "bullet" } },
+          { "id": "pe-e2-video", "type": "embed", "layer": 3, "placement": { "x": 960, "y": 240, "width": 840, "height": 473, "rotation": 0, "opacity": 1 }, "content": { "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw", "provider": "youtube", "title": "Video two" } }
+        ]
+      }
+    },
+    {
+      "id": "pe-embed-3",
+      "order": 4,
+      "content": { "title": "Video three" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#FFFFFF",
+        "backgroundImage": "https://athena-golden.s3.us-east-1.amazonaws.com/golden/photo-3.jpg",
+        "backgroundImageFit": "cover",
+        "elements": [
+          { "id": "pe-e3-video", "type": "embed", "layer": 3, "placement": { "x": 160, "y": 140, "width": 1000, "height": 563, "rotation": 0, "opacity": 1 }, "content": { "url": "https://youtu.be/dQw4w9WgXcQ", "provider": "youtube", "title": "Video three" } },
+          { "id": "pe-e3-caption", "type": "text", "layer": 2, "placement": { "x": 160, "y": 760, "width": 1600, "height": 120, "rotation": 0, "opacity": 1 }, "content": { "text": "A video over a background photo", "fontSize": 48, "bold": true, "color": "#FFFFFF", "userColor": true } }
+        ]
+      }
+    },
+    {
+      "id": "pe-links-1",
+      "order": 5,
+      "content": { "title": "Further reading" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#FFFFFF",
+        "elements": [
+          { "id": "pe-l1-title", "type": "text", "layer": 2, "placement": { "x": 120, "y": 80, "width": 1680, "height": 110, "rotation": 0, "opacity": 1 }, "content": { "text": "Further reading", "fontSize": 64, "bold": true, "color": "#0F172A", "userColor": true } },
+          { "id": "pe-l1-list", "type": "text", "layer": 2, "placement": { "x": 120, "y": 240, "width": 1680, "height": 520, "rotation": 0, "opacity": 1 }, "content": { "text": "Course handbook: www.example.com/handbook\nReading list: https://example.org/reading\nPractice quiz: https://example.net/quiz\nGlossary: www.example.com/glossary\nOffice hours: https://example.com/office-hours", "fontSize": 34, "color": "#334155", "userColor": true, "listType": "bullet" } },
+          { "id": "pe-l1-runs", "type": "text", "layer": 2, "placement": { "x": 120, "y": 820, "width": 1680, "height": 120, "rotation": 0, "opacity": 1 }, "content": { "text": "Questions? Write to the course team or open the forum.", "fontSize": 32, "runs": [ { "text": "Questions? Write to " }, { "text": "the course team", "href": "mailto:team@example.com", "bold": true }, { "text": " or open " }, { "text": "the forum", "href": "https://example.com/forum", "bold": true }, { "text": "." } ] } }
+        ]
+      }
+    },
+    {
+      "id": "pe-links-2",
+      "order": 6,
+      "content": { "title": "Resources" },
+      "elements": {
+        "canvas": { "width": 1920, "height": 1080 },
+        "backgroundColor": "#F1F5F9",
+        "elements": [
+          { "id": "pe-l2-title", "type": "text", "layer": 2, "placement": { "x": 120, "y": 80, "width": 1680, "height": 110, "rotation": 0, "opacity": 1 }, "content": { "text": "Resources", "fontSize": 64, "bold": true, "color": "#0F172A", "userColor": true } },
+          { "id": "pe-l2-card-1", "type": "link", "layer": 3, "placement": { "x": 120, "y": 260, "width": 820, "height": 300, "rotation": 0, "opacity": 1 }, "content": { "url": "https://example.com/toolkit", "title": "Facilitator toolkit", "description": "Templates and checklists for running the session" } },
+          { "id": "pe-l2-card-2", "type": "link", "layer": 3, "placement": { "x": 980, "y": 260, "width": 820, "height": 300, "rotation": 0, "opacity": 1 }, "content": { "url": "https://example.org/case-studies", "title": "Case studies", "description": "Five worked examples with answers" } },
+          { "id": "pe-l2-body", "type": "text", "layer": 2, "placement": { "x": 120, "y": 640, "width": 1680, "height": 300, "rotation": 0, "opacity": 1 }, "content": { "text": "Slides: www.example.com/slides\nRecording: https://example.com/recording\nFeedback form: https://example.com/feedback", "fontSize": 32, "color": "#334155", "userColor": true } }
+        ]
+      }
+    }
+  ]
+}
